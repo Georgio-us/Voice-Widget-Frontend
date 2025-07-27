@@ -697,31 +697,38 @@ class VoiceWidget extends HTMLElement {
                 }
             };
 
-            // ✅ ИСПРАВЛЕННЫЙ onstop - единственное место где управляем кнопкой
-            this.mediaRecorder.onstop = () => {
-                this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-                
-                console.log('=== ONSTOP DEBUG ===');
-                console.log('recordingTime:', this.recordingTime);
-                console.log('minRecordingTime:', this.minRecordingTime);
-                console.log('audioBlob создан:', this.audioBlob);
-                
-                const sendBtn = this.shadowRoot.getElementById('sendButton');
-                console.log('sendButton найден:', sendBtn);
-                console.log('sendButton disabled ДО изменения:', sendBtn.disabled);
-                
-                // ✅ ТОЛЬКО ЗДЕСЬ решаем включить/выключить кнопку
-                if (this.recordingTime >= this.minRecordingTime) {
-                    sendBtn.disabled = false;
-                    console.log('✅ Кнопка активирована!');
-                } else {
-                    sendBtn.disabled = true;
-                    console.log('❌ Запись слишком короткая');
-                }
-                
-                console.log('sendButton disabled ПОСЛЕ изменения:', sendBtn.disabled);
-                console.log('=== END DEBUG ===');
-            };
+           // ✅ ИСПРАВЛЕННЫЙ onstop с принудительными стилями
+this.mediaRecorder.onstop = () => {
+    this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+    
+    console.log('=== ONSTOP DEBUG ===');
+    console.log('recordingTime:', this.recordingTime);
+    console.log('minRecordingTime:', this.minRecordingTime);
+    console.log('audioBlob создан:', this.audioBlob);
+    
+    const sendBtn = this.shadowRoot.getElementById('sendButton');
+    console.log('sendButton найден:', sendBtn);
+    console.log('sendButton disabled ДО изменения:', sendBtn.disabled);
+    
+    // ✅ ТОЛЬКО ЗДЕСЬ решаем включить/выключить кнопку
+    if (this.recordingTime >= this.minRecordingTime) {
+        sendBtn.disabled = false;
+        // ✅ ПРИНУДИТЕЛЬНО СБРАСЫВАЕМ CSS:
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.style.pointerEvents = 'auto';
+        console.log('✅ Кнопка активирована принудительно!');
+    } else {
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.5';
+        sendBtn.style.cursor = 'not-allowed';
+        sendBtn.style.pointerEvents = 'none';
+        console.log('❌ Запись слишком короткая');
+    }
+    
+    console.log('sendButton disabled ПОСЛЕ изменения:', sendBtn.disabled);
+    console.log('=== END DEBUG ===');
+};
 
             this.mediaRecorder.onerror = (event) => {
                 console.error('Ошибка записи:', event.error);
