@@ -698,13 +698,17 @@ class VoiceWidget extends HTMLElement {
         };
 
         this.mediaRecorder.onstop = () => {
-            this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-            
-            // Enable send button only if recording is valid
-            if (this.recordingTime >= this.minRecordingTime) {
-                sendButton.disabled = false;
-            }
-        };
+    this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+    
+    console.log('onstop сработал, recordingTime:', this.recordingTime);
+    console.log('minRecordingTime:', this.minRecordingTime);
+    
+    if (this.recordingTime >= this.minRecordingTime) {
+        const sendBtn = this.shadowRoot.getElementById('sendButton');
+        sendBtn.disabled = false;
+        console.log('Кнопка разблокирована!');
+    }
+};
 
         this.mediaRecorder.onerror = (event) => {
             console.error('Ошибка записи:', event.error);
