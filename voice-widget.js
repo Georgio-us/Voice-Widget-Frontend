@@ -10,11 +10,11 @@ class VoiceWidget extends HTMLElement {
         this.messages = [];
         this.mediaRecorder = null;
         this.stream = null;
-        this.audioBlob = null;
-        this.recordedChunks = [];
-        
-        // Новые свойства для превью
-        this.isInPreviewMode = false;
+this.audioBlob = null;
+this.recordedChunks = [];
+
+// Новые свойства для превью
+this.isInPreviewMode = false;
         this.speechRecognition = null;
         this.transcriptPreview = '';
 
@@ -45,11 +45,22 @@ class VoiceWidget extends HTMLElement {
 
         recordingControls.style.display = 'flex';
         recordingControls.classList.add('active');
-
-        sendBtn.style.opacity = '0.5';
-        sendBtn.style.pointerEvents = 'none';
     }
 
+    bindEvents() {
+        const mainBtn = this.shadowRoot.getElementById('mainButton');
+        const stopBtn = this.shadowRoot.getElementById('stopButton');
+        const sendBtn = this.shadowRoot.getElementById('sendButton');
+
+        mainBtn?.addEventListener('click', () => this.toggleRecording());
+        stopBtn?.addEventListener('click', () => this.cancelRecording());
+        sendBtn?.addEventListener('click', () => this.sendMessage());
+    }
+
+    // Проверка виджета
+    connectedCallback() {
+        console.log('✅ Виджет подключён!');
+    }
     checkBrowserSupport() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
