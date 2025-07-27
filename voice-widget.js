@@ -669,34 +669,25 @@ class VoiceWidget extends HTMLElement {
         });
 
         stopButton.addEventListener('click', () => {
-            if (this.isRecording) {
-                this.stopRecording();
-            }
-        });
+           if (this.isRecording) {
+             this.cancelRecording(); // ⬅️ теперь сброс записи
+         }
+       });
 
         // ✅ ИСПРАВЛЕННЫЙ обработчик sendButton
         sendButton.addEventListener('click', () => {
-            if (!this.audioBlob) {
-                // Если нет записи - показываем уведомление
-                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-                statusIndicator.innerHTML = '<div class="status-text">⚠️ Сначала сделайте запись</div>';
-                setTimeout(() => {
-                    statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-                }, 2000);
-                return;
-            }
-            
-            if (this.recordingTime < this.minRecordingTime) {
-                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-                statusIndicator.innerHTML = '<div class="status-text">⚠️ Запись слишком короткая</div>';
-                setTimeout(() => {
-                    statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-                }, 2000);
-                return;
-            }
-
-            this.sendMessage();
-        });
+    if (this.isRecording && this.mediaRecorder?.state === 'recording') {
+        this.prepareBlobAndSend(); // ⬅️ дождёмся blob и отправим
+    } else if (this.audioBlob) {
+        this.sendMessage(); // ⬅️ если blob уже есть — отправляем
+    } else {
+        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+        statusIndicator.innerHTML = '<div class="status-text">⚠️ Сначала сделайте запись</div>';
+        setTimeout(() => {
+            statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
+        }, 2000);
+    }
+});
     }
 
     async startRecording() {
@@ -895,6 +886,7 @@ class VoiceWidget extends HTMLElement {
             detail: { duration: this.recordingTime }
         }));
     }
+        
 
     addMessage(message) {
         this.messages.push(message);
@@ -1044,7 +1036,54 @@ class VoiceWidget extends HTMLElement {
     getMessages() {
         return [...this.messages];
     }
+    // 🔽 НАЧАЛО метода prepareBlobAndSend
+    // Этот метод вызывается при нажатии кнопки "Отправить",
+    // если в данный момент идет запись.
+    // Он останавливает запись, создает audioBlob и сразу отправляет сообщение.
+    prepareBlobAndSend() {
+        // Если запись уже остановлена
+        if (!this.isRecording || !this.mediaRecorder) {
+            if (this.audioBlob) {
+                this.sendMessage(); // Если blob уже есть — отправляем
+            } else {
+                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+                statusIndicator.innerHTML = '<div class="status-text">❌ Нет записи для отправки</div>';
+            }
+            return;
+        }
 
+        // Назначаем обработчик остановки — он сработает, когда mediaRecorder остановится
+        this.mediaRecorder.onstop = () => {
+            // Создаём blob из записанных аудиочанков
+            this.audioBlob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+            this.isRecording = false;
+            this.sendMessage(); // И сразу же отправляем
+        };
+
+        // Останавливаем запись
+        this.mediaRecorder.stop();
+
+        // Отключаем микрофон
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+
+        // Останавливаем таймер записи
+        clearInterval(this.recordingTimer);
+        this.recordingTimer = null;
+
+        // UI-обновления
+        const mainButton = this.shadowRoot.getElementById('mainButton');
+        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
+        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+
+        mainButton.classList.remove('recording');
+        waveAnimation.classList.remove('active');
+        statusIndicator.innerHTML = '<div class="status-text">⏳ Обработка записи...</div>';
+    }
+    // 🔼 КОНЕЦ метода prepareBlobAndSend
+    
     isCurrentlyRecording() {
         return this.isRecording;
     }
