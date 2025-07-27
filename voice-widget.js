@@ -700,14 +700,24 @@ class VoiceWidget extends HTMLElement {
         this.mediaRecorder.onstop = () => {
     this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
     
-    console.log('onstop сработал, recordingTime:', this.recordingTime);
+    console.log('=== ONSTOP DEBUG ===');
+    console.log('recordingTime:', this.recordingTime);
     console.log('minRecordingTime:', this.minRecordingTime);
+    console.log('audioBlob создан:', this.audioBlob);
+    
+    const sendBtn = this.shadowRoot.getElementById('sendButton');
+    console.log('sendButton найден:', sendBtn);
+    console.log('sendButton disabled ДО изменения:', sendBtn.disabled);
     
     if (this.recordingTime >= this.minRecordingTime) {
-        const sendBtn = this.shadowRoot.getElementById('sendButton');
         sendBtn.disabled = false;
-        console.log('Кнопка разблокирована!');
+        console.log('✅ Кнопка должна быть активна!');
+        console.log('sendButton disabled ПОСЛЕ изменения:', sendBtn.disabled);
+    } else {
+        console.log('❌ Запись слишком короткая');
     }
+    
+    console.log('=== END DEBUG ===');
 };
 
         this.mediaRecorder.onerror = (event) => {
