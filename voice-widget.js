@@ -989,6 +989,18 @@ class VoiceWidget extends HTMLElement {
         timer.textContent = '0:00';
     }
 
+    // 🔹 Отмена записи и сброс состояния
+cancelRecording() {
+    this.cleanupRecording(); // очищает всё: blob, таймер, поток
+
+    const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+    statusIndicator.innerHTML = '<div class="status-text">Запись отменена</div>';
+
+    setTimeout(() => {
+        statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
+    }, 2000);
+}
+
     getErrorMessage(error) {
         if (error.name === 'NotAllowedError') {
             return 'Доступ к микрофону запрещен';
