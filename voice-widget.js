@@ -12,45 +12,157 @@ class VoiceWidget extends HTMLElement {
         this.stream = null;
         this.audioBlob = null;
         this.recordedChunks = [];
-        
+
+        // Новые свойства для превью
+        this.isInPreviewMode = false;
+        this.speechRecognition = null;
+        this.transcriptPreview = '';
+
+        // Новые свойства для индикатора громкости
+        this.audioContext = null;
+        this.analyser = null;
+        this.microphone = null;
+        this.animationId = null;
+
         // Configurable parameters
         this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
         this.fieldName = this.getAttribute('field-name') || 'audio';
         this.responseField = this.getAttribute('response-field') || 'response';
-        
+
         this.render();
         this.bindEvents();
         this.checkBrowserSupport();
-        this.initializeUI(); // ✅ НОВЫЙ МЕТОД
+        this.initializeUI();
+        this.initSpeechRecognition();
     }
 
-    // ✅ НОВЫЙ МЕТОД - инициализация UI с видимой кнопкой
     initializeUI() {
         const recordingControls = this.shadowRoot.getElementById('recordingControls');
         const sendBtn = this.shadowRoot.getElementById('sendButton');
-        
-        // Показываем блок с кнопками сразу
+
         recordingControls.style.display = 'flex';
         recordingControls.classList.add('active');
-        
-        // Делаем кнопку видимой и кликабельной
-        sendBtn.disabled = false;
-        sendBtn.removeAttribute('disabled');
-        sendBtn.style.setProperty('opacity', '1', 'important');
-        sendBtn.style.setProperty('cursor', 'pointer', 'important');
-        sendBtn.style.setProperty('pointer-events', 'auto', 'important');
+
+        sendBtn.style.opacity = '0.5';
+        sendBtn.style.pointerEvents = 'none';
     }
 
     checkBrowserSupport() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
             statusIndicator.innerHTML = '<div class="status-text">❌ Браузер не поддерживает запись аудио</div>';
-            
+
             const mainButton = this.shadowRoot.getElementById('mainButton');
             mainButton.disabled = true;
             mainButton.style.opacity = '0.5';
             mainButton.style.cursor = 'not-allowed';
         }
+    }
+
+    initSpeechRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            this.speechRecognition = new SpeechRecognition();
+            this.speechRecognition.continuous = true;
+            this.speechRecognition.interimResults = true;
+            this.speechRecognition.lang = 'ru-RU';
+
+            this.speechRecognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                this.transcriptPreview = finalTranscript || interimTranscript;
+            };
+
+            this.speechRecognition.onerror = (event) => {
+                console.log('Speech recognition error:', event.error);
+            };
+        }
+    }
+
+    initAudioAnalyser(stream) {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            this.microphone = this.audioContext.createMediaStreamSource(stream);
+
+            this.analyser.fftSize = 256;
+            this.analyser.smoothingTimeConstant = 0.8;
+
+            this.microphone.connect(this.analyser);
+
+            this.visualizeVolume();
+        } catch (error) {
+            console.log('Audio analyser not available:', error);
+        }
+    }
+
+    visualizeVolume() {
+        if (!this.analyser || !this.isRecording) {
+            this.stopVolumeVisualization();
+            return;
+        }
+
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(dataArray);
+
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        const normalizedVolume = Math.min(average / 128, 1);
+
+        this.updateVolumeIndicator(normalizedVolume);
+
+        this.animationId = requestAnimationFrame(() => this.visualizeVolume());
+    }
+
+    updateVolumeIndicator(level) {
+        const volumeBars = this.shadowRoot.querySelectorAll('.volume-bar');
+        const mainButton = this.shadowRoot.getElementById('mainButton');
+
+        volumeBars.forEach((bar, index) => {
+            const threshold = (index + 1) / volumeBars.length;
+            if (level > threshold) {
+                bar.classList.add('active');
+                bar.style.height = `${20 + Math.random() * 20}px`;
+            } else {
+                bar.classList.remove('active');
+                bar.style.height = '8px';
+            }
+        });
+
+        if (level > 0.7) {
+            mainButton.classList.add('loud-pulse');
+        } else {
+            mainButton.classList.remove('loud-pulse');
+        }
+    }
+
+    stopVolumeVisualization() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+
+        const volumeBars = this.shadowRoot.querySelectorAll('.volume-bar');
+        volumeBars.forEach(bar => {
+            bar.classList.remove('active');
+            bar.style.height = '8px';
+        });
+
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            this.audioContext.close();
+        }
+        this.audioContext = null;
+        this.analyser = null;
+        this.microphone = null;
     }
 
     render() {
@@ -185,6 +297,10 @@ class VoiceWidget extends HTMLElement {
                     animation: pulse-glow 2s ease-in-out infinite;
                 }
 
+                .main-button.loud-pulse {
+                    animation: loudPulse 0.3s ease;
+                }
+
                 @keyframes pulse-glow {
                     0%, 100% {
                         box-shadow: 
@@ -197,6 +313,27 @@ class VoiceWidget extends HTMLElement {
                             0 8px 24px rgba(255, 122, 0, 0.5),
                             0 4px 12px rgba(255, 122, 0, 0.4),
                             0 0 0 20px rgba(255, 122, 0, 0);
+                    }
+                }
+
+                @keyframes loudPulse {
+                    0% { 
+                        box-shadow: 
+                            0 8px 24px rgba(255, 122, 0, 0.3),
+                            0 4px 12px rgba(255, 122, 0, 0.2),
+                            0 0 0 0 rgba(255, 122, 0, 0.4);
+                    }
+                    50% { 
+                        box-shadow: 
+                            0 8px 24px rgba(255, 122, 0, 0.5),
+                            0 4px 12px rgba(255, 122, 0, 0.4),
+                            0 0 0 10px rgba(255, 122, 0, 0.1);
+                    }
+                    100% { 
+                        box-shadow: 
+                            0 8px 24px rgba(255, 122, 0, 0.3),
+                            0 4px 12px rgba(255, 122, 0, 0.2),
+                            0 0 0 0 rgba(255, 122, 0, 0);
                     }
                 }
 
@@ -227,7 +364,6 @@ class VoiceWidget extends HTMLElement {
                     border: 1px solid rgba(255, 255, 255, 0.3);
                     padding: 20px;
                     margin-bottom: 20px;
-                    /* ✅ ИЗМЕНЕНО - теперь всегда показываем блок */
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
@@ -235,8 +371,6 @@ class VoiceWidget extends HTMLElement {
                         0 4px 16px rgba(0, 0, 0, 0.1),
                         inset 0 1px 0 rgba(255, 255, 255, 0.3);
                 }
-
-                /* ✅ УБРАЛИ .recording-controls.active - больше не нужно */
 
                 @keyframes slideIn {
                     from {
@@ -259,13 +393,16 @@ class VoiceWidget extends HTMLElement {
                     display: flex;
                     align-items: center;
                     gap: 3px;
-                    /* ✅ ДОБАВЛЕНО - скрываем анимацию по умолчанию */
                     opacity: 0;
                     transition: opacity 0.3s ease;
                 }
 
                 .wave-animation.active {
                     opacity: 1;
+                }
+
+                .recording-controls.active .wave-animation {
+                    display: none;
                 }
 
                 .wave-bar {
@@ -291,6 +428,41 @@ class VoiceWidget extends HTMLElement {
                         height: 24px; 
                         opacity: 1; 
                     }
+                }
+
+                .volume-indicator {
+                    display: flex;
+                    align-items: center;
+                    gap: 2px;
+                    height: 24px;
+                    margin: 0 12px;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .recording-controls.active .volume-indicator {
+                    opacity: 1;
+                }
+
+                .volume-bar {
+                    width: 3px;
+                    height: 8px;
+                    background: rgba(255, 122, 0, 0.3);
+                    border-radius: 1.5px;
+                    transition: all 0.1s ease;
+                    transform-origin: center bottom;
+                }
+
+                .volume-bar.active {
+                    background: linear-gradient(135deg, #FF7A00, #ff9500);
+                    box-shadow: 0 0 8px rgba(255, 122, 0, 0.6);
+                    animation: volumePulse 0.2s ease;
+                }
+
+                @keyframes volumePulse {
+                    0% { transform: scaleY(1); }
+                    50% { transform: scaleY(1.2); }
+                    100% { transform: scaleY(1); }
                 }
 
                 .timer {
@@ -322,11 +494,6 @@ class VoiceWidget extends HTMLElement {
                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
                 }
 
-                /* ✅ ИЗМЕНЕНО - убрали блокировку disabled кнопок */
-                .control-button:disabled {
-                    /* Убрали стили disabled - управляем через JS */
-                }
-
                 .stop-button {
                     background: rgba(255, 71, 87, 0.9);
                 }
@@ -343,6 +510,11 @@ class VoiceWidget extends HTMLElement {
                 .send-button:hover:not(:disabled) {
                     background: rgba(38, 208, 104, 1);
                     transform: scale(1.05);
+                }
+
+                .send-button.active {
+                    opacity: 1 !important;
+                    pointer-events: auto !important;
                 }
 
                 .button-icon {
@@ -387,18 +559,7 @@ class VoiceWidget extends HTMLElement {
 
                 .message {
                     margin-bottom: 16px;
-                    animation: messageSlide 0.3s ease-out;
-                }
-
-                @keyframes messageSlide {
-                    from {
-                        opacity: 0;
-                        transform: translateY(15px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                 }
 
                 .message.user {
@@ -421,6 +582,7 @@ class VoiceWidget extends HTMLElement {
                     -webkit-backdrop-filter: blur(10px);
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     word-wrap: break-word;
+                    transition: all 0.3s ease;
                 }
 
                 .message.user .message-bubble {
@@ -435,6 +597,17 @@ class VoiceWidget extends HTMLElement {
                     color: #1d1d1f;
                     border-bottom-left-radius: 6px;
                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                }
+
+                .message-bubble:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 
+                        0 6px 20px rgba(0, 0, 0, 0.12),
+                        0 2px 8px rgba(0, 0, 0, 0.08);
+                }
+
+                .message-text {
+                    display: inline-block;
                 }
 
                 .voice-indicator {
@@ -457,6 +630,7 @@ class VoiceWidget extends HTMLElement {
                     text-align: center;
                     padding: 40px 20px;
                     color: rgba(29, 29, 31, 0.6);
+                    transition: opacity 0.3s ease;
                 }
 
                 .empty-state-icon {
@@ -474,51 +648,297 @@ class VoiceWidget extends HTMLElement {
                 }
 
                 .loading-indicator {
-                    display: none;
+                    display: none !important;
+                }
+
+                .typing-indicator .message-bubble {
+                    padding: 16px 20px;
+                    min-width: 80px;
+                }
+
+                .typing-dots {
+                    display: flex;
                     align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                    gap: 12px;
-                    color: rgba(29, 29, 31, 0.7);
-                    font-size: 15px;
-                    font-weight: 500;
-                }
-
-                .loading-indicator.active {
-                    display: flex;
-                    animation: fadeIn 0.3s ease;
-                }
-
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-
-                .loading-dots {
-                    display: flex;
                     gap: 4px;
                 }
 
-                .loading-dot {
+                .typing-dot {
                     width: 8px;
                     height: 8px;
-                    background: linear-gradient(135deg, #FF7A00, #e66800);
+                    background: rgba(29, 29, 31, 0.6);
                     border-radius: 50%;
-                    animation: loadingDots 1.4s ease-in-out infinite both;
-                    box-shadow: 0 2px 4px rgba(255, 122, 0, 0.3);
+                    animation: typingDot 1.4s ease-in-out infinite;
                 }
 
-                .loading-dot:nth-child(1) { animation-delay: -0.32s; }
-                .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+                .typing-dot:nth-child(1) { animation-delay: 0s; }
+                .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+                .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
-                @keyframes loadingDots {
-                    0%, 80%, 100% { 
-                        transform: scale(0.8); 
-                        opacity: 0.5; 
+                @keyframes typingDot {
+                    0%, 60%, 100% {
+                        transform: scale(1);
+                        opacity: 0.5;
                     }
-                    40% { 
-                        transform: scale(1.2); 
-                        opacity: 1; 
+                    30% {
+                        transform: scale(1.3);
+                        opacity: 1;
+                    }
+                }
+
+                .message-preview {
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(20px);
+                    border-radius: 18px;
+                    padding: 16px;
+                    margin-bottom: 16px;
+                    border: 2px solid rgba(255, 122, 0, 0.3);
+                    animation: slideInUp 0.3s ease-out;
+                }
+
+                @keyframes slideInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .preview-text {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                    margin-bottom: 16px;
+                }
+
+                .preview-label {
+                    font-size: 12px;
+                    color: rgba(29, 29, 31, 0.6);
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .preview-content {
+                    font-size: 16px;
+                    color: #1d1d1f;
+                    font-weight: 500;
+                    font-style: italic;
+                }
+
+                .preview-duration {
+                    font-size: 18px;
+                    color: #FF7A00;
+                    font-weight: 700;
+                }
+
+                .preview-actions {
+                    display: flex;
+                    gap: 12px;
+                    justify-content: flex-end;
+                }
+
+                .preview-button {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .cancel-preview {
+                    background: rgba(255, 71, 87, 0.1);
+                    color: #FF4757;
+                }
+
+                .cancel-preview:hover {
+                    background: rgba(255, 71, 87, 0.2);
+                    transform: scale(1.05);
+                }
+
+                .send-preview {
+                    background: rgba(46, 213, 115, 0.9);
+                    color: white;
+                }
+
+                .send-preview:hover {
+                    background: rgba(38, 208, 104, 1);
+                    transform: scale(1.05);
+                }
+
+                .preview-icon {
+                    width: 16px;
+                    height: 16px;
+                    fill: currentColor;
+                }
+
+                .error-message {
+                    margin: 16px 0;
+                    animation: slideIn 0.3s ease-out;
+                    transition: all 0.3s ease;
+                }
+
+                .error-container {
+                    background: rgba(255, 71, 87, 0.1);
+                    border: 2px solid rgba(255, 71, 87, 0.3);
+                    border-radius: 16px;
+                    padding: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 12px;
+                    text-align: center;
+                }
+
+                .error-icon {
+                    font-size: 32px;
+                    line-height: 1;
+                }
+
+                .error-content {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+
+                .error-title {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #FF4757;
+                }
+
+                .error-description {
+                    font-size: 14px;
+                    color: rgba(29, 29, 31, 0.7);
+                }
+
+                .retry-button {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 20px;
+                    background: rgba(255, 122, 0, 0.9);
+                    color: white;
+                    border: none;
+                    border-radius: 24px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    margin-top: 8px;
+                }
+
+                .retry-button:hover {
+                    background: rgba(255, 122, 0, 1);
+                    transform: scale(1.05);
+                    box-shadow: 0 4px 16px rgba(255, 122, 0, 0.3);
+                }
+
+                .retry-icon {
+                    width: 18px;
+                    height: 18px;
+                    fill: currentColor;
+                }
+
+                .permission-guide {
+                    margin: 16px 0;
+                    animation: slideIn 0.3s ease-out;
+                }
+
+                .guide-container {
+                    background: rgba(255, 255, 255, 0.95);
+                    border: 2px solid rgba(255, 122, 0, 0.3);
+                    border-radius: 16px;
+                    padding: 20px;
+                }
+
+                .guide-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 16px;
+                    justify-content: center;
+                }
+
+                .guide-icon {
+                    font-size: 24px;
+                }
+
+                .guide-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1d1d1f;
+                }
+
+                .guide-steps {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
+
+                .guide-step {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 8px;
+                    background: rgba(255, 122, 0, 0.05);
+                    border-radius: 8px;
+                }
+
+                .step-number {
+                    width: 24px;
+                    height: 24px;
+                    background: linear-gradient(135deg, #FF7A00, #e66800);
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    font-weight: 700;
+                    flex-shrink: 0;
+                }
+
+                .step-text {
+                    font-size: 14px;
+                    color: #1d1d1f;
+                    line-height: 1.4;
+                }
+
+                .guide-button {
+                    width: 100%;
+                    padding: 12px;
+                    background: linear-gradient(135deg, #FF7A00, #e66800);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+
+                .guide-button:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 16px rgba(255, 122, 0, 0.3);
+                }
+
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
                     }
                 }
 
@@ -587,6 +1007,14 @@ class VoiceWidget extends HTMLElement {
                     .control-buttons {
                         gap: 20px;
                     }
+
+                    .volume-indicator {
+                        margin: 0 8px;
+                    }
+                    
+                    .volume-bar {
+                        width: 2px;
+                    }
                 }
             </style>
 
@@ -618,16 +1046,22 @@ class VoiceWidget extends HTMLElement {
                             <div class="wave-bar"></div>
                             <div class="wave-bar"></div>
                         </div>
+                        <div class="volume-indicator" id="volumeIndicator">
+                            <div class="volume-bar"></div>
+                            <div class="volume-bar"></div>
+                            <div class="volume-bar"></div>
+                            <div class="volume-bar"></div>
+                            <div class="volume-bar"></div>
+                        </div>
                         <div class="timer" id="timer">0:00</div>
                     </div>
                     <div class="control-buttons">
-                        <button class="control-button stop-button" id="stopButton" title="Остановить запись">
+                        <button class="control-button stop-button" id="stopButton" title="Отменить запись">
                             <svg class="button-icon" viewBox="0 0 24 24">
                                 <rect x="6" y="6" width="12" height="12" rx="2"/>
                             </svg>
                         </button>
-                        <!-- ✅ ИЗМЕНЕНО - убрали disabled из HTML -->
-                        <button class="control-button send-button" id="sendButton" title="Отправить сообщение">
+                        <button class="control-button send-button" id="sendButton" title="Отправить голосовое сообщение">
                             <svg class="button-icon" viewBox="0 0 24 24">
                                 <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
                             </svg>
@@ -650,405 +1084,11 @@ class VoiceWidget extends HTMLElement {
                             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                             <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
                         </svg>
-                        <div class="empty-state-text">Нажмите кнопку записи<br>чтобы начать диалог</div>
+                        <div class="empty-state-text">Нажмите кнопку записи<br>чтобы начать диалог</div></div>
                     </div>
+                </div>
                 </div>
             </div>
         `;
     }
-
-    bindEvents() {
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const stopButton = this.shadowRoot.getElementById('stopButton');
-        const sendButton = this.shadowRoot.getElementById('sendButton');
-
-        mainButton.addEventListener('click', () => {
-            if (!this.isRecording && !mainButton.disabled) {
-                this.startRecording();
-            }
-        });
-
-        stopButton.addEventListener('click', () => {
-            if (this.isRecording) {
-                this.stopRecording();
-            }
-        });
-
-        // ✅ ИСПРАВЛЕННЫЙ обработчик sendButton
-        sendButton.addEventListener('click', () => {
-            if (!this.audioBlob) {
-                // Если нет записи - показываем уведомление
-                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-                statusIndicator.innerHTML = '<div class="status-text">⚠️ Сначала сделайте запись</div>';
-                setTimeout(() => {
-                    statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-                }, 2000);
-                return;
-            }
-            
-            if (this.recordingTime < this.minRecordingTime) {
-                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-                statusIndicator.innerHTML = '<div class="status-text">⚠️ Запись слишком короткая</div>';
-                setTimeout(() => {
-                    statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-                }, 2000);
-                return;
-            }
-
-            this.sendMessage();
-        });
-    }
-
-    async startRecording() {
-        try {
-            this.isRecording = true;
-            this.recordingTime = 0;
-            this.recordedChunks = [];
-
-            const mainButton = this.shadowRoot.getElementById('mainButton');
-            const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-            const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-
-            mainButton.classList.add('recording');
-            waveAnimation.classList.add('active'); // ✅ ДОБАВЛЕНО - показываем анимацию
-            statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
-
-            this.stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
-            });
-
-            // Безопасная проверка MIME-типа
-            let mimeType = '';
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                mimeType = 'audio/webm;codecs=opus';
-            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-                mimeType = 'audio/webm';
-            }
-
-            this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
-                }
-            };
-
-            this.mediaRecorder.onstop = () => {
-                this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-                console.log('✅ Аудио готово к отправке');
-            };
-
-            this.mediaRecorder.onerror = (event) => {
-                console.error('Ошибка записи:', event.error);
-                this.handleRecordingError('Произошла ошибка во время записи');
-            };
-
-            this.mediaRecorder.start(100);
-
-            this.recordingTimer = setInterval(() => {
-                this.recordingTime++;
-                this.updateTimer();
-
-                if (this.recordingTime >= this.maxRecordingTime) {
-                    this.stopRecording();
-                }
-            }, 1000);
-
-            this.dispatchEvent(new CustomEvent('recordingStart'));
-
-        } catch (err) {
-            console.error('Ошибка доступа к микрофону:', err);
-            this.handleRecordingError(this.getErrorMessage(err));
-        }
-    }
-
-    stopRecording() {
-        if (!this.isRecording) return;
-
-        this.isRecording = false;
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-            this.recordingTimer = null;
-        }
-
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-
-        mainButton.classList.remove('recording');
-        waveAnimation.classList.remove('active'); // ✅ ДОБАВЛЕНО - скрываем анимацию
-
-        if (this.recordingTime < this.minRecordingTime) {
-            statusIndicator.innerHTML = '<div class="status-text">⚠️ Запись слишком короткая</div>';
-            this.cleanupRecording();
-            setTimeout(() => {
-                statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-            }, 2000);
-        } else {
-            statusIndicator.innerHTML = '<div class="status-text">✅ Запись готова к отправке</div>';
-        }
-
-        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-            this.mediaRecorder.stop();
-        }
-
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
-        }
-
-        this.dispatchEvent(new CustomEvent('recordingStop', {
-            detail: { duration: this.recordingTime }
-        }));
-    }
-
-    updateTimer() {
-        const timer = this.shadowRoot.getElementById('timer');
-        const minutes = Math.floor(this.recordingTime / 60);
-        const seconds = this.recordingTime % 60;
-        timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-
-    async sendMessage() {
-        if (!this.audioBlob) {
-            console.error('Нет аудио для отправки');
-            return;
-        }
-
-        if (this.recordingTime < this.minRecordingTime) {
-            const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-            statusIndicator.innerHTML = '<div class="status-text">⚠️ Запись слишком короткая</div>';
-            return;
-        }
-
-        this.showLoading();
-        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-        
-        statusIndicator.innerHTML = '<div class="status-text">📤 Отправляю сообщение...</div>';
-
-        // Add user message
-        const userMessage = {
-            type: 'user',
-            content: `Голосовое сообщение (${this.recordingTime}с)`,
-            timestamp: new Date()
-        };
-        
-        this.addMessage(userMessage);
-
-        try {
-            // Prepare form data
-            const formData = new FormData();
-            formData.append(this.fieldName, this.audioBlob, 'voice-message.webm');
-
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            this.hideLoading();
-            statusIndicator.innerHTML = '<div class="status-text">✅ Сообщение отправлено</div>';
-
-            const assistantMessage = {
-                type: 'assistant',
-                content: data[this.responseField] || 'Ответ не получен от сервера.',
-                timestamp: new Date()
-            };
-            this.addMessage(assistantMessage);
-
-            // ✅ Очистка после успешной отправки
-            this.cleanupAfterSend();
-
-            setTimeout(() => {
-                statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-            }, 2000);
-
-        } catch (error) {
-            this.hideLoading();
-            console.error('Ошибка при отправке:', error);
-            
-            statusIndicator.innerHTML = '<div class="status-text">❌ Ошибка при отправке</div>';
-
-            const assistantMessage = {
-                type: 'assistant',
-                content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
-                timestamp: new Date()
-            };
-            this.addMessage(assistantMessage);
-
-            setTimeout(() => {
-                statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-            }, 3000);
-        }
-
-        // Dispatch event
-        this.dispatchEvent(new CustomEvent('messageSend', {
-            detail: { duration: this.recordingTime }
-        }));
-    }
-
-    addMessage(message) {
-        this.messages.push(message);
-        const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-        const emptyState = this.shadowRoot.getElementById('emptyState');
-        
-        // Hide empty state on first message
-        if (this.messages.length === 1 && emptyState) {
-            emptyState.style.display = 'none';
-        }
-
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${message.type}`;
-        
-        const bubbleElement = document.createElement('div');
-        bubbleElement.className = 'message-bubble';
-        bubbleElement.textContent = message.content;
-        
-        messageElement.appendChild(bubbleElement);
-        
-        // Add voice indicator for user messages
-        if (message.type === 'user') {
-            const voiceIndicator = document.createElement('div');
-            voiceIndicator.className = 'voice-indicator';
-            voiceIndicator.innerHTML = `
-                <svg class="voice-icon" viewBox="0 0 24 24">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
-                </svg>
-                <span>Голосовое сообщение</span>
-            `;
-            messageElement.appendChild(voiceIndicator);
-        }
-        
-        messagesContainer.appendChild(messageElement);
-        
-        // Scroll to bottom
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    showLoading() {
-        const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
-        loadingIndicator.classList.add('active');
-    }
-
-    hideLoading() {
-        const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
-        loadingIndicator.classList.remove('active');
-    }
-
-    handleRecordingError(message) {
-        this.isRecording = false;
-        
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-            this.recordingTimer = null;
-        }
-
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
-        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-
-        mainButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
-        statusIndicator.innerHTML = `<div class="status-text">❌ ${message}</div>`;
-
-        this.cleanupRecording();
-
-        setTimeout(() => {
-            statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
-        }, 3000);
-    }
-
-    // ✅ ИСПРАВЛЕННЫЙ cleanupRecording - НЕ блокируем кнопку
-    cleanupRecording() {
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
-        }
-        
-        this.mediaRecorder = null;
-        this.audioBlob = null;
-        this.recordedChunks = [];
-        this.recordingTime = 0;
-
-        // ✅ НЕ блокируем кнопку - она всегда видна
-        const timer = this.shadowRoot.getElementById('timer');
-        timer.textContent = '0:00';
-    }
-
-    // ✅ ИСПРАВЛЕННЫЙ cleanupAfterSend - НЕ блокируем кнопку
-    cleanupAfterSend() {
-        this.audioBlob = null;
-        this.recordedChunks = [];
-        this.recordingTime = 0;
-
-        // ✅ НЕ блокируем кнопку - она всегда видна
-        const timer = this.shadowRoot.getElementById('timer');
-        timer.textContent = '0:00';
-    }
-
-    getErrorMessage(error) {
-        if (error.name === 'NotAllowedError') {
-            return 'Доступ к микрофону запрещен';
-        } else if (error.name === 'NotFoundError') {
-            return 'Микрофон не найден';
-        } else if (error.name === 'NotReadableError') {
-            return 'Микрофон уже используется';
-        } else if (error.name === 'OverconstrainedError') {
-            return 'Настройки микрофона не поддерживаются';
-        } else {
-            return 'Ошибка доступа к микрофону';
-        }
-    }
-
-    // Lifecycle method - cleanup when component is removed
-    disconnectedCallback() {
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-        }
-        
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-        }
-        
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-            this.mediaRecorder.stop();
-        }
-    }
-
-    // Public methods for external control
-    clearMessages() {
-        this.messages = [];
-        const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-        const emptyState = this.shadowRoot.getElementById('emptyState');
-        
-        messagesContainer.innerHTML = '';
-        messagesContainer.appendChild(emptyState.cloneNode(true));
-        emptyState.style.display = 'block';
-    }
-
-    setApiUrl(url) {
-        this.apiUrl = url;
-    }
-
-    getMessages() {
-        return [...this.messages];
-    }
-
-    isCurrentlyRecording() {
-        return this.isRecording;
-    }
 }
-
-// Register the custom element
-customElements.define('voice-widget', VoiceWidget);
