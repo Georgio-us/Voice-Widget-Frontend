@@ -1,27 +1,27 @@
 class VoiceWidget extends HTMLElement {
     constructor() {
-    super();
-    this.attachShadow({ mode: 'open' });
-    this.isRecording = false;
-    this.recordingTime = 0;
-    this.recordingTimer = null;
-    this.maxRecordingTime = 30;
-    this.minRecordingTime = 1;
-    this.messages = [];
-    this.mediaRecorder = null;
-    this.stream = null;
-    this.audioBlob = null;
-    this.recordedChunks = [];
-    
-    // Configurable parameters - ВОТ ЭТО ГЛАВНОЕ!
-   this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
-    this.fieldName = this.getAttribute('field-name') || 'audio';
-    this.responseField = this.getAttribute('response-field') || 'response';
-    
-    this.render();
-    this.bindEvents();
-    this.checkBrowserSupport();
-}
+        super();
+        this.attachShadow({ mode: 'open' });
+        this.isRecording = false;
+        this.recordingTime = 0;
+        this.recordingTimer = null;
+        this.maxRecordingTime = 30;
+        this.minRecordingTime = 1;
+        this.messages = [];
+        this.mediaRecorder = null;
+        this.stream = null;
+        this.audioBlob = null;
+        this.recordedChunks = [];
+        
+        // Configurable parameters
+        this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
+        this.fieldName = this.getAttribute('field-name') || 'audio';
+        this.responseField = this.getAttribute('response-field') || 'response';
+        
+        this.render();
+        this.bindEvents();
+        this.checkBrowserSupport();
+    }
 
     checkBrowserSupport() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -657,92 +657,97 @@ class VoiceWidget extends HTMLElement {
         });
     }
 
-   async startRecording() {
-    try {
-        this.isRecording = true;
-        this.recordingTime = 0;
-        this.recordedChunks = [];
+    async startRecording() {
+        try {
+            this.isRecording = true;
+            this.recordingTime = 0;
+            this.recordedChunks = [];
 
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
-        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-        const sendButton = this.shadowRoot.getElementById('sendButton');
+            const mainButton = this.shadowRoot.getElementById('mainButton');
+            const recordingControls = this.shadowRoot.getElementById('recordingControls');
+            const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+            const sendButton = this.shadowRoot.getElementById('sendButton');
 
-        mainButton.classList.add('recording');
-        recordingControls.classList.add('active');
-        statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
-        sendButton.disabled = true;
+            mainButton.classList.add('recording');
+            recordingControls.classList.add('active');
+            statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
+            sendButton.disabled = true; // ✅ Блокируем в начале записи
 
-        this.stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
+            this.stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
+
+            // Безопасная проверка MIME-типа
+            let mimeType = '';
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                mimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                mimeType = 'audio/webm';
             }
-        });
 
-        // 💡 Безопасная проверка MIME-типа
-        let mimeType = '';
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            mimeType = 'audio/webm';
+            this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
+
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.recordedChunks.push(event.data);
+                }
+            };
+
+            // ✅ ИСПРАВЛЕННЫЙ onstop - единственное место где управляем кнопкой
+            this.mediaRecorder.onstop = () => {
+                this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+                
+                console.log('=== ONSTOP DEBUG ===');
+                console.log('recordingTime:', this.recordingTime);
+                console.log('minRecordingTime:', this.minRecordingTime);
+                console.log('audioBlob создан:', this.audioBlob);
+                
+                const sendBtn = this.shadowRoot.getElementById('sendButton');
+                console.log('sendButton найден:', sendBtn);
+                console.log('sendButton disabled ДО изменения:', sendBtn.disabled);
+                
+                // ✅ ТОЛЬКО ЗДЕСЬ решаем включить/выключить кнопку
+                if (this.recordingTime >= this.minRecordingTime) {
+                    sendBtn.disabled = false;
+                    console.log('✅ Кнопка активирована!');
+                } else {
+                    sendBtn.disabled = true;
+                    console.log('❌ Запись слишком короткая');
+                }
+                
+                console.log('sendButton disabled ПОСЛЕ изменения:', sendBtn.disabled);
+                console.log('=== END DEBUG ===');
+            };
+
+            this.mediaRecorder.onerror = (event) => {
+                console.error('Ошибка записи:', event.error);
+                this.handleRecordingError('Произошла ошибка во время записи');
+            };
+
+            this.mediaRecorder.start(100);
+
+            this.recordingTimer = setInterval(() => {
+                this.recordingTime++;
+                this.updateTimer();
+
+                if (this.recordingTime >= this.maxRecordingTime) {
+                    this.stopRecording();
+                }
+            }, 1000);
+
+            this.dispatchEvent(new CustomEvent('recordingStart'));
+
+        } catch (err) {
+            console.error('Ошибка доступа к микрофону:', err);
+            this.handleRecordingError(this.getErrorMessage(err));
         }
-
-        this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
-
-        this.mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                this.recordedChunks.push(event.data);
-            }
-        };
-
-        this.mediaRecorder.onstop = () => {
-    this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-    
-    console.log('=== ONSTOP DEBUG ===');
-    console.log('recordingTime:', this.recordingTime);
-    console.log('minRecordingTime:', this.minRecordingTime);
-    console.log('audioBlob создан:', this.audioBlob);
-    
-    const sendBtn = this.shadowRoot.getElementById('sendButton');
-    console.log('sendButton найден:', sendBtn);
-    console.log('sendButton disabled ДО изменения:', sendBtn.disabled);
-    
-    if (this.recordingTime >= this.minRecordingTime) {
-        sendBtn.disabled = false;
-        console.log('✅ Кнопка должна быть активна!');
-        console.log('sendButton disabled ПОСЛЕ изменения:', sendBtn.disabled);
-    } else {
-        console.log('❌ Запись слишком короткая');
     }
-    
-    console.log('=== END DEBUG ===');
-};
 
-        this.mediaRecorder.onerror = (event) => {
-            console.error('Ошибка записи:', event.error);
-            this.handleRecordingError('Произошла ошибка во время записи');
-        };
-
-        this.mediaRecorder.start(100); // Collect data every 100ms
-
-        this.recordingTimer = setInterval(() => {
-            this.recordingTime++;
-            this.updateTimer();
-
-            if (this.recordingTime >= this.maxRecordingTime) {
-                this.stopRecording();
-            }
-        }, 1000);
-
-        this.dispatchEvent(new CustomEvent('recordingStart'));
-
-    } catch (err) {
-        console.error('Ошибка доступа к микрофону:', err);
-        this.handleRecordingError(this.getErrorMessage(err));
-    }
-}
+    // ✅ ИСПРАВЛЕННЫЙ stopRecording - НЕ трогаем кнопку!
     stopRecording() {
         if (!this.isRecording) return;
 
@@ -767,6 +772,7 @@ class VoiceWidget extends HTMLElement {
             }, 2000);
         } else {
             statusIndicator.innerHTML = '<div class="status-text">✅ Запись готова к отправке</div>';
+            // ✅ НЕ ТРОГАЕМ sendButton.disabled - пусть onstop управляет!
         }
 
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
@@ -807,7 +813,7 @@ class VoiceWidget extends HTMLElement {
         const sendButton = this.shadowRoot.getElementById('sendButton');
         
         statusIndicator.innerHTML = '<div class="status-text">📤 Отправляю сообщение...</div>';
-        sendButton.disabled = true;
+        sendButton.disabled = true; // ✅ Блокируем во время отправки
 
         // Add user message
         const userMessage = {
@@ -844,7 +850,7 @@ class VoiceWidget extends HTMLElement {
             };
             this.addMessage(assistantMessage);
 
-            // Clean up after successful send
+            // ✅ Очистка после успешной отправки
             this.cleanupAfterSend();
 
             setTimeout(() => {
@@ -864,8 +870,10 @@ class VoiceWidget extends HTMLElement {
             };
             this.addMessage(assistantMessage);
 
-            // Re-enable send button on error
-            sendButton.disabled = false;
+            // ✅ При ошибке возвращаем возможность отправить снова
+            if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
+                sendButton.disabled = false;
+            }
 
             setTimeout(() => {
                 statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
@@ -950,6 +958,7 @@ class VoiceWidget extends HTMLElement {
         }, 3000);
     }
 
+    // ✅ ИСПРАВЛЕННЫЙ cleanupRecording - всегда блокируем кнопку при очистке
     cleanupRecording() {
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
@@ -962,16 +971,17 @@ class VoiceWidget extends HTMLElement {
         this.recordingTime = 0;
 
         const sendButton = this.shadowRoot.getElementById('sendButton');
-        sendButton.disabled = true;
+        sendButton.disabled = true; // ✅ При очистке всегда блокируем
     }
 
+    // ✅ ИСПРАВЛЕННЫЙ cleanupAfterSend - очищаем и блокируем кнопку
     cleanupAfterSend() {
         this.audioBlob = null;
         this.recordedChunks = [];
         this.recordingTime = 0;
 
         const sendButton = this.shadowRoot.getElementById('sendButton');
-        sendButton.disabled = true;
+        sendButton.disabled = true; // ✅ После отправки блокируем кнопку
     }
 
     getErrorMessage(error) {
