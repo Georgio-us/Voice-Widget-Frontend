@@ -14,7 +14,7 @@ class VoiceWidget extends HTMLElement {
     this.recordedChunks = [];
     
     // Configurable parameters - ВОТ ЭТО ГЛАВНОЕ!
-    this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-production.up.railway.app/api/ask';
+   this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
     this.fieldName = this.getAttribute('field-name') || 'audio';
     this.responseField = this.getAttribute('response-field') || 'response';
     
