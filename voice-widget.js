@@ -21,6 +21,24 @@ class VoiceWidget extends HTMLElement {
         this.render();
         this.bindEvents();
         this.checkBrowserSupport();
+        this.initializeUI(); // ✅ НОВЫЙ МЕТОД
+    }
+
+    // ✅ НОВЫЙ МЕТОД - инициализация UI с видимой кнопкой
+    initializeUI() {
+        const recordingControls = this.shadowRoot.getElementById('recordingControls');
+        const sendBtn = this.shadowRoot.getElementById('sendButton');
+        
+        // Показываем блок с кнопками сразу
+        recordingControls.style.display = 'flex';
+        recordingControls.classList.add('active');
+        
+        // Делаем кнопку видимой и кликабельной
+        sendBtn.disabled = false;
+        sendBtn.removeAttribute('disabled');
+        sendBtn.style.setProperty('opacity', '1', 'important');
+        sendBtn.style.setProperty('cursor', 'pointer', 'important');
+        sendBtn.style.setProperty('pointer-events', 'auto', 'important');
     }
 
     checkBrowserSupport() {
@@ -209,7 +227,8 @@ class VoiceWidget extends HTMLElement {
                     border: 1px solid rgba(255, 255, 255, 0.3);
                     padding: 20px;
                     margin-bottom: 20px;
-                    display: none;
+                    /* ✅ ИЗМЕНЕНО - теперь всегда показываем блок */
+                    display: flex;
                     align-items: center;
                     justify-content: space-between;
                     box-shadow: 
@@ -217,10 +236,7 @@ class VoiceWidget extends HTMLElement {
                         inset 0 1px 0 rgba(255, 255, 255, 0.3);
                 }
 
-                .recording-controls.active {
-                    display: flex;
-                    animation: slideIn 0.3s ease-out;
-                }
+                /* ✅ УБРАЛИ .recording-controls.active - больше не нужно */
 
                 @keyframes slideIn {
                     from {
@@ -243,6 +259,13 @@ class VoiceWidget extends HTMLElement {
                     display: flex;
                     align-items: center;
                     gap: 3px;
+                    /* ✅ ДОБАВЛЕНО - скрываем анимацию по умолчанию */
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .wave-animation.active {
+                    opacity: 1;
                 }
 
                 .wave-bar {
@@ -299,9 +322,9 @@ class VoiceWidget extends HTMLElement {
                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
                 }
 
+                /* ✅ ИЗМЕНЕНО - убрали блокировку disabled кнопок */
                 .control-button:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
+                    /* Убрали стили disabled - управляем через JS */
                 }
 
                 .stop-button {
@@ -588,7 +611,7 @@ class VoiceWidget extends HTMLElement {
 
                 <div class="recording-controls" id="recordingControls">
                     <div class="recording-indicator">
-                        <div class="wave-animation">
+                        <div class="wave-animation" id="waveAnimation">
                             <div class="wave-bar"></div>
                             <div class="wave-bar"></div>
                             <div class="wave-bar"></div>
@@ -603,7 +626,8 @@ class VoiceWidget extends HTMLElement {
                                 <rect x="6" y="6" width="12" height="12" rx="2"/>
                             </svg>
                         </button>
-                        <button class="control-button send-button" id="sendButton" title="Отправить сообщение" disabled>
+                        <!-- ✅ ИЗМЕНЕНО - убрали disabled из HTML -->
+                        <button class="control-button send-button" id="sendButton" title="Отправить сообщение">
                             <svg class="button-icon" viewBox="0 0 24 24">
                                 <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
                             </svg>
@@ -650,10 +674,28 @@ class VoiceWidget extends HTMLElement {
             }
         });
 
+        // ✅ ИСПРАВЛЕННЫЙ обработчик sendButton
         sendButton.addEventListener('click', () => {
-            if (this.audioBlob && !sendButton.disabled) {
-                this.sendMessage();
+            if (!this.audioBlob) {
+                // Если нет записи - показываем уведомление
+                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+                statusIndicator.innerHTML = '<div class="status-text">⚠️ Сначала сделайте запись</div>';
+                setTimeout(() => {
+                    statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
+                }, 2000);
+                return;
             }
+            
+            if (this.recordingTime < this.minRecordingTime) {
+                const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+                statusIndicator.innerHTML = '<div class="status-text">⚠️ Запись слишком короткая</div>';
+                setTimeout(() => {
+                    statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
+                }, 2000);
+                return;
+            }
+
+            this.sendMessage();
         });
     }
 
@@ -664,14 +706,12 @@ class VoiceWidget extends HTMLElement {
             this.recordedChunks = [];
 
             const mainButton = this.shadowRoot.getElementById('mainButton');
-            const recordingControls = this.shadowRoot.getElementById('recordingControls');
             const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-            const sendButton = this.shadowRoot.getElementById('sendButton');
+            const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
 
             mainButton.classList.add('recording');
-            recordingControls.classList.add('active');
+            waveAnimation.classList.add('active'); // ✅ ДОБАВЛЕНО - показываем анимацию
             statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
-            sendButton.disabled = true; // ✅ Блокируем в начале записи
 
             this.stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
@@ -697,38 +737,10 @@ class VoiceWidget extends HTMLElement {
                 }
             };
 
-           // ✅ ИСПРАВЛЕННЫЙ onstop с принудительными стилями
-this.mediaRecorder.onstop = () => {
-    this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-    
-    console.log('=== ONSTOP DEBUG ===');
-    console.log('recordingTime:', this.recordingTime);
-    console.log('minRecordingTime:', this.minRecordingTime);
-    console.log('audioBlob создан:', this.audioBlob);
-    
-    const sendBtn = this.shadowRoot.getElementById('sendButton');
-    console.log('sendButton найден:', sendBtn);
-    console.log('sendButton disabled ДО изменения:', sendBtn.disabled);
-    
-    // ✅ ТОЛЬКО ЗДЕСЬ решаем включить/выключить кнопку
-    if (this.recordingTime >= this.minRecordingTime) {
-        sendBtn.disabled = false;
-        // ✅ ПРИНУДИТЕЛЬНО СБРАСЫВАЕМ CSS:
-        sendBtn.style.opacity = '1';
-        sendBtn.style.cursor = 'pointer';
-        sendBtn.style.pointerEvents = 'auto';
-        console.log('✅ Кнопка активирована принудительно!');
-    } else {
-        sendBtn.disabled = true;
-        sendBtn.style.opacity = '0.5';
-        sendBtn.style.cursor = 'not-allowed';
-        sendBtn.style.pointerEvents = 'none';
-        console.log('❌ Запись слишком короткая');
-    }
-    
-    console.log('sendButton disabled ПОСЛЕ изменения:', sendBtn.disabled);
-    console.log('=== END DEBUG ===');
-};
+            this.mediaRecorder.onstop = () => {
+                this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+                console.log('✅ Аудио готово к отправке');
+            };
 
             this.mediaRecorder.onerror = (event) => {
                 console.error('Ошибка записи:', event.error);
@@ -754,7 +766,6 @@ this.mediaRecorder.onstop = () => {
         }
     }
 
-    // ✅ ИСПРАВЛЕННЫЙ stopRecording - НЕ трогаем кнопку!
     stopRecording() {
         if (!this.isRecording) return;
 
@@ -765,11 +776,11 @@ this.mediaRecorder.onstop = () => {
         }
 
         const mainButton = this.shadowRoot.getElementById('mainButton');
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
         const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
 
         mainButton.classList.remove('recording');
-        recordingControls.classList.remove('active');
+        waveAnimation.classList.remove('active'); // ✅ ДОБАВЛЕНО - скрываем анимацию
 
         if (this.recordingTime < this.minRecordingTime) {
             statusIndicator.innerHTML = '<div class="status-text">⚠️ Запись слишком короткая</div>';
@@ -779,7 +790,6 @@ this.mediaRecorder.onstop = () => {
             }, 2000);
         } else {
             statusIndicator.innerHTML = '<div class="status-text">✅ Запись готова к отправке</div>';
-            // ✅ НЕ ТРОГАЕМ sendButton.disabled - пусть onstop управляет!
         }
 
         if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
@@ -817,10 +827,8 @@ this.mediaRecorder.onstop = () => {
 
         this.showLoading();
         const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-        const sendButton = this.shadowRoot.getElementById('sendButton');
         
         statusIndicator.innerHTML = '<div class="status-text">📤 Отправляю сообщение...</div>';
-        sendButton.disabled = true; // ✅ Блокируем во время отправки
 
         // Add user message
         const userMessage = {
@@ -876,11 +884,6 @@ this.mediaRecorder.onstop = () => {
                 timestamp: new Date()
             };
             this.addMessage(assistantMessage);
-
-            // ✅ При ошибке возвращаем возможность отправить снова
-            if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
-                sendButton.disabled = false;
-            }
 
             setTimeout(() => {
                 statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
@@ -953,9 +956,10 @@ this.mediaRecorder.onstop = () => {
         const mainButton = this.shadowRoot.getElementById('mainButton');
         const recordingControls = this.shadowRoot.getElementById('recordingControls');
         const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
 
         mainButton.classList.remove('recording');
-        recordingControls.classList.remove('active');
+        waveAnimation.classList.remove('active');
         statusIndicator.innerHTML = `<div class="status-text">❌ ${message}</div>`;
 
         this.cleanupRecording();
@@ -965,7 +969,7 @@ this.mediaRecorder.onstop = () => {
         }, 3000);
     }
 
-    // ✅ ИСПРАВЛЕННЫЙ cleanupRecording - всегда блокируем кнопку при очистке
+    // ✅ ИСПРАВЛЕННЫЙ cleanupRecording - НЕ блокируем кнопку
     cleanupRecording() {
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
@@ -977,18 +981,20 @@ this.mediaRecorder.onstop = () => {
         this.recordedChunks = [];
         this.recordingTime = 0;
 
-        const sendButton = this.shadowRoot.getElementById('sendButton');
-        sendButton.disabled = true; // ✅ При очистке всегда блокируем
+        // ✅ НЕ блокируем кнопку - она всегда видна
+        const timer = this.shadowRoot.getElementById('timer');
+        timer.textContent = '0:00';
     }
 
-    // ✅ ИСПРАВЛЕННЫЙ cleanupAfterSend - очищаем и блокируем кнопку
+    // ✅ ИСПРАВЛЕННЫЙ cleanupAfterSend - НЕ блокируем кнопку
     cleanupAfterSend() {
         this.audioBlob = null;
         this.recordedChunks = [];
         this.recordingTime = 0;
 
-        const sendButton = this.shadowRoot.getElementById('sendButton');
-        sendButton.disabled = true; // ✅ После отправки блокируем кнопку
+        // ✅ НЕ блокируем кнопку - она всегда видна
+        const timer = this.shadowRoot.getElementById('timer');
+        timer.textContent = '0:00';
     }
 
     getErrorMessage(error) {
