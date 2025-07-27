@@ -657,75 +657,78 @@ class VoiceWidget extends HTMLElement {
         });
     }
 
-    async startRecording() {
-        try {
-            this.isRecording = true;
-            this.recordingTime = 0;
-            this.recordedChunks = [];
+   async startRecording() {
+    try {
+        this.isRecording = true;
+        this.recordingTime = 0;
+        this.recordedChunks = [];
 
-            const mainButton = this.shadowRoot.getElementById('mainButton');
-            const recordingControls = this.shadowRoot.getElementById('recordingControls');
-            const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-            const sendButton = this.shadowRoot.getElementById('sendButton');
+        const mainButton = this.shadowRoot.getElementById('mainButton');
+        const recordingControls = this.shadowRoot.getElementById('recordingControls');
+        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+        const sendButton = this.shadowRoot.getElementById('sendButton');
 
-            mainButton.classList.add('recording');
-            recordingControls.classList.add('active');
-            statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
-            sendButton.disabled = true;
+        mainButton.classList.add('recording');
+        recordingControls.classList.add('active');
+        statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
+        sendButton.disabled = true;
 
-            this.stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
-            });
+        this.stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
 
-            this.mediaRecorder = new MediaRecorder(this.stream, {
-                mimeType: 'audio/webm;codecs=opus'
-            });
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
-                }
-            };
-
-            this.mediaRecorder.onstop = () => {
-                this.audioBlob = new Blob(this.recordedChunks, { 
-                    type: 'audio/webm;codecs=opus' 
-                });
-                
-                // Enable send button only if recording is valid
-                if (this.recordingTime >= this.minRecordingTime) {
-                    sendButton.disabled = false;
-                }
-            };
-
-            this.mediaRecorder.onerror = (event) => {
-                console.error('Ошибка записи:', event.error);
-                this.handleRecordingError('Произошла ошибка во время записи');
-            };
-
-            this.mediaRecorder.start(100); // Collect data every 100ms
-
-            this.recordingTimer = setInterval(() => {
-                this.recordingTime++;
-                this.updateTimer();
-
-                if (this.recordingTime >= this.maxRecordingTime) {
-                    this.stopRecording();
-                }
-            }, 1000);
-
-            this.dispatchEvent(new CustomEvent('recordingStart'));
-
-        } catch (err) {
-            console.error('Ошибка доступа к микрофону:', err);
-            this.handleRecordingError(this.getErrorMessage(err));
+        // 💡 Безопасная проверка MIME-типа
+        let mimeType = '';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            mimeType = 'audio/webm';
         }
-    }
 
+        this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
+
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+            }
+        };
+
+        this.mediaRecorder.onstop = () => {
+            this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+            
+            // Enable send button only if recording is valid
+            if (this.recordingTime >= this.minRecordingTime) {
+                sendButton.disabled = false;
+            }
+        };
+
+        this.mediaRecorder.onerror = (event) => {
+            console.error('Ошибка записи:', event.error);
+            this.handleRecordingError('Произошла ошибка во время записи');
+        };
+
+        this.mediaRecorder.start(100); // Collect data every 100ms
+
+        this.recordingTimer = setInterval(() => {
+            this.recordingTime++;
+            this.updateTimer();
+
+            if (this.recordingTime >= this.maxRecordingTime) {
+                this.stopRecording();
+            }
+        }, 1000);
+
+        this.dispatchEvent(new CustomEvent('recordingStart'));
+
+    } catch (err) {
+        console.error('Ошибка доступа к микрофону:', err);
+        this.handleRecordingError(this.getErrorMessage(err));
+    }
+}
     stopRecording() {
         if (!this.isRecording) return;
 
