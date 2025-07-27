@@ -12,7 +12,7 @@ class VoiceWidget extends HTMLElement {
         this.stream = null;
         this.audioBlob = null;
         this.recordedChunks = [];
-
+        
         // Новые свойства для превью
         this.isInPreviewMode = false;
         this.speechRecognition = null;
@@ -35,7 +35,10 @@ class VoiceWidget extends HTMLElement {
         this.initializeUI();
         this.initSpeechRecognition();
     }
-
+        // Проверка виджета
+        connectedCallback() {
+        console.log('✅ Виджет подключён!');
+    }
     initializeUI() {
         const recordingControls = this.shadowRoot.getElementById('recordingControls');
         const sendBtn = this.shadowRoot.getElementById('sendButton');
@@ -1092,3 +1095,4 @@ class VoiceWidget extends HTMLElement {
         `;
     }
 }
+customElements.define('voice-widget', VoiceWidget);

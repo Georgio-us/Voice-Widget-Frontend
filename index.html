@@ -1,23 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Widget Demo</title>
-    <link rel="stylesheet" href="voice-widget.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Widget Demo</title>
+  <link rel="stylesheet" href="voice-widget.css" />
 </head>
 <body>
-    <div class="demo-container">
-        <h1 class="demo-title">Voice Assistant Widget</h1>
-        <p class="demo-subtitle">Голосовой помощник в стиле Apple Liquid Glass</p>
-    </div>
+  <div class="demo-container">
+    <h1 class="demo-title">Voice Assistant Widget</h1>
+    <p class="demo-subtitle">Голосовой помощник в стиле Apple Liquid Glass</p>
+  </div>
 
-    <voice-widget 
+  <!-- Компонент виджета -->
+  <voice-widget
     api-url="https://voice-widget-backend-production.up.railway.app/api/audio/upload"
     field-name="audio"
     response-field="reply">
-</voice-widget>
+  </voice-widget>
 
-    <script src="voice-widget.js"></script>
+  <!-- Подключение JS-модуля -->
+  <script type="module" src="voice-widget.js"></script>
 </body>
 </html>
