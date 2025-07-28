@@ -935,7 +935,7 @@ class VoiceWidget extends HTMLElement {
             this.hideLoading();
             statusIndicator.innerHTML = '<div class="status-text">✅ Сообщение отправлено</div>';
 
-            // ✅ ОБНОВЛЕНО - Показываем краткое резюме пользователю
+            // ✅ ИСПРАВЛЕНО - Показываем краткое резюме пользователю
             if (data.summary) {
                 // Обновляем последнее сообщение пользователя с кратким резюме
                 const lastUserMessage = this.messages[this.messages.length - 1];
@@ -943,8 +943,8 @@ class VoiceWidget extends HTMLElement {
                     lastUserMessage.content = data.summary; // ✅ Показываем только краткое резюме
                     lastUserMessage.fullTranscription = data.transcription; // ✅ Сохраняем полную транскрипцию про запас
                     
-                    // Обновляем отображение в DOM
-                    const userMessages = document.querySelectorAll('.message.user');
+                    // ✅ ИСПРАВЛЕНО - Обновляем отображение в DOM через shadowRoot
+                    const userMessages = this.shadowRoot.querySelectorAll('.message.user');
                     const lastUserMessageElement = userMessages[userMessages.length - 1];
                     if (lastUserMessageElement) {
                         const bubble = lastUserMessageElement.querySelector('.message-bubble');
