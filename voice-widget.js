@@ -16,7 +16,7 @@ class VoiceWidget extends HTMLElement {
         // Configurable parameters
         this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
         this.fieldName = this.getAttribute('field-name') || 'audio';
-        this.responseField = this.getAttribute('response-field') || 'response';
+        this.responseField = this.getAttribute('response-field') || 'response'; // ✅ ОБНОВЛЕНО - теперь 'response'
         
         this.render();
         this.bindEvents();
@@ -935,6 +935,26 @@ class VoiceWidget extends HTMLElement {
             this.hideLoading();
             statusIndicator.innerHTML = '<div class="status-text">✅ Сообщение отправлено</div>';
 
+            // ✅ ОБНОВЛЕНО - Показываем краткое резюме пользователю
+            if (data.summary) {
+                // Обновляем последнее сообщение пользователя с кратким резюме
+                const lastUserMessage = this.messages[this.messages.length - 1];
+                if (lastUserMessage && lastUserMessage.type === 'user') {
+                    lastUserMessage.content = data.summary; // ✅ Показываем только краткое резюме
+                    lastUserMessage.fullTranscription = data.transcription; // ✅ Сохраняем полную транскрипцию про запас
+                    
+                    // Обновляем отображение в DOM
+                    const userMessages = document.querySelectorAll('.message.user');
+                    const lastUserMessageElement = userMessages[userMessages.length - 1];
+                    if (lastUserMessageElement) {
+                        const bubble = lastUserMessageElement.querySelector('.message-bubble');
+                        if (bubble) {
+                            bubble.textContent = data.summary; // ✅ Показываем краткое резюме
+                        }
+                    }
+                }
+            }
+
             const assistantMessage = {
                 type: 'assistant',
                 content: data[this.responseField] || 'Ответ не получен от сервера.',
@@ -1020,7 +1040,7 @@ class VoiceWidget extends HTMLElement {
     }
 
     // ✅ НОВЫЙ МЕТОД - эффект машинной печати
-    typeWriter(element, text, speed = 15) {
+    typeWriter(element, text, speed = 30) {
         let i = 0;
         const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
         
