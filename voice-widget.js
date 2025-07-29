@@ -13,15 +13,31 @@ class VoiceWidget extends HTMLElement {
         this.audioBlob = null;
         this.recordedChunks = [];
         
+        // ✅ ДОБАВЛЕНО - SessionId для контекста диалогов
+        this.sessionId = this.getOrCreateSessionId();
+        
         // Configurable parameters
         this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
         this.fieldName = this.getAttribute('field-name') || 'audio';
-        this.responseField = this.getAttribute('response-field') || 'response'; // ✅ ОБНОВЛЕНО - теперь 'response'
+        this.responseField = this.getAttribute('response-field') || 'response';
         
         this.render();
         this.bindEvents();
         this.checkBrowserSupport();
         this.initializeUI();
+    }
+
+    // ✅ НОВЫЙ МЕТОД - Генерация/получение sessionId
+    getOrCreateSessionId() {
+        let sessionId = localStorage.getItem('voiceWidgetSessionId');
+        if (!sessionId) {
+            sessionId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('voiceWidgetSessionId', sessionId);
+            console.log('✨ Создан новый sessionId:', sessionId);
+        } else {
+            console.log('📋 Использую существующий sessionId:', sessionId);
+        }
+        return sessionId;
     }
 
     initializeUI() {
@@ -218,7 +234,6 @@ class VoiceWidget extends HTMLElement {
                     border: 1px solid rgba(255, 255, 255, 0.3);
                     padding: 20px;
                     margin-bottom: 20px;
-                    /* ✅ ИЗМЕНЕНО - скрыто по умолчанию */
                     display: none;
                     align-items: center;
                     justify-content: space-between;
@@ -227,7 +242,6 @@ class VoiceWidget extends HTMLElement {
                         inset 0 1px 0 rgba(255, 255, 255, 0.3);
                 }
 
-                /* ✅ ВЕРНУЛИ .recording-controls.active */
                 .recording-controls.active {
                     display: flex;
                     animation: slideIn 0.3s ease-out;
@@ -413,7 +427,6 @@ class VoiceWidget extends HTMLElement {
                     position: relative;
                 }
 
-                /* ✅ ДОБАВЛЕНО - стили для курсора печати */
                 .typing-cursor {
                     color: #FF7A00;
                     font-weight: bold;
@@ -670,23 +683,20 @@ class VoiceWidget extends HTMLElement {
             }
         });
 
-        // ✅ ИСПРАВЛЕНО - кнопка STOP = ОТМЕНА записи
+        // Кнопка STOP = ОТМЕНА записи
         stopButton.addEventListener('click', () => {
             if (this.isRecording) {
-                this.cancelRecording(); // Отменяет и полностью сбрасывает
+                this.cancelRecording();
             }
         });
 
-        // ✅ ИСПРАВЛЕНО - кнопка SEND = ОТПРАВИТЬ запись
+        // Кнопка SEND = ОТПРАВИТЬ запись
         sendButton.addEventListener('click', () => {
             if (this.isRecording) {
-                // Во время записи - завершаем и отправляем
                 this.finishAndSend();
             } else if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
-                // Если есть готовая запись - отправляем
                 this.sendMessage();
             } else {
-                // Нет записи - показываем предупреждение
                 this.showWarning('⚠️ Сначала сделайте запись');
             }
         });
@@ -697,7 +707,7 @@ class VoiceWidget extends HTMLElement {
             this.isRecording = true;
             this.recordingTime = 0;
             this.recordedChunks = [];
-            this.audioBlob = null; // Очищаем предыдущую запись
+            this.audioBlob = null;
 
             const mainButton = this.shadowRoot.getElementById('mainButton');
             const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
@@ -708,7 +718,6 @@ class VoiceWidget extends HTMLElement {
             waveAnimation.classList.add('active');
             statusIndicator.innerHTML = '<div class="status-text">🔴 Запись...</div>';
             
-            // ✅ ДОБАВЛЕНО - показываем блок с кнопками
             recordingControls.style.display = 'flex';
             recordingControls.classList.add('active');
 
@@ -720,7 +729,6 @@ class VoiceWidget extends HTMLElement {
                 }
             });
 
-            // Определяем MIME-тип
             let mimeType = '';
             if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
                 mimeType = 'audio/webm;codecs=opus';
@@ -737,7 +745,6 @@ class VoiceWidget extends HTMLElement {
             };
 
             this.mediaRecorder.onstop = () => {
-                // Создаем blob только если не отменено
                 if (this.recordedChunks.length > 0) {
                     this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
                     console.log('✅ Аудио готово к отправке');
@@ -751,12 +758,10 @@ class VoiceWidget extends HTMLElement {
 
             this.mediaRecorder.start(100);
 
-            // Таймер записи
             this.recordingTimer = setInterval(() => {
                 this.recordingTime++;
                 this.updateTimer();
 
-                // Автоматическая остановка при достижении лимита
                 if (this.recordingTime >= this.maxRecordingTime) {
                     this.finishAndSend();
                 }
@@ -770,13 +775,11 @@ class VoiceWidget extends HTMLElement {
         }
     }
 
-    // ✅ НОВЫЙ МЕТОД - отмена записи (кнопка STOP)
     cancelRecording() {
         if (!this.isRecording) return;
 
         console.log('🔴 Отменяем запись');
 
-        // Останавливаем запись
         this.isRecording = false;
         
         if (this.recordingTimer) {
@@ -784,18 +787,15 @@ class VoiceWidget extends HTMLElement {
             this.recordingTimer = null;
         }
 
-        // Останавливаем MediaRecorder
         if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
             this.mediaRecorder.stop();
         }
 
-        // Останавливаем поток
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
         }
 
-        // Сбрасываем UI
         const mainButton = this.shadowRoot.getElementById('mainButton');
         const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
         const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
@@ -803,15 +803,11 @@ class VoiceWidget extends HTMLElement {
 
         mainButton.classList.remove('recording');
         waveAnimation.classList.remove('active');
-        
-        // ✅ ДОБАВЛЕНО - скрываем блок с кнопками
         recordingControls.style.display = 'none';
         recordingControls.classList.remove('active');
 
-        // Полная очистка состояния
         this.cleanupRecording();
 
-        // Показываем статус отмены
         statusIndicator.innerHTML = '<div class="status-text">❌ Запись отменена</div>';
         setTimeout(() => {
             statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
@@ -820,13 +816,11 @@ class VoiceWidget extends HTMLElement {
         this.dispatchEvent(new CustomEvent('recordingCancelled'));
     }
 
-    // ✅ НОВЫЙ МЕТОД - завершение записи и отправка (кнопка SEND)
     async finishAndSend() {
         if (!this.isRecording) return;
 
         console.log('🟢 Завершаем запись и отправляем');
 
-        // Проверяем минимальную длину
         if (this.recordingTime < this.minRecordingTime) {
             this.showWarning('⚠️ Запись слишком короткая');
             return;
@@ -835,7 +829,6 @@ class VoiceWidget extends HTMLElement {
         const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
         statusIndicator.innerHTML = '<div class="status-text">⏳ Завершаем запись...</div>';
 
-        // Останавливаем запись
         this.isRecording = false;
         
         if (this.recordingTimer) {
@@ -843,14 +836,12 @@ class VoiceWidget extends HTMLElement {
             this.recordingTimer = null;
         }
 
-        // Сбрасываем UI
         const mainButton = this.shadowRoot.getElementById('mainButton');
         const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
 
         mainButton.classList.remove('recording');
         waveAnimation.classList.remove('active');
 
-        // Ждем создания blob и отправляем
         await new Promise((resolve) => {
             this.mediaRecorder.onstop = () => {
                 if (this.recordedChunks.length > 0) {
@@ -865,17 +856,14 @@ class VoiceWidget extends HTMLElement {
             this.mediaRecorder.stop();
         });
 
-        // Останавливаем поток
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
         }
 
-        // Отправляем сообщение
         this.sendMessage();
     }
 
-    // ✅ ВСПОМОГАТЕЛЬНЫЙ МЕТОД - показать предупреждение
     showWarning(message) {
         const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
         statusIndicator.innerHTML = `<div class="status-text">${message}</div>`;
@@ -907,7 +895,6 @@ class VoiceWidget extends HTMLElement {
         
         statusIndicator.innerHTML = '<div class="status-text">📤 Отправляю сообщение...</div>';
 
-        // Добавляем пользовательское сообщение
         const userMessage = {
             type: 'user',
             content: `Голосовое сообщение (${this.recordingTime}с)`,
@@ -917,9 +904,12 @@ class VoiceWidget extends HTMLElement {
         this.addMessage(userMessage);
 
         try {
-            // Подготавливаем данные для отправки
+            // ✅ ОБНОВЛЕНО - Подготавливаем данные для отправки с sessionId
             const formData = new FormData();
             formData.append(this.fieldName, this.audioBlob, 'voice-message.webm');
+            formData.append('sessionId', this.sessionId);
+
+            console.log('📤 Отправляем с sessionId:', this.sessionId);
 
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
@@ -932,24 +922,29 @@ class VoiceWidget extends HTMLElement {
 
             const data = await response.json();
             
+            // ✅ ДОБАВЛЕНО - Логируем ответ для отладки
+            console.log('📥 Ответ от сервера:', {
+                sessionId: data.sessionId,
+                messageCount: data.messageCount,
+                tokens: data.tokens,
+                timing: data.timing
+            });
+            
             this.hideLoading();
             statusIndicator.innerHTML = '<div class="status-text">✅ Сообщение отправлено</div>';
 
-            // ✅ ИСПРАВЛЕНО - Показываем краткое резюме пользователю
-            if (data.summary) {
-                // Обновляем последнее сообщение пользователя с кратким резюме
+            // ✅ ИСПРАВЛЕНО - Используем transcription вместо summary
+            if (data.transcription) {
                 const lastUserMessage = this.messages[this.messages.length - 1];
                 if (lastUserMessage && lastUserMessage.type === 'user') {
-                    lastUserMessage.content = data.summary; // ✅ Показываем только краткое резюме
-                    lastUserMessage.fullTranscription = data.transcription; // ✅ Сохраняем полную транскрипцию про запас
+                    lastUserMessage.content = data.transcription;
                     
-                    // ✅ ИСПРАВЛЕНО - Обновляем отображение в DOM через shadowRoot
                     const userMessages = this.shadowRoot.querySelectorAll('.message.user');
                     const lastUserMessageElement = userMessages[userMessages.length - 1];
                     if (lastUserMessageElement) {
                         const bubble = lastUserMessageElement.querySelector('.message-bubble');
                         if (bubble) {
-                            bubble.textContent = data.summary; // ✅ Показываем краткое резюме
+                            bubble.textContent = data.transcription;
                         }
                     }
                 }
@@ -962,7 +957,6 @@ class VoiceWidget extends HTMLElement {
             };
             this.addMessage(assistantMessage);
 
-            // ✅ Очистка после успешной отправки
             this.cleanupAfterSend();
 
             setTimeout(() => {
@@ -987,7 +981,6 @@ class VoiceWidget extends HTMLElement {
             }, 3000);
         }
 
-        // Отправляем событие
         this.dispatchEvent(new CustomEvent('messageSend', {
             detail: { duration: this.recordingTime }
         }));
@@ -998,7 +991,6 @@ class VoiceWidget extends HTMLElement {
         const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
         const emptyState = this.shadowRoot.getElementById('emptyState');
         
-        // Скрываем пустое состояние при первом сообщении
         if (this.messages.length === 1 && emptyState) {
             emptyState.style.display = 'none';
         }
@@ -1009,17 +1001,15 @@ class VoiceWidget extends HTMLElement {
         const bubbleElement = document.createElement('div');
         bubbleElement.className = 'message-bubble';
         
-        // ✅ ДОБАВЛЕНО - машинная печать для ассистента
         if (message.type === 'assistant') {
-            bubbleElement.textContent = ''; // Начинаем с пустого текста
-            this.typeWriter(bubbleElement, message.content, 30); // 30ms между символами
+            bubbleElement.textContent = '';
+            this.typeWriter(bubbleElement, message.content, 30);
         } else {
             bubbleElement.textContent = message.content;
         }
         
         messageElement.appendChild(bubbleElement);
         
-        // Добавляем индикатор голосового сообщения для пользователя
         if (message.type === 'user') {
             const voiceIndicator = document.createElement('div');
             voiceIndicator.className = 'voice-indicator';
@@ -1034,17 +1024,13 @@ class VoiceWidget extends HTMLElement {
         }
         
         messagesContainer.appendChild(messageElement);
-        
-        // Прокручиваем к низу
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
-    // ✅ НОВЫЙ МЕТОД - эффект машинной печати
     typeWriter(element, text, speed = 30) {
         let i = 0;
         const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
         
-        // Добавляем курсор печати
         const cursor = document.createElement('span');
         cursor.className = 'typing-cursor';
         cursor.textContent = '|';
@@ -1052,18 +1038,12 @@ class VoiceWidget extends HTMLElement {
         
         const typeInterval = setInterval(() => {
             if (i < text.length) {
-                // Вставляем символ перед курсором
                 element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
                 i++;
-                
-                // Автоскролл во время печати
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             } else {
-                // Убираем курсор когда текст напечатан
                 cursor.remove();
                 clearInterval(typeInterval);
-                
-                // Финальный скролл
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
         }, speed);
@@ -1096,7 +1076,6 @@ class VoiceWidget extends HTMLElement {
         waveAnimation.classList.remove('active');
         statusIndicator.innerHTML = `<div class="status-text">❌ ${message}</div>`;
         
-        // ✅ ДОБАВЛЕНО - скрываем блок при ошибке
         recordingControls.style.display = 'none';
         recordingControls.classList.remove('active');
 
@@ -1107,7 +1086,6 @@ class VoiceWidget extends HTMLElement {
         }, 3000);
     }
 
-    // ✅ ИСПРАВЛЕННЫЙ cleanupRecording - полная очистка
     cleanupRecording() {
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
@@ -1119,22 +1097,18 @@ class VoiceWidget extends HTMLElement {
         this.recordedChunks = [];
         this.recordingTime = 0;
 
-        // Сбрасываем таймер
         const timer = this.shadowRoot.getElementById('timer');
         timer.textContent = '0:00';
     }
 
-    // ✅ ИСПРАВЛЕННЫЙ cleanupAfterSend - очистка после отправки
     cleanupAfterSend() {
         this.audioBlob = null;
         this.recordedChunks = [];
         this.recordingTime = 0;
 
-        // Сбрасываем таймер
         const timer = this.shadowRoot.getElementById('timer');
         timer.textContent = '0:00';
         
-        // ✅ ДОБАВЛЕНО - скрываем блок с кнопками после отправки
         const recordingControls = this.shadowRoot.getElementById('recordingControls');
         recordingControls.style.display = 'none';
         recordingControls.classList.remove('active');
@@ -1154,7 +1128,6 @@ class VoiceWidget extends HTMLElement {
         }
     }
 
-    // Lifecycle method - очистка при удалении компонента
     disconnectedCallback() {
         if (this.recordingTimer) {
             clearInterval(this.recordingTimer);
@@ -1166,6 +1139,28 @@ class VoiceWidget extends HTMLElement {
         
         if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
             this.mediaRecorder.stop();
+        }
+    }
+
+    // ✅ НОВЫЕ МЕТОДЫ - Управление сессией
+    clearSession() {
+        localStorage.removeItem('voiceWidgetSessionId');
+        this.sessionId = this.getOrCreateSessionId();
+        console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
+    }
+
+    getCurrentSessionId() {
+        return this.sessionId;
+    }
+
+    logSessionStats(responseData) {
+        if (responseData.messageCount && responseData.tokens && responseData.timing) {
+            console.log('📊 Статистика сессии:', {
+                sessionId: responseData.sessionId,
+                messageCount: responseData.messageCount,
+                totalTokens: responseData.tokens.total,
+                totalTime: responseData.timing.total + 'ms'
+            });
         }
     }
 
