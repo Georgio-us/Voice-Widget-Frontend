@@ -537,6 +537,196 @@ class VoiceWidget extends HTMLElement {
                     }
                 }
 
+                /* Text Input Section */
+                .text-input-section {
+                    margin-top: 20px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.2);
+                    padding-top: 20px;
+                }
+
+                .text-input-container {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 16px;
+                }
+
+                .text-input {
+                    flex: 1;
+                    background: rgba(255, 255, 255, 0.3);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 8px;
+                    padding: 12px 20px;
+                    font-size: 14px;
+                    color: #1d1d1f;
+                    outline: none;
+                    transition: all 0.3s ease;
+                    font-family: inherit;
+                    min-height: 38px;
+                }
+
+                .text-input::placeholder {
+                    color: rgba(29, 29, 31, 0.6);
+                    position: absolute;
+                    bottom: 8px;
+                    left: 20px;
+                    font-size: 12px;
+                }
+
+                .text-input:focus {
+                    border-color: rgba(255, 122, 0, 0.5);
+                    box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.1);
+                    background: rgba(255, 255, 255, 0.4);
+                }
+
+                .send-text-button {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 50%;
+                    border: none;
+                    background: linear-gradient(135deg, #FF7A00, #e66800);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                    box-shadow: 0 4px 12px rgba(255, 122, 0, 0.3);
+                }
+
+                .send-text-button:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 6px 16px rgba(255, 122, 0, 0.4);
+                }
+
+                .send-text-button:active {
+                    transform: scale(0.95);
+                }
+
+                .send-icon {
+                    width: 20px;
+                    height: 20px;
+                    fill: white;
+                    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+                }
+
+                .function-icons {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 16px;
+                    flex-wrap: nowrap;
+                }
+
+                .function-icon {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(255, 255, 255, 0.2);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 122, 0, 0.3);
+                    border-radius: 12px;
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-size: 13px;
+                    color: rgba(29, 29, 31, 0.8);
+                    font-weight: 500;
+                    font-family: inherit;
+                }
+
+                .function-icon:hover {
+                    transform: scale(1.05);
+                    background: rgba(255, 255, 255, 0.3);
+                    border-color: rgba(255, 122, 0, 0.7);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                }
+
+                .function-icon:active {
+                    transform: scale(0.95);
+                }
+
+                .function-icon svg {
+                    width: 16px;
+                    height: 16px;
+                    fill: rgba(29, 29, 31, 0.7);
+                }
+
+                .help-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 255, 255, 0.2);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 122, 0, 0.3);
+                    border-radius: 50%;
+                    width: 36px;
+                    height: 36px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-family: inherit;
+                    margin-left: auto;
+                    position: relative;
+                }
+
+                .help-icon:hover {
+                    transform: scale(1.05);
+                    background: rgba(255, 255, 255, 0.3);
+                    border-color: rgba(255, 122, 0, 0.7);
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                }
+
+                .help-icon:active {
+                    transform: scale(0.95);
+                }
+
+                .help-icon span {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: rgba(29, 29, 31, 0.8);
+                }
+
+                .help-tooltip {
+                    position: absolute;
+                    bottom: 120%;
+                    right: 0;
+                    background: rgba(255, 255, 255, 0.4);
+                    backdrop-filter: blur(15px);
+                    -webkit-backdrop-filter: blur(15px);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    color: rgba(29, 29, 31, 0.9);
+                    padding: 16px 20px;
+                    border-radius: 12px;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    width: 320px;
+                    opacity: 0;
+                    visibility: hidden;
+                    transform: translateY(10px);
+                    transition: all 0.3s ease;
+                    z-index: 1000;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                }
+
+                .help-tooltip::after {
+                    content: '';
+                    position: absolute;
+                    top: 100%;
+                    right: 20px;
+                    border: 8px solid transparent;
+                    border-top-color: rgba(255, 255, 255, 0.4);
+                }
+
+                .help-icon:hover .help-tooltip {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(0);
+                }
+
                 /* Mobile adaptivity */
                 @media (max-width: 768px) {
                     :host {
@@ -570,6 +760,23 @@ class VoiceWidget extends HTMLElement {
                     .message-bubble {
                         max-width: 90%;
                         font-size: 14px;
+                    }
+
+                    .function-icons {
+                        gap: 12px;
+                    }
+
+                    .function-icon {
+                        padding: 6px 10px;
+                        font-size: 12px;
+                    }
+
+                    .presentation-icon {
+                        font-size: 11px;
+                    }
+
+                    .divider {
+                        width: 40px;
                     }
                 }
 
@@ -667,6 +874,51 @@ class VoiceWidget extends HTMLElement {
                         <div class="empty-state-text">Нажмите кнопку записи<br>чтобы начать диалог</div>
                     </div>
                 </div>
+
+                <div class="text-input-section" id="textInputSection">
+                    <div class="text-input-container">
+                        <input type="text" class="text-input" id="textInput" placeholder="...или начните печатать чтоб отправить текст">
+                        <button class="send-text-button" id="sendTextButton" style="display: none;">
+                            <svg class="send-icon" viewBox="0 0 24 24">
+                                <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="function-icons">
+                        <button class="function-icon" id="imgIcon" title="Добавить изображение">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                            </svg>
+                            <span>img</span>
+                        </button>
+                        
+                        <button class="function-icon" id="docIcon" title="Добавить документ">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                            </svg>
+                            <span>doc</span>
+                        </button>
+                        
+                        <button class="function-icon" id="pdfIcon" title="Скачать PDF">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                            </svg>
+                            <span>скачать PDF</span>
+                        </button>
+
+                        <button class="help-icon" id="helpIcon" title="Справка по функциям">
+                            <span>?</span>
+                            <div class="help-tooltip">
+                                <strong>Доступные функции:</strong><br><br>
+                                📷 <strong>img</strong> - Добавить изображения к сообщению<br>
+                                📄 <strong>doc</strong> - Прикрепить документы<br>
+                                📊 <strong>скачать PDF</strong> - Создать PDF с подборкой недвижимости<br><br>
+                                <em>Функции находятся в разработке</em>
+                            </div>
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -675,6 +927,8 @@ class VoiceWidget extends HTMLElement {
         const mainButton = this.shadowRoot.getElementById('mainButton');
         const stopButton = this.shadowRoot.getElementById('stopButton');
         const sendButton = this.shadowRoot.getElementById('sendButton');
+        const textInput = this.shadowRoot.getElementById('textInput');
+        const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
 
         // Главная кнопка записи
         mainButton.addEventListener('click', () => {
@@ -699,6 +953,66 @@ class VoiceWidget extends HTMLElement {
             } else {
                 this.showWarning('⚠️ Сначала сделайте запись');
             }
+        });
+
+        // ✅ НОВОЕ - Обработка текстового ввода
+        textInput.addEventListener('input', () => {
+            const hasText = textInput.value.trim().length > 0;
+            sendTextButton.style.display = hasText ? 'flex' : 'none';
+        });
+
+        // ✅ НОВОЕ - Отправка текста по Enter (только на desktop)
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !this.isMobile()) {
+                e.preventDefault();
+                if (textInput.value.trim()) {
+                    this.sendTextMessage();
+                }
+            }
+        });
+
+        // ✅ НОВОЕ - Отправка текста по кнопке
+        sendTextButton.addEventListener('click', () => {
+            if (textInput.value.trim()) {
+                this.sendTextMessage();
+            }
+        });
+
+        // ✅ НОВОЕ - Заглушки для функциональных иконок
+        this.bindFunctionIcons();
+    }
+
+    // ✅ НОВЫЙ МЕТОД - Определение мобильного устройства
+    isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+               || 'ontouchstart' in window;
+    }
+
+    // ✅ НОВЫЙ МЕТОД - Привязка событий к функциональным иконкам
+    bindFunctionIcons() {
+        const imgIcon = this.shadowRoot.getElementById('imgIcon');
+        const docIcon = this.shadowRoot.getElementById('docIcon');
+        const pdfIcon = this.shadowRoot.getElementById('pdfIcon');
+        const helpIcon = this.shadowRoot.getElementById('helpIcon');
+
+        imgIcon.addEventListener('click', () => {
+            console.log('🖼️ Функция добавления изображений в разработке');
+            this.showWarning('🖼️ Функция в разработке');
+        });
+
+        docIcon.addEventListener('click', () => {
+            console.log('📄 Функция добавления документов в разработке');
+            this.showWarning('📄 Функция в разработке');
+        });
+
+        pdfIcon.addEventListener('click', () => {
+            console.log('📊 Функция скачивания PDF в разработке');
+            this.showWarning('📊 Функция в разработке');
+        });
+
+        // ✅ Справка работает только на hover, никаких кликов
+        helpIcon.addEventListener('click', (e) => {
+            e.preventDefault();
         });
     }
 
@@ -862,6 +1176,95 @@ class VoiceWidget extends HTMLElement {
         }
 
         this.sendMessage();
+    }
+
+    // ✅ НОВЫЙ МЕТОД - Отправка текстового сообщения
+    async sendTextMessage() {
+        const textInput = this.shadowRoot.getElementById('textInput');
+        const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
+        const messageText = textInput.value.trim();
+        
+        if (!messageText) return;
+
+        // Очищаем поле и скрываем кнопку
+        textInput.value = '';
+        sendTextButton.style.display = 'none';
+
+        this.showLoading();
+        const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+        statusIndicator.innerHTML = '<div class="status-text">📤 Отправляю текстовое сообщение...</div>';
+
+        // Добавляем пользовательское сообщение
+        const userMessage = {
+            type: 'user',
+            content: messageText,
+            timestamp: new Date()
+        };
+        
+        this.addMessage(userMessage);
+
+        try {
+            // ✅ Подготавливаем данные для отправки с sessionId и текстом
+            const formData = new FormData();
+            formData.append('text', messageText);
+            formData.append('sessionId', this.sessionId);
+
+            console.log('📤 Отправляем текст с sessionId:', this.sessionId);
+
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            console.log('📥 Ответ от сервера на текст:', {
+                sessionId: data.sessionId,
+                messageCount: data.messageCount,
+                tokens: data.tokens,
+                timing: data.timing
+            });
+            
+            this.hideLoading();
+            statusIndicator.innerHTML = '<div class="status-text">✅ Сообщение отправлено</div>';
+
+            const assistantMessage = {
+                type: 'assistant',
+                content: data[this.responseField] || 'Ответ не получен от сервера.',
+                timestamp: new Date()
+            };
+            this.addMessage(assistantMessage);
+
+            setTimeout(() => {
+                statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
+            }, 2000);
+
+        } catch (error) {
+            this.hideLoading();
+            console.error('Ошибка при отправке текста:', error);
+            
+            statusIndicator.innerHTML = '<div class="status-text">❌ Ошибка при отправке</div>';
+
+            const assistantMessage = {
+                type: 'assistant',
+                content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+                timestamp: new Date()
+            };
+            this.addMessage(assistantMessage);
+
+            setTimeout(() => {
+                statusIndicator.innerHTML = '<div class="status-text">Готов к записи</div>';
+            }, 3000);
+        }
+
+        // Отправляем событие
+        this.dispatchEvent(new CustomEvent('textMessageSend', {
+            detail: { text: messageText }
+        }));
     }
 
     showWarning(message) {
