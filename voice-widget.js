@@ -16,14 +16,14 @@ class VoiceWidget extends HTMLElement {
         // SessionId для контекста диалогов
         this.sessionId = this.getOrCreateSessionId();
         
-        // Данные понимания запроса (заглушки)
+        // Данные понимания запроса из бэкенда
         this.understanding = {
-            progress: 15,
-            stage: 'Начальная информация',
-            propertyType: '',
-            preferredArea: '',
-            budget: '',
-            requirements: ''
+            name: null,
+            type: null,
+            operation: null,
+            budget: null,
+            location: null,
+            progress: 0
         };
         
         // Configurable parameters
@@ -58,6 +58,27 @@ class VoiceWidget extends HTMLElement {
         messagesContainer.style.overflowY = 'hidden';
         
         this.updateUnderstandingDisplay();
+        
+        // Загружаем данные сессии при инициализации
+        this.loadSessionInfo();
+    }
+
+    // 🆕 Загрузка информации о сессии с сервера
+    async loadSessionInfo() {
+        try {
+            const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.sessionId}`);
+            const response = await fetch(sessionUrl);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.insights) {
+                    this.understanding = { ...data.insights };
+                    this.updateUnderstandingDisplay();
+                    console.log('📥 Загружены данные сессии:', data);
+                }
+            }
+        } catch (error) {
+            console.log('ℹ️ Новая сессия или CORS ошибка, используем локальные данные');
+        }
     }
 
     checkBrowserSupport() {
@@ -617,7 +638,7 @@ class VoiceWidget extends HTMLElement {
                     background: linear-gradient(90deg, #4ade80, #22c55e);
                     border-radius: 4px;
                     transition: width 0.5s ease;
-                    width: 15%;
+                    width: 0%;
                 }
 
                 .progress-text {
@@ -998,19 +1019,25 @@ class VoiceWidget extends HTMLElement {
                             <div class="progress-bar">
                                 <div class="progress-fill" id="progressFill"></div>
                             </div>
-                            <div class="progress-text" id="progressText">15% - Начальная информация</div>
+                            <div class="progress-text" id="progressText">0% - Ожидание</div>
                         </div>
                         
                         <div class="understanding-item">
-                            <div class="item-indicator" id="propertyTypeIndicator"></div>
+                            <div class="item-indicator" id="nameIndicator"></div>
+                            <div class="item-text">Имя клиента</div>
+                            <div class="item-value" id="nameValue">не определено</div>
+                        </div>
+                        
+                        <div class="understanding-item">
+                            <div class="item-indicator" id="typeIndicator"></div>
                             <div class="item-text">Тип недвижимости</div>
-                            <div class="item-value" id="propertyTypeValue">не определен</div>
+                            <div class="item-value" id="typeValue">не определен</div>
                         </div>
                         
                         <div class="understanding-item">
-                            <div class="item-indicator" id="areaIndicator"></div>
-                            <div class="item-text">Предпочтительный район</div>
-                            <div class="item-value" id="areaValue">не определен</div>
+                            <div class="item-indicator" id="operationIndicator"></div>
+                            <div class="item-text">Тип операции</div>
+                            <div class="item-value" id="operationValue">не определена</div>
                         </div>
                         
                         <div class="understanding-item">
@@ -1020,9 +1047,9 @@ class VoiceWidget extends HTMLElement {
                         </div>
                         
                         <div class="understanding-item">
-                            <div class="item-indicator" id="requirementsIndicator"></div>
-                            <div class="item-text">Особые требования</div>
-                            <div class="item-value" id="requirementsValue">не определены</div>
+                            <div class="item-indicator" id="locationIndicator"></div>
+                            <div class="item-text">Район</div>
+                            <div class="item-value" id="locationValue">не определен</div>
                         </div>
                     </div>
 
@@ -1161,37 +1188,66 @@ class VoiceWidget extends HTMLElement {
                || 'ontouchstart' in window;
     }
 
-    // Методы понимания запроса
-    updateUnderstanding(data) {
-        if (data.progress !== undefined) {
-            this.understanding.progress = data.progress;
-            const progressFill = this.shadowRoot.getElementById('progressFill');
-            const progressText = this.shadowRoot.getElementById('progressText');
-            
-            progressFill.style.width = `${data.progress}%`;
-            progressText.textContent = `${data.progress}% - ${data.stage || this.understanding.stage}`;
-        }
-
-        const fields = ['propertyType', 'preferredArea', 'budget', 'requirements'];
-        fields.forEach(field => {
-            if (data[field] !== undefined) {
-                this.understanding[field] = data[field];
-                this.updateUnderstandingItem(field, data[field]);
-            }
-        });
+    // 🆕 Обновленные методы понимания запроса для работы с новым бэкендом
+    updateUnderstanding(insights) {
+        if (!insights) return;
+        
+        console.log('🧠 Обновляю понимание:', insights);
+        
+        // Обновляем локальное состояние
+        this.understanding = { ...insights };
+        
+        // Обновляем прогресс-бар
+        const progressFill = this.shadowRoot.getElementById('progressFill');
+        const progressText = this.shadowRoot.getElementById('progressText');
+        
+        progressFill.style.width = `${insights.progress}%`;
+        progressText.textContent = `${insights.progress}% - ${this.getStageText(insights.progress)}`;
+        
+        // Обновляем все поля insights
+        this.updateInsightItem('name', insights.name);
+        this.updateInsightItem('type', insights.type);  
+        this.updateInsightItem('operation', insights.operation);
+        this.updateInsightItem('budget', insights.budget);
+        this.updateInsightItem('location', insights.location);
     }
 
-    updateUnderstandingItem(field, value) {
+    updateInsightItem(field, value) {
         const indicator = this.shadowRoot.getElementById(`${field}Indicator`);
         const valueElement = this.shadowRoot.getElementById(`${field}Value`);
+        
+        if (!indicator || !valueElement) {
+            console.warn(`🔍 Элементы для поля ${field} не найдены`);
+            return;
+        }
         
         if (value && value.trim()) {
             indicator.classList.add('filled');
             valueElement.textContent = value;
         } else {
             indicator.classList.remove('filled');
-            valueElement.textContent = 'не определен';
+            valueElement.textContent = this.getDefaultText(field);
         }
+    }
+
+    getDefaultText(field) {
+        const defaults = {
+            name: 'не определено',
+            type: 'не определен',
+            operation: 'не определена',
+            budget: 'не определен',
+            location: 'не определен'
+        };
+        return defaults[field] || 'не определено';
+    }
+
+    getStageText(progress) {
+        if (progress === 0) return 'Ожидание';
+        if (progress <= 20) return 'Знакомство';
+        if (progress <= 40) return 'Основные параметры';
+        if (progress <= 60) return 'Уточнение деталей';
+        if (progress <= 80) return 'Финальные требования';
+        return 'Готов к подбору';
     }
 
     updateUnderstandingDisplay() {
@@ -1199,16 +1255,62 @@ class VoiceWidget extends HTMLElement {
         const progressText = this.shadowRoot.getElementById('progressText');
         
         progressFill.style.width = `${this.understanding.progress}%`;
-        progressText.textContent = `${this.understanding.progress}% - ${this.understanding.stage}`;
+        progressText.textContent = `${this.understanding.progress}% - ${this.getStageText(this.understanding.progress)}`;
 
         // Обновляем все поля
-        Object.keys(this.understanding).forEach(key => {
-            if (['progress', 'stage'].includes(key)) return;
-            this.updateUnderstandingItem(key, this.understanding[key]);
-        });
+        this.updateInsightItem('name', this.understanding.name);
+        this.updateInsightItem('type', this.understanding.type);
+        this.updateInsightItem('operation', this.understanding.operation);
+        this.updateInsightItem('budget', this.understanding.budget);
+        this.updateInsightItem('location', this.understanding.location);
     }
 
-    // Все остальные методы остаются как в оригинале
+    // 🆕 Улучшенная симуляция для тестирования
+    simulateUnderstandingUpdate(message = '') {
+        const text = message.toLowerCase();
+        let updates = {};
+        
+        // Анализируем сообщение
+        if (text.includes('меня зовут') || text.includes('я ')) {
+            const nameMatch = text.match(/меня зовут\s+([а-яё]+)/i) || text.match(/я\s+([а-яё]+)/i);
+            if (nameMatch) updates.name = nameMatch[1];
+        }
+        
+        if (text.includes('квартир') || text.includes('дом') || text.includes('комнат')) {
+            if (text.includes('квартир')) updates.type = 'квартира';
+            if (text.includes('дом')) updates.type = 'дом';
+            if (text.includes('комнат')) updates.type = 'комната';
+        }
+        
+        if (text.includes('купить') || text.includes('снять') || text.includes('аренд')) {
+            updates.operation = text.includes('купить') ? 'покупка' : 'аренда';
+        }
+        
+        if (text.match(/\d+.*евро|\d+.*€/)) {
+            const budgetMatch = text.match(/(\d+[\d\s]*)\s*(евро|€)/);
+            if (budgetMatch) updates.budget = budgetMatch[1] + ' €';
+        }
+        
+        if (text.includes('центр') || text.includes('руссафа') || text.includes('район')) {
+            if (text.includes('центр')) updates.location = 'центр';
+            if (text.includes('руссафа')) updates.location = 'Руссафа';
+        }
+        
+        // Обновляем прогресс
+        const currentProgress = this.understanding.progress;
+        const newFields = Object.keys(updates).length;
+        if (newFields > 0) {
+            updates.progress = Math.min(currentProgress + newFields * 20, 100);
+        } else {
+            updates.progress = Math.min(currentProgress + 10, 100);
+        }
+        
+        if (Object.keys(updates).length > 0) {
+            // Объединяем с текущими данными
+            Object.assign(this.understanding, updates);
+            this.updateUnderstanding(this.understanding);
+        }
+    }
     async startRecording() {
         try {
             this.isRecording = true;
@@ -1367,6 +1469,7 @@ class VoiceWidget extends HTMLElement {
         this.sendMessage();
     }
 
+    // 🆕 Обновленный метод отправки текста
     async sendTextMessage() {
         const textInput = this.shadowRoot.getElementById('textInput');
         const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
@@ -1408,12 +1511,18 @@ class VoiceWidget extends HTMLElement {
             console.log('📥 Ответ от сервера на текст:', {
                 sessionId: data.sessionId,
                 messageCount: data.messageCount,
+                insights: data.insights,
                 tokens: data.tokens,
                 timing: data.timing
             });
             
             this.hideLoading();
             this.updateMessageCount();
+
+            // 🆕 Обновляем insights из ответа сервера
+            if (data.insights) {
+                this.updateUnderstanding(data.insights);
+            }
 
             const assistantMessage = {
                 type: 'assistant',
@@ -1422,19 +1531,24 @@ class VoiceWidget extends HTMLElement {
             };
             this.addMessage(assistantMessage);
 
-            // Симуляция обновления понимания (в будущем из бэкенда)
-            this.simulateUnderstandingUpdate();
-
         } catch (error) {
             this.hideLoading();
             console.error('Ошибка при отправке текста:', error);
             
+            // 🆕 Fallback для тестирования
             const assistantMessage = {
                 type: 'assistant',
-                content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+                content: error.message.includes('CORS') || error.message.includes('502') 
+                    ? 'CORS ошибка: Бэкенд недоступен с localhost. Проверьте настройки сервера или тестируйте с того же домена.'
+                    : 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
                 timestamp: new Date()
             };
             this.addMessage(assistantMessage);
+            
+            // Демо обновление понимания для тестирования
+            if (error.message.includes('CORS') || error.message.includes('502')) {
+                this.simulateUnderstandingUpdate(messageText);
+            }
         }
 
         this.dispatchEvent(new CustomEvent('textMessageSend', {
@@ -1442,6 +1556,7 @@ class VoiceWidget extends HTMLElement {
         }));
     }
 
+    // 🆕 Обновленный метод отправки аудио
     async sendMessage() {
         if (!this.audioBlob) {
             console.error('Нет аудио для отправки');
@@ -1468,7 +1583,7 @@ class VoiceWidget extends HTMLElement {
             formData.append(this.fieldName, this.audioBlob, 'voice-message.webm');
             formData.append('sessionId', this.sessionId);
 
-            console.log('📤 Отправляем с sessionId:', this.sessionId);
+            console.log('📤 Отправляем аудио с sessionId:', this.sessionId);
 
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
@@ -1481,9 +1596,10 @@ class VoiceWidget extends HTMLElement {
 
             const data = await response.json();
             
-            console.log('📥 Ответ от сервера:', {
+            console.log('📥 Ответ от сервера на аудио:', {
                 sessionId: data.sessionId,
                 messageCount: data.messageCount,
+                insights: data.insights,
                 tokens: data.tokens,
                 timing: data.timing
             });
@@ -1491,6 +1607,7 @@ class VoiceWidget extends HTMLElement {
             this.hideLoading();
             this.updateMessageCount();
 
+            // 🆕 Обновляем транскрипцию в пользовательском сообщении
             if (data.transcription) {
                 const lastUserMessage = this.messages[this.messages.length - 1];
                 if (lastUserMessage && lastUserMessage.type === 'user') {
@@ -1507,6 +1624,11 @@ class VoiceWidget extends HTMLElement {
                 }
             }
 
+            // 🆕 Обновляем insights из ответа сервера
+            if (data.insights) {
+                this.updateUnderstanding(data.insights);
+            }
+
             const assistantMessage = {
                 type: 'assistant',
                 content: data[this.responseField] || 'Ответ не получен от сервера.',
@@ -1516,12 +1638,9 @@ class VoiceWidget extends HTMLElement {
 
             this.cleanupAfterSend();
 
-            // Симуляция обновления понимания
-            this.simulateUnderstandingUpdate();
-
         } catch (error) {
             this.hideLoading();
-            console.error('Ошибка при отправке:', error);
+            console.error('Ошибка при отправке аудио:', error);
             
             const assistantMessage = {
                 type: 'assistant',
@@ -1534,41 +1653,6 @@ class VoiceWidget extends HTMLElement {
         this.dispatchEvent(new CustomEvent('messageSend', {
             detail: { duration: this.recordingTime }
         }));
-    }
-
-    simulateUnderstandingUpdate() {
-        // Временная симуляция - в будущем данные будут приходить от бэкенда
-        const currentProgress = this.understanding.progress;
-        let newProgress = Math.min(currentProgress + Math.random() * 20, 100);
-        
-        const updates = {
-            progress: Math.round(newProgress)
-        };
-
-        if (newProgress > 25 && !this.understanding.propertyType) {
-            updates.propertyType = 'Квартира';
-        }
-        if (newProgress > 45 && !this.understanding.preferredArea) {
-            updates.preferredArea = 'Центр города';
-        }
-        if (newProgress > 65 && !this.understanding.budget) {
-            updates.budget = '200,000 - 350,000 €';
-        }
-        if (newProgress > 85 && !this.understanding.requirements) {
-            updates.requirements = 'Балкон, паркинг';
-        }
-
-        if (newProgress < 35) {
-            updates.stage = 'Начальная информация';
-        } else if (newProgress < 65) {
-            updates.stage = 'Уточнение деталей';
-        } else if (newProgress < 90) {
-            updates.stage = 'Финальные требования';
-        } else {
-            updates.stage = 'Готов к подбору';
-        }
-
-        this.updateUnderstanding(updates);
     }
 
     addMessage(message) {
@@ -1734,13 +1818,24 @@ class VoiceWidget extends HTMLElement {
         }
     }
 
-    // Публичные методы для управления
+    // 🆕 Обновленные публичные методы для управления
     clearSession() {
         localStorage.removeItem('voiceWidgetSessionId');
         this.sessionId = this.getOrCreateSessionId();
         
         const sessionDisplay = this.shadowRoot.getElementById('sessionDisplay');
         sessionDisplay.textContent = this.sessionId.slice(-8);
+        
+        // Сбрасываем понимание запроса
+        this.understanding = {
+            name: null,
+            type: null,
+            operation: null,
+            budget: null,
+            location: null,
+            progress: 0
+        };
+        this.updateUnderstandingDisplay();
         
         console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
     }
@@ -1755,21 +1850,22 @@ class VoiceWidget extends HTMLElement {
         const emptyState = this.shadowRoot.getElementById('emptyState');
         
         messagesContainer.innerHTML = '';
-        messagesContainer.appendChild(emptyState.cloneNode(true));
-        emptyState.style.display = 'block';
+        const newEmptyState = emptyState.cloneNode(true);
+        messagesContainer.appendChild(newEmptyState);
+        newEmptyState.style.display = 'block';
         
         // Скрываем скроллбар когда нет сообщений
         messagesContainer.style.overflowY = 'hidden';
         
         this.updateMessageCount();
-        shadowRoot.getElementById('messagesContainer');
         
-        
-        messagesContainer.innerHTML = '';
-        messagesContainer.appendChild(emptyState.cloneNode(true));
-        emptyState.style.display = 'block';
-        
-        this.updateMessageCount();
+        // Перебиндим события для новой кнопки
+        const newMainButton = this.shadowRoot.getElementById('mainButton');
+        newMainButton.addEventListener('click', () => {
+            if (!this.isRecording && !newMainButton.disabled) {
+                this.startRecording();
+            }
+        });
     }
 
     setApiUrl(url) {
@@ -1784,9 +1880,9 @@ class VoiceWidget extends HTMLElement {
         return this.isRecording;
     }
 
-    // Методы для управления пониманием запроса (API для будущего использования)
-    setUnderstanding(data) {
-        this.updateUnderstanding(data);
+    // 🆕 Методы для управления пониманием запроса (обновленные для работы с бэкендом)
+    setUnderstanding(insights) {
+        this.updateUnderstanding(insights);
     }
 
     getUnderstanding() {
@@ -1795,14 +1891,42 @@ class VoiceWidget extends HTMLElement {
 
     resetUnderstanding() {
         this.understanding = {
-            progress: 0,
-            stage: 'Ожидание',
-            propertyType: '',
-            preferredArea: '',
-            budget: '',
-            requirements: ''
+            name: null,
+            type: null,
+            operation: null,
+            budget: null,
+            location: null,
+            progress: 0
         };
         this.updateUnderstandingDisplay();
+    }
+
+    // 🆕 Метод для получения статистики сессии
+    async getSessionStats() {
+        try {
+            const statsUrl = this.apiUrl.replace('/upload', '/stats');
+            const response = await fetch(statsUrl);
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Ошибка при получении статистики:', error);
+        }
+        return null;
+    }
+
+    // 🆕 Метод для получения полной информации о текущей сессии
+    async getCurrentSessionInfo() {
+        try {
+            const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.sessionId}`);
+            const response = await fetch(sessionUrl);
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Ошибка при получении информации о сессии:', error);
+        }
+        return null;
     }
 }
 
