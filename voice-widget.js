@@ -16,13 +16,23 @@ class VoiceWidget extends HTMLElement {
         // SessionId для контекста диалогов
         this.sessionId = this.getOrCreateSessionId();
         
-        // Данные понимания запроса из бэкенда
+        // 🆕 Расширенная структура понимания запроса (9 параметров)
         this.understanding = {
-            name: null,
-            type: null,
-            operation: null,
-            budget: null,
-            location: null,
+            // Блок 1: Основная информация (33.3%)
+            name: null,           // 10%
+            operation: null,      // 12%  
+            budget: null,         // 11%
+            
+            // Блок 2: Параметры недвижимости (33.3%)
+            type: null,           // 11%
+            location: null,       // 11%
+            rooms: null,          // 11%
+            
+            // Блок 3: Детали и предпочтения (33.3%)
+            area: null,           // 11%
+            details: null,        // 11% (детали локации: возле парка, пересечение улиц)
+            preferences: null,    // 11%
+            
             progress: 0
         };
         
@@ -71,7 +81,8 @@ class VoiceWidget extends HTMLElement {
             if (response.ok) {
                 const data = await response.json();
                 if (data.insights) {
-                    this.understanding = { ...data.insights };
+                    // Преобразуем старый формат в новый, если необходимо
+                    this.understanding = this.migrateInsights(data.insights);
                     this.updateUnderstandingDisplay();
                     console.log('📥 Загружены данные сессии:', data);
                 }
@@ -79,6 +90,28 @@ class VoiceWidget extends HTMLElement {
         } catch (error) {
             console.log('ℹ️ Новая сессия или CORS ошибка, используем локальные данные');
         }
+    }
+
+    // 🔄 Миграция старого формата insights в новый
+    migrateInsights(oldInsights) {
+        return {
+            // Основная информация
+            name: oldInsights.name || null,
+            operation: oldInsights.operation || null,
+            budget: oldInsights.budget || null,
+            
+            // Параметры недвижимости  
+            type: oldInsights.type || null,
+            location: oldInsights.location || null,
+            rooms: null,    // новое поле
+            
+            // Детали и предпочтения
+            area: null,         // новое поле
+            details: null,      // новое поле (детали локации)
+            preferences: null,  // новое поле
+            
+            progress: oldInsights.progress || 0
+        };
     }
 
     checkBrowserSupport() {
@@ -494,6 +527,42 @@ class VoiceWidget extends HTMLElement {
                     fill: white;
                 }
 
+                /* 🆕 ФУНКЦИОНАЛЬНЫЕ КНОПКИ В INPUT AREA */
+                .function-buttons-input {
+                    display: flex;
+                    gap: 12px;
+                    justify-content: center;
+                }
+
+                .function-btn-input {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 12px;
+                    padding: 10px 16px;
+                    color: rgba(255, 255, 255, 0.8);
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-family: inherit;
+                    flex: 1;
+                    justify-content: center;
+                }
+
+                .function-btn-input:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-color: rgba(255, 255, 255, 0.25);
+                    transform: translateY(-1px);
+                }
+
+                .function-btn-input svg {
+                    width: 16px;
+                    height: 16px;
+                    fill: currentColor;
+                }
+
                 /* MOBILE FUNCTION BUTTONS */
                 .mobile-functions {
                     display: none;
@@ -531,7 +600,7 @@ class VoiceWidget extends HTMLElement {
 
                 /* RIGHT PANEL - UNDERSTANDING */
                 .understanding-panel {
-                    width: 300px;
+                    width: 340px;
                     background: rgba(255, 255, 255, 0.03);
                     backdrop-filter: blur(20px);
                     border-left: 1px solid rgba(255, 255, 255, 0.1);
@@ -539,6 +608,20 @@ class VoiceWidget extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 20px;
+                    overflow-y: auto;
+                }
+
+                .understanding-panel::-webkit-scrollbar {
+                    width: 4px;
+                }
+
+                .understanding-panel::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+
+                .understanding-panel::-webkit-scrollbar-thumb {
+                    background: rgba(147, 51, 234, 0.3);
+                    border-radius: 2px;
                 }
 
                 /* JARVIS SPHERE */
@@ -605,12 +688,13 @@ class VoiceWidget extends HTMLElement {
                     50% { transform: scale(1.1); opacity: 1; }
                 }
 
-                /* UNDERSTANDING PROGRESS */
+                /* 🆕 UNDERSTANDING PROGRESS */
                 .understanding-section {
                     background: rgba(255, 255, 255, 0.05);
                     border-radius: 16px;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     padding: 16px;
+                    margin-bottom: 12px;
                 }
 
                 .section-title {
@@ -646,16 +730,42 @@ class VoiceWidget extends HTMLElement {
                     color: rgba(255, 255, 255, 0.7);
                 }
 
+                /* 🆕 INSIGHTS BLOCKS */
+                .insights-block {
+                    background: rgba(255, 255, 255, 0.03);
+                    border-radius: 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    padding: 14px;
+                    margin-bottom: 12px;
+                }
+
+                .block-title {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.9);
+                    margin-bottom: 10px;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .block-icon {
+                    width: 14px;
+                    height: 14px;
+                    opacity: 0.7;
+                }
+
                 .understanding-item {
                     display: flex;
                     align-items: center;
                     gap: 10px;
-                    padding: 10px 0;
+                    padding: 8px 0;
                     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
                 }
 
                 .understanding-item:last-child {
                     border-bottom: none;
+                    padding-bottom: 0;
                 }
 
                 .item-indicator {
@@ -671,49 +781,18 @@ class VoiceWidget extends HTMLElement {
                 }
 
                 .item-text {
-                    font-size: 13px;
+                    font-size: 12px;
                     color: rgba(255, 255, 255, 0.8);
                     flex: 1;
+                    min-width: 0;
                 }
 
                 .item-value {
-                    font-size: 12px;
+                    font-size: 11px;
                     color: rgba(255, 255, 255, 0.6);
                     font-style: italic;
-                }
-
-                /* FUNCTION BUTTONS */
-                .function-buttons {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-
-                .function-btn {
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-radius: 12px;
-                    padding: 12px;
-                    color: rgba(255, 255, 255, 0.8);
-                    font-size: 13px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    font-family: inherit;
-                }
-
-                .function-btn:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-color: rgba(255, 255, 255, 0.25);
-                    transform: translateY(-1px);
-                }
-
-                .function-btn svg {
-                    width: 16px;
-                    height: 16px;
-                    fill: currentColor;
+                    text-align: right;
+                    flex-shrink: 0;
                 }
 
                 /* MESSAGES */
@@ -860,6 +939,10 @@ class VoiceWidget extends HTMLElement {
                         display: grid;
                     }
 
+                    .function-buttons-input {
+                        display: none;
+                    }
+
                     .messages-container {
                         max-height: 300px;
                         min-height: 250px;
@@ -980,6 +1063,30 @@ class VoiceWidget extends HTMLElement {
                             </button>
                         </div>
 
+                        <!-- 🆕 ФУНКЦИОНАЛЬНЫЕ КНОПКИ ПЕРЕНЕСЕНЫ СЮДА -->
+                        <div class="function-buttons-input">
+                            <button class="function-btn-input" id="imageBtn">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                                </svg>
+                                Изображения
+                            </button>
+                            
+                            <button class="function-btn-input" id="documentBtn">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                Документы
+                            </button>
+                            
+                            <button class="function-btn-input" id="pdfBtn">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                Скачать PDF
+                            </button>
+                        </div>
+
                         <div class="mobile-functions">
                             <button class="mobile-function-btn" id="mobileImgBtn">
                                 <svg viewBox="0 0 24 24">
@@ -1003,7 +1110,7 @@ class VoiceWidget extends HTMLElement {
                     </div>
                 </div>
 
-                <!-- RIGHT PANEL - UNDERSTANDING -->
+                <!-- RIGHT PANEL - UNDERSTANDING (🆕 ОБНОВЛЕННАЯ СТРУКТУРА) -->
                 <div class="understanding-panel">
                     <!-- JARVIS SPHERE -->
                     <div class="jarvis-container">
@@ -1021,17 +1128,21 @@ class VoiceWidget extends HTMLElement {
                             </div>
                             <div class="progress-text" id="progressText">0% - Ожидание</div>
                         </div>
+                    </div>
+
+                    <!-- 🆕 БЛОК 1: ОСНОВНАЯ ИНФОРМАЦИЯ (40%) -->
+                    <div class="insights-block">
+                        <div class="block-title">
+                            <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                            Основная информация
+                        </div>
                         
                         <div class="understanding-item">
                             <div class="item-indicator" id="nameIndicator"></div>
                             <div class="item-text">Имя клиента</div>
                             <div class="item-value" id="nameValue">не определено</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="typeIndicator"></div>
-                            <div class="item-text">Тип недвижимости</div>
-                            <div class="item-value" id="typeValue">не определен</div>
                         </div>
                         
                         <div class="understanding-item">
@@ -1045,36 +1156,62 @@ class VoiceWidget extends HTMLElement {
                             <div class="item-text">Бюджет</div>
                             <div class="item-value" id="budgetValue">не определен</div>
                         </div>
+                    </div>
+
+                    <!-- 🆕 БЛОК 2: ПАРАМЕТРЫ НЕДВИЖИМОСТИ (35%) -->
+                    <div class="insights-block">
+                        <div class="block-title">
+                            <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                            </svg>
+                            Параметры недвижимости
+                        </div>
+                        
+                        <div class="understanding-item">
+                            <div class="item-indicator" id="typeIndicator"></div>
+                            <div class="item-text">Тип недвижимости</div>
+                            <div class="item-value" id="typeValue">не определен</div>
+                        </div>
                         
                         <div class="understanding-item">
                             <div class="item-indicator" id="locationIndicator"></div>
-                            <div class="item-text">Район</div>
+                            <div class="item-text">Город/район</div>
                             <div class="item-value" id="locationValue">не определен</div>
+                        </div>
+                        
+                        <div class="understanding-item">
+                            <div class="item-indicator" id="roomsIndicator"></div>
+                            <div class="item-text">Количество комнат</div>
+                            <div class="item-value" id="roomsValue">не определено</div>
                         </div>
                     </div>
 
-                    <!-- FUNCTION BUTTONS -->
-                    <div class="function-buttons">
-                        <button class="function-btn" id="imageBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                    <!-- 🆕 БЛОК 3: ДЕТАЛИ И ПРЕДПОЧТЕНИЯ (33.3%) -->
+                    <div class="insights-block">
+                        <div class="block-title">
+                            <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                             </svg>
-                            Изображения
-                        </button>
+                            Детали и предпочтения
+                        </div>
                         
-                        <button class="function-btn" id="documentBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Документы
-                        </button>
+                        <div class="understanding-item">
+                            <div class="item-indicator" id="areaIndicator"></div>
+                            <div class="item-text">Площадь</div>
+                            <div class="item-value" id="areaValue">не определена</div>
+                        </div>
                         
-                        <button class="function-btn" id="pdfBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Скачать PDF
-                        </button>
+                        <div class="understanding-item">
+                            <div class="item-indicator" id="detailsIndicator"></div>
+                            <div class="item-text">Детали локации</div>
+                            <div class="item-value" id="detailsValue">не определены</div>
+                        </div>
+                        
+                        <div class="understanding-item">
+                            <div class="item-indicator" id="preferencesIndicator"></div>
+                            <div class="item-text">Предпочтения</div>
+                            <div class="item-value" id="preferencesValue">не определены</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1145,7 +1282,7 @@ class VoiceWidget extends HTMLElement {
     }
 
     bindFunctionButtons() {
-        // Desktop функции
+        // Desktop функции (перенесены к input area)
         const imageBtn = this.shadowRoot.getElementById('imageBtn');
         const documentBtn = this.shadowRoot.getElementById('documentBtn');
         const pdfBtn = this.shadowRoot.getElementById('pdfBtn');
@@ -1188,28 +1325,66 @@ class VoiceWidget extends HTMLElement {
                || 'ontouchstart' in window;
     }
 
-    // 🆕 Обновленные методы понимания запроса для работы с новым бэкендом
+    // 🆕 Обновленные методы понимания запроса для работы с новой структурой (9 параметров)
     updateUnderstanding(insights) {
         if (!insights) return;
         
         console.log('🧠 Обновляю понимание:', insights);
         
         // Обновляем локальное состояние
-        this.understanding = { ...insights };
+        this.understanding = { ...this.understanding, ...insights };
+        
+        // 🆕 Гибкая система прогресса с приоритизацией
+        const progress = this.calculateProgress();
+        this.understanding.progress = progress;
         
         // Обновляем прогресс-бар
         const progressFill = this.shadowRoot.getElementById('progressFill');
         const progressText = this.shadowRoot.getElementById('progressText');
         
-        progressFill.style.width = `${insights.progress}%`;
-        progressText.textContent = `${insights.progress}% - ${this.getStageText(insights.progress)}`;
+        progressFill.style.width = `${progress}%`;
+        progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
         
         // Обновляем все поля insights
         this.updateInsightItem('name', insights.name);
-        this.updateInsightItem('type', insights.type);  
-        this.updateInsightItem('operation', insights.operation);
+        this.updateInsightItem('operation', insights.operation);  
         this.updateInsightItem('budget', insights.budget);
+        this.updateInsightItem('type', insights.type);
         this.updateInsightItem('location', insights.location);
+        this.updateInsightItem('details', insights.details);
+        this.updateInsightItem('rooms', insights.rooms);
+        this.updateInsightItem('area', insights.area);
+        this.updateInsightItem('preferences', insights.preferences);
+    }
+
+    // 🆕 Гибкая система расчета прогресса
+    calculateProgress() {
+        const weights = {
+            // Блок 1: Основная информация (33.3%)
+            name: 10,
+            operation: 12,
+            budget: 11,
+            
+            // Блок 2: Параметры недвижимости (33.3%)
+            type: 11,
+            location: 11,
+            rooms: 11,
+            
+            // Блок 3: Детали и предпочтения (33.3%)
+            area: 11,
+            details: 11,    // детали локации: возле парка, пересечение улиц
+            preferences: 11
+        };
+        
+        let totalProgress = 0;
+        
+        for (const [field, weight] of Object.entries(weights)) {
+            if (this.understanding[field] && this.understanding[field].trim()) {
+                totalProgress += weight;
+            }
+        }
+        
+        return Math.min(totalProgress, 99); // максимум 99%, чтобы было место для округления
     }
 
     updateInsightItem(field, value) {
@@ -1233,10 +1408,14 @@ class VoiceWidget extends HTMLElement {
     getDefaultText(field) {
         const defaults = {
             name: 'не определено',
-            type: 'не определен',
             operation: 'не определена',
             budget: 'не определен',
-            location: 'не определен'
+            type: 'не определен',
+            location: 'не определен',
+            details: 'не определены',
+            rooms: 'не определено',
+            area: 'не определена',
+            preferences: 'не определены'
         };
         return defaults[field] || 'не определено';
     }
@@ -1245,72 +1424,34 @@ class VoiceWidget extends HTMLElement {
         if (progress === 0) return 'Ожидание';
         if (progress <= 20) return 'Знакомство';
         if (progress <= 40) return 'Основные параметры';
-        if (progress <= 60) return 'Уточнение деталей';
-        if (progress <= 80) return 'Финальные требования';
-        return 'Готов к подбору';
+        if (progress <= 60) return 'Готов к первичному подбору';
+        if (progress <= 80) return 'Уточнение деталей';
+        return 'Готов к точному подбору';
     }
 
     updateUnderstandingDisplay() {
         const progressFill = this.shadowRoot.getElementById('progressFill');
         const progressText = this.shadowRoot.getElementById('progressText');
         
-        progressFill.style.width = `${this.understanding.progress}%`;
-        progressText.textContent = `${this.understanding.progress}% - ${this.getStageText(this.understanding.progress)}`;
+        const progress = this.calculateProgress();
+        this.understanding.progress = progress;
+        
+        progressFill.style.width = `${progress}%`;
+        progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
 
         // Обновляем все поля
         this.updateInsightItem('name', this.understanding.name);
-        this.updateInsightItem('type', this.understanding.type);
         this.updateInsightItem('operation', this.understanding.operation);
         this.updateInsightItem('budget', this.understanding.budget);
+        this.updateInsightItem('type', this.understanding.type);
         this.updateInsightItem('location', this.understanding.location);
+        this.updateInsightItem('details', this.understanding.details);
+        this.updateInsightItem('rooms', this.understanding.rooms);
+        this.updateInsightItem('area', this.understanding.area);
+        this.updateInsightItem('preferences', this.understanding.preferences);
     }
 
-    // 🆕 Улучшенная симуляция для тестирования
-    simulateUnderstandingUpdate(message = '') {
-        const text = message.toLowerCase();
-        let updates = {};
-        
-        // Анализируем сообщение
-        if (text.includes('меня зовут') || text.includes('я ')) {
-            const nameMatch = text.match(/меня зовут\s+([а-яё]+)/i) || text.match(/я\s+([а-яё]+)/i);
-            if (nameMatch) updates.name = nameMatch[1];
-        }
-        
-        if (text.includes('квартир') || text.includes('дом') || text.includes('комнат')) {
-            if (text.includes('квартир')) updates.type = 'квартира';
-            if (text.includes('дом')) updates.type = 'дом';
-            if (text.includes('комнат')) updates.type = 'комната';
-        }
-        
-        if (text.includes('купить') || text.includes('снять') || text.includes('аренд')) {
-            updates.operation = text.includes('купить') ? 'покупка' : 'аренда';
-        }
-        
-        if (text.match(/\d+.*евро|\d+.*€/)) {
-            const budgetMatch = text.match(/(\d+[\d\s]*)\s*(евро|€)/);
-            if (budgetMatch) updates.budget = budgetMatch[1] + ' €';
-        }
-        
-        if (text.includes('центр') || text.includes('руссафа') || text.includes('район')) {
-            if (text.includes('центр')) updates.location = 'центр';
-            if (text.includes('руссафа')) updates.location = 'Руссафа';
-        }
-        
-        // Обновляем прогресс
-        const currentProgress = this.understanding.progress;
-        const newFields = Object.keys(updates).length;
-        if (newFields > 0) {
-            updates.progress = Math.min(currentProgress + newFields * 20, 100);
-        } else {
-            updates.progress = Math.min(currentProgress + 10, 100);
-        }
-        
-        if (Object.keys(updates).length > 0) {
-            // Объединяем с текущими данными
-            Object.assign(this.understanding, updates);
-            this.updateUnderstanding(this.understanding);
-        }
-    }
+    // Все остальные методы остаются без изменений
     async startRecording() {
         try {
             this.isRecording = true;
@@ -1469,7 +1610,6 @@ class VoiceWidget extends HTMLElement {
         this.sendMessage();
     }
 
-    // 🆕 Обновленный метод отправки текста
     async sendTextMessage() {
         const textInput = this.shadowRoot.getElementById('textInput');
         const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
@@ -1535,7 +1675,6 @@ class VoiceWidget extends HTMLElement {
             this.hideLoading();
             console.error('Ошибка при отправке текста:', error);
             
-            // 🆕 Fallback для тестирования
             const assistantMessage = {
                 type: 'assistant',
                 content: error.message.includes('CORS') || error.message.includes('502') 
@@ -1544,11 +1683,6 @@ class VoiceWidget extends HTMLElement {
                 timestamp: new Date()
             };
             this.addMessage(assistantMessage);
-            
-            // Демо обновление понимания для тестирования
-            if (error.message.includes('CORS') || error.message.includes('502')) {
-                this.simulateUnderstandingUpdate(messageText);
-            }
         }
 
         this.dispatchEvent(new CustomEvent('textMessageSend', {
@@ -1556,7 +1690,6 @@ class VoiceWidget extends HTMLElement {
         }));
     }
 
-    // 🆕 Обновленный метод отправки аудио
     async sendMessage() {
         if (!this.audioBlob) {
             console.error('Нет аудио для отправки');
@@ -1662,7 +1795,6 @@ class VoiceWidget extends HTMLElement {
         
         if (this.messages.length === 1 && emptyState) {
             emptyState.style.display = 'none';
-            // Показываем скроллбар только когда есть сообщения
             messagesContainer.style.overflowY = 'auto';
         }
 
@@ -1729,13 +1861,7 @@ class VoiceWidget extends HTMLElement {
     }
 
     showNotification(message) {
-        // Простое уведомление - можно расширить
         console.log('📢', message);
-        
-        // Можно добавить toast уведомления в будущем
-        if (typeof window !== 'undefined' && window.alert) {
-            // Пока просто в консоль, чтобы не мешать UX
-        }
     }
 
     handleRecordingError(message) {
@@ -1829,10 +1955,14 @@ class VoiceWidget extends HTMLElement {
         // Сбрасываем понимание запроса
         this.understanding = {
             name: null,
-            type: null,
             operation: null,
             budget: null,
+            type: null,
             location: null,
+            details: null,
+            rooms: null,
+            area: null,
+            preferences: null,
             progress: 0
         };
         this.updateUnderstandingDisplay();
@@ -1854,12 +1984,10 @@ class VoiceWidget extends HTMLElement {
         messagesContainer.appendChild(newEmptyState);
         newEmptyState.style.display = 'block';
         
-        // Скрываем скроллбар когда нет сообщений
         messagesContainer.style.overflowY = 'hidden';
         
         this.updateMessageCount();
         
-        // Перебиндим события для новой кнопки
         const newMainButton = this.shadowRoot.getElementById('mainButton');
         newMainButton.addEventListener('click', () => {
             if (!this.isRecording && !newMainButton.disabled) {
@@ -1880,7 +2008,6 @@ class VoiceWidget extends HTMLElement {
         return this.isRecording;
     }
 
-    // 🆕 Методы для управления пониманием запроса (обновленные для работы с бэкендом)
     setUnderstanding(insights) {
         this.updateUnderstanding(insights);
     }
@@ -1892,41 +2019,17 @@ class VoiceWidget extends HTMLElement {
     resetUnderstanding() {
         this.understanding = {
             name: null,
-            type: null,
             operation: null,
             budget: null,
+            type: null,
             location: null,
+            details: null,
+            rooms: null,
+            area: null,
+            preferences: null,
             progress: 0
         };
         this.updateUnderstandingDisplay();
-    }
-
-    // 🆕 Метод для получения статистики сессии
-    async getSessionStats() {
-        try {
-            const statsUrl = this.apiUrl.replace('/upload', '/stats');
-            const response = await fetch(statsUrl);
-            if (response.ok) {
-                return await response.json();
-            }
-        } catch (error) {
-            console.error('Ошибка при получении статистики:', error);
-        }
-        return null;
-    }
-
-    // 🆕 Метод для получения полной информации о текущей сессии
-    async getCurrentSessionInfo() {
-        try {
-            const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.sessionId}`);
-            const response = await fetch(sessionUrl);
-            if (response.ok) {
-                return await response.json();
-            }
-        } catch (error) {
-            console.error('Ошибка при получении информации о сессии:', error);
-        }
-        return null;
     }
 }
 
