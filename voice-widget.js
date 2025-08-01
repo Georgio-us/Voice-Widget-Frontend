@@ -60,18 +60,36 @@ class VoiceWidget extends HTMLElement {
     }
 
     initializeUI() {
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
-        recordingControls.style.display = 'none';
-        
-        // Скрываем скроллбар в пустом состоянии
-        const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-        messagesContainer.style.overflowY = 'hidden';
-        
-        this.updateUnderstandingDisplay();
-        
-        // Загружаем данные сессии при инициализации
-        this.loadSessionInfo();
-    }
+    const recordingControls = this.shadowRoot.getElementById('recordingControls');
+    recordingControls.style.display = 'none';
+    
+    // Скрываем скроллбар в пустом состоянии
+    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
+    messagesContainer.style.overflowY = 'hidden';
+    
+    // 🆕 Инициализация состояний кнопок для UX логики
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
+    
+    // Voice button неактивна до начала диалога (акцент на центральной кнопке)
+    voiceButton.disabled = true;
+    voiceButton.style.opacity = '0.5';
+    voiceButton.style.cursor = 'not-allowed';
+    
+    // Send text button всегда видима, но неактивна до ввода текста
+    sendTextButton.style.display = 'flex';
+    sendTextButton.disabled = true;
+    sendTextButton.style.opacity = '0.5';
+    sendTextButton.style.cursor = 'not-allowed';
+    
+    // Добавляем флаг для отслеживания начала диалога
+    this.dialogStarted = false;
+    
+    this.updateUnderstandingDisplay();
+    
+    // Загружаем данные сессии при инициализации
+    this.loadSessionInfo();
+}
 
     // 🆕 Загрузка информации о сессии с сервера
     async loadSessionInfo() {
@@ -125,8 +143,7 @@ class VoiceWidget extends HTMLElement {
             mainButton.style.cursor = 'not-allowed';
         }
     }
-
-    render() {
+render() {
         this.shadowRoot.innerHTML = `
             <style>
                 :host {
@@ -139,13 +156,13 @@ class VoiceWidget extends HTMLElement {
     border-radius: 24px;
     overflow: hidden;
     height: auto;
-    min-height: 700px;
+    min-height: auto;
     position: relative;
 }
 
                 .widget-container {
                     display: flex;
-                    height: 100%;
+                    height: 90vh;
                     position: relative;
                 }
 
@@ -483,6 +500,7 @@ class VoiceWidget extends HTMLElement {
                     box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
                 }
 
+                /* 🆕 VOICE BUTTON - обновленные стили с disabled состоянием */
                 .voice-button {
                     width: 44px;
                     height: 44px;
@@ -497,11 +515,23 @@ class VoiceWidget extends HTMLElement {
                     box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
                 }
 
-                .voice-button:hover {
+                .voice-button:not(:disabled):hover {
                     transform: scale(1.05);
                     box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
                 }
 
+                .voice-button:disabled {
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 0.5;
+                    cursor: default !important;
+                    box-shadow: none;
+                }
+
+                .voice-button:disabled .input-icon {
+                    fill: rgba(255, 255, 255, 0.4);
+                }
+
+                /* 🆕 SEND TEXT BUTTON - обновленные стили с disabled состоянием */
                 .send-text-button {
                     width: 44px;
                     height: 44px;
@@ -509,46 +539,59 @@ class VoiceWidget extends HTMLElement {
                     background: linear-gradient(135deg, #8B5CF6, #A855F7);
                     border: none;
                     cursor: pointer;
-                    display: none;
+                    display: flex; /* 🔥 Изменено: всегда видима */
                     align-items: center;
                     justify-content: center;
                     transition: all 0.2s ease;
                     box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
                 }
 
-                .send-text-button:hover {
+                .send-text-button:not(:disabled):hover {
                     transform: scale(1.05);
                     box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+                }
+
+                .send-text-button:disabled {
+                    background: rgba(255, 255, 255, 0.1);
+                    opacity: 0.5;
+                    cursor: default !important;
+                    box-shadow: none;
+                }
+
+                .send-text-button:disabled .input-icon {
+                    fill: rgba(255, 255, 255, 0.4);
                 }
 
                 .input-icon {
                     width: 20px;
                     height: 20px;
                     fill: white;
+                    transition: fill 0.2s ease;
                 }
 
                 /* 🆕 ФУНКЦИОНАЛЬНЫЕ КНОПКИ В INPUT AREA */
                 .function-buttons-input {
                     display: flex;
                     gap: 12px;
-                    justify-content: center;
+                    justify-content: flex-start; /* 🔄 смещаем влево */
                 }
 
                 .function-btn-input {
-                    background: rgba(255, 255, 255, 0.05);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    border-radius: 12px;
-                    padding: 10px 16px;
-                    color: rgba(255, 255, 255, 0.8);
+                    background: transparent;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 6px 10px; /* 👈 уменьшенный padding */
+                    color: rgba(255, 255, 255, 0.85);
                     font-size: 13px;
                     cursor: pointer;
                     transition: all 0.2s ease;
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 6px;
                     font-family: inherit;
-                    flex: 1;
-                    justify-content: center;
+                    /* удаляем растягивание */
+                    flex: none;
+                    justify-content: flex-start;
                 }
 
                 .function-btn-input:hover {
@@ -598,7 +641,7 @@ class VoiceWidget extends HTMLElement {
                     fill: currentColor;
                 }
 
-                /* RIGHT PANEL - UNDERSTANDING */
+                /* RIGHT PANEL - UNDERSTANDING (🔥 ОБНОВЛЕННАЯ СТРУКТУРА) */
                 .understanding-panel {
                     width: 340px;
                     background: rgba(255, 255, 255, 0.03);
@@ -607,33 +650,20 @@ class VoiceWidget extends HTMLElement {
                     padding: 60px 20px 20px 20px;
                     display: flex;
                     flex-direction: column;
-                    gap: 20px;
-                    overflow-y: auto;
+                    gap: 16px;
                 }
 
-                .understanding-panel::-webkit-scrollbar {
-                    width: 4px;
-                }
-
-                .understanding-panel::-webkit-scrollbar-track {
-                    background: rgba(255, 255, 255, 0.05);
-                }
-
-                .understanding-panel::-webkit-scrollbar-thumb {
-                    background: rgba(147, 51, 234, 0.3);
-                    border-radius: 2px;
-                }
-
-                /* JARVIS SPHERE */
+                /* JARVIS SPHERE (КОМПАКТНЫЙ) */
                 .jarvis-container {
                     display: flex;
                     justify-content: center;
-                    margin-bottom: 16px;
+                    margin-bottom: 12px;
+                    flex-shrink: 0;
                 }
 
                 .jarvis-sphere {
-                    width: 100px;
-                    height: 100px;
+                    width: 80px;
+                    height: 80px;
                     border-radius: 50%;
                     background: linear-gradient(135deg, 
                         rgba(147, 51, 234, 0.8) 0%, 
@@ -645,8 +675,8 @@ class VoiceWidget extends HTMLElement {
                     position: relative;
                     animation: jarvis-rotate 4s linear infinite;
                     box-shadow: 
-                        0 0 40px rgba(147, 51, 234, 0.3),
-                        inset 0 0 40px rgba(255, 255, 255, 0.1);
+                        0 0 30px rgba(147, 51, 234, 0.3),
+                        inset 0 0 30px rgba(255, 255, 255, 0.1);
                 }
 
                 .jarvis-sphere::before {
@@ -675,8 +705,8 @@ class VoiceWidget extends HTMLElement {
                 }
 
                 .jarvis-core {
-                    width: 32px;
-                    height: 32px;
+                    width: 26px;
+                    height: 26px;
                     border-radius: 50%;
                     background: white;
                     opacity: 0.9;
@@ -688,13 +718,14 @@ class VoiceWidget extends HTMLElement {
                     50% { transform: scale(1.1); opacity: 1; }
                 }
 
-                /* 🆕 UNDERSTANDING PROGRESS */
+                /* UNDERSTANDING PROGRESS (ФИКСИРОВАННЫЙ) */
                 .understanding-section {
                     background: rgba(255, 255, 255, 0.05);
                     border-radius: 16px;
                     border: 1px solid rgba(255, 255, 255, 0.1);
                     padding: 16px;
                     margin-bottom: 12px;
+                    flex-shrink: 0;
                 }
 
                 .section-title {
@@ -705,22 +736,22 @@ class VoiceWidget extends HTMLElement {
                 }
 
                 .progress-container {
-                    margin-bottom: 16px;
+                    margin-bottom: 0;
                 }
 
                 .progress-bar {
                     width: 100%;
-                    height: 8px;
+                    height: 6px;
                     background: rgba(255, 255, 255, 0.1);
-                    border-radius: 4px;
+                    border-radius: 3px;
                     overflow: hidden;
-                    margin-bottom: 8px;
+                    margin-bottom: 6px;
                 }
 
                 .progress-fill {
                     height: 100%;
                     background: linear-gradient(90deg, #4ade80, #22c55e);
-                    border-radius: 4px;
+                    border-radius: 3px;
                     transition: width 0.5s ease;
                     width: 0%;
                 }
@@ -730,29 +761,131 @@ class VoiceWidget extends HTMLElement {
                     color: rgba(255, 255, 255, 0.7);
                 }
 
-                /* 🆕 INSIGHTS BLOCKS */
-                .insights-block {
-                    background: rgba(255, 255, 255, 0.03);
-                    border-radius: 12px;
-                    border: 1px solid rgba(255, 255, 255, 0.08);
-                    padding: 14px;
-                    margin-bottom: 12px;
+                /* 🔥 ACCORDION CONTAINER (СКРОЛЛИРУЕМЫЙ) */
+                .accordion-container {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding-right: 4px;
                 }
 
-                .block-title {
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: rgba(255, 255, 255, 0.9);
-                    margin-bottom: 10px;
+                .accordion-container::-webkit-scrollbar {
+                    width: 4px;
+                }
+
+                .accordion-container::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+
+                .accordion-container::-webkit-scrollbar-thumb {
+                    background: rgba(147, 51, 234, 0.3);
+                    border-radius: 2px;
+                }
+
+                /* 🔥 БАЗОВЫЕ СТИЛИ ДЛЯ БЛОКОВ */
+                .info-block {
+                    background: rgba(255, 255, 255, 0.03);
+                    border-radius: 14px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    margin-bottom: 12px;
+                    overflow: hidden;
+                }
+
+                /* 🔥 СТАТИЧНЫЕ БЛОКИ (без аккордеона) */
+                .static-block {
+                    background: rgba(255, 255, 255, 0.03);
+                    border-radius: 14px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    margin-bottom: 12px;
+                    overflow: hidden;
+                }
+
+                .static-header {
                     display: flex;
                     align-items: center;
-                    gap: 6px;
+                    padding: 16px 18px 12px 18px;
+                    background: rgba(255, 255, 255, 0.02);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                }
+
+                .static-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.9);
+                }
+
+                .static-content {
+                    padding: 14px 18px 18px 18px;
+                }
+
+                /* 🔥 ACCORDION BLOCKS (только для "Детали и предпочтения") */
+                .accordion-block {
+                    background: rgba(255, 255, 255, 0.03);
+                    border-radius: 14px;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    margin-bottom: 12px;
+                    overflow: hidden;
+                }
+
+                .accordion-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 16px 18px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    user-select: none;
+                    background: rgba(255, 255, 255, 0.02);
+                }
+
+                .accordion-header:hover {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+
+                .accordion-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.9);
+                }
+
+                .accordion-arrow {
+                    width: 0;
+                    height: 0;
+                    border-left: 5px solid transparent;
+                    border-right: 5px solid transparent;
+                    border-top: 6px solid rgba(255, 255, 255, 0.6);
+                    transition: transform 0.3s ease;
+                    flex-shrink: 0;
+                }
+
+                .accordion-block.open .accordion-arrow {
+                    transform: rotate(180deg);
+                }
+
+                .accordion-content {
+                    max-height: 0;
+                    overflow: hidden;
+                    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .accordion-block.open .accordion-content {
+                    max-height: 220px;
+                }
+
+                .accordion-content-inner {
+                    padding: 0 18px 18px 18px;
                 }
 
                 .block-icon {
                     width: 14px;
                     height: 14px;
-                    opacity: 0.7;
+                    opacity: 0.8;
+                    flex-shrink: 0;
                 }
 
                 .understanding-item {
@@ -769,8 +902,8 @@ class VoiceWidget extends HTMLElement {
                 }
 
                 .item-indicator {
-                    width: 8px;
-                    height: 8px;
+                    width: 7px;
+                    height: 7px;
                     border-radius: 50%;
                     background: rgba(255, 255, 255, 0.3);
                     flex-shrink: 0;
@@ -781,18 +914,21 @@ class VoiceWidget extends HTMLElement {
                 }
 
                 .item-text {
-                    font-size: 12px;
-                    color: rgba(255, 255, 255, 0.8);
+                    font-size: 13px;
+                    color: rgba(255, 255, 255, 0.85);
                     flex: 1;
                     min-width: 0;
+                    font-weight: 500;
                 }
 
                 .item-value {
                     font-size: 11px;
-                    color: rgba(255, 255, 255, 0.6);
+                    color: rgba(255, 255, 255, 0.65);
                     font-style: italic;
                     text-align: right;
                     flex-shrink: 0;
+                    max-width: 120px;
+                    word-wrap: break-word;
                 }
 
                 /* MESSAGES */
@@ -914,6 +1050,88 @@ class VoiceWidget extends HTMLElement {
                         border-radius: 0;
                         height: 100vh;
                     }
+                        .chat-response {
+                    background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+                    padding: 20px;
+                    border-radius: 14px;
+                    font-family: 'Inter', 'Segoe UI', sans-serif;
+                    color: #eaeaea;
+                    line-height: 1.75;
+                    font-size: 16px;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    }
+
+                    .chat-response h1,
+                    .chat-response h2,
+                    .chat-response h3 {
+                    margin: 24px 0 12px;
+                    color: #ffb347;
+                    font-weight: 700;
+                    line-height: 1.3;
+                    }
+
+                    .chat-response h1 {
+                    font-size: 24px;
+                    }
+                    .chat-response h2 {
+                    font-size: 20px;
+                    }
+                    .chat-response h3 {
+                    font-size: 18px;
+                    }
+
+                    .chat-response p {
+                    margin: 12px 0;
+                    }
+
+                    .chat-response ul,
+                    .chat-response ol {
+                    margin: 14px 0;
+                    padding-left: 22px;
+                    }
+
+                    .chat-response li {
+                    margin: 6px 0;
+                    }
+
+                    .chat-response code {
+                    background-color: rgba(255, 255, 255, 0.08);
+                    padding: 3px 6px;
+                    border-radius: 6px;
+                    font-family: 'Fira Code', monospace;
+                    font-size: 15px;
+                    color: #ffdca8;
+                    }
+
+                    .chat-response pre {
+                    margin: 16px 0;
+                    }
+
+                    .chat-response pre code {
+                    display: block;
+                    padding: 16px;
+                    background: rgba(0, 0, 0, 0.6);
+                    border-radius: 10px;
+                    overflow-x: auto;
+                    font-family: 'Fira Code', monospace;
+                    font-size: 14px;
+                    color: #aaffdd;
+                    }
+
+                    .chat-response blockquote {
+                    margin: 16px 0;
+                    padding: 12px 18px;
+                    border-left: 4px solid #ffa94d;
+                    background: rgba(255, 255, 255, 0.03);
+                    color: #cccccc;
+                    font-style: italic;
+                    border-radius: 6px;
+                    }
+
 
                     .widget-container {
                         flex-direction: column;
@@ -978,10 +1196,12 @@ class VoiceWidget extends HTMLElement {
                         width: 22px;
                         height: 22px;
                     }
+
+                    
                 }
             </style>
 
-            <div class="widget-container">
+           <div class="widget-container">
                 <!-- HEADER -->
                 <div class="widget-header">
                     <div class="header-left">
@@ -997,1040 +1217,1169 @@ class VoiceWidget extends HTMLElement {
                 </div>
 
                 <!-- LEFT PANEL - CHAT -->
-                <div class="chat-panel">
-                    <div class="messages-area">
-                        <div class="loading-indicator" id="loadingIndicator">
-                            <span>Обрабатываю запрос</span>
-                            <div class="loading-dots">
-                                <div class="loading-dot"></div>
-                                <div class="loading-dot"></div>
-                                <div class="loading-dot"></div>
-                            </div>
-                        </div>
+               <div class="chat-panel">
+                   <div class="messages-area">
+                       <div class="loading-indicator" id="loadingIndicator">
+                           <span>Обрабатываю запрос</span>
+                           <div class="loading-dots">
+                               <div class="loading-dot"></div>
+                               <div class="loading-dot"></div>
+                               <div class="loading-dot"></div>
+                           </div>
+                       </div>
 
+                    
+
+                       <div class="messages-container" id="messagesContainer">
+                           <div class="empty-state" id="emptyState">
+                               <button class="record-button-large" id="mainButton">
+                                   <svg class="mic-icon" viewBox="0 0 24 24">
+                                       <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                       <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
+                                   </svg>
+                               </button>
+                               <div class="empty-state-text">Нажмите кнопку записи</div>
+                               <div class="empty-state-subtitle">чтобы начать диалог</div>
+                           </div>
+                       </div>
+                   </div>
+
+                   <div class="input-area">
+                       <div class="input-container">
                         <div class="recording-controls" id="recordingControls">
-                            <div class="recording-indicator">
-                                <div class="wave-animation" id="waveAnimation">
-                                    <div class="wave-bar"></div>
-                                    <div class="wave-bar"></div>
-                                    <div class="wave-bar"></div>
-                                    <div class="wave-bar"></div>
-                                    <div class="wave-bar"></div>
-                                </div>
-                                <div class="timer" id="timer">0:00</div>
-                            </div>
-                            <div class="control-buttons">
-                                <button class="control-button stop-button" id="stopButton" title="Отменить запись">
-                                    <svg class="button-icon" viewBox="0 0 24 24">
-                                        <rect x="6" y="6" width="12" height="12" rx="2"/>
-                                    </svg>
-                                </button>
-                                <button class="control-button send-button" id="sendButton" title="Отправить сообщение">
-                                    <svg class="button-icon" viewBox="0 0 24 24">
-                                        <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
+                           <div class="recording-indicator">
+                               <div class="wave-animation" id="waveAnimation">
+                                   <div class="wave-bar"></div>
+                                   <div class="wave-bar"></div>
+                                   <div class="wave-bar"></div>
+                                   <div class="wave-bar"></div>
+                                   <div class="wave-bar"></div>
+                               </div>
+                               <div class="timer" id="timer">0:00</div>
+                           </div>
+                           <div class="control-buttons">
+                               <button class="control-button stop-button" id="stopButton" title="Отменить запись">
+                                   <svg class="button-icon" viewBox="0 0 24 24">
+                                       <rect x="6" y="6" width="12" height="12" rx="2"/>
+                                   </svg>
+                               </button>
+                               <button class="control-button send-button" id="sendButton" title="Отправить сообщение">
+                                   <svg class="button-icon" viewBox="0 0 24 24">
+                                       <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+                                   </svg>
+                               </button>
+                           </div>
+                       </div>
+                           <input type="text" class="text-input" id="textInput" placeholder="Или введите ваш вопрос...">
+                           <button class="voice-button" id="voiceButton">
+                               <svg class="input-icon" viewBox="0 0 24 24">
+                                   <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                                   <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
+                               </svg>
+                           </button>
+                           <button class="send-text-button" id="sendTextButton">
+                               <svg class="input-icon" viewBox="0 0 24 24">
+                                   <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+                               </svg>
+                           </button>
+                       </div>
 
-                        <div class="messages-container" id="messagesContainer">
-                            <div class="empty-state" id="emptyState">
-                                <button class="record-button-large" id="mainButton">
-                                    <svg class="mic-icon" viewBox="0 0 24 24">
-                                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
-                                    </svg>
-                                </button>
-                                <div class="empty-state-text">Нажмите кнопку записи</div>
-                                <div class="empty-state-subtitle">чтобы начать диалог</div>
-                            </div>
-                        </div>
-                    </div>
+                       <!-- 🆕 ФУНКЦИОНАЛЬНЫЕ КНОПКИ ПЕРЕНЕСЕНЫ СЮДА -->
+                       <div class="function-buttons-input">
+                           <button class="function-btn-input" id="imageBtn">
+                               <svg viewBox="0 0 24 24">
+                                   <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                               </svg>
+                               Изображения
+                           </button>
+                           
+                           <button class="function-btn-input" id="documentBtn">
+                               <svg viewBox="0 0 24 24">
+                                   <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                               </svg>
+                               Документы
+                           </button>
+                           
+                           <button class="function-btn-input" id="pdfBtn">
+                               <svg viewBox="0 0 24 24">
+                                   <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                               </svg>
+                               Скачать PDF
+                           </button>
+                       </div>
 
-                    <div class="input-area">
-                        <div class="input-container">
-                            <input type="text" class="text-input" id="textInput" placeholder="Или введите ваш вопрос...">
-                            <button class="voice-button" id="voiceButton">
-                                <svg class="input-icon" viewBox="0 0 24 24">
-                                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
-                                </svg>
-                            </button>
-                            <button class="send-text-button" id="sendTextButton">
-                                <svg class="input-icon" viewBox="0 0 24 24">
-                                    <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
-                                </svg>
-                            </button>
-                        </div>
+                       <div class="mobile-functions">
+                           <button class="mobile-function-btn" id="mobileImgBtn">
+                               <svg viewBox="0 0 24 24">
+                                   <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                               </svg>
+                               Изображения
+                           </button>
+                           <button class="mobile-function-btn" id="mobileDocBtn">
+                               <svg viewBox="0 0 24 24">
+                                   <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                               </svg>
+                               Документы
+                           </button>
+                           <button class="mobile-function-btn" id="mobilePdfBtn">
+                               <svg viewBox="0 0 24 24">
+                                   <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                               </svg>
+                               Скачать PDF
+                           </button>
+                       </div>
+                   </div>
+               </div>
 
-                        <!-- 🆕 ФУНКЦИОНАЛЬНЫЕ КНОПКИ ПЕРЕНЕСЕНЫ СЮДА -->
-                        <div class="function-buttons-input">
-                            <button class="function-btn-input" id="imageBtn">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                                </svg>
-                                Изображения
-                            </button>
-                            
-                            <button class="function-btn-input" id="documentBtn">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                </svg>
-                                Документы
-                            </button>
-                            
-                            <button class="function-btn-input" id="pdfBtn">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                </svg>
-                                Скачать PDF
-                            </button>
-                        </div>
+               <!-- RIGHT PANEL - UNDERSTANDING (🔥 ОБНОВЛЕННАЯ СТРУКТУРА БЕЗ ACCORDION) -->
+               <div class="understanding-panel">
+                   <!-- UNDERSTANDING PROGRESS (перемещен наверх) -->
+                   <div class="understanding-section">
+                       <div class="section-title">Понимание запроса</div>
+                       <div class="progress-container">
+                           <div class="progress-bar">
+                               <div class="progress-fill" id="progressFill"></div>
+                           </div>
+                           <div class="progress-text" id="progressText">0% - Ожидание</div>
+                       </div>
+                   </div>
 
-                        <div class="mobile-functions">
-                            <button class="mobile-function-btn" id="mobileImgBtn">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                                </svg>
-                                Изображения
-                            </button>
-                            <button class="mobile-function-btn" id="mobileDocBtn">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                </svg>
-                                Документы
-                            </button>
-                            <button class="mobile-function-btn" id="mobilePdfBtn">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                                </svg>
-                                Скачать PDF
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                   <!-- JARVIS SPHERE (перемещена под прогресс) -->
+                   <div class="jarvis-container">
+                       <div class="jarvis-sphere">
+                           <div class="jarvis-core"></div>
+                       </div>
+                   </div>
 
-                <!-- RIGHT PANEL - UNDERSTANDING (🆕 ОБНОВЛЕННАЯ СТРУКТУРА) -->
-                <div class="understanding-panel">
-                    <!-- JARVIS SPHERE -->
-                    <div class="jarvis-container">
-                        <div class="jarvis-sphere">
-                            <div class="jarvis-core"></div>
-                        </div>
-                    </div>
+                   <!-- ACCORDION CONTAINER (обновленная структура) -->
+                   <div class="accordion-container">
+                       <!-- СТАТИЧНЫЙ БЛОК 1: ОСНОВНАЯ ИНФОРМАЦИЯ (БЕЗ ACCORDION) -->
+                       <div class="static-block">
+                           <div class="static-header">
+                               <div class="static-title">
+                                   <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
+                                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                   </svg>
+                                   Основная информация
+                               </div>
+                           </div>
+                           <div class="static-content">
+                               <div class="understanding-item">
+                                   <div class="item-indicator" id="nameIndicator"></div>
+                                   <div class="item-text">Имя клиента</div>
+                                   <div class="item-value" id="nameValue">не определено</div>
+                               </div>
+                               <div class="understanding-item">
+                                   <div class="item-indicator" id="operationIndicator"></div>
+                                   <div class="item-text">Тип операции</div>
+                                   <div class="item-value" id="operationValue">не определена</div>
+                               </div>
+                               <div class="understanding-item">
+                                   <div class="item-indicator" id="budgetIndicator"></div>
+                                   <div class="item-text">Бюджет</div>
+                                   <div class="item-value" id="budgetValue">не определен</div>
+                               </div>
+                           </div>
+                       </div>
 
-                    <!-- UNDERSTANDING PROGRESS -->
-                    <div class="understanding-section">
-                        <div class="section-title">Понимание запроса</div>
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="progressFill"></div>
-                            </div>
-                            <div class="progress-text" id="progressText">0% - Ожидание</div>
-                        </div>
-                    </div>
+                       <!-- СТАТИЧНЫЙ БЛОК 2: ПАРАМЕТРЫ НЕДВИЖИМОСТИ (БЕЗ ACCORDION) -->
+                       <div class="static-block">
+                           <div class="static-header">
+                               <div class="static-title">
+                                   <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
+                                       <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                                   </svg>
+                                   Параметры недвижимости
+                               </div>
+                           </div>
+                           <div class="static-content">
+                               <div class="understanding-item">
+                                   <div class="item-indicator" id="typeIndicator"></div>
+                                   <div class="item-text">Тип недвижимости</div>
+                                   <div class="item-value" id="typeValue">не определен</div>
+                               </div>
+                               <div class="understanding-item">
+                                   <div class="item-indicator" id="locationIndicator"></div>
+                                   <div class="item-text">Город/район</div>
+                                   <div class="item-value" id="locationValue">не определен</div>
+                               </div>
+                               <div class="understanding-item">
+                                   <div class="item-indicator" id="roomsIndicator"></div>
+                                   <div class="item-text">Количество комнат</div>
+                                   <div class="item-value" id="roomsValue">не определено</div>
+                               </div>
+                           </div>
+                       </div>
 
-                    <!-- 🆕 БЛОК 1: ОСНОВНАЯ ИНФОРМАЦИЯ (40%) -->
-                    <div class="insights-block">
-                        <div class="block-title">
-                            <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                            </svg>
-                            Основная информация
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="nameIndicator"></div>
-                            <div class="item-text">Имя клиента</div>
-                            <div class="item-value" id="nameValue">не определено</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="operationIndicator"></div>
-                            <div class="item-text">Тип операции</div>
-                            <div class="item-value" id="operationValue">не определена</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="budgetIndicator"></div>
-                            <div class="item-text">Бюджет</div>
-                            <div class="item-value" id="budgetValue">не определен</div>
-                        </div>
-                    </div>
-
-                    <!-- 🆕 БЛОК 2: ПАРАМЕТРЫ НЕДВИЖИМОСТИ (35%) -->
-                    <div class="insights-block">
-                        <div class="block-title">
-                            <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                            </svg>
-                            Параметры недвижимости
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="typeIndicator"></div>
-                            <div class="item-text">Тип недвижимости</div>
-                            <div class="item-value" id="typeValue">не определен</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="locationIndicator"></div>
-                            <div class="item-text">Город/район</div>
-                            <div class="item-value" id="locationValue">не определен</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="roomsIndicator"></div>
-                            <div class="item-text">Количество комнат</div>
-                            <div class="item-value" id="roomsValue">не определено</div>
-                        </div>
-                    </div>
-
-                    <!-- 🆕 БЛОК 3: ДЕТАЛИ И ПРЕДПОЧТЕНИЯ (33.3%) -->
-                    <div class="insights-block">
-                        <div class="block-title">
-                            <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            Детали и предпочтения
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="areaIndicator"></div>
-                            <div class="item-text">Площадь</div>
-                            <div class="item-value" id="areaValue">не определена</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="detailsIndicator"></div>
-                            <div class="item-text">Детали локации</div>
-                            <div class="item-value" id="detailsValue">не определены</div>
-                        </div>
-                        
-                        <div class="understanding-item">
-                            <div class="item-indicator" id="preferencesIndicator"></div>
-                            <div class="item-text">Предпочтения</div>
-                            <div class="item-value" id="preferencesValue">не определены</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                       <!-- ACCORDION БЛОК 3: ДЕТАЛИ И ПРЕДПОЧТЕНИЯ (ОСТАЕТСЯ С ACCORDION) -->
+                       <div class="accordion-block">
+                           <div class="accordion-header" data-accordion="details-preferences">
+                               <div class="accordion-title">
+                                   <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
+                                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                   </svg>
+                                   Детали и предпочтения
+                               </div>
+                               <div class="accordion-arrow"></div>
+                           </div>
+                           <div class="accordion-content" id="accordion-details-preferences">
+                               <div class="accordion-content-inner">
+                                   <div class="understanding-item">
+                                       <div class="item-indicator" id="areaIndicator"></div>
+                                       <div class="item-text">Площадь</div>
+                                       <div class="item-value" id="areaValue">не определена</div>
+                                   </div>
+                                   <div class="understanding-item">
+                                       <div class="item-indicator" id="detailsIndicator"></div>
+                                       <div class="item-text">Детали локации</div>
+                                       <div class="item-value" id="detailsValue">не определены</div>
+                                   </div>
+                                   <div class="understanding-item">
+                                       <div class="item-indicator" id="preferencesIndicator"></div>
+                                       <div class="item-text">Предпочтения</div>
+                                       <div class="item-value" id="preferencesValue">не определены</div>
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+               </div>
+           </div>
         `;
     }
+   bindEvents() {
+    const mainButton = this.shadowRoot.getElementById('mainButton');
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const stopButton = this.shadowRoot.getElementById('stopButton');
+    const sendButton = this.shadowRoot.getElementById('sendButton');
+    const textInput = this.shadowRoot.getElementById('textInput');
+    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
 
-    bindEvents() {
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const voiceButton = this.shadowRoot.getElementById('voiceButton');
-        const stopButton = this.shadowRoot.getElementById('stopButton');
-        const sendButton = this.shadowRoot.getElementById('sendButton');
-        const textInput = this.shadowRoot.getElementById('textInput');
-        const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
+    // Главные кнопки записи
+    mainButton.addEventListener('click', () => {
+        if (!this.isRecording && !mainButton.disabled) {
+            this.startRecording();
+        }
+    });
 
-        // Главные кнопки записи
-        mainButton.addEventListener('click', () => {
-            if (!this.isRecording && !mainButton.disabled) {
-                this.startRecording();
-            }
-        });
+    voiceButton.addEventListener('click', () => {
+        if (!this.isRecording && !voiceButton.disabled) {
+            this.startRecording();
+        }
+    });
 
-        voiceButton.addEventListener('click', () => {
-            if (!this.isRecording && !voiceButton.disabled) {
-                this.startRecording();
-            }
-        });
+    // Кнопки управления записью
+    stopButton.addEventListener('click', () => {
+        if (this.isRecording) {
+            this.cancelRecording();
+        }
+    });
 
-        // Кнопки управления записью
-        stopButton.addEventListener('click', () => {
-            if (this.isRecording) {
-                this.cancelRecording();
-            }
-        });
+    sendButton.addEventListener('click', () => {
+        if (this.isRecording) {
+            this.finishAndSend();
+        } else if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
+            this.sendMessage();
+        } else {
+            this.showWarning('⚠️ Сначала сделайте запись');
+        }
+    });
 
-        sendButton.addEventListener('click', () => {
-            if (this.isRecording) {
-                this.finishAndSend();
-            } else if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
-                this.sendMessage();
-            } else {
-                this.showWarning('⚠️ Сначала сделайте запись');
-            }
-        });
+    // 🔥 ОБНОВЛЕННАЯ ЛОГИКА ТЕКСТОВОГО ВВОДА
+    textInput.addEventListener('input', () => {
+        const hasText = textInput.value.trim().length > 0;
+        // Вместо скрытия/показа - управляем disabled состоянием
+        sendTextButton.disabled = !hasText;
+        if (hasText) {
+            sendTextButton.style.opacity = '1';
+            sendTextButton.style.cursor = 'pointer';
+        } else {
+            sendTextButton.style.opacity = '0.5';
+            sendTextButton.style.cursor = 'not-allowed';
+        }
+    });
 
-        // Текстовый ввод
-        textInput.addEventListener('input', () => {
-            const hasText = textInput.value.trim().length > 0;
-            sendTextButton.style.display = hasText ? 'flex' : 'none';
-        });
-
-        textInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !this.isMobile()) {
-                e.preventDefault();
-                if (textInput.value.trim()) {
-                    this.sendTextMessage();
-                }
-            }
-        });
-
-        sendTextButton.addEventListener('click', () => {
-            if (textInput.value.trim()) {
+    textInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !this.isMobile()) {
+            e.preventDefault();
+            if (textInput.value.trim() && !sendTextButton.disabled) {
                 this.sendTextMessage();
             }
-        });
-
-        // Функциональные кнопки
-        this.bindFunctionButtons();
-    }
-
-    bindFunctionButtons() {
-        // Desktop функции (перенесены к input area)
-        const imageBtn = this.shadowRoot.getElementById('imageBtn');
-        const documentBtn = this.shadowRoot.getElementById('documentBtn');
-        const pdfBtn = this.shadowRoot.getElementById('pdfBtn');
-
-        // Mobile функции
-        const mobileImgBtn = this.shadowRoot.getElementById('mobileImgBtn');
-        const mobileDocBtn = this.shadowRoot.getElementById('mobileDocBtn');
-        const mobilePdfBtn = this.shadowRoot.getElementById('mobilePdfBtn');
-
-        [imageBtn, mobileImgBtn].forEach(btn => {
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    console.log('🖼️ Функция добавления изображений в разработке');
-                    this.showNotification('🖼️ Функция в разработке');
-                });
-            }
-        });
-
-        [documentBtn, mobileDocBtn].forEach(btn => {
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    console.log('📄 Функция добавления документов в разработке');
-                    this.showNotification('📄 Функция в разработке');
-                });
-            }
-        });
-
-        [pdfBtn, mobilePdfBtn].forEach(btn => {
-            if (btn) {
-                btn.addEventListener('click', () => {
-                    console.log('📊 Функция скачивания PDF в разработке');
-                    this.showNotification('📊 Функция в разработке');
-                });
-            }
-        });
-    }
-
-    isMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
-               || 'ontouchstart' in window;
-    }
-
-    // 🆕 Обновленные методы понимания запроса для работы с новой структурой (9 параметров)
-    updateUnderstanding(insights) {
-        if (!insights) return;
-        
-        console.log('🧠 Обновляю понимание:', insights);
-        
-        // Обновляем локальное состояние
-        this.understanding = { ...this.understanding, ...insights };
-        
-        // 🆕 Гибкая система прогресса с приоритизацией
-        const progress = this.calculateProgress();
-        this.understanding.progress = progress;
-        
-        // Обновляем прогресс-бар
-        const progressFill = this.shadowRoot.getElementById('progressFill');
-        const progressText = this.shadowRoot.getElementById('progressText');
-        
-        progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
-        
-        // Обновляем все поля insights
-        this.updateInsightItem('name', insights.name);
-        this.updateInsightItem('operation', insights.operation);  
-        this.updateInsightItem('budget', insights.budget);
-        this.updateInsightItem('type', insights.type);
-        this.updateInsightItem('location', insights.location);
-        this.updateInsightItem('details', insights.details);
-        this.updateInsightItem('rooms', insights.rooms);
-        this.updateInsightItem('area', insights.area);
-        this.updateInsightItem('preferences', insights.preferences);
-    }
-
-    // 🆕 Гибкая система расчета прогресса
-    calculateProgress() {
-        const weights = {
-            // Блок 1: Основная информация (33.3%)
-            name: 10,
-            operation: 12,
-            budget: 11,
-            
-            // Блок 2: Параметры недвижимости (33.3%)
-            type: 11,
-            location: 11,
-            rooms: 11,
-            
-            // Блок 3: Детали и предпочтения (33.3%)
-            area: 11,
-            details: 11,    // детали локации: возле парка, пересечение улиц
-            preferences: 11
-        };
-        
-        let totalProgress = 0;
-        
-        for (const [field, weight] of Object.entries(weights)) {
-            if (this.understanding[field] && this.understanding[field].trim()) {
-                totalProgress += weight;
-            }
         }
-        
-        return Math.min(totalProgress, 99); // максимум 99%, чтобы было место для округления
-    }
+    });
 
-    updateInsightItem(field, value) {
-        const indicator = this.shadowRoot.getElementById(`${field}Indicator`);
-        const valueElement = this.shadowRoot.getElementById(`${field}Value`);
-        
-        if (!indicator || !valueElement) {
-            console.warn(`🔍 Элементы для поля ${field} не найдены`);
-            return;
+    sendTextButton.addEventListener('click', () => {
+        if (textInput.value.trim() && !sendTextButton.disabled) {
+            this.sendTextMessage();
         }
-        
-        if (value && value.trim()) {
-            indicator.classList.add('filled');
-            valueElement.textContent = value;
-        } else {
-            indicator.classList.remove('filled');
-            valueElement.textContent = this.getDefaultText(field);
-        }
-    }
+    });
 
-    getDefaultText(field) {
-        const defaults = {
-            name: 'не определено',
-            operation: 'не определена',
-            budget: 'не определен',
-            type: 'не определен',
-            location: 'не определен',
-            details: 'не определены',
-            rooms: 'не определено',
-            area: 'не определена',
-            preferences: 'не определены'
-        };
-        return defaults[field] || 'не определено';
-    }
+    // Функциональные кнопки
+    this.bindFunctionButtons();
+    
+    // 🔥 Только для третьего блока "Детали и предпочтения"
+    this.bindAccordionEvents();
+}
 
-    getStageText(progress) {
-        if (progress === 0) return 'Ожидание';
-        if (progress <= 20) return 'Знакомство';
-        if (progress <= 40) return 'Основные параметры';
-        if (progress <= 60) return 'Готов к первичному подбору';
-        if (progress <= 80) return 'Уточнение деталей';
-        return 'Готов к точному подбору';
-    }
+bindFunctionButtons() {
+    // Desktop функции (перенесены к input area)
+    const imageBtn = this.shadowRoot.getElementById('imageBtn');
+    const documentBtn = this.shadowRoot.getElementById('documentBtn');
+    const pdfBtn = this.shadowRoot.getElementById('pdfBtn');
 
-    updateUnderstandingDisplay() {
-        const progressFill = this.shadowRoot.getElementById('progressFill');
-        const progressText = this.shadowRoot.getElementById('progressText');
-        
-        const progress = this.calculateProgress();
-        this.understanding.progress = progress;
-        
-        progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
+    // Mobile функции
+    const mobileImgBtn = this.shadowRoot.getElementById('mobileImgBtn');
+    const mobileDocBtn = this.shadowRoot.getElementById('mobileDocBtn');
+    const mobilePdfBtn = this.shadowRoot.getElementById('mobilePdfBtn');
 
-        // Обновляем все поля
-        this.updateInsightItem('name', this.understanding.name);
-        this.updateInsightItem('operation', this.understanding.operation);
-        this.updateInsightItem('budget', this.understanding.budget);
-        this.updateInsightItem('type', this.understanding.type);
-        this.updateInsightItem('location', this.understanding.location);
-        this.updateInsightItem('details', this.understanding.details);
-        this.updateInsightItem('rooms', this.understanding.rooms);
-        this.updateInsightItem('area', this.understanding.area);
-        this.updateInsightItem('preferences', this.understanding.preferences);
-    }
-
-    // Все остальные методы остаются без изменений
-    async startRecording() {
-        try {
-            this.isRecording = true;
-            this.recordingTime = 0;
-            this.recordedChunks = [];
-            this.audioBlob = null;
-
-            const mainButton = this.shadowRoot.getElementById('mainButton');
-            const voiceButton = this.shadowRoot.getElementById('voiceButton');
-            const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-            const recordingControls = this.shadowRoot.getElementById('recordingControls');
-
-            mainButton.classList.add('recording');
-            voiceButton.classList.add('recording');
-            waveAnimation.classList.add('active');
-            
-            recordingControls.style.display = 'flex';
-            recordingControls.classList.add('active');
-
-            this.stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
+    [imageBtn, mobileImgBtn].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                console.log('🖼️ Функция добавления изображений в разработке');
+                this.showNotification('🖼️ Функция в разработке');
             });
-
-            let mimeType = '';
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                mimeType = 'audio/webm;codecs=opus';
-            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-                mimeType = 'audio/webm';
-            }
-
-            this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    this.recordedChunks.push(event.data);
-                }
-            };
-
-            this.mediaRecorder.onstop = () => {
-                if (this.recordedChunks.length > 0) {
-                    this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-                    console.log('✅ Аудио готово к отправке');
-                }
-            };
-
-            this.mediaRecorder.onerror = (event) => {
-                console.error('Ошибка записи:', event.error);
-                this.handleRecordingError('Произошла ошибка во время записи');
-            };
-
-            this.mediaRecorder.start(100);
-
-            this.recordingTimer = setInterval(() => {
-                this.recordingTime++;
-                this.updateTimer();
-
-                if (this.recordingTime >= this.maxRecordingTime) {
-                    this.finishAndSend();
-                }
-            }, 1000);
-
-            this.dispatchEvent(new CustomEvent('recordingStart'));
-
-        } catch (err) {
-            console.error('Ошибка доступа к микрофону:', err);
-            this.handleRecordingError(this.getErrorMessage(err));
         }
+    });
+
+    [documentBtn, mobileDocBtn].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                console.log('📄 Функция добавления документов в разработке');
+                this.showNotification('📄 Функция в разработке');
+            });
+        }
+    });
+
+    [pdfBtn, mobilePdfBtn].forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => {
+                console.log('📊 Функция скачивания PDF в разработке');
+                this.showNotification('📊 Функция в разработке');
+            });
+        }
+    });
+}
+
+// 🔥 ОПТИМИЗИРОВАННЫЕ ACCORDION МЕТОДЫ (только для "Детали и предпочтения")
+bindAccordionEvents() {
+    // Находим только аккордеон для "Детали и предпочтения"
+    const detailsAccordionHeader = this.shadowRoot.querySelector('[data-accordion="details-preferences"]');
+    
+    if (detailsAccordionHeader) {
+        detailsAccordionHeader.addEventListener('click', () => {
+            this.toggleDetailsAccordion();
+        });
+        console.log('📂 Инициализирован аккордеон для "Детали и предпочтения"');
+    }
+}
+
+toggleDetailsAccordion() {
+    const accordionBlock = this.shadowRoot.querySelector('[data-accordion="details-preferences"]')?.closest('.accordion-block');
+    
+    if (!accordionBlock) {
+        console.warn('🔍 Блок "Детали и предпочтения" не найден');
+        return;
     }
 
-    cancelRecording() {
-        if (!this.isRecording) return;
+    // Переключаем класс open
+    if (accordionBlock.classList.contains('open')) {
+        accordionBlock.classList.remove('open');
+        console.log('📁 Закрыл "Детали и предпочтения"');
+    } else {
+        accordionBlock.classList.add('open');
+        console.log('📂 Открыл "Детали и предпочтения"');
+    }
+}
 
-        console.log('🔴 Отменяем запись');
+// 🔥 УПРОЩЕННЫЕ ПУБЛИЧНЫЕ МЕТОДЫ ДЛЯ УПРАВЛЕНИЯ АККОРДЕОНОМ
+openDetailsAccordion() {
+    const accordionBlock = this.shadowRoot.querySelector('[data-accordion="details-preferences"]')?.closest('.accordion-block');
+    if (accordionBlock) {
+        accordionBlock.classList.add('open');
+        console.log('📂 Принудительно открыл "Детали и предпочтения"');
+    }
+}
 
-        this.isRecording = false;
+closeDetailsAccordion() {
+    const accordionBlock = this.shadowRoot.querySelector('[data-accordion="details-preferences"]')?.closest('.accordion-block');
+    if (accordionBlock) {
+        accordionBlock.classList.remove('open');
+        console.log('📁 Принудительно закрыл "Детали и предпочтения"');
+    }
+}
+
+// 🆕 МЕТОД АКТИВАЦИИ КНОПОК ПОСЛЕ НАЧАЛА ДИАЛОГА
+activateDialogButtons() {
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    
+    if (voiceButton && voiceButton.disabled) {
+        voiceButton.disabled = false;
+        voiceButton.style.opacity = '1';
+        voiceButton.style.cursor = 'pointer';
         
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-            this.recordingTimer = null;
-        }
+        console.log('✅ Voice button активирована - диалог начат');
+        this.dialogStarted = true;
+    }
+}
 
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-            this.mediaRecorder.stop();
-        }
+isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+           || 'ontouchstart' in window;
+}
 
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
+// 🆕 Обновленные методы понимания запроса для работы с новой структурой (9 параметров)
+updateUnderstanding(insights) {
+    if (!insights) return;
+    
+    console.log('🧠 Обновляю понимание:', insights);
+    
+    // Обновляем локальное состояние
+    this.understanding = { ...this.understanding, ...insights };
+    
+    // 🆕 Гибкая система прогресса с приоритизацией
+    const progress = this.calculateProgress();
+    this.understanding.progress = progress;
+    
+    // Обновляем прогресс-бар
+    const progressFill = this.shadowRoot.getElementById('progressFill');
+    const progressText = this.shadowRoot.getElementById('progressText');
+    
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
+    
+    // Обновляем все поля insights
+    this.updateInsightItem('name', insights.name);
+    this.updateInsightItem('operation', insights.operation);  
+    this.updateInsightItem('budget', insights.budget);
+    this.updateInsightItem('type', insights.type);
+    this.updateInsightItem('location', insights.location);
+    this.updateInsightItem('details', insights.details);
+    this.updateInsightItem('rooms', insights.rooms);
+    this.updateInsightItem('area', insights.area);
+    this.updateInsightItem('preferences', insights.preferences);
+}
+
+// 🆕 Гибкая система расчета прогресса
+calculateProgress() {
+    const weights = {
+        // Блок 1: Основная информация (33.3%)
+        name: 10,
+        operation: 12,
+        budget: 11,
+        
+        // Блок 2: Параметры недвижимости (33.3%)
+        type: 11,
+        location: 11,
+        rooms: 11,
+        
+        // Блок 3: Детали и предпочтения (33.3%)
+        area: 11,
+        details: 11,    // детали локации: возле парка, пересечение улиц
+        preferences: 11
+    };
+    
+    let totalProgress = 0;
+    
+    for (const [field, weight] of Object.entries(weights)) {
+        if (this.understanding[field] && this.understanding[field].trim()) {
+            totalProgress += weight;
         }
+    }
+    
+    return Math.min(totalProgress, 99); // максимум 99%, чтобы было место для округления
+}
+
+updateInsightItem(field, value) {
+    const indicator = this.shadowRoot.getElementById(`${field}Indicator`);
+    const valueElement = this.shadowRoot.getElementById(`${field}Value`);
+    
+    if (!indicator || !valueElement) {
+        console.warn(`🔍 Элементы для поля ${field} не найдены`);
+        return;
+    }
+    
+    if (value && value.trim()) {
+        indicator.classList.add('filled');
+        valueElement.textContent = value;
+    } else {
+        indicator.classList.remove('filled');
+        valueElement.textContent = this.getDefaultText(field);
+    }
+}
+
+getDefaultText(field) {
+    const defaults = {
+        name: 'не определено',
+        operation: 'не определена',
+        budget: 'не определен',
+        type: 'не определен',
+        location: 'не определен',
+        details: 'не определены',
+        rooms: 'не определено',
+        area: 'не определена',
+        preferences: 'не определены'
+    };
+    return defaults[field] || 'не определено';
+}
+
+getStageText(progress) {
+    if (progress === 0) return 'Ожидание';
+    if (progress <= 20) return 'Знакомство';
+    if (progress <= 40) return 'Основные параметры';
+    if (progress <= 60) return 'Готов к первичному подбору';
+    if (progress <= 80) return 'Уточнение деталей';
+    return 'Готов к точному подбору';
+}
+
+updateUnderstandingDisplay() {
+    const progressFill = this.shadowRoot.getElementById('progressFill');
+    const progressText = this.shadowRoot.getElementById('progressText');
+    
+    const progress = this.calculateProgress();
+    this.understanding.progress = progress;
+    
+    progressFill.style.width = `${progress}%`;
+    progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
+
+    // Обновляем все поля
+    this.updateInsightItem('name', this.understanding.name);
+    this.updateInsightItem('operation', this.understanding.operation);
+    this.updateInsightItem('budget', this.understanding.budget);
+    this.updateInsightItem('type', this.understanding.type);
+    this.updateInsightItem('location', this.understanding.location);
+    this.updateInsightItem('details', this.understanding.details);
+    this.updateInsightItem('rooms', this.understanding.rooms);
+    this.updateInsightItem('area', this.understanding.area);
+    this.updateInsightItem('preferences', this.understanding.preferences);
+}
+
+// Все остальные методы остаются без изменений
+async startRecording() {
+    try {
+        this.isRecording = true;
+        this.recordingTime = 0;
+        this.recordedChunks = [];
+        this.audioBlob = null;
 
         const mainButton = this.shadowRoot.getElementById('mainButton');
         const voiceButton = this.shadowRoot.getElementById('voiceButton');
         const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
         const recordingControls = this.shadowRoot.getElementById('recordingControls');
 
-        mainButton.classList.remove('recording');
-        voiceButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
-        recordingControls.style.display = 'none';
-        recordingControls.classList.remove('active');
-
-        this.cleanupRecording();
-        this.showNotification('❌ Запись отменена');
-
-        this.dispatchEvent(new CustomEvent('recordingCancelled'));
-    }
-
-    async finishAndSend() {
-        if (!this.isRecording) return;
-
-        console.log('🟢 Завершаем запись и отправляем');
-
-        if (this.recordingTime < this.minRecordingTime) {
-            this.showNotification('⚠️ Запись слишком короткая');
-            return;
-        }
-
-        this.isRecording = false;
+        mainButton.classList.add('recording');
+        voiceButton.classList.add('recording');
+        waveAnimation.classList.add('active');
         
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-            this.recordingTimer = null;
-        }
+        recordingControls.style.display = 'flex';
+        recordingControls.classList.add('active');
 
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const voiceButton = this.shadowRoot.getElementById('voiceButton');
-        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-
-        mainButton.classList.remove('recording');
-        voiceButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
-
-        await new Promise((resolve) => {
-            this.mediaRecorder.onstop = () => {
-                if (this.recordedChunks.length > 0) {
-                    this.audioBlob = new Blob(this.recordedChunks, { 
-                        type: this.mediaRecorder.mimeType || 'audio/webm' 
-                    });
-                    console.log('✅ Blob создан, отправляем...');
-                    resolve();
-                }
-            };
-
-            this.mediaRecorder.stop();
+        this.stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
         });
 
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
+        let mimeType = '';
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            mimeType = 'audio/webm';
         }
 
-        this.sendMessage();
+        this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
+
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+            }
+        };
+
+        this.mediaRecorder.onstop = () => {
+            if (this.recordedChunks.length > 0) {
+                this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+                console.log('✅ Аудио готово к отправке');
+            }
+        };
+
+        this.mediaRecorder.onerror = (event) => {
+            console.error('Ошибка записи:', event.error);
+            this.handleRecordingError('Произошла ошибка во время записи');
+        };
+
+        this.mediaRecorder.start(100);
+
+        this.recordingTimer = setInterval(() => {
+            this.recordingTime++;
+            this.updateTimer();
+
+            if (this.recordingTime >= this.maxRecordingTime) {
+                this.finishAndSend();
+            }
+        }, 1000);
+
+        this.dispatchEvent(new CustomEvent('recordingStart'));
+
+    } catch (err) {
+        console.error('Ошибка доступа к микрофону:', err);
+        this.handleRecordingError(this.getErrorMessage(err));
+    }
+}
+
+cancelRecording() {
+    if (!this.isRecording) return;
+
+    console.log('🔴 Отменяем запись');
+
+    this.isRecording = false;
+    
+    if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+        this.recordingTimer = null;
     }
 
-    async sendTextMessage() {
-        const textInput = this.shadowRoot.getElementById('textInput');
-        const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
-        const messageText = textInput.value.trim();
-        
-        if (!messageText) return;
-
-        textInput.value = '';
-        sendTextButton.style.display = 'none';
-
-        this.showLoading();
-
-        const userMessage = {
-            type: 'user',
-            content: messageText,
-            timestamp: new Date()
-        };
-        
-        this.addMessage(userMessage);
-
-        try {
-            const formData = new FormData();
-            formData.append('text', messageText);
-            formData.append('sessionId', this.sessionId);
-
-            console.log('📤 Отправляем текст с sessionId:', this.sessionId);
-
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            console.log('📥 Ответ от сервера на текст:', {
-                sessionId: data.sessionId,
-                messageCount: data.messageCount,
-                insights: data.insights,
-                tokens: data.tokens,
-                timing: data.timing
-            });
-            
-            this.hideLoading();
-            this.updateMessageCount();
-
-            // 🆕 Обновляем insights из ответа сервера
-            if (data.insights) {
-                this.updateUnderstanding(data.insights);
-            }
-
-            const assistantMessage = {
-                type: 'assistant',
-                content: data[this.responseField] || 'Ответ не получен от сервера.',
-                timestamp: new Date()
-            };
-            this.addMessage(assistantMessage);
-
-        } catch (error) {
-            this.hideLoading();
-            console.error('Ошибка при отправке текста:', error);
-            
-            const assistantMessage = {
-                type: 'assistant',
-                content: error.message.includes('CORS') || error.message.includes('502') 
-                    ? 'CORS ошибка: Бэкенд недоступен с localhost. Проверьте настройки сервера или тестируйте с того же домена.'
-                    : 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
-                timestamp: new Date()
-            };
-            this.addMessage(assistantMessage);
-        }
-
-        this.dispatchEvent(new CustomEvent('textMessageSend', {
-            detail: { text: messageText }
-        }));
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+        this.mediaRecorder.stop();
     }
 
-    async sendMessage() {
-        if (!this.audioBlob) {
-            console.error('Нет аудио для отправки');
-            return;
+    if (this.stream) {
+        this.stream.getTracks().forEach(track => track.stop());
+        this.stream = null;
+    }
+
+    const mainButton = this.shadowRoot.getElementById('mainButton');
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
+    const recordingControls = this.shadowRoot.getElementById('recordingControls');
+
+    mainButton.classList.remove('recording');
+    voiceButton.classList.remove('recording');
+    waveAnimation.classList.remove('active');
+    recordingControls.style.display = 'none';
+    recordingControls.classList.remove('active');
+
+    this.cleanupRecording();
+    this.showNotification('❌ Запись отменена');
+
+    this.dispatchEvent(new CustomEvent('recordingCancelled'));
+}
+
+async finishAndSend() {
+    if (!this.isRecording) return;
+
+    console.log('🟢 Завершаем запись и отправляем');
+
+    if (this.recordingTime < this.minRecordingTime) {
+        this.showNotification('⚠️ Запись слишком короткая');
+        return;
+    }
+
+    this.isRecording = false;
+    
+    if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+        this.recordingTimer = null;
+    }
+
+    const mainButton = this.shadowRoot.getElementById('mainButton');
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
+
+    mainButton.classList.remove('recording');
+    voiceButton.classList.remove('recording');
+    waveAnimation.classList.remove('active');
+
+    await new Promise((resolve) => {
+        this.mediaRecorder.onstop = () => {
+            if (this.recordedChunks.length > 0) {
+                this.audioBlob = new Blob(this.recordedChunks, { 
+                    type: this.mediaRecorder.mimeType || 'audio/webm' 
+                });
+                console.log('✅ Blob создан, отправляем...');
+                resolve();
+            }
+        };
+
+        this.mediaRecorder.stop();
+    });
+
+    if (this.stream) {
+        this.stream.getTracks().forEach(track => track.stop());
+        this.stream = null;
+    }
+
+    this.sendMessage();
+}
+
+async sendTextMessage() {
+    const textInput = this.shadowRoot.getElementById('textInput');
+    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
+    const messageText = textInput.value.trim();
+    
+    if (!messageText) return;
+
+    textInput.value = '';
+    // 🔥 ОБНОВЛЕНО: Вместо скрытия - делаем disabled
+    sendTextButton.disabled = true;
+    sendTextButton.style.opacity = '0.5';
+    sendTextButton.style.cursor = 'not-allowed';
+
+    this.showLoading();
+
+    const userMessage = {
+        type: 'user',
+        content: messageText,
+        timestamp: new Date()
+    };
+    
+    this.addMessage(userMessage);
+
+    try {
+        const formData = new FormData();
+        formData.append('text', messageText);
+        formData.append('sessionId', this.sessionId);
+
+        console.log('📤 Отправляем текст с sessionId:', this.sessionId);
+
+        const response = await fetch(this.apiUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        if (this.recordingTime < this.minRecordingTime) {
-            this.showNotification('⚠️ Запись слишком короткая');
-            return;
+        const data = await response.json();
+        
+        console.log('📥 Ответ от сервера на текст:', {
+            sessionId: data.sessionId,
+            messageCount: data.messageCount,
+            insights: data.insights,
+            tokens: data.tokens,
+            timing: data.timing
+        });
+        
+        this.hideLoading();
+        this.updateMessageCount();
+
+        // 🆕 Обновляем insights из ответа сервера
+        if (data.insights) {
+            this.updateUnderstanding(data.insights);
         }
 
-        this.showLoading();
-
-        const userMessage = {
-            type: 'user',
-            content: `Голосовое сообщение (${this.recordingTime}с)`,
+        const assistantMessage = {
+            type: 'assistant',
+            content: data[this.responseField] || 'Ответ не получен от сервера.',
             timestamp: new Date()
         };
+        this.addMessage(assistantMessage);
+
+    } catch (error) {
+        this.hideLoading();
+        console.error('Ошибка при отправке текста:', error);
         
-        this.addMessage(userMessage);
+        const assistantMessage = {
+            type: 'assistant',
+            content: error.message.includes('CORS') || error.message.includes('502') 
+                ? 'CORS ошибка: Бэкенд недоступен с localhost. Проверьте настройки сервера или тестируйте с того же домена.'
+                : 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+            timestamp: new Date()
+        };
+        this.addMessage(assistantMessage);
+    }
 
-        try {
-            const formData = new FormData();
-            formData.append(this.fieldName, this.audioBlob, 'voice-message.webm');
-            formData.append('sessionId', this.sessionId);
+    this.dispatchEvent(new CustomEvent('textMessageSend', {
+        detail: { text: messageText }
+    }));
+}
 
-            console.log('📤 Отправляем аудио с sessionId:', this.sessionId);
+async sendMessage() {
+    if (!this.audioBlob) {
+        console.error('Нет аудио для отправки');
+        return;
+    }
 
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                body: formData
-            });
+    if (this.recordingTime < this.minRecordingTime) {
+        this.showNotification('⚠️ Запись слишком короткая');
+        return;
+    }
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+    this.showLoading();
 
-            const data = await response.json();
-            
-            console.log('📥 Ответ от сервера на аудио:', {
-                sessionId: data.sessionId,
-                messageCount: data.messageCount,
-                insights: data.insights,
-                tokens: data.tokens,
-                timing: data.timing
-            });
-            
-            this.hideLoading();
-            this.updateMessageCount();
+    const userMessage = {
+        type: 'user',
+        content: `Голосовое сообщение (${this.recordingTime}с)`,
+        timestamp: new Date()
+    };
+    
+    this.addMessage(userMessage);
 
-            // 🆕 Обновляем транскрипцию в пользовательском сообщении
-            if (data.transcription) {
-                const lastUserMessage = this.messages[this.messages.length - 1];
-                if (lastUserMessage && lastUserMessage.type === 'user') {
-                    lastUserMessage.content = data.transcription;
-                    
-                    const userMessages = this.shadowRoot.querySelectorAll('.message.user');
-                    const lastUserMessageElement = userMessages[userMessages.length - 1];
-                    if (lastUserMessageElement) {
-                        const bubble = lastUserMessageElement.querySelector('.message-bubble');
-                        if (bubble) {
-                            bubble.textContent = data.transcription;
-                        }
+    try {
+        const formData = new FormData();
+        formData.append(this.fieldName, this.audioBlob, 'voice-message.webm');
+        formData.append('sessionId', this.sessionId);
+
+        console.log('📤 Отправляем аудио с sessionId:', this.sessionId);
+
+        const response = await fetch(this.apiUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        console.log('📥 Ответ от сервера на аудио:', {
+            sessionId: data.sessionId,
+            messageCount: data.messageCount,
+            insights: data.insights,
+            tokens: data.tokens,
+            timing: data.timing
+        });
+        
+        this.hideLoading();
+        this.updateMessageCount();
+
+        // 🆕 Обновляем транскрипцию в пользовательском сообщении
+        if (data.transcription) {
+            const lastUserMessage = this.messages[this.messages.length - 1];
+            if (lastUserMessage && lastUserMessage.type === 'user') {
+                lastUserMessage.content = data.transcription;
+                
+                const userMessages = this.shadowRoot.querySelectorAll('.message.user');
+                const lastUserMessageElement = userMessages[userMessages.length - 1];
+                if (lastUserMessageElement) {
+                    const bubble = lastUserMessageElement.querySelector('.message-bubble');
+                    if (bubble) {
+                        bubble.textContent = data.transcription;
                     }
                 }
             }
-
-            // 🆕 Обновляем insights из ответа сервера
-            if (data.insights) {
-                this.updateUnderstanding(data.insights);
-            }
-
-            const assistantMessage = {
-                type: 'assistant',
-                content: data[this.responseField] || 'Ответ не получен от сервера.',
-                timestamp: new Date()
-            };
-            this.addMessage(assistantMessage);
-
-            this.cleanupAfterSend();
-
-        } catch (error) {
-            this.hideLoading();
-            console.error('Ошибка при отправке аудио:', error);
-            
-            const assistantMessage = {
-                type: 'assistant',
-                content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
-                timestamp: new Date()
-            };
-            this.addMessage(assistantMessage);
         }
 
-        this.dispatchEvent(new CustomEvent('messageSend', {
-            detail: { duration: this.recordingTime }
-        }));
+        // 🆕 Обновляем insights из ответа сервера
+        if (data.insights) {
+            this.updateUnderstanding(data.insights);
+        }
+
+        const assistantMessage = {
+            type: 'assistant',
+            content: data[this.responseField] || 'Ответ не получен от сервера.',
+            timestamp: new Date()
+        };
+        this.addMessage(assistantMessage);
+
+        this.cleanupAfterSend();
+
+    } catch (error) {
+        this.hideLoading();
+        console.error('Ошибка при отправке аудио:', error);
+        
+        const assistantMessage = {
+            type: 'assistant',
+            content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+            timestamp: new Date()
+        };
+        this.addMessage(assistantMessage);
     }
 
-    addMessage(message) {
-        this.messages.push(message);
-        const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-        const emptyState = this.shadowRoot.getElementById('emptyState');
-        
-        if (this.messages.length === 1 && emptyState) {
+    this.dispatchEvent(new CustomEvent('messageSend', {
+        detail: { duration: this.recordingTime }
+    }));
+}
+
+// 🔥 ОБНОВЛЕННЫЙ МЕТОД addMessage с активацией кнопок
+addMessage(message) {
+    this.messages.push(message);
+    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
+    const emptyState = this.shadowRoot.getElementById('emptyState');
+    
+    // 🆕 Скрываем пустое состояние и активируем кнопки
+    if (this.messages.length === 1) {
+        if (emptyState) {
             emptyState.style.display = 'none';
             messagesContainer.style.overflowY = 'auto';
         }
+        this.activateDialogButtons();
+    }
 
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${message.type}`;
-        
-        const bubbleElement = document.createElement('div');
-        bubbleElement.className = 'message-bubble';
-        
-        if (message.type === 'assistant') {
-            bubbleElement.textContent = '';
-            this.typeWriter(bubbleElement, message.content, 30);
+    // Создаём обёртку сообщения
+    const messageElement = document.createElement('div');
+    messageElement.className = `message ${message.type}`;
+    
+    // Создаём "пузырь"
+    const bubbleElement = document.createElement('div');
+    bubbleElement.className = 'message-bubble';
+
+    // 💬 Рендерим ассистента через Markdown
+    if (message.type === 'assistant') {
+        bubbleElement.classList.add('chat-response');
+        bubbleElement.innerHTML = marked.parse(message.content);
+    } else {
+        bubbleElement.textContent = message.content;
+    }
+
+    messageElement.appendChild(bubbleElement);
+    messagesContainer.appendChild(messageElement);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+
+typeWriter(element, text, speed = 30) {
+    let i = 0;
+    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
+    
+    const cursor = document.createElement('span');
+    cursor.className = 'typing-cursor';
+    cursor.textContent = '|';
+    element.appendChild(cursor);
+    
+    const typeInterval = setInterval(() => {
+        if (i < text.length) {
+            element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
+            i++;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } else {
-            bubbleElement.textContent = message.content;
+            cursor.remove();
+            clearInterval(typeInterval);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-        
-        messageElement.appendChild(bubbleElement);
-        messagesContainer.appendChild(messageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }, speed);
+}
+
+updateTimer() {
+    const timer = this.shadowRoot.getElementById('timer');
+    const minutes = Math.floor(this.recordingTime / 60);
+    const seconds = this.recordingTime % 60;
+    timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+updateMessageCount() {
+    const messageCountElement = this.shadowRoot.getElementById('messageCount');
+    messageCountElement.textContent = this.messages.length;
+}
+
+showLoading() {
+    const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
+    loadingIndicator.classList.add('active');
+}
+
+hideLoading() {
+    const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
+    loadingIndicator.classList.remove('active');
+}
+
+showNotification(message) {
+    console.log('📢', message);
+}
+
+handleRecordingError(message) {
+    this.isRecording = false;
+    
+    if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
+        this.recordingTimer = null;
     }
 
-    typeWriter(element, text, speed = 30) {
-        let i = 0;
-        const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-        
-        const cursor = document.createElement('span');
-        cursor.className = 'typing-cursor';
-        cursor.textContent = '|';
-        element.appendChild(cursor);
-        
-        const typeInterval = setInterval(() => {
-            if (i < text.length) {
-                element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
-                i++;
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            } else {
-                cursor.remove();
-                clearInterval(typeInterval);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-        }, speed);
+    const mainButton = this.shadowRoot.getElementById('mainButton');
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
+    const recordingControls = this.shadowRoot.getElementById('recordingControls');
+
+    mainButton.classList.remove('recording');
+    voiceButton.classList.remove('recording');
+    waveAnimation.classList.remove('active');
+    
+    recordingControls.style.display = 'none';
+    recordingControls.classList.remove('active');
+
+    this.cleanupRecording();
+    this.showNotification(`❌ ${message}`);
+}
+
+cleanupRecording() {
+    if (this.stream) {
+        this.stream.getTracks().forEach(track => track.stop());
+        this.stream = null;
     }
+    
+    this.mediaRecorder = null;
+    this.audioBlob = null;
+    this.recordedChunks = [];
+    this.recordingTime = 0;
 
-    updateTimer() {
-        const timer = this.shadowRoot.getElementById('timer');
-        const minutes = Math.floor(this.recordingTime / 60);
-        const seconds = this.recordingTime % 60;
-        timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const timer = this.shadowRoot.getElementById('timer');
+    timer.textContent = '0:00';
+}
+
+cleanupAfterSend() {
+    this.audioBlob = null;
+    this.recordedChunks = [];
+    this.recordingTime = 0;
+
+    const timer = this.shadowRoot.getElementById('timer');
+    timer.textContent = '0:00';
+    
+    const recordingControls = this.shadowRoot.getElementById('recordingControls');
+    recordingControls.style.display = 'none';
+    recordingControls.classList.remove('active');
+}
+
+getErrorMessage(error) {
+    if (error.name === 'NotAllowedError') {
+        return 'Доступ к микрофону запрещен';
+    } else if (error.name === 'NotFoundError') {
+        return 'Микрофон не найден';
+    } else if (error.name === 'NotReadableError') {
+        return 'Микрофон уже используется';
+    } else if (error.name === 'OverconstrainedError') {
+        return 'Настройки микрофона не поддерживаются';
+    } else {
+        return 'Ошибка доступа к микрофону';
     }
+}
 
-    updateMessageCount() {
-        const messageCountElement = this.shadowRoot.getElementById('messageCount');
-        messageCountElement.textContent = this.messages.length;
+disconnectedCallback() {
+    if (this.recordingTimer) {
+        clearInterval(this.recordingTimer);
     }
-
-    showLoading() {
-        const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
-        loadingIndicator.classList.add('active');
+    
+    if (this.stream) {
+        this.stream.getTracks().forEach(track => track.stop());
     }
-
-    hideLoading() {
-        const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
-        loadingIndicator.classList.remove('active');
+    
+    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+        this.mediaRecorder.stop();
     }
+}
 
-    showNotification(message) {
-        console.log('📢', message);
+// 🔥 ОБНОВЛЕННЫЕ ПУБЛИЧНЫЕ МЕТОДЫ с логикой кнопок
+clearSession() {
+    localStorage.removeItem('voiceWidgetSessionId');
+    this.sessionId = this.getOrCreateSessionId();
+    
+    const sessionDisplay = this.shadowRoot.getElementById('sessionDisplay');
+    sessionDisplay.textContent = this.sessionId.slice(-8);
+    
+    // Сбрасываем понимание запроса
+    this.understanding = {
+        name: null,
+        operation: null,
+        budget: null,
+        type: null,
+        location: null,
+        details: null,
+        rooms: null,
+        area: null,
+        preferences: null,
+        progress: 0
+    };
+    this.updateUnderstandingDisplay();
+    
+    // 🆕 Сбрасываем состояние кнопок при очистке сессии
+    this.dialogStarted = false;
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
+    
+    if (voiceButton) {
+        voiceButton.disabled = true;
+        voiceButton.style.opacity = '0.5';
+        voiceButton.style.cursor = 'not-allowed';
     }
-
-    handleRecordingError(message) {
-        this.isRecording = false;
-        
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-            this.recordingTimer = null;
-        }
-
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        const voiceButton = this.shadowRoot.getElementById('voiceButton');
-        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
-
-        mainButton.classList.remove('recording');
-        voiceButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
-        
-        recordingControls.style.display = 'none';
-        recordingControls.classList.remove('active');
-
-        this.cleanupRecording();
-        this.showNotification(`❌ ${message}`);
+    
+    if (sendTextButton) {
+        sendTextButton.disabled = true;
+        sendTextButton.style.opacity = '0.5';
+        sendTextButton.style.cursor = 'not-allowed';
     }
+    
+    console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
+}
 
-    cleanupRecording() {
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
-        }
-        
-        this.mediaRecorder = null;
-        this.audioBlob = null;
-        this.recordedChunks = [];
-        this.recordingTime = 0;
+getCurrentSessionId() {
+    return this.sessionId;
+}
 
-        const timer = this.shadowRoot.getElementById('timer');
-        timer.textContent = '0:00';
+clearMessages() {
+    this.messages = [];
+    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
+    const emptyState = this.shadowRoot.getElementById('emptyState');
+    
+    messagesContainer.innerHTML = '';
+    const newEmptyState = emptyState.cloneNode(true);
+    messagesContainer.appendChild(newEmptyState);
+    newEmptyState.style.display = 'block';
+    
+    messagesContainer.style.overflowY = 'hidden';
+    
+    // 🆕 Сбрасываем состояние диалога при очистке сообщений
+    this.dialogStarted = false;
+    const voiceButton = this.shadowRoot.getElementById('voiceButton');
+    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
+    
+    if (voiceButton) {
+        voiceButton.disabled = true;
+        voiceButton.style.opacity = '0.5';
+        voiceButton.style.cursor = 'not-allowed';
     }
-
-    cleanupAfterSend() {
-        this.audioBlob = null;
-        this.recordedChunks = [];
-        this.recordingTime = 0;
-
-        const timer = this.shadowRoot.getElementById('timer');
-        timer.textContent = '0:00';
-        
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
-        recordingControls.style.display = 'none';
-        recordingControls.classList.remove('active');
+    
+    if (sendTextButton) {
+        sendTextButton.disabled = true;
+        sendTextButton.style.opacity = '0.5';
+        sendTextButton.style.cursor = 'not-allowed';
     }
+    
+    this.updateMessageCount();
+    
+    const newMainButton = this.shadowRoot.getElementById('mainButton');
+    newMainButton.addEventListener('click', () => {
+        if (!this.isRecording && !newMainButton.disabled) {
+            this.startRecording();
+       }
+   });
+}
 
-    getErrorMessage(error) {
-        if (error.name === 'NotAllowedError') {
-            return 'Доступ к микрофону запрещен';
-        } else if (error.name === 'NotFoundError') {
-            return 'Микрофон не найден';
-        } else if (error.name === 'NotReadableError') {
-            return 'Микрофон уже используется';
-        } else if (error.name === 'OverconstrainedError') {
-            return 'Настройки микрофона не поддерживаются';
-        } else {
-            return 'Ошибка доступа к микрофону';
-        }
-    }
+setApiUrl(url) {
+    this.apiUrl = url;
+}
 
-    disconnectedCallback() {
-        if (this.recordingTimer) {
-            clearInterval(this.recordingTimer);
-        }
-        
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-        }
-        
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-            this.mediaRecorder.stop();
-        }
-    }
+getMessages() {
+    return [...this.messages];
+}
 
-    // 🆕 Обновленные публичные методы для управления
-    clearSession() {
-        localStorage.removeItem('voiceWidgetSessionId');
-        this.sessionId = this.getOrCreateSessionId();
-        
-        const sessionDisplay = this.shadowRoot.getElementById('sessionDisplay');
-        sessionDisplay.textContent = this.sessionId.slice(-8);
-        
-        // Сбрасываем понимание запроса
-        this.understanding = {
-            name: null,
-            operation: null,
-            budget: null,
-            type: null,
-            location: null,
-            details: null,
-            rooms: null,
-            area: null,
-            preferences: null,
-            progress: 0
-        };
-        this.updateUnderstandingDisplay();
-        
-        console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
-    }
+isCurrentlyRecording() {
+    return this.isRecording;
+}
 
-    getCurrentSessionId() {
-        return this.sessionId;
-    }
+setUnderstanding(insights) {
+    this.updateUnderstanding(insights);
+}
 
-    clearMessages() {
-        this.messages = [];
-        const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-        const emptyState = this.shadowRoot.getElementById('emptyState');
-        
-        messagesContainer.innerHTML = '';
-        const newEmptyState = emptyState.cloneNode(true);
-        messagesContainer.appendChild(newEmptyState);
-        newEmptyState.style.display = 'block';
-        
-        messagesContainer.style.overflowY = 'hidden';
-        
-        this.updateMessageCount();
-        
-        const newMainButton = this.shadowRoot.getElementById('mainButton');
-        newMainButton.addEventListener('click', () => {
-            if (!this.isRecording && !newMainButton.disabled) {
-                this.startRecording();
-            }
-        });
-    }
+getUnderstanding() {
+    return { ...this.understanding };
+}
 
-    setApiUrl(url) {
-        this.apiUrl = url;
-    }
+resetUnderstanding() {
+    this.understanding = {
+        name: null,
+        operation: null,
+        budget: null,
+        type: null,
+        location: null,
+        details: null,
+        rooms: null,
+        area: null,
+        preferences: null,
+        progress: 0
+    };
+    this.updateUnderstandingDisplay();
+}
 
-    getMessages() {
-        return [...this.messages];
-    }
-
-    isCurrentlyRecording() {
-        return this.isRecording;
-    }
-
-    setUnderstanding(insights) {
-        this.updateUnderstanding(insights);
-    }
-
-    getUnderstanding() {
-        return { ...this.understanding };
-    }
-
-    resetUnderstanding() {
-        this.understanding = {
-            name: null,
-            operation: null,
-            budget: null,
-            type: null,
-            location: null,
-            details: null,
-            rooms: null,
-            area: null,
-            preferences: null,
-            progress: 0
-        };
-        this.updateUnderstandingDisplay();
-    }
 }
 
 // Регистрируем кастомный элемент
