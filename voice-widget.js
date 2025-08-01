@@ -8,12 +8,12 @@ class VoiceWidget extends HTMLElement {
         this.maxRecordingTime = 30;
         this.minRecordingTime = 1;
         this.messages = [];
-        this.mediaRecorder = null;
+        this.mediaRecorder = null; 
         this.stream = null;
         this.audioBlob = null;
         this.recordedChunks = [];
         
-        // SessionId для контекста диалогов
+        // SessionId это для контекста диалогов
         this.sessionId = this.getOrCreateSessionId();
         
         // 🆕 Расширенная структура понимания запроса (9 параметров)
