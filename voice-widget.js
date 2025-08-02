@@ -1,3 +1,14 @@
+// ========================================
+// 📁 voice-widget.js (НОВАЯ ВЕРСИЯ С МОДУЛЯМИ)
+// ========================================
+
+// 🔗 ИМПОРТЫ МОДУЛЕЙ
+import { AudioRecorder } from './modules/audio-recorder.js';
+import { UnderstandingManager } from './modules/understanding-manager.js';
+import { UIManager } from './modules/ui-manager.js';
+import { APIClient } from './modules/api-client.js';
+import { EventManager } from './modules/event-manager.js';
+
 class VoiceWidget extends HTMLElement {
     constructor() {
         super();
@@ -16,30 +27,17 @@ class VoiceWidget extends HTMLElement {
         // SessionId это для контекста диалогов
         this.sessionId = this.getOrCreateSessionId();
         
-        // 🆕 Расширенная структура понимания запроса (9 параметров)
-        this.understanding = {
-            // Блок 1: Основная информация (33.3%)
-            name: null,           // 10%
-            operation: null,      // 12%  
-            budget: null,         // 11%
-            
-            // Блок 2: Параметры недвижимости (33.3%)
-            type: null,           // 11%
-            location: null,       // 11%
-            rooms: null,          // 11%
-            
-            // Блок 3: Детали и предпочтения (33.3%)
-            area: null,           // 11%
-            details: null,        // 11% (детали локации: возле парка, пересечение улиц)
-            preferences: null,    // 11%
-            
-            progress: 0
-        };
-        
         // Configurable parameters
         this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
         this.fieldName = this.getAttribute('field-name') || 'audio';
         this.responseField = this.getAttribute('response-field') || 'response';
+        
+        // 🔥 ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ
+        this.events = new EventManager();
+        this.audioRecorder = new AudioRecorder(this);
+        this.understanding = new UnderstandingManager(this);
+        this.ui = new UIManager(this);
+        this.api = new APIClient(this);
         
         this.render();
         this.bindEvents();
@@ -60,76 +58,8 @@ class VoiceWidget extends HTMLElement {
     }
 
     initializeUI() {
-    const recordingControls = this.shadowRoot.getElementById('recordingControls');
-    recordingControls.style.display = 'none';
-    
-    // Скрываем скроллбар в пустом состоянии
-    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-    messagesContainer.style.overflowY = 'hidden';
-    
-    // 🆕 Инициализация состояний кнопок для UX логики
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
-    
-    // Voice button неактивна до начала диалога (акцент на центральной кнопке)
-    voiceButton.disabled = true;
-    voiceButton.style.opacity = '0.5';
-    voiceButton.style.cursor = 'not-allowed';
-    
-    // Send text button всегда видима, но неактивна до ввода текста
-    sendTextButton.style.display = 'flex';
-    sendTextButton.disabled = true;
-    sendTextButton.style.opacity = '0.5';
-    sendTextButton.style.cursor = 'not-allowed';
-    
-    // Добавляем флаг для отслеживания начала диалога
-    this.dialogStarted = false;
-    
-    this.updateUnderstandingDisplay();
-    
-    // Загружаем данные сессии при инициализации
-    this.loadSessionInfo();
-}
-
-    // 🆕 Загрузка информации о сессии с сервера
-    async loadSessionInfo() {
-        try {
-            const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.sessionId}`);
-            const response = await fetch(sessionUrl);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.insights) {
-                    // Преобразуем старый формат в новый, если необходимо
-                    this.understanding = this.migrateInsights(data.insights);
-                    this.updateUnderstandingDisplay();
-                    console.log('📥 Загружены данные сессии:', data);
-                }
-            }
-        } catch (error) {
-            console.log('ℹ️ Новая сессия или CORS ошибка, используем локальные данные');
-        }
-    }
-
-    // 🔄 Миграция старого формата insights в новый
-    migrateInsights(oldInsights) {
-        return {
-            // Основная информация
-            name: oldInsights.name || null,
-            operation: oldInsights.operation || null,
-            budget: oldInsights.budget || null,
-            
-            // Параметры недвижимости  
-            type: oldInsights.type || null,
-            location: oldInsights.location || null,
-            rooms: null,    // новое поле
-            
-            // Детали и предпочтения
-            area: null,         // новое поле
-            details: null,      // новое поле (детали локации)
-            preferences: null,  // новое поле
-            
-            progress: oldInsights.progress || 0
-        };
+        this.ui.initializeUI();
+        this.api.loadSessionInfo();
     }
 
     checkBrowserSupport() {
@@ -143,7 +73,8 @@ class VoiceWidget extends HTMLElement {
             mainButton.style.cursor = 'not-allowed';
         }
     }
-render() {
+
+    render() {
         this.shadowRoot.innerHTML = `
             <style>
                 :host {
@@ -1228,8 +1159,6 @@ render() {
                            </div>
                        </div>
 
-                    
-
                        <div class="messages-container" id="messagesContainer">
                            <div class="empty-state" id="emptyState">
                                <button class="record-button-large" id="mainButton">
@@ -1447,939 +1376,132 @@ render() {
            </div>
         `;
     }
-   bindEvents() {
-    const mainButton = this.shadowRoot.getElementById('mainButton');
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const stopButton = this.shadowRoot.getElementById('stopButton');
-    const sendButton = this.shadowRoot.getElementById('sendButton');
-    const textInput = this.shadowRoot.getElementById('textInput');
-    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
 
-    // Главные кнопки записи
-    mainButton.addEventListener('click', () => {
-        if (!this.isRecording && !mainButton.disabled) {
-            this.startRecording();
-        }
-    });
-
-    voiceButton.addEventListener('click', () => {
-        if (!this.isRecording && !voiceButton.disabled) {
-            this.startRecording();
-        }
-    });
-
-    // Кнопки управления записью
-    stopButton.addEventListener('click', () => {
-        if (this.isRecording) {
-            this.cancelRecording();
-        }
-    });
-
-    sendButton.addEventListener('click', () => {
-        if (this.isRecording) {
-            this.finishAndSend();
-        } else if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
-            this.sendMessage();
-        } else {
-            this.showWarning('⚠️ Сначала сделайте запись');
-        }
-    });
-
-    // 🔥 ОБНОВЛЕННАЯ ЛОГИКА ТЕКСТОВОГО ВВОДА
-    textInput.addEventListener('input', () => {
-        const hasText = textInput.value.trim().length > 0;
-        // Вместо скрытия/показа - управляем disabled состоянием
-        sendTextButton.disabled = !hasText;
-        if (hasText) {
-            sendTextButton.style.opacity = '1';
-            sendTextButton.style.cursor = 'pointer';
-        } else {
-            sendTextButton.style.opacity = '0.5';
-            sendTextButton.style.cursor = 'not-allowed';
-        }
-    });
-
-    textInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !this.isMobile()) {
-            e.preventDefault();
-            if (textInput.value.trim() && !sendTextButton.disabled) {
-                this.sendTextMessage();
-            }
-        }
-    });
-
-    sendTextButton.addEventListener('click', () => {
-        if (textInput.value.trim() && !sendTextButton.disabled) {
-            this.sendTextMessage();
-        }
-    });
-
-    // Функциональные кнопки
-    this.bindFunctionButtons();
-    
-    // 🔥 Только для третьего блока "Детали и предпочтения"
-    this.bindAccordionEvents();
-}
-
-bindFunctionButtons() {
-    // Desktop функции (перенесены к input area)
-    const imageBtn = this.shadowRoot.getElementById('imageBtn');
-    const documentBtn = this.shadowRoot.getElementById('documentBtn');
-    const pdfBtn = this.shadowRoot.getElementById('pdfBtn');
-
-    // Mobile функции
-    const mobileImgBtn = this.shadowRoot.getElementById('mobileImgBtn');
-    const mobileDocBtn = this.shadowRoot.getElementById('mobileDocBtn');
-    const mobilePdfBtn = this.shadowRoot.getElementById('mobilePdfBtn');
-
-    [imageBtn, mobileImgBtn].forEach(btn => {
-        if (btn) {
-            btn.addEventListener('click', () => {
-                console.log('🖼️ Функция добавления изображений в разработке');
-                this.showNotification('🖼️ Функция в разработке');
-            });
-        }
-    });
-
-    [documentBtn, mobileDocBtn].forEach(btn => {
-        if (btn) {
-            btn.addEventListener('click', () => {
-                console.log('📄 Функция добавления документов в разработке');
-                this.showNotification('📄 Функция в разработке');
-            });
-        }
-    });
-
-    [pdfBtn, mobilePdfBtn].forEach(btn => {
-        if (btn) {
-            btn.addEventListener('click', () => {
-                console.log('📊 Функция скачивания PDF в разработке');
-                this.showNotification('📊 Функция в разработке');
-            });
-        }
-    });
-}
-
-// 🔥 ОПТИМИЗИРОВАННЫЕ ACCORDION МЕТОДЫ (только для "Детали и предпочтения")
-bindAccordionEvents() {
-    // Находим только аккордеон для "Детали и предпочтения"
-    const detailsAccordionHeader = this.shadowRoot.querySelector('[data-accordion="details-preferences"]');
-    
-    if (detailsAccordionHeader) {
-        detailsAccordionHeader.addEventListener('click', () => {
-            this.toggleDetailsAccordion();
-        });
-        console.log('📂 Инициализирован аккордеон для "Детали и предпочтения"');
-    }
-}
-
-toggleDetailsAccordion() {
-    const accordionBlock = this.shadowRoot.querySelector('[data-accordion="details-preferences"]')?.closest('.accordion-block');
-    
-    if (!accordionBlock) {
-        console.warn('🔍 Блок "Детали и предпочтения" не найден');
-        return;
-    }
-
-    // Переключаем класс open
-    if (accordionBlock.classList.contains('open')) {
-        accordionBlock.classList.remove('open');
-        console.log('📁 Закрыл "Детали и предпочтения"');
-    } else {
-        accordionBlock.classList.add('open');
-        console.log('📂 Открыл "Детали и предпочтения"');
-    }
-}
-
-// 🔥 УПРОЩЕННЫЕ ПУБЛИЧНЫЕ МЕТОДЫ ДЛЯ УПРАВЛЕНИЯ АККОРДЕОНОМ
-openDetailsAccordion() {
-    const accordionBlock = this.shadowRoot.querySelector('[data-accordion="details-preferences"]')?.closest('.accordion-block');
-    if (accordionBlock) {
-        accordionBlock.classList.add('open');
-        console.log('📂 Принудительно открыл "Детали и предпочтения"');
-    }
-}
-
-closeDetailsAccordion() {
-    const accordionBlock = this.shadowRoot.querySelector('[data-accordion="details-preferences"]')?.closest('.accordion-block');
-    if (accordionBlock) {
-        accordionBlock.classList.remove('open');
-        console.log('📁 Принудительно закрыл "Детали и предпочтения"');
-    }
-}
-
-// 🆕 МЕТОД АКТИВАЦИИ КНОПОК ПОСЛЕ НАЧАЛА ДИАЛОГА
-activateDialogButtons() {
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    
-    if (voiceButton && voiceButton.disabled) {
-        voiceButton.disabled = false;
-        voiceButton.style.opacity = '1';
-        voiceButton.style.cursor = 'pointer';
-        
-        console.log('✅ Voice button активирована - диалог начат');
-        this.dialogStarted = true;
-    }
-}
-
-isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
-           || 'ontouchstart' in window;
-}
-
-// 🆕 Обновленные методы понимания запроса для работы с новой структурой (9 параметров)
-updateUnderstanding(insights) {
-    if (!insights) return;
-    
-    console.log('🧠 Обновляю понимание:', insights);
-    
-    // Обновляем локальное состояние
-    this.understanding = { ...this.understanding, ...insights };
-    
-    // 🆕 Гибкая система прогресса с приоритизацией
-    const progress = this.calculateProgress();
-    this.understanding.progress = progress;
-    
-    // Обновляем прогресс-бар
-    const progressFill = this.shadowRoot.getElementById('progressFill');
-    const progressText = this.shadowRoot.getElementById('progressText');
-    
-    progressFill.style.width = `${progress}%`;
-    progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
-    
-    // Обновляем все поля insights
-    this.updateInsightItem('name', insights.name);
-    this.updateInsightItem('operation', insights.operation);  
-    this.updateInsightItem('budget', insights.budget);
-    this.updateInsightItem('type', insights.type);
-    this.updateInsightItem('location', insights.location);
-    this.updateInsightItem('details', insights.details);
-    this.updateInsightItem('rooms', insights.rooms);
-    this.updateInsightItem('area', insights.area);
-    this.updateInsightItem('preferences', insights.preferences);
-}
-
-// 🆕 Гибкая система расчета прогресса
-calculateProgress() {
-    const weights = {
-        // Блок 1: Основная информация (33.3%)
-        name: 10,
-        operation: 12,
-        budget: 11,
-        
-        // Блок 2: Параметры недвижимости (33.3%)
-        type: 11,
-        location: 11,
-        rooms: 11,
-        
-        // Блок 3: Детали и предпочтения (33.3%)
-        area: 11,
-        details: 11,    // детали локации: возле парка, пересечение улиц
-        preferences: 11
-    };
-    
-    let totalProgress = 0;
-    
-    for (const [field, weight] of Object.entries(weights)) {
-        if (this.understanding[field] && this.understanding[field].trim()) {
-            totalProgress += weight;
-        }
-    }
-    
-    return Math.min(totalProgress, 99); // максимум 99%, чтобы было место для округления
-}
-
-updateInsightItem(field, value) {
-    const indicator = this.shadowRoot.getElementById(`${field}Indicator`);
-    const valueElement = this.shadowRoot.getElementById(`${field}Value`);
-    
-    if (!indicator || !valueElement) {
-        console.warn(`🔍 Элементы для поля ${field} не найдены`);
-        return;
-    }
-    
-    if (value && value.trim()) {
-        indicator.classList.add('filled');
-        valueElement.textContent = value;
-    } else {
-        indicator.classList.remove('filled');
-        valueElement.textContent = this.getDefaultText(field);
-    }
-}
-
-getDefaultText(field) {
-    const defaults = {
-        name: 'не определено',
-        operation: 'не определена',
-        budget: 'не определен',
-        type: 'не определен',
-        location: 'не определен',
-        details: 'не определены',
-        rooms: 'не определено',
-        area: 'не определена',
-        preferences: 'не определены'
-    };
-    return defaults[field] || 'не определено';
-}
-
-getStageText(progress) {
-    if (progress === 0) return 'Ожидание';
-    if (progress <= 20) return 'Знакомство';
-    if (progress <= 40) return 'Основные параметры';
-    if (progress <= 60) return 'Готов к первичному подбору';
-    if (progress <= 80) return 'Уточнение деталей';
-    return 'Готов к точному подбору';
-}
-
-updateUnderstandingDisplay() {
-    const progressFill = this.shadowRoot.getElementById('progressFill');
-    const progressText = this.shadowRoot.getElementById('progressText');
-    
-    const progress = this.calculateProgress();
-    this.understanding.progress = progress;
-    
-    progressFill.style.width = `${progress}%`;
-    progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
-
-    // Обновляем все поля
-    this.updateInsightItem('name', this.understanding.name);
-    this.updateInsightItem('operation', this.understanding.operation);
-    this.updateInsightItem('budget', this.understanding.budget);
-    this.updateInsightItem('type', this.understanding.type);
-    this.updateInsightItem('location', this.understanding.location);
-    this.updateInsightItem('details', this.understanding.details);
-    this.updateInsightItem('rooms', this.understanding.rooms);
-    this.updateInsightItem('area', this.understanding.area);
-    this.updateInsightItem('preferences', this.understanding.preferences);
-}
-
-// Все остальные методы остаются без изменений
-async startRecording() {
-    try {
-        this.isRecording = true;
-        this.recordingTime = 0;
-        this.recordedChunks = [];
-        this.audioBlob = null;
-
+    bindEvents() {
         const mainButton = this.shadowRoot.getElementById('mainButton');
         const voiceButton = this.shadowRoot.getElementById('voiceButton');
-        const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-        const recordingControls = this.shadowRoot.getElementById('recordingControls');
+        const stopButton = this.shadowRoot.getElementById('stopButton');
+        const sendButton = this.shadowRoot.getElementById('sendButton');
+        const textInput = this.shadowRoot.getElementById('textInput');
+        const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
 
-        mainButton.classList.add('recording');
-        voiceButton.classList.add('recording');
-        waveAnimation.classList.add('active');
-        
-        recordingControls.style.display = 'flex';
-        recordingControls.classList.add('active');
-
-        this.stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true
+        // Главные кнопки записи - ДЕЛЕГАЦИЯ К МОДУЛЯМ
+        mainButton.addEventListener('click', () => {
+            if (!this.audioRecorder.isRecording && !mainButton.disabled) {
+                this.audioRecorder.startRecording();
             }
         });
 
-        let mimeType = '';
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            mimeType = 'audio/webm';
-        }
-
-        this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
-
-        this.mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                this.recordedChunks.push(event.data);
+        voiceButton.addEventListener('click', () => {
+            if (!this.audioRecorder.isRecording && !voiceButton.disabled) {
+                this.audioRecorder.startRecording();
             }
-        };
-
-        this.mediaRecorder.onstop = () => {
-            if (this.recordedChunks.length > 0) {
-                this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
-                console.log('✅ Аудио готово к отправке');
-            }
-        };
-
-        this.mediaRecorder.onerror = (event) => {
-            console.error('Ошибка записи:', event.error);
-            this.handleRecordingError('Произошла ошибка во время записи');
-        };
-
-        this.mediaRecorder.start(100);
-
-        this.recordingTimer = setInterval(() => {
-            this.recordingTime++;
-            this.updateTimer();
-
-            if (this.recordingTime >= this.maxRecordingTime) {
-                this.finishAndSend();
-            }
-        }, 1000);
-
-        this.dispatchEvent(new CustomEvent('recordingStart'));
-
-    } catch (err) {
-        console.error('Ошибка доступа к микрофону:', err);
-        this.handleRecordingError(this.getErrorMessage(err));
-    }
-}
-
-cancelRecording() {
-    if (!this.isRecording) return;
-
-    console.log('🔴 Отменяем запись');
-
-    this.isRecording = false;
-    
-    if (this.recordingTimer) {
-        clearInterval(this.recordingTimer);
-        this.recordingTimer = null;
-    }
-
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-        this.mediaRecorder.stop();
-    }
-
-    if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-    }
-
-    const mainButton = this.shadowRoot.getElementById('mainButton');
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-    const recordingControls = this.shadowRoot.getElementById('recordingControls');
-
-    mainButton.classList.remove('recording');
-    voiceButton.classList.remove('recording');
-    waveAnimation.classList.remove('active');
-    recordingControls.style.display = 'none';
-    recordingControls.classList.remove('active');
-
-    this.cleanupRecording();
-    this.showNotification('❌ Запись отменена');
-
-    this.dispatchEvent(new CustomEvent('recordingCancelled'));
-}
-
-async finishAndSend() {
-    if (!this.isRecording) return;
-
-    console.log('🟢 Завершаем запись и отправляем');
-
-    if (this.recordingTime < this.minRecordingTime) {
-        this.showNotification('⚠️ Запись слишком короткая');
-        return;
-    }
-
-    this.isRecording = false;
-    
-    if (this.recordingTimer) {
-        clearInterval(this.recordingTimer);
-        this.recordingTimer = null;
-    }
-
-    const mainButton = this.shadowRoot.getElementById('mainButton');
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-
-    mainButton.classList.remove('recording');
-    voiceButton.classList.remove('recording');
-    waveAnimation.classList.remove('active');
-
-    await new Promise((resolve) => {
-        this.mediaRecorder.onstop = () => {
-            if (this.recordedChunks.length > 0) {
-                this.audioBlob = new Blob(this.recordedChunks, { 
-                    type: this.mediaRecorder.mimeType || 'audio/webm' 
-                });
-                console.log('✅ Blob создан, отправляем...');
-                resolve();
-            }
-        };
-
-        this.mediaRecorder.stop();
-    });
-
-    if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-    }
-
-    this.sendMessage();
-}
-
-async sendTextMessage() {
-    const textInput = this.shadowRoot.getElementById('textInput');
-    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
-    const messageText = textInput.value.trim();
-    
-    if (!messageText) return;
-
-    textInput.value = '';
-    // 🔥 ОБНОВЛЕНО: Вместо скрытия - делаем disabled
-    sendTextButton.disabled = true;
-    sendTextButton.style.opacity = '0.5';
-    sendTextButton.style.cursor = 'not-allowed';
-
-    this.showLoading();
-
-    const userMessage = {
-        type: 'user',
-        content: messageText,
-        timestamp: new Date()
-    };
-    
-    this.addMessage(userMessage);
-
-    try {
-        const formData = new FormData();
-        formData.append('text', messageText);
-        formData.append('sessionId', this.sessionId);
-
-        console.log('📤 Отправляем текст с sessionId:', this.sessionId);
-
-        const response = await fetch(this.apiUrl, {
-            method: 'POST',
-            body: formData
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        console.log('📥 Ответ от сервера на текст:', {
-            sessionId: data.sessionId,
-            messageCount: data.messageCount,
-            insights: data.insights,
-            tokens: data.tokens,
-            timing: data.timing
-        });
-        
-        this.hideLoading();
-        this.updateMessageCount();
-
-        // 🆕 Обновляем insights из ответа сервера
-        if (data.insights) {
-            this.updateUnderstanding(data.insights);
-        }
-
-        const assistantMessage = {
-            type: 'assistant',
-            content: data[this.responseField] || 'Ответ не получен от сервера.',
-            timestamp: new Date()
-        };
-        this.addMessage(assistantMessage);
-
-    } catch (error) {
-        this.hideLoading();
-        console.error('Ошибка при отправке текста:', error);
-        
-        const assistantMessage = {
-            type: 'assistant',
-            content: error.message.includes('CORS') || error.message.includes('502') 
-                ? 'CORS ошибка: Бэкенд недоступен с localhost. Проверьте настройки сервера или тестируйте с того же домена.'
-                : 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
-            timestamp: new Date()
-        };
-        this.addMessage(assistantMessage);
-    }
-
-    this.dispatchEvent(new CustomEvent('textMessageSend', {
-        detail: { text: messageText }
-    }));
-}
-
-async sendMessage() {
-    if (!this.audioBlob) {
-        console.error('Нет аудио для отправки');
-        return;
-    }
-
-    if (this.recordingTime < this.minRecordingTime) {
-        this.showNotification('⚠️ Запись слишком короткая');
-        return;
-    }
-
-    this.showLoading();
-
-    const userMessage = {
-        type: 'user',
-        content: `Голосовое сообщение (${this.recordingTime}с)`,
-        timestamp: new Date()
-    };
-    
-    this.addMessage(userMessage);
-
-    try {
-        const formData = new FormData();
-        formData.append(this.fieldName, this.audioBlob, 'voice-message.webm');
-        formData.append('sessionId', this.sessionId);
-
-        console.log('📤 Отправляем аудио с sessionId:', this.sessionId);
-
-        const response = await fetch(this.apiUrl, {
-            method: 'POST',
-            body: formData
+        // Кнопки управления записью - ДЕЛЕГАЦИЯ К МОДУЛЯМ
+        stopButton.addEventListener('click', () => {
+            if (this.audioRecorder.isRecording) {
+                this.audioRecorder.cancelRecording();
+            }
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        console.log('📥 Ответ от сервера на аудио:', {
-            sessionId: data.sessionId,
-            messageCount: data.messageCount,
-            insights: data.insights,
-            tokens: data.tokens,
-            timing: data.timing
+        sendButton.addEventListener('click', () => {
+            if (this.audioRecorder.isRecording) {
+                this.audioRecorder.finishAndSend();
+            } else if (this.audioBlob && this.recordingTime >= this.minRecordingTime) {
+                this.api.sendMessage();
+            } else {
+                this.ui.showWarning('⚠️ Сначала сделайте запись');
+            }
         });
-        
-        this.hideLoading();
-        this.updateMessageCount();
 
-        // 🆕 Обновляем транскрипцию в пользовательском сообщении
-        if (data.transcription) {
-            const lastUserMessage = this.messages[this.messages.length - 1];
-            if (lastUserMessage && lastUserMessage.type === 'user') {
-                lastUserMessage.content = data.transcription;
-                
-                const userMessages = this.shadowRoot.querySelectorAll('.message.user');
-                const lastUserMessageElement = userMessages[userMessages.length - 1];
-                if (lastUserMessageElement) {
-                    const bubble = lastUserMessageElement.querySelector('.message-bubble');
-                    if (bubble) {
-                        bubble.textContent = data.transcription;
-                    }
+        // 🔥 ОБНОВЛЕННАЯ ЛОГИКА ТЕКСТОВОГО ВВОДА
+        textInput.addEventListener('input', () => {
+            const hasText = textInput.value.trim().length > 0;
+            sendTextButton.disabled = !hasText;
+            if (hasText) {
+                sendTextButton.style.opacity = '1';
+                sendTextButton.style.cursor = 'pointer';
+            } else {
+                sendTextButton.style.opacity = '0.5';
+                sendTextButton.style.cursor = 'not-allowed';
+            }
+        });
+
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !this.ui.isMobile()) {
+                e.preventDefault();
+                if (textInput.value.trim() && !sendTextButton.disabled) {
+                    this.api.sendTextMessage();
                 }
             }
-        }
+        });
 
-        // 🆕 Обновляем insights из ответа сервера
-        if (data.insights) {
-            this.updateUnderstanding(data.insights);
-        }
+        sendTextButton.addEventListener('click', () => {
+            if (textInput.value.trim() && !sendTextButton.disabled) {
+                this.api.sendTextMessage();
+            }
+        });
 
-        const assistantMessage = {
-            type: 'assistant',
-            content: data[this.responseField] || 'Ответ не получен от сервера.',
-            timestamp: new Date()
-        };
-        this.addMessage(assistantMessage);
-
-        this.cleanupAfterSend();
-
-    } catch (error) {
-        this.hideLoading();
-        console.error('Ошибка при отправке аудио:', error);
+        // Функциональные кнопки - ДЕЛЕГАЦИЯ К UI МОДУЛЮ
+        this.ui.bindFunctionButtons();
         
-        const assistantMessage = {
-            type: 'assistant',
-            content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
-            timestamp: new Date()
-        };
-        this.addMessage(assistantMessage);
+        // 🔥 Только для третьего блока "Детали и предпочтения" - ДЕЛЕГАЦИЯ К UI МОДУЛЮ
+        this.ui.bindAccordionEvents();
     }
 
-    this.dispatchEvent(new CustomEvent('messageSend', {
-        detail: { duration: this.recordingTime }
-    }));
-}
+    // Простые методы утилиты, которые не требуют модулей
+    cleanupAfterSend() {
+        this.audioRecorder.cleanupAfterSend();
+    }
 
-// 🔥 ОБНОВЛЕННЫЙ МЕТОД addMessage с активацией кнопок
-addMessage(message) {
-    this.messages.push(message);
-    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-    const emptyState = this.shadowRoot.getElementById('emptyState');
-    
-    // 🆕 Скрываем пустое состояние и активируем кнопки
-    if (this.messages.length === 1) {
-        if (emptyState) {
-            emptyState.style.display = 'none';
-            messagesContainer.style.overflowY = 'auto';
+    // 🔥 ОБНОВЛЕННЫЕ ПУБЛИЧНЫЕ МЕТОДЫ с логикой кнопок - ВСЕ ДЕЛЕГАЦИИ К МОДУЛЯМ
+    clearSession() {
+        localStorage.removeItem('voiceWidgetSessionId');
+        this.sessionId = this.getOrCreateSessionId();
+        
+        const sessionDisplay = this.shadowRoot.getElementById('sessionDisplay');
+        sessionDisplay.textContent = this.sessionId.slice(-8);
+        
+        this.understanding.reset();
+        this.ui.clearMessages();
+        
+        console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
+    }
+
+    getCurrentSessionId() {
+        return this.sessionId;
+    }
+
+    setApiUrl(url) {
+        this.apiUrl = url;
+    }
+
+    getMessages() {
+        return [...this.messages];
+    }
+
+    isCurrentlyRecording() {
+        return this.audioRecorder.isRecording;
+    }
+
+    setUnderstanding(insights) {
+        this.understanding.update(insights);
+    }
+
+    getUnderstanding() {
+        return this.understanding.export();
+    }
+
+    resetUnderstanding() {
+        this.understanding.reset();
+    }
+
+    disconnectedCallback() {
+        if (this.audioRecorder) {
+            this.audioRecorder.cleanupRecording();
         }
-        this.activateDialogButtons();
     }
-
-    // Создаём обёртку сообщения
-    const messageElement = document.createElement('div');
-    messageElement.className = `message ${message.type}`;
-    
-    // Создаём "пузырь"
-    const bubbleElement = document.createElement('div');
-    bubbleElement.className = 'message-bubble';
-
-    // 💬 Рендерим ассистента через Markdown
-    if (message.type === 'assistant') {
-        bubbleElement.classList.add('chat-response');
-        bubbleElement.innerHTML = marked.parse(message.content);
-    } else {
-        bubbleElement.textContent = message.content;
-    }
-
-    messageElement.appendChild(bubbleElement);
-    messagesContainer.appendChild(messageElement);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
-
-typeWriter(element, text, speed = 30) {
-    let i = 0;
-    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-    
-    const cursor = document.createElement('span');
-    cursor.className = 'typing-cursor';
-    cursor.textContent = '|';
-    element.appendChild(cursor);
-    
-    const typeInterval = setInterval(() => {
-        if (i < text.length) {
-            element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
-            i++;
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        } else {
-            cursor.remove();
-            clearInterval(typeInterval);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    }, speed);
-}
-
-updateTimer() {
-    const timer = this.shadowRoot.getElementById('timer');
-    const minutes = Math.floor(this.recordingTime / 60);
-    const seconds = this.recordingTime % 60;
-    timer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-updateMessageCount() {
-    const messageCountElement = this.shadowRoot.getElementById('messageCount');
-    messageCountElement.textContent = this.messages.length;
-}
-
-showLoading() {
-    const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
-    loadingIndicator.classList.add('active');
-}
-
-hideLoading() {
-    const loadingIndicator = this.shadowRoot.getElementById('loadingIndicator');
-    loadingIndicator.classList.remove('active');
-}
-
-showNotification(message) {
-    console.log('📢', message);
-}
-
-handleRecordingError(message) {
-    this.isRecording = false;
-    
-    if (this.recordingTimer) {
-        clearInterval(this.recordingTimer);
-        this.recordingTimer = null;
-    }
-
-    const mainButton = this.shadowRoot.getElementById('mainButton');
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const waveAnimation = this.shadowRoot.getElementById('waveAnimation');
-    const recordingControls = this.shadowRoot.getElementById('recordingControls');
-
-    mainButton.classList.remove('recording');
-    voiceButton.classList.remove('recording');
-    waveAnimation.classList.remove('active');
-    
-    recordingControls.style.display = 'none';
-    recordingControls.classList.remove('active');
-
-    this.cleanupRecording();
-    this.showNotification(`❌ ${message}`);
-}
-
-cleanupRecording() {
-    if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-    }
-    
-    this.mediaRecorder = null;
-    this.audioBlob = null;
-    this.recordedChunks = [];
-    this.recordingTime = 0;
-
-    const timer = this.shadowRoot.getElementById('timer');
-    timer.textContent = '0:00';
-}
-
-cleanupAfterSend() {
-    this.audioBlob = null;
-    this.recordedChunks = [];
-    this.recordingTime = 0;
-
-    const timer = this.shadowRoot.getElementById('timer');
-    timer.textContent = '0:00';
-    
-    const recordingControls = this.shadowRoot.getElementById('recordingControls');
-    recordingControls.style.display = 'none';
-    recordingControls.classList.remove('active');
-}
-
-getErrorMessage(error) {
-    if (error.name === 'NotAllowedError') {
-        return 'Доступ к микрофону запрещен';
-    } else if (error.name === 'NotFoundError') {
-        return 'Микрофон не найден';
-    } else if (error.name === 'NotReadableError') {
-        return 'Микрофон уже используется';
-    } else if (error.name === 'OverconstrainedError') {
-        return 'Настройки микрофона не поддерживаются';
-    } else {
-        return 'Ошибка доступа к микрофону';
-    }
-}
-
-disconnectedCallback() {
-    if (this.recordingTimer) {
-        clearInterval(this.recordingTimer);
-    }
-    
-    if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-    }
-    
-    if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-        this.mediaRecorder.stop();
-    }
-}
-
-// 🔥 ОБНОВЛЕННЫЕ ПУБЛИЧНЫЕ МЕТОДЫ с логикой кнопок
-clearSession() {
-    localStorage.removeItem('voiceWidgetSessionId');
-    this.sessionId = this.getOrCreateSessionId();
-    
-    const sessionDisplay = this.shadowRoot.getElementById('sessionDisplay');
-    sessionDisplay.textContent = this.sessionId.slice(-8);
-    
-    // Сбрасываем понимание запроса
-    this.understanding = {
-        name: null,
-        operation: null,
-        budget: null,
-        type: null,
-        location: null,
-        details: null,
-        rooms: null,
-        area: null,
-        preferences: null,
-        progress: 0
-    };
-    this.updateUnderstandingDisplay();
-    
-    // 🆕 Сбрасываем состояние кнопок при очистке сессии
-    this.dialogStarted = false;
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
-    
-    if (voiceButton) {
-        voiceButton.disabled = true;
-        voiceButton.style.opacity = '0.5';
-        voiceButton.style.cursor = 'not-allowed';
-    }
-    
-    if (sendTextButton) {
-        sendTextButton.disabled = true;
-        sendTextButton.style.opacity = '0.5';
-        sendTextButton.style.cursor = 'not-allowed';
-    }
-    
-    console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
-}
-
-getCurrentSessionId() {
-    return this.sessionId;
-}
-
-clearMessages() {
-    this.messages = [];
-    const messagesContainer = this.shadowRoot.getElementById('messagesContainer');
-    const emptyState = this.shadowRoot.getElementById('emptyState');
-    
-    messagesContainer.innerHTML = '';
-    const newEmptyState = emptyState.cloneNode(true);
-    messagesContainer.appendChild(newEmptyState);
-    newEmptyState.style.display = 'block';
-    
-    messagesContainer.style.overflowY = 'hidden';
-    
-    // 🆕 Сбрасываем состояние диалога при очистке сообщений
-    this.dialogStarted = false;
-    const voiceButton = this.shadowRoot.getElementById('voiceButton');
-    const sendTextButton = this.shadowRoot.getElementById('sendTextButton');
-    
-    if (voiceButton) {
-        voiceButton.disabled = true;
-        voiceButton.style.opacity = '0.5';
-        voiceButton.style.cursor = 'not-allowed';
-    }
-    
-    if (sendTextButton) {
-        sendTextButton.disabled = true;
-        sendTextButton.style.opacity = '0.5';
-        sendTextButton.style.cursor = 'not-allowed';
-    }
-    
-    this.updateMessageCount();
-    
-    const newMainButton = this.shadowRoot.getElementById('mainButton');
-    newMainButton.addEventListener('click', () => {
-        if (!this.isRecording && !newMainButton.disabled) {
-            this.startRecording();
-       }
-   });
-}
-
-setApiUrl(url) {
-    this.apiUrl = url;
-}
-
-getMessages() {
-    return [...this.messages];
-}
-
-isCurrentlyRecording() {
-    return this.isRecording;
-}
-
-setUnderstanding(insights) {
-    this.updateUnderstanding(insights);
-}
-
-getUnderstanding() {
-    return { ...this.understanding };
-}
-
-resetUnderstanding() {
-    this.understanding = {
-        name: null,
-        operation: null,
-        budget: null,
-        type: null,
-        location: null,
-        details: null,
-        rooms: null,
-        area: null,
-        preferences: null,
-        progress: 0
-    };
-    this.updateUnderstandingDisplay();
-}
-
 }
 
 // Регистрируем кастомный элемент
