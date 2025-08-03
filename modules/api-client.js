@@ -1,5 +1,5 @@
 // ========================================
-// 📁 modules/api-client.js
+// 📁 modules/api-client.js (ПОЛНАЯ ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ========================================
 // Работа с сервером и API запросами
 
@@ -32,16 +32,18 @@ export class APIClient {
 
     async sendTextMessage() {
         const textInput = this.widget.shadowRoot.getElementById('textInput');
-        const sendTextButton = this.widget.shadowRoot.getElementById('sendTextButton');
+        const sendButton = this.widget.shadowRoot.getElementById('sendButton'); // ✅ ИСПРАВЛЕНО: было sendTextButton
         const messageText = textInput.value.trim();
         
         if (!messageText) return;
 
         textInput.value = '';
-        // 🔥 ОБНОВЛЕНО: Вместо скрытия - делаем disabled
-        sendTextButton.disabled = true;
-        sendTextButton.style.opacity = '0.5';
-        sendTextButton.style.cursor = 'not-allowed';
+        
+        // ✅ ИСПРАВЛЕНО: правильная деактивация кнопки
+        if (sendButton) {
+            sendButton.disabled = true;
+            sendButton.classList.remove('active');
+        }
 
         this.widget.ui.showLoading();
 
@@ -106,37 +108,42 @@ export class APIClient {
                 timestamp: new Date()
             };
             this.widget.ui.addMessage(assistantMessage);
+        } finally {
+            // ✅ ДОБАВЛЕНО: всегда восстанавливаем кнопку в finally
+            if (sendButton) {
+                sendButton.disabled = false;
+                // Кнопка активируется автоматически через UI Manager при вводе текста
+            }
         }
 
-        this.widget.dispatchEvent(new CustomEvent('textMessageSend', {
-            detail: { text: messageText }
-        }));
+        // ✅ ИСПРАВЛЕНО: используем систему событий вместо CustomEvent
+        this.widget.events.emit('textMessageSent', { text: messageText });
     }
 
     async sendMessage() {
         if (!this.widget.audioRecorder.audioBlob) {
-        console.error('Нет аудио для отправки');
-        return;
+            console.error('Нет аудио для отправки');
+            return;
         }
 
         if (this.widget.audioRecorder.recordingTime < this.widget.audioRecorder.minRecordingTime) {
-        this.widget.ui.showNotification('⚠️ Запись слишком короткая');
-        return;
-    }
+            this.widget.ui.showNotification('⚠️ Запись слишком короткая');
+            return;
+        }
 
         this.widget.ui.showLoading();
 
-         const userMessage = {
-        type: 'user',
-        content: `Голосовое сообщение (${this.widget.audioRecorder.recordingTime}с)`, // ← Тоже исправить
-        timestamp: new Date()
-             };
+        const userMessage = {
+            type: 'user',
+            content: `Голосовое сообщение (${this.widget.audioRecorder.recordingTime}с)`,
+            timestamp: new Date()
+        };
     
-         this.widget.ui.addMessage(userMessage);
+        this.widget.ui.addMessage(userMessage);
 
-         try {
-           const formData = new FormData();
-            formData.append(this.fieldName, this.widget.audioRecorder.audioBlob, 'voice-message.webm'); // ← И здесь
+        try {
+            const formData = new FormData();
+            formData.append(this.fieldName, this.widget.audioRecorder.audioBlob, 'voice-message.webm');
             formData.append('sessionId', this.widget.sessionId);
 
             console.log('📤 Отправляем аудио с sessionId:', this.widget.sessionId);
@@ -206,8 +213,7 @@ export class APIClient {
             this.widget.ui.addMessage(assistantMessage);
         }
 
-        this.widget.dispatchEvent(new CustomEvent('messageSend', {
-            detail: { duration: this.widget.recordingTime }
-        }));
+        // ✅ ИСПРАВЛЕНО: используем систему событий вместо CustomEvent
+        this.widget.events.emit('messageSent', { duration: this.widget.audioRecorder.recordingTime });
     }
 }

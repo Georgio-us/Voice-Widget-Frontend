@@ -1,5 +1,5 @@
 // ========================================
-// 📁 modules/audio-recorder.js
+// 📁 modules/audio-recorder.js (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 // ========================================
 // Запись и обработка аудио
 
@@ -24,17 +24,8 @@ export class AudioRecorder {
             this.recordedChunks = [];
             this.audioBlob = null;
 
-            const mainButton = this.widget.shadowRoot.getElementById('mainButton');
-            const voiceButton = this.widget.shadowRoot.getElementById('voiceButton');
-            const waveAnimation = this.widget.shadowRoot.getElementById('waveAnimation');
-            const recordingControls = this.widget.shadowRoot.getElementById('recordingControls');
-
-            mainButton.classList.add('recording');
-            voiceButton.classList.add('recording');
-            waveAnimation.classList.add('active');
-            
-            recordingControls.style.display = 'flex';
-            recordingControls.classList.add('active');
+            // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ДЛЯ UI MANAGER
+            this.widget.events.emit('recordingStarted');
 
             this.stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
@@ -73,16 +64,17 @@ export class AudioRecorder {
 
             this.mediaRecorder.start(100);
 
+            // 🔥 ИСПОЛЬЗУЕМ ТОЛЬКО СИСТЕМУ СОБЫТИЙ (убираем прямую манипуляцию DOM)
             this.recordingTimer = setInterval(() => {
                 this.recordingTime++;
-                this.widget.ui.updateTimer(this.recordingTime);
+                this.widget.events.emit('timerUpdated', this.recordingTime);
 
                 if (this.recordingTime >= this.maxRecordingTime) {
                     this.finishAndSend();
                 }
             }, 1000);
 
-            this.widget.dispatchEvent(new CustomEvent('recordingStart'));
+            console.log('🎤 Запись началась');
 
         } catch (err) {
             console.error('Ошибка доступа к микрофону:', err);
@@ -111,21 +103,11 @@ export class AudioRecorder {
             this.stream = null;
         }
 
-        const mainButton = this.widget.shadowRoot.getElementById('mainButton');
-        const voiceButton = this.widget.shadowRoot.getElementById('voiceButton');
-        const waveAnimation = this.widget.shadowRoot.getElementById('waveAnimation');
-        const recordingControls = this.widget.shadowRoot.getElementById('recordingControls');
-
-        mainButton.classList.remove('recording');
-        voiceButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
-        recordingControls.style.display = 'none';
-        recordingControls.classList.remove('active');
-
         this.cleanupRecording();
-        this.widget.ui.showNotification('❌ Запись отменена');
-
-        this.widget.dispatchEvent(new CustomEvent('recordingCancelled'));
+        
+        // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ОТМЕНЫ
+        this.widget.events.emit('recordingCancelled');
+        this.widget.events.emit('notification', '❌ Запись отменена');
     }
 
     async finishAndSend() {
@@ -134,7 +116,7 @@ export class AudioRecorder {
         console.log('🟢 Завершаем запись и отправляем');
 
         if (this.recordingTime < this.minRecordingTime) {
-            this.widget.ui.showNotification('⚠️ Запись слишком короткая');
+            this.widget.events.emit('notification', '⚠️ Запись слишком короткая');
             return;
         }
 
@@ -144,14 +126,6 @@ export class AudioRecorder {
             clearInterval(this.recordingTimer);
             this.recordingTimer = null;
         }
-
-        const mainButton = this.widget.shadowRoot.getElementById('mainButton');
-        const voiceButton = this.widget.shadowRoot.getElementById('voiceButton');
-        const waveAnimation = this.widget.shadowRoot.getElementById('waveAnimation');
-
-        mainButton.classList.remove('recording');
-        voiceButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
 
         await new Promise((resolve) => {
             this.mediaRecorder.onstop = () => {
@@ -172,6 +146,10 @@ export class AudioRecorder {
             this.stream = null;
         }
 
+        // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ОСТАНОВКИ ЗАПИСИ
+        this.widget.events.emit('recordingStopped');
+
+        // Отправляем через API
         this.widget.api.sendMessage();
     }
 
@@ -183,20 +161,12 @@ export class AudioRecorder {
             this.recordingTimer = null;
         }
 
-        const mainButton = this.widget.shadowRoot.getElementById('mainButton');
-        const voiceButton = this.widget.shadowRoot.getElementById('voiceButton');
-        const waveAnimation = this.widget.shadowRoot.getElementById('waveAnimation');
-        const recordingControls = this.widget.shadowRoot.getElementById('recordingControls');
-
-        mainButton.classList.remove('recording');
-        voiceButton.classList.remove('recording');
-        waveAnimation.classList.remove('active');
-        
-        recordingControls.style.display = 'none';
-        recordingControls.classList.remove('active');
-
         this.cleanupRecording();
-        this.widget.ui.showNotification(`❌ ${message}`);
+        
+        // 🔥 ГЕНЕРИРУЕМ СОБЫТИЯ ОШИБКИ
+        this.widget.events.emit('recordingCancelled');
+        this.widget.events.emit('notification', `❌ ${message}`);
+        this.widget.events.emit('error', new Error(message));
     }
 
     cleanupRecording() {
@@ -209,22 +179,12 @@ export class AudioRecorder {
         this.audioBlob = null;
         this.recordedChunks = [];
         this.recordingTime = 0;
-
-        const timer = this.widget.shadowRoot.getElementById('timer');
-        timer.textContent = '0:00';
     }
 
     cleanupAfterSend() {
         this.audioBlob = null;
         this.recordedChunks = [];
         this.recordingTime = 0;
-
-        const timer = this.widget.shadowRoot.getElementById('timer');
-        timer.textContent = '0:00';
-        
-        const recordingControls = this.widget.shadowRoot.getElementById('recordingControls');
-        recordingControls.style.display = 'none';
-        recordingControls.classList.remove('active');
     }
 
     getErrorMessage(error) {
