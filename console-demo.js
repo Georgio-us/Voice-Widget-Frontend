@@ -3,8 +3,8 @@
 // ========================================
 //
 // 💡 БЫСТРАЯ ЗАГРУЗКА (одна строка):
-// const s=document.createElement('script');s.src='https://georgio-us.github.io/Voice-Widget-Frontend/console-demo.js';document.head.appendChild(s)
-//
+// 
+//const s=document.createElement('script');s.src='https://georgio-us.github.io/Voice-Widget-Frontend/console-demo.js';document.head.appendChild(s)
 // ========================================
 
 // Проверяем, не загружен ли уже скрипт
@@ -20,6 +20,9 @@ const WIDGET_URL = 'https://georgio-us.github.io/Voice-Widget-Frontend';
 async function loadVoiceWidget() {
   try {
     console.log('🚀 Загружаю Voice Widget...');
+    
+    // Устанавливаем базовый путь для ассетов (GitHub Pages)
+    window.__VW_ASSETS_BASE__ = 'https://georgio-us.github.io/Voice-Widget-Frontend/assets/';
     
     // Проверяем, не загружен ли уже
     if (document.querySelector('voice-widget')) {
@@ -67,7 +70,7 @@ async function loadVoiceWidget() {
       bottom: 20px;
       right: 20px;
       z-index: 999999;
-      pointer-events: none;
+      pointer-events: auto;
     `;
     
     container.innerHTML = `

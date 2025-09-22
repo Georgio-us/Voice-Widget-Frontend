@@ -2,6 +2,9 @@
 /* 📁 voice-widget.js (ОБНОВЛЁННАЯ ВЕРСИЯ) */
 // ========================================
 
+// Базовый путь для ассетов
+const ASSETS_BASE = window.__VW_ASSETS_BASE__ || '${ASSETS_BASE}';
+
 import { AudioRecorder } from './modules/audio-recorder.js';
 import { UnderstandingManager } from './modules/understanding-manager.js';
 import { UIManager } from './modules/ui-manager.js';
@@ -389,7 +392,7 @@ render() {
 
   <!-- Launcher -->
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
-    <img src="./assets/Voice-big-btn.svg" alt="Voice" />
+    <img src="${ASSETS_BASE}Voice-big-btn.svg" alt="Voice" />
   </button>
 
   <div class="scrim" id="scrim"></div>
@@ -397,14 +400,14 @@ render() {
   <div class="widget" role="dialog" aria-modal="true" aria-label="Voice Assistant">
     <!-- Header -->
     <div class="header">
-      <div class="header-left"><img src="./assets/logo-group-resized.svg" alt="VIA logo" /></div>
+      <div class="header-left"><img src="${ASSETS_BASE}logo-group-resized.svg" alt="VIA logo" /></div>
       <div class="header-center">
         <div class="understanding-title">deep understanding: 0%</div>
         <div class="understanding-scale"><div class="understanding-track"></div><div class="understanding-fill" id="understandingFill"></div></div>
       </div>
       <div class="header-actions">
-        <button class="header-question-btn" id="btnToggle" title="Details"><img src="./assets/details-btn.svg" alt="Details" /></button>
-        <button class="header-switch-btn" title="Switch Mode"><img src="./assets/switch-mode.svg" alt="Switch Mode" /></button>
+        <button class="header-question-btn" id="btnToggle" title="Details"><img src="${ASSETS_BASE}details-btn.svg" alt="Details" /></button>
+        <button class="header-switch-btn" title="Switch Mode"><img src="${ASSETS_BASE}switch-mode.svg" alt="Switch Mode" /></button>
       </div>
     </div>
 
@@ -413,7 +416,7 @@ render() {
       <!-- Main Screen -->
       <div class="main-screen" id="mainScreen">
         <div class="main-content">
-          <button class="big-mic" id="mainButton" aria-pressed="false"><img src="./assets/Voice-big-btn.svg" alt="Voice" /></button>
+          <button class="big-mic" id="mainButton" aria-pressed="false"><img src="${ASSETS_BASE}Voice-big-btn.svg" alt="Voice" /></button>
           <div>
             <div class="main-title">Voice Intelligent Assistance</div>
             <div class="main-subtitle">Press To Speak</div>
@@ -427,8 +430,8 @@ render() {
               <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
             </div>
           </div>
-          <button class="icon-btn" id="mainToggleButton" aria-pressed="false" title="Говорить"><img src="./assets/mic-btn.svg" alt="Microphone" /></button>
-          <button class="icon-btn" id="mainSendButton" title="Отправить"><img src="./assets/send-btn.svg" alt="Send" /></button>
+          <button class="icon-btn" id="mainToggleButton" aria-pressed="false" title="Говорить"><img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" /></button>
+          <button class="icon-btn" id="mainSendButton" title="Отправить"><img src="${ASSETS_BASE}send-btn.svg" alt="Send" /></button>
         </div>
       </div>
 
@@ -448,8 +451,8 @@ render() {
               <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
             </div>
           </div>
-          <button class="icon-btn" id="toggleButton" aria-pressed="false" title="Говорить"><img src="./assets/mic-btn.svg" alt="Microphone" /></button>
-          <button class="icon-btn" id="sendButton" title="Отправить"><img src="./assets/send-btn.svg" alt="Send" /></button>
+          <button class="icon-btn" id="toggleButton" aria-pressed="false" title="Говорить"><img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" /></button>
+          <button class="icon-btn" id="sendButton" title="Отправить"><img src="${ASSETS_BASE}send-btn.svg" alt="Send" /></button>
         </div>
       </div>
 
@@ -871,11 +874,11 @@ render() {
     if (toggleButton) {
       if (isRecording) {
         // Show stop icon
-        toggleButton.innerHTML = '<img src="./assets/stop-btn.svg" alt="Stop" />';
+        toggleButton.innerHTML = '<img src="${ASSETS_BASE}stop-btn.svg" alt="Stop" />';
         toggleButton.setAttribute('title', 'Сбросить');
       } else {
         // Show mic icon
-        toggleButton.innerHTML = '<img src="./assets/mic-btn.svg" alt="Microphone" />';
+        toggleButton.innerHTML = '<img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" />';
         toggleButton.setAttribute('title', 'Говорить');
       }
     }
@@ -925,11 +928,11 @@ render() {
 
     if (mode === 'details') {
       // Show return icon when details are open
-      toggleButton.innerHTML = '<img src="./assets/return-btn.svg" alt="Return" />';
+      toggleButton.innerHTML = '<img src="${ASSETS_BASE}return-btn.svg" alt="Return" />';
       toggleButton.setAttribute('title', 'Return to Dialog');
     } else {
       // Show question icon when in dialog mode
-      toggleButton.innerHTML = '<img src="./assets/details-btn.svg" alt="Details" />';
+      toggleButton.innerHTML = '<img src="${ASSETS_BASE}details-btn.svg" alt="Details" />';
       toggleButton.setAttribute('title', 'Details');
     }
   }
