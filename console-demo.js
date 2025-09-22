@@ -1,6 +1,17 @@
 // ========================================
 // 🚀 Voice Widget - Демо для консоли
 // ========================================
+//
+// 💡 БЫСТРАЯ ЗАГРУЗКА (одна строка):
+// const s=document.createElement('script');s.src='https://georgio-us.github.io/Voice-Widget-Frontend/console-demo.js';document.head.appendChild(s)
+//
+// ========================================
+
+// Проверяем, не загружен ли уже скрипт
+if (window.VoiceWidgetDemoLoaded) {
+  console.log('⚠️ Voice Widget Demo уже загружен. Используйте существующие функции.');
+} else {
+  window.VoiceWidgetDemoLoaded = true;
 
 // ⚠️ ВАЖНО: Замените URL на ваш домен!
 const WIDGET_URL = 'https://georgio-us.github.io/Voice-Widget-Frontend';
@@ -121,3 +132,5 @@ console.log(`
 // Экспортируем функции в глобальную область
 window.loadVoiceWidget = loadVoiceWidget;
 window.removeVoiceWidget = removeVoiceWidget;
+
+} // Закрываем блок проверки загрузки
