@@ -3,7 +3,7 @@
 // ========================================
 
 // ⚠️ ВАЖНО: Замените URL на ваш домен!
-const WIDGET_URL = 'https://your-domain.com/voice-widget'; // ЗАМЕНИТЕ НА ВАШ ДОМЕН
+const WIDGET_URL = 'https://georgio-us.github.io/Voice-Widget-Frontend';
 
 // Функция загрузки виджета
 async function loadVoiceWidget() {
