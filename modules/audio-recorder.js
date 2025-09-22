@@ -170,6 +170,13 @@ export class AudioRecorder {
     }
 
     cleanupRecording() {
+        this.isRecording = false;
+        
+        if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+        }
+        
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;

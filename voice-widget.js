@@ -1,8 +1,7 @@
 // ========================================
-// 📁 voice-widget.js (ОБНОВЛЕННАЯ ВЕРСИЯ С МОДУЛЯМИ)
+/* 📁 voice-widget.js (ОБНОВЛЁННАЯ ВЕРСИЯ) */
 // ========================================
 
-// 🔗 ИМПОРТЫ МОДУЛЕЙ
 import { AudioRecorder } from './modules/audio-recorder.js';
 import { UnderstandingManager } from './modules/understanding-manager.js';
 import { UIManager } from './modules/ui-manager.js';
@@ -10,1481 +9,1006 @@ import { APIClient } from './modules/api-client.js';
 import { EventManager } from './modules/event-manager.js';
 
 class VoiceWidget extends HTMLElement {
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
-        this.isRecording = false;
-        this.recordingTime = 0;
-        this.recordingTimer = null;
-        this.maxRecordingTime = 30;
-        this.minRecordingTime = 1;
-        this.messages = [];
-        this.mediaRecorder = null; 
-        this.stream = null;
-        this.audioBlob = null;
-        this.recordedChunks = [];
-        
-        // SessionId это для контекста диалогов
-        this.sessionId = this.getOrCreateSessionId();
-        
-        // Configurable parameters
-        this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
-        this.fieldName = this.getAttribute('field-name') || 'audio';
-        this.responseField = this.getAttribute('response-field') || 'response';
-        
-        // 🔥 ИНИЦИАЛИЗАЦИЯ МОДУЛЕЙ
-        this.events = new EventManager();
-        this.audioRecorder = new AudioRecorder(this);
-        this.understanding = new UnderstandingManager(this);
-        this.ui = new UIManager(this);
-        this.api = new APIClient(this);
-        
-        this.render();
-        this.bindEvents();
-        this.checkBrowserSupport();
-        this.initializeUI();
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+
+    // базовые состояния
+    this.isRecording = false;
+    this.recordingTime = 0;
+    this.maxRecordingTime = 30;
+    this.minRecordingTime = 1;
+    this.messages = [];
+    this.mediaRecorder = null;
+    this.stream = null;
+    this.audioBlob = null;
+    this.recordedChunks = [];
+
+    // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
+    this.sessionId = this.getInitialSessionId();
+
+    // параметры
+    this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
+    this.fieldName = this.getAttribute('field-name') || 'audio';
+    this.responseField = this.getAttribute('response-field') || 'response';
+
+    // модули
+    this.events = new EventManager();
+    this.audioRecorder = new AudioRecorder(this);
+    this.understanding = new UnderstandingManager(this);
+    this.ui = new UIManager(this);
+    this.api = new APIClient(this);
+
+    this.render();
+    this.bindEvents();
+    this.checkBrowserSupport();
+    this.initializeUI();
+  }
+
+  // берем id из localStorage (если ранее выдал сервер); иначе null
+  getInitialSessionId() {
+    try {
+      return (
+        localStorage.getItem('vw_sessionId') ||
+        localStorage.getItem('voiceWidgetSessionId') ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  // ---------- UI init ----------
+  initializeUI() {
+    this.ui.initializeUI();
+
+    // единый ввод
+    this.ui.bindUnifiedInputEvents();
+    this.ui.bindFunctionButtons();
+    this.ui.bindAccordionEvents();
+
+    // грузим данные сессии только если id есть
+    if (this.sessionId) {
+      this.api.loadSessionInfo();
     }
 
-    getOrCreateSessionId() {
-        let sessionId = localStorage.getItem('voiceWidgetSessionId');
-        if (!sessionId) {
-            sessionId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('voiceWidgetSessionId', sessionId);
-            console.log('✨ Создан новый sessionId:', sessionId);
-        } else {
-            console.log('📋 Использую существующий sessionId:', sessionId);
-        }
-        return sessionId;
+    // Initialize understanding bar with 10%
+    this.updateUnderstanding(10);
+
+    // Initialize send buttons with disabled state
+    const mainSendButton = this.shadowRoot.getElementById('mainSendButton');
+    const sendButton = this.shadowRoot.getElementById('sendButton');
+    if (mainSendButton) mainSendButton.setAttribute('aria-disabled', 'true');
+    if (sendButton) sendButton.setAttribute('aria-disabled', 'true');
+
+    console.log('✅ Voice Widget инициализирован');
+  }
+
+  checkBrowserSupport() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+      if (statusIndicator) statusIndicator.innerHTML = '<div class="status-text">❌ Браузер не поддерживает запись аудио</div>';
+      const mainButton = this.shadowRoot.getElementById('mainButton');
+      if (mainButton) {
+        mainButton.disabled = true;
+        mainButton.style.opacity = '0.5';
+        mainButton.style.cursor = 'not-allowed';
+      }
     }
+  }
 
-    // 🔥 ОБНОВЛЕННЫЙ initializeUI()
-    initializeUI() {
-        // Инициализируем UI Manager с новым интерфейсом
-        this.ui.initializeUI();
-        
-        // Привязываем события единого интерфейса
-        this.ui.bindUnifiedInputEvents();
-        
-        // Привязываем функциональные кнопки и аккордеон
-        this.ui.bindFunctionButtons();
-        this.ui.bindAccordionEvents();
-        
-        // Загружаем информацию о сессии
-        this.api.loadSessionInfo();
-        
-        console.log('✅ Voice Widget инициализирован с единым интерфейсом');
-    }
-
-    checkBrowserSupport() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
-            statusIndicator.innerHTML = '<div class="status-text">❌ Браузер не поддерживает запись аудио</div>';
-            
-            const mainButton = this.shadowRoot.getElementById('mainButton');
-            mainButton.disabled = true;
-            mainButton.style.opacity = '0.5';
-            mainButton.style.cursor = 'not-allowed';
-        }
-    }
-
-    // Обновленная render() метод в voice-widget.js
-
+ // ---------- RENDER ----------
 render() {
-    this.shadowRoot.innerHTML = `
-        <style>
-            :host {
-                display: block;
-                width: 100%;
-                max-width: 1200px;
-                margin: 0 auto;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-                border-radius: 24px;
-                overflow: hidden;
-                height: auto;
-                min-height: auto;
-                position: relative;
-            }
-
-            .widget-container {
-                display: flex;
-                height: 90vh;
-                position: relative;
-            }
-
-            /* HEADER - БЕЗ ИЗМЕНЕНИЙ */
-            .widget-header {
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(20px);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 12px 20px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                z-index: 100;
-            }
-
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .widget-title {
-                font-size: 20px;
-                font-weight: 700;
-                color: white;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            .status-dot {
-                width: 8px;
-                height: 8px;
-                background: #4ade80;
-                border-radius: 50%;
-                animation: pulse-dot 2s ease-in-out infinite;
-            }
-
-            @keyframes pulse-dot {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
-            }
-
-            .widget-subtitle {
-                font-size: 14px;
-                color: rgba(255, 255, 255, 0.7);
-                margin: 0;
-                font-weight: 400;
-            }
-
-            .header-right {
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.5);
-                font-weight: 500;
-            }
-
-            /* LEFT PANEL - CHAT */
-            .chat-panel {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                padding: 80px 24px 24px 24px;
-                position: relative;
-            }
-
-            .messages-area {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                margin-bottom: 24px;
-            }
-
-            .messages-container {
-                flex: 1;
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(15px);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                max-height: 400px;
-                overflow-y: auto;
-                padding: 20px;
-                margin-bottom: 20px;
-            }
-
-            .messages-container::-webkit-scrollbar {
-                width: 6px;
-            }
-
-            .messages-container::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 3px;
-            }
-
-            .messages-container::-webkit-scrollbar-thumb {
-                background: rgba(147, 51, 234, 0.5);
-                border-radius: 3px;
-            }
-
-            .empty-state {
-                text-align: center;
-                padding: 40px 20px;
-                color: rgba(255, 255, 255, 0.6);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                min-height: 200px;
-            }
-
-            .record-button-large {
-                width: 70px;
-                height: 70px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #FF6B35, #F7931E);
-                border: none;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-bottom: 20px;
-                transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                box-shadow: 
-                    0 8px 24px rgba(255, 107, 53, 0.3),
-                    0 4px 12px rgba(255, 107, 53, 0.2);
-            }
-
-            .record-button-large:hover {
-                transform: scale(1.05);
-                box-shadow: 
-                    0 12px 32px rgba(255, 107, 53, 0.4),
-                    0 6px 16px rgba(255, 107, 53, 0.3);
-            }
-
-            .record-button-large.recording {
-                animation: pulse-glow 2s ease-in-out infinite;
-            }
-
-            @keyframes pulse-glow {
-                0%, 100% {
-                    box-shadow: 
-                        0 8px 24px rgba(255, 107, 53, 0.3),
-                        0 4px 12px rgba(255, 107, 53, 0.2),
-                        0 0 0 0 rgba(255, 107, 53, 0.4);
-                }
-                50% {
-                    box-shadow: 
-                        0 8px 24px rgba(255, 107, 53, 0.5),
-                        0 4px 12px rgba(255, 107, 53, 0.4),
-                        0 0 0 20px rgba(255, 107, 53, 0);
-                }
-            }
-
-            .mic-icon {
-                width: 28px;
-                height: 28px;
-                fill: white;
-                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-            }
-
-            .empty-state-text {
-                font-size: 18px;
-                font-weight: 600;
-                margin-bottom: 8px;
-                color: white;
-            }
-
-            .empty-state-subtitle {
-                font-size: 14px;
-                color: rgba(255, 255, 255, 0.6);
-            }
-
-            /* ✅ НОВЫЙ ЕДИНЫЙ INPUT AREA */
-            .input-area {
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(20px);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 16px;
-            }
-
-            /* ✅ ПРАВИЛЬНЫЙ ЕДИНЫЙ INPUT CONTAINER */
-            .unified-input-container {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                position: relative;
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 12px;
-                padding: 4px;
-                transition: all 0.3s ease;
-                margin-bottom: 16px;
-            }
-
-            .unified-input-container:focus-within {
-                border-color: rgba(147, 51, 234, 0.5);
-                background: rgba(255, 255, 255, 0.15);
-                box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.1);
-            }
-
-            /* ✅ ДОБАВЛЕНО: Оранжевая рамка при записи */
-            .unified-input-container.recording-active {
-                border-color: rgba(255, 107, 53, 0.8) !important;
-                background: rgba(255, 255, 255, 0.15);
-                box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-            }
-
-            /* ✅ ОДИН АДАПТИВНЫЙ ЭЛЕМЕНТ ВВОДА */
-            .adaptive-input-field {
-                flex: 1;
-                background: transparent;
-                border: none;
-                outline: none;
-                padding: 12px 16px;
-                font-size: 14px;
-                color: white;
-                font-family: inherit;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                min-height: 24px;
-            }
-
-            /* ✅ РЕЖИМ ТЕКСТОВОГО ВВОДА */
-            .adaptive-input-field.text-mode {
-                /* Стили для обычного текстового поля */
-            }
-
-            .adaptive-input-field.text-mode input {
-                width: 100%;
-                background: transparent;
-                border: none;
-                outline: none;
-                font-size: 14px;
-                color: white;
-                font-family: inherit;
-            }
-
-            .adaptive-input-field.text-mode input::placeholder {
-                color: rgba(255, 255, 255, 0.5);
-            }
-
-            /* ✅ РЕЖИМ ЗАПИСИ */
-            .adaptive-input-field.recording-mode {
-                gap: 12px;
-                padding: 8px 16px;
-                animation: fadeIn 0.3s ease;
-                /* ❌ УБРАЛИ: дополнительные border и background */
-            }
-
-            .recording-timer {
-                font-size: 15px;
-                font-weight: 700;
-                color: #FF6B35;
-                min-width: 45px;
-                flex-shrink: 0;
-            }
-
-            .recording-waves {
-                display: flex;
-                align-items: center;
-                gap: 3px;
-                flex-shrink: 0;
-            }
-
-            .wave-bar {
-                width: 3px;
-                height: 12px;
-                background: linear-gradient(135deg, #FF6B35, #F7931E);
-                border-radius: 2px;
-                animation: wave 1.2s ease-in-out infinite;
-            }
-
-            .wave-bar:nth-child(2) { animation-delay: 0.1s; }
-            .wave-bar:nth-child(3) { animation-delay: 0.2s; }
-            .wave-bar:nth-child(4) { animation-delay: 0.3s; }
-
-            @keyframes wave {
-                0%, 100% { 
-                    height: 8px; 
-                    opacity: 0.6; 
-                }
-                50% { 
-                    height: 16px; 
-                    opacity: 1; 
-                }
-            }
-
-            .recording-text {
-                color: rgba(255, 255, 255, 0.9);
-                font-size: 14px;
-                font-weight: 500;
-                flex: 1;
-            }
-
-            /* ✅ КОНТРОЛЬНЫЕ КНОПКИ - БЕЗ ЗАЗОРА */
-            .input-controls {
-                display: flex;
-                align-items: center;
-                gap: 4px; /* ✅  зазор */
-            }
-
-            .control-button {
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                border: none;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s ease;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .control-button:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-                transform: none !important;
-            }
-
-            /* ✅ КНОПКА МИКРОФОНА */
-            .mic-button {
-                background: linear-gradient(135deg, #FF6B35, #F7931E);
-                box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-                transition: all 0.3s ease;
-                opacity: 0.5; /* ✅ ДОБАВЛЕНО: неактивна по умолчанию */
-            }
-
-            .mic-button.active {
-                opacity: 1; /* ✅ ДОБАВЛЕНО: активное состояние */
-            }
-
-            .mic-button:not(:disabled):hover {
-                transform: scale(1.05);
-                box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
-            }
-
-            .mic-button.recording {
-                animation: pulse-recording 2s ease-in-out infinite;
-            }
-
-            /* ✅ СКРЫТИЕ МИКРОФОНА */
-            .mic-button.hidden {
-                opacity: 0;
-                transform: scale(0.8);
-                pointer-events: none;
-                width: 0;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-            }
-
-            @keyframes pulse-recording {
-                0%, 100% {
-                    box-shadow: 
-                        0 4px 12px rgba(255, 107, 53, 0.3),
-                        0 0 0 0 rgba(255, 107, 53, 0.4);
-                }
-                50% {
-                    box-shadow: 
-                        0 6px 16px rgba(255, 107, 53, 0.5),
-                        0 0 0 12px rgba(255, 107, 53, 0);
-                }
-            }
-
-            /* ✅ КНОПКА ОТПРАВКИ */
-            .send-button {
-                background: linear-gradient(135deg, #8B5CF6, #A855F7);
-                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-                opacity: 0.5;
-                transition: all 0.3s ease;
-            }
-
-            .send-button.active {
-                opacity: 1;
-            }
-
-            .send-button:not(:disabled):hover {
-                transform: scale(1.05);
-                box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
-            }
-
-            /* ✅ ОБНОВЛЕНА: КНОПКА ОТМЕНЫ - КВАДРАТ В КРУГЕ */
-            .cancel-button {
-                background: linear-gradient(135deg, #ef4444, #dc2626);
-                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-                opacity: 0;
-                transform: scale(0.8);
-                transition: all 0.3s ease;
-                pointer-events: none;
-                width: 0;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-            }
-
-            .cancel-button.active {
-                opacity: 1;
-                transform: scale(1);
-                pointer-events: auto;
-                width: 40px;
-                margin: 0;
-                padding: 0;
-            }
-
-            .cancel-button:not(:disabled):hover {
-                transform: scale(1.05);
-                background: linear-gradient(135deg, #dc2626, #b91c1c);
-                box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
-            }
-
-            /* ✅ ДОБАВЛЕНО: Специальная иконка квадрата для кнопки отмены */
-            .cancel-button .button-icon {
-                fill: white;
-                stroke: none;
-            }
-
-            /* ✅ ИКОНКИ КНОПОК */
-            .button-icon {
-                width: 18px;
-                height: 18px;
-                fill: white;
-                transition: all 0.2s ease;
-            }
-
-            /* ✅ АНИМАЦИИ */
-            @keyframes fadeIn {
-                from {
-                    opacity: 0;
-                    transform: translateY(-10px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            /* ФУНКЦИОНАЛЬНЫЕ КНОПКИ */
-            .function-buttons-input {
-                display: flex;
-                gap: 12px;
-                justify-content: flex-start;
-            }
-
-            .function-btn-input {
-                background: transparent;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 10px;
-                color: rgba(255, 255, 255, 0.85);
-                font-size: 13px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-family: inherit;
-                flex: none;
-                justify-content: flex-start;
-            }
-
-            .function-btn-input:hover {
-                background: rgba(255, 255, 255, 0.1);
-                border-color: rgba(255, 255, 255, 0.25);
-                transform: translateY(-1px);
-            }
-
-            .function-btn-input svg {
-                width: 16px;
-                height: 16px;
-                fill: currentColor;
-            }
-
-            /* MOBILE FUNCTION BUTTONS */
-            .mobile-functions {
-                display: none;
-                grid-template-columns: 1fr 1fr 1fr;
-                gap: 12px;
-                margin-top: 16px;
-            }
-
-            .mobile-function-btn {
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 12px;
-                padding: 12px;
-                color: rgba(255, 255, 255, 0.8);
-                font-size: 12px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 6px;
-                font-family: inherit;
-            }
-
-            .mobile-function-btn:hover {
-                background: rgba(255, 255, 255, 0.15);
-                border-color: rgba(255, 255, 255, 0.3);
-            }
-
-            .mobile-function-btn svg {
-                width: 14px;
-                height: 14px;
-                fill: currentColor;
-            }
-
-            /* RIGHT PANEL - UNDERSTANDING */
-            .understanding-panel {
-                width: 340px;
-                background: rgba(255, 255, 255, 0.03);
-                backdrop-filter: blur(20px);
-                border-left: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 80px 20px 20px 20px;
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-            }
-
-            /* JARVIS SPHERE */
-            .jarvis-container {
-                display: flex;
-                justify-content: center;
-                margin-bottom: auto;
-                flex-shrink: 0;
-            }
-
-            .jarvis-sphere {
-                width: 75px;
-                height: 75px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, 
-                    rgba(147, 51, 234, 0.8) 0%, 
-                    rgba(168, 85, 247, 0.6) 50%, 
-                    rgba(196, 181, 253, 0.4) 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                animation: jarvis-rotate 4s linear infinite;
-                box-shadow: 
-                    0 0 30px rgba(147, 51, 234, 0.3),
-                    inset 0 0 30px rgba(255, 255, 255, 0.1);
-            }
-
-            @keyframes jarvis-rotate {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
-            }
-
-            .jarvis-core {
-                width: 26px;
-                height: 26px;
-                border-radius: 50%;
-                background: white;
-                opacity: 0.9;
-                animation: jarvis-pulse 1.5s ease-in-out infinite;
-            }
-
-            @keyframes jarvis-pulse {
-                0%, 100% { transform: scale(1); opacity: 0.9; }
-                50% { transform: scale(1.1); opacity: 1; }
-            }
-
-            /* UNDERSTANDING PROGRESS */
-            .understanding-section {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 16px;
-                margin-bottom: auto;
-                flex-shrink: 0;
-            }
-
-            .section-title {
-                font-size: 15px;
-                font-weight: 600;
-                color: white;
-                margin-bottom: 12px;
-            }
-
-            .progress-container {
-                margin-bottom: 0;
-            }
-
-            .progress-bar {
-                width: 100%;
-                height: 6px;
-                background: rgba(255, 255, 255, 0.1);
-                border-radius: 3px;
-                overflow: hidden;
-                margin-bottom: 6px;
-            }
-
-            .progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #4ade80, #22c55e);
-                border-radius: 3px;
-                transition: width 0.5s ease;
-                width: 0%;
-            }
-
-            .progress-text {
-                font-size: 12px;
-                color: rgba(255, 255, 255, 0.7);
-            }
-
-            /* ACCORDION CONTAINER и остальные стили остаются теми же */
-            .accordion-container {
-                flex: 1;
-                overflow-y: auto;
-                padding-right: 4px;
-            }
-
-            .static-block {
-                background: rgba(255, 255, 255, 0.03);
-                border-radius: 14px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                margin-bottom: 20px;
-                overflow: hidden;
-            }
-
-            .static-header {
-                display: flex;
-                align-items: center;
-                padding: 16px 18px 12px 18px;
-                background: rgba(255, 255, 255, 0.02);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            }
-
-            .static-title {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 14px;
-                font-weight: 600;
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .static-content {
-                padding: 14px 18px 18px 18px;
-            }
-
-            .accordion-block {
-                background: rgba(255, 255, 255, 0.03);
-                border-radius: 14px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                margin-bottom: 12px;
-                overflow: hidden;
-            }
-
-            .accordion-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 16px 18px;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                user-select: none;
-                background: rgba(255, 255, 255, 0.02);
-            }
-
-            .accordion-title {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 14px;
-                font-weight: 600;
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .accordion-arrow {
-                width: 0;
-                height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 6px solid rgba(255, 255, 255, 0.6);
-                transition: transform 0.3s ease;
-                flex-shrink: 0;
-            }
-
-            .accordion-block.open .accordion-arrow {
-                transform: rotate(180deg);
-            }
-
-            .accordion-content {
-                max-height: 0;
-                overflow: hidden;
-                transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-
-            .accordion-block.open .accordion-content {
-                max-height: 220px;
-            }
-
-            .accordion-content-inner {
-                padding: 0 18px 18px 18px;
-            }
-
-            .block-icon {
-                width: 14px;
-                height: 14px;
-                opacity: 0.8;
-                flex-shrink: 0;
-            }
-
-            .understanding-item {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding: 8px 0;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            }
-
-            .item-indicator {
-                width: 7px;
-                height: 7px;
-                border-radius: 50%;
-                background: rgba(255, 255, 255, 0.3);
-                flex-shrink: 0;
-            }
-
-            .item-text {
-                font-size: 13px;
-                color: rgba(255, 255, 255, 0.85);
-                flex: 1;
-                min-width: 0;
-                font-weight: 500;
-            }
-
-            .item-value {
-                font-size: 11px;
-                color: rgba(255, 255, 255, 0.65);
-                font-style: italic;
-                text-align: right;
-                flex-shrink: 0;
-                max-width: 120px;
-                word-wrap: break-word;
-            }
-
-            /* MESSAGES */
-            .message {
-                margin-bottom: 16px;
-                animation: messageSlide 0.3s ease-out;
-            }
-
-            @keyframes messageSlide {
-                from {
-                    opacity: 0;
-                    transform: translateY(15px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-
-            .message.user {
-                text-align: right;
-            }
-
-            .message.assistant {
-                text-align: left;
-            }
-
-            .message-bubble {
-                display: inline-block;
-                max-width: 85%;
-                padding: 14px 18px;
-                border-radius: 18px;
-                font-size: 15px;
-                line-height: 1.4;
-                font-weight: 500;
-                word-wrap: break-word;
-                position: relative;
-            }
-
-            .message.user .message-bubble {
-                background: linear-gradient(135deg, #FF6B35, #F7931E);
-                color: white;
-                border-bottom-right-radius: 6px;
-                box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-            }
-
-            .message.assistant .message-bubble {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-                border-bottom-left-radius: 6px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            /* LOADING */
-            .loading-indicator {
-                display: none;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                gap: 12px;
-                color: rgba(255, 255, 255, 0.7);
-                font-size: 15px;
-                font-weight: 500;
-            }
-
-            .loading-indicator.active {
-                display: flex;
-                animation: fadeIn 0.3s ease;
-            }
-
-            .loading-dots {
-                display: flex;
-                gap: 4px;
-            }
-
-            .loading-dot {
-                width: 8px;
-                height: 8px;
-                background: linear-gradient(135deg, #8B5CF6, #A855F7);
-                border-radius: 50%;
-                animation: loadingDots 1.4s ease-in-out infinite both;
-            }
-
-            @keyframes loadingDots {
-                0%, 80%, 100% { 
-                    transform: scale(0.8); 
-                    opacity: 0.5; 
-                }
-                40% { 
-                    transform: scale(1.2); 
-                    opacity: 1; 
-                }
-            }
-
-            .chat-response {
-                background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
-                padding: 20px;
-                border-radius: 14px;
-                font-family: 'Inter', 'Segoe UI', sans-serif;
-                color: #eaeaea;
-                line-height: 1.75;
-                font-size: 16px;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                overflow-wrap: break-word;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-
-            /* RESPONSIVE */
-            @media (max-width: 768px) {
-                :host {
-                    max-width: 100%;
-                    margin: 0;
-                    border-radius: 0;
-                    height: 100vh;
-                }
-
-                .widget-container {
-                    flex-direction: column;
-                }
-
-                .understanding-panel {
-                    display: none;
-                }
-
-                .chat-panel {
-                    width: 100%;
-                    padding: 55px 16px 16px 16px;
-                }
-
-                .mobile-functions {
-                    display: grid;
-                }
-
-                .function-buttons-input {
-                    display: none;
-                }
-
-                .control-button {
-                    width: 36px;
-                    height: 36px;
-                }
-
-                .button-icon {
-                    width: 16px;
-                    height: 16px;
-                }
-
-                .recording-timer {
-                    font-size: 13px;
-                    min-width: 35px;
-                }
-
-                .wave-bar {
-                    width: 2px;
-                    height: 10px;
-                }
-            }
-        </style>
-
-        <div class="widget-container">
-            <!-- HEADER -->
-            <div class="widget-header">
-                <div class="header-left">
-                    <h2 class="widget-title">
-                        Voice Assistant
-                        <div class="status-dot"></div>
-                    </h2>
-                    <p class="widget-subtitle">Джон - эксперт по недвижимости в Валенсии</p>
-                </div>
-                <div class="header-right">
-                    Session: <span id="sessionDisplay">${this.sessionId.slice(-8)}</span> | Messages: <span id="messageCount">0</span>
-                </div>
-            </div>
-
-            <!-- LEFT PANEL - CHAT -->
-            <div class="chat-panel">
-                <div class="messages-area">
-                    <div class="loading-indicator" id="loadingIndicator">
-                        <span>Обрабатываю запрос</span>
-                        <div class="loading-dots">
-                            <div class="loading-dot"></div>
-                            <div class="loading-dot"></div>
-                            <div class="loading-dot"></div>
-                        </div>
-                    </div>
-
-                    <div class="messages-container" id="messagesContainer">
-                        <div class="empty-state" id="emptyState">
-                            <button class="record-button-large" id="mainButton">
-                                <svg class="mic-icon" viewBox="0 0 24 24">
-                                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
-                                </svg>
-                            </button>
-                            <div class="empty-state-text">Нажмите кнопку записи</div>
-                            <div class="empty-state-subtitle">чтобы начать диалог</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ✅ ПРАВИЛЬНЫЙ ЕДИНЫЙ INPUT AREA -->
-                <div class="input-area">
-                    <div class="unified-input-container" id="unifiedInputContainer">
-                        <!-- ✅ ОДИН АДАПТИВНЫЙ ЭЛЕМЕНТ ВВОДА -->
-                        <div class="adaptive-input-field text-mode" id="adaptiveInputField">
-                            <!-- Режим текстового ввода (по умолчанию) -->
-                            <input type="text" id="textInput" placeholder="Введите ваш вопрос...">
-                        </div>
-
-                        <!-- Контрольные кнопки -->
-                        <div class="input-controls">
-                            <!-- Кнопка микрофона -->
-                            <button class="control-button mic-button" id="micButton">
-                                <svg class="button-icon" viewBox="0 0 24 24">
-                                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.93V21h2v-3.07c3.39-.5 6-3.4 6-6.93h-2z"/>
-                                </svg>
-                            </button>
-
-                            <!-- Кнопка отмены -->
-                            <button class="control-button cancel-button" id="cancelButton">
-                                <svg class="button-icon" viewBox="0 0 24 24">
-                                    <rect x="6" y="6" width="12" height="12" rx="1" ry="1"/>
-                                </svg>
-                            </button>
-
-                            <!-- Кнопка отправки -->
-                            <button class="control-button send-button" id="sendButton">
-                                <svg class="button-icon" viewBox="0 0 24 24">
-                                    <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Функциональные кнопки -->
-                    <div class="function-buttons-input">
-                        <button class="function-btn-input" id="imageBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                            </svg>
-                            Изображения
-                        </button>
-                        
-                        <button class="function-btn-input" id="documentBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Документы
-                        </button>
-                        
-                        <button class="function-btn-input" id="pdfBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Скачать PDF
-                        </button>
-                    </div>
-
-                    <div class="mobile-functions">
-                        <button class="mobile-function-btn" id="mobileImgBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
-                            </svg>
-                            Изображения
-                        </button>
-                        <button class="mobile-function-btn" id="mobileDocBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Документы
-                        </button>
-                        <button class="mobile-function-btn" id="mobilePdfBtn">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                            </svg>
-                            Скачать PDF
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RIGHT PANEL - UNDERSTANDING -->
-            <div class="understanding-panel">
-                <div class="understanding-section">
-                    <div class="section-title">Понимание запроса</div>
-                    <div class="progress-container">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                        <div class="progress-text" id="progressText">0% - Ожидание</div>
-                    </div>
-                </div>
-
-                <div class="jarvis-container">
-                    <div class="jarvis-sphere">
-                        <div class="jarvis-core"></div>
-                    </div>
-                </div>
-
-                <div class="accordion-container">
-                    <div class="static-block">
-                        <div class="static-header">
-                            <div class="static-title">
-                                <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                </svg>
-                                Основная информация
-                            </div>
-                        </div>
-                        <div class="static-content">
-                            <div class="understanding-item">
-                                <div class="item-indicator" id="nameIndicator"></div>
-                                <div class="item-text">Имя клиента</div>
-                                <div class="item-value" id="nameValue">не определено</div>
-                            </div>
-                            <div class="understanding-item">
-                                <div class="item-indicator" id="operationIndicator"></div>
-                                <div class="item-text">Тип операции</div>
-                                <div class="item-value" id="operationValue">не определена</div>
-                            </div>
-                            <div class="understanding-item">
-                                <div class="item-indicator" id="budgetIndicator"></div>
-                                <div class="item-text">Бюджет</div>
-                                <div class="item-value" id="budgetValue">не определен</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="static-block">
-                        <div class="static-header">
-                            <div class="static-title">
-                                <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                                </svg>
-                                Параметры недвижимости
-                            </div>
-                        </div>
-                        <div class="static-content">
-                            <div class="understanding-item">
-                                <div class="item-indicator" id="typeIndicator"></div>
-                                <div class="item-text">Тип недвижимости</div>
-                                <div class="item-value" id="typeValue">не определен</div>
-                            </div>
-                            <div class="understanding-item">
-                                <div class="item-indicator" id="locationIndicator"></div>
-                                <div class="item-text">Город/район</div>
-                                <div class="item-value" id="locationValue">не определен</div>
-                            </div>
-                            <div class="understanding-item">
-                                <div class="item-indicator" id="roomsIndicator"></div>
-                                <div class="item-text">Количество комнат</div>
-                                <div class="item-value" id="roomsValue">не определено</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-block">
-                        <div class="accordion-header" data-accordion="details-preferences">
-                            <div class="accordion-title">
-                                <svg class="block-icon" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                </svg>
-                                Детали и предпочтения
-                            </div>
-                            <div class="accordion-arrow"></div>
-                        </div>
-                        <div class="accordion-content" id="accordion-details-preferences">
-                            <div class="accordion-content-inner">
-                                <div class="understanding-item">
-                                    <div class="item-indicator" id="areaIndicator"></div>
-                                    <div class="item-text">Площадь</div>
-                                    <div class="item-value" id="areaValue">не определена</div>
-                                </div>
-                                <div class="understanding-item">
-                                    <div class="item-indicator" id="detailsIndicator"></div>
-                                    <div class="item-text">Детали локации</div>
-                                    <div class="item-value" id="detailsValue">не определены</div>
-                                </div>
-                                <div class="understanding-item">
-                                    <div class="item-indicator" id="preferencesIndicator"></div>
-                                    <div class="item-text">Предпочтения</div>
-                                    <div class="item-value" id="preferencesValue">не определены</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  this.shadowRoot.innerHTML = `
+  <style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* Global button image sizing rule */
+  .btn img, .btn svg, button img, button svg { 
+    width:100%; height:100%; display:block; object-fit:contain;
+  }
+
+  .icon-btn{ width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    background:transparent; border:0; padding:0; cursor:pointer; transition:filter .2s ease; position:relative; z-index:4; }
+  .icon-btn img, .icon-btn svg{ width:100%; height:100%; display:block; object-fit:contain; }
+  .icon-btn:hover{ filter:brightness(1.05); }
+
+  :host{
+    position:fixed; right:20px; z-index:10000;
+
+    /* габариты */
+    --vw-h: 760px;
+    --vw-w: 420px;
+    --vw-radius:16px;
+
+    /* типографика (проектные + добавленные) */
+    --header-h: 60px;
+    --fs-title: 16px;
+    --fs-subtitle: 16px;
+    --fs-body: 12px;
+    --fs-meta: 12px;
+    --fs-meta-value: 12px;
+    --fs-hero: 28px;
+    --fs-button: 14px;
+    --fs-placeholder: 14px;
+
+    /* цвета */
+    --grad-1:#A18CD1; --grad-2:#FBC2EB;
+    --txt:#4E4E4E; 
+    --muted:#7F7F7F;
+    --dot:#D9DEE6; --dot-on:#8AD39D; --orange:#FF7A45;
+    --shadow:0 20px 60px rgba(0,0,0,.18);
+
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+    top: calc(50% - var(--vw-h) / 2);
+  }
+
+  /* launcher/scrim */
+  .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
+    border:none; cursor:pointer; z-index:10001; background:linear-gradient(135deg,#FF8A4C,#A855F7);
+    box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
+    transition:transform .15s ease, box-shadow .15s ease; }
+  .launcher:hover{ transform:scale(1.05); box-shadow:0 14px 32px rgba(0,0,0,.22); }
+  .launcher svg{ width:100%; height:100%; fill:#fff }
+  .launcher img{ width:100%; height:100%; display:block; object-fit:contain; filter:brightness(0) invert(1); }
+  :host(.open) .launcher{ display:none; }
+
+  .scrim{ position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .2s ease; }
+  :host(.open) .scrim{ opacity:1; pointer-events:auto; }
+
+  /* виджет */
+  .widget{ width:400px; height:760px; border-radius:20px; overflow:hidden; box-shadow:var(--shadow);
+    position:relative; transform-origin:bottom right; transition:opacity .2s ease, transform .2s ease;
+    opacity:0; transform: translateY(8px) scale(.98); pointer-events:none; backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); }
+  .widget::before{ content:''; position:absolute; inset:0; background:rgba(0,0,0,.7); border-radius:20px; z-index:1; }
+  .widget::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); opacity:.2; border-radius:20px; z-index:2; }
+  :host(.open) .widget{ opacity:1; transform:none; pointer-events:auto; }
+
+  /* Header (без фона и без градиентной обводки, top:10px) */
+  .header{
+    position: sticky;
+    top: 10px;
+    z-index: 3;
+    display:flex; align-items:center; justify-content:space-between;
+    width:400px; height:60px; padding:0 20px;
+    background: transparent;             /* было rgba(...) */
+    border-radius:20px 20px 0 0;
+    border:1px solid transparent;        /* оставили прозрачный 1px */
+    background-clip:padding-box;
+    position:relative;
+  }
+  .header::before{ content: none; }      /* убрана градиентная обводка */
+
+  .title{ font-weight:700; font-size:var(--fs-title); display:flex; gap:8px; align-items:center;
+    background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text; color:transparent; position:relative; z-index:4; }
+  .header-left{ display:flex; align-items:center; position:relative; z-index:4; }
+  .header-left img{ width:91px; height:38px; object-fit:contain; }
+  .header-center{ display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; z-index:4; }
+  .header-actions{ display:flex; align-items:center; gap:8px; position:relative; z-index:4; }
+  .header-question-btn, .header-switch-btn{ display:flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; cursor:pointer; transition:filter .2s ease; position:relative; z-index:4; }
+  .header-question-btn{ width:24px; height:24px; } .header-switch-btn{ width:56px; height:24px; }
+  .header-question-btn img, .header-switch-btn img{ width:100%; height:100%; display:block; object-fit:contain; }
+  .header-question-btn:hover, .header-switch-btn:hover{ filter:brightness(1.05); }
+
+  /* Understanding bar (header) — Meta System */
+  .understanding-title{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:4px; font-weight:500; }
+  .understanding-scale{ width:140px; height:2px; position:relative; border-radius:2px; overflow:hidden; }
+  .understanding-track{ position:absolute; inset:0; background:rgba(255,255,255,.15); border-radius:2px; }
+  .understanding-fill{ position:absolute; left:0; top:0; height:100%; width:10%; background:linear-gradient(90deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 100%); border-radius:2px; transition:width .3s ease; }
+
+  /* Content */
+  .content{ display:flex; flex-direction:column; height:calc(100% - 60px); padding:30px 20px 30px; gap:30px; position:relative; z-index:3; }
+  /* Для Details — те же отступы, что и для чата */
+  .content.understanding-mode { padding: 30px 20px 30px; }  /* было 0 20px */
+
+  /* Main Screen */
+  .main-screen{ display:flex; flex-direction:column; height:100%; }
+  .main-screen.hidden{ display:none; }
+  .main-content{ display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:24px; text-align:center; }
+  .big-mic{ width:120px; height:120px; border:none; cursor:pointer; background:transparent; display:flex; align-items:center; justify-content:center; transition:transform .15s ease; }
+  .big-mic:hover{ transform:scale(1.05); }
+  .big-mic svg{ width:100%; height:100%; fill:#fff; }
+  .big-mic img{ width:100%; height:100%; display:block; object-fit:contain; }
+
+  /* Главный экран — роли */
+  .main-title{   /* Voice Intelligent Assistance — подзаголовок */
+    font-size:var(--fs-subtitle); font-weight:400; color:var(--muted); line-height:1.35;
+  }
+  .main-subtitle{ /* Press To Speak — крупный хедер */
+    font-size:var(--fs-hero); font-weight:700; color:#FFFFFF; line-height:1.15;
+  }
+
+  /* Chat */
+  .chat-screen{ display:flex; flex-direction:column; height:100%; gap:20px; min-height:0; }
+  .chat-screen.hidden{ display:none; }
+  .messages-frame{ flex:1; border-radius:20px; background:transparent; border:1px solid transparent; position:relative; display:flex; flex-direction:column; min-height:0; height:400px; }
+  .messages-frame::before{
+    content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
+    background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude;
+  }
+  .messages{ flex:1; overflow:auto; padding:16px; border-radius:20px; background:transparent; border:none; scrollbar-gutter:stable both-edges; position:relative; z-index:1; height:100%; min-height:0; max-height:100%; margin:2px; }
+  .messages::-webkit-scrollbar{ width:2px; }
+  .messages::-webkit-scrollbar-track{ background:transparent; }
+  .messages::-webkit-scrollbar-thumb{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%); border-radius:1px; }
+  .messages::-webkit-scrollbar-thumb:hover{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%); }
+  .messages{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
+  .thread{ display:flex; flex-direction:column; gap:12px; position:relative; z-index:1; min-height:0; }
+  .message{ display:flex; }
+  .message.user{ justify-content:flex-end; }
+  .message.assistant{ justify-content:flex-start; }
+  .bubble{ max-width:90%; padding:12px 16px; border-radius:20px; line-height:1.45; font-size:var(--fs-body); box-shadow:0 4px 16px rgba(0,0,0,.08); word-break:break-word; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .message.user .bubble{ background:#333333; color:#fff; border-bottom-right-radius:8px; }
+  .message.assistant .bubble{ background:#646464; color:#fff; border-bottom-left-radius:8px; }
+
+  /* Property Card */
+  .property-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:8px; }
+  .card-image{ width:100%; height:200px; background-size:cover; background-position:center; background-color:#f5f5f5; }
+  .card-content{ padding:16px; }
+  .card-title{ font-weight:700; font-size:var(--fs-body); color:var(--txt); margin-bottom:4px; }
+  .card-location{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:8px; }
+  .card-price{ font-weight:600; font-size:var(--fs-body); color:var(--orange); margin-bottom:16px; }
+  .card-actions{ display:flex; gap:12px; }
+  .card-btn{ flex:1; height:40px; border:none; border-radius:12px; cursor:pointer; font-weight:600; font-size:var(--fs-button); transition:transform .12s ease; }
+  .card-btn:hover{ transform:translateY(-1px); }
+  .card-btn.like{ background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; }
+  .card-btn.next{ background:rgba(255,255,255,.9); color:var(--txt); border:1px solid rgba(0,0,0,.1); }
+
+  /* Input */
+  .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
+  .input-container::before{ content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
+    background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
+  .text-input{ flex:1; background:transparent; border:none; outline:none; color:var(--txt); font-size:var(--fs-body); padding:8px 0; position:relative; z-index:4; }
+  .text-input::placeholder{ color:#ffffff; opacity:.6; font-size:var(--fs-placeholder); font-weight:400; }
+  .text-input-wrapper.recording .text-input::placeholder { opacity:0; }
+  .text-input-wrapper{ flex:1; position:relative; display:flex; align-items:center; }
+
+  .recording-indicator{ position:absolute; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; gap:12px; padding:8px 0; background:transparent; pointer-events:none; }
+  .visualizer{ display:flex; align-items:center; gap:2px; }
+  .wave{ width:3px; height:12px; background:#FF8A4C; border-radius:2px; animation:wave 1.2s ease-in-out infinite; }
+  .wave:nth-child(1){ animation-delay:0s; } .wave:nth-child(2){ animation-delay:.2s; } .wave:nth-child(3){ animation-delay:.4s; }
+  @keyframes wave{ 0%,40%,100%{ height:12px; } 20%{ height:20px; } }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 10%,30%,50%,70%,90%{ transform:translateX(-2px); } 20%,40%,60%,80%{ transform:translateX(2px); } }
+  .shake{ animation:shake .5s ease-in-out; }
+
+  .details-btn{ display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 16px; border:none; cursor:pointer; border-radius:999px; white-space:nowrap; background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); color:#fff; font-weight:600; font-size:var(--fs-button); box-shadow:0 4px 12px rgba(48,14,126,.20); transition:transform .12s ease, box-shadow .2s ease; }
+  .details-btn:hover{ transform: translateY(-1px); box-shadow:0 6px 16px rgba(48,14,126,.28); }
+  .details-btn svg{ width:100%; height:100%; fill:#fff; }
+  .details-btn.dialog-mode{ background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); }
+
+  .loading{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,.4)); backdrop-filter: blur(2px); border-radius:20px; z-index:2; font-weight:600; color:#3b2a86; pointer-events:none; }
+  .loading.active{ display:flex; }
+
+  /* ======= DETAILS ======= */
+  .details-screen{ display:flex; flex-direction:column; height:100%; gap:20px; }
+  .details-screen.hidden{ display:none; }
+
+  .details-content{
+    flex:1;
+    overflow:visible;
+    padding:0 0 24px;         /* было 8px 0 24px */
+    background:transparent;
+    border:none;
+    position:relative;
+  }
+
+  /* секции — без горизонтальных margin, радиус 20px как у чата */
+  .progress-section, .details-section{
+    margin:16px 0;            /* было 16px 20px */
+    padding:16px;
+    border-radius:20px;       /* было 16px */
+    background:rgba(255,255,255,0.04);
+    border:1px solid transparent;
+    position:relative;
+  }
+  .progress-section{ margin-top:12px; padding:14px 16px; }
+  .details-section::before, .progress-section::before{
+    content:''; position:absolute; inset:0; border-radius:20px; padding:1px; /* радиус 20px */
+    background:conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+    mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  }
+
+  .details-title{ font-weight:400; font-size:var(--fs-subtitle); color:#ffffff; margin-bottom:18px; position:relative; z-index:1; }
+
+  .progress-bar{ height:4px; border-radius:2px; overflow:hidden; background:rgba(255,255,255,.18); margin-bottom:10px; position:relative; z-index:1; }
+  .progress-fill{ height:100%; width:0%; background:conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%); transition:width .28s ease; }
+  .progress-text{ font-size:var(--fs-meta); color:var(--muted); text-align:left; z-index:1; position:relative; }
+
+  .param-list{ display:grid; grid-auto-rows:minmax(18px, auto); row-gap:10px; position:relative; z-index:1; }
+  .param-row{
+    display:grid;
+    grid-template-columns: minmax(0, 50%) minmax(0, 50%);
+    column-gap:16px; align-items:center; line-height:1.35;
+  }
+  .param-label{ font-size:var(--fs-body); color:#ffffff; display:flex; align-items:center; gap:10px; font-weight:500; }
+  .param-dot{ width:6px; height:6px; border-radius:50%; background:#E646B9; flex-shrink:0; }
+
+  .param-value{
+    font-size:var(--fs-meta-value);
+    color:var(--muted);       /* было #BBBBBB */
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    justify-self:end; text-align:right; max-width:100%; font-weight:400;
+  }
+
+  .action-buttons{ display:flex; gap:16px; margin:18px 0 4px 0; align-items:center; }  /* было 18px 20px 4px 20px */
+  .btn-back, .btn-refresh{ height:40px; padding:0 24px; border:none; border-radius:12px; font-size:var(--fs-button); font-weight:600; cursor:pointer; transition:all .2s ease; position:relative; z-index:1; }
+  .btn-back{ background:rgba(51,51,51,.8); color:#fff; border:1px solid transparent; }
+  .btn-back::before{ content:''; position:absolute; inset:0; border-radius:12px; padding:1px;
+    background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
+    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+    mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
+  .btn-back:hover{ background:#646464; transform:translateY(-1px); }
+  .btn-refresh{ background:transparent; color:#BBBBBB; padding:0; }
+  .btn-refresh:hover{ color:#ffffff; }
+
+  .legal-text{ margin:14px 0 0 0; height:auto; display:flex; justify-content:center; }  /* центрируем контейнер */
+  .tooltip-container{ position:relative; display:inline-block; }
+  .tooltip-trigger{ font-size:var(--fs-meta); color:#E646B9; cursor:pointer; text-decoration:underline; text-decoration-color:rgba(230,70,185,.5); transition:color .2s ease; }
+  .tooltip-trigger:hover{ color:#ffffff; }
+  .tooltip-content{
+    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:320px; max-width:90vw; max-height:70vh; background:rgba(51,51,51,.95);
+    border:1px solid transparent; border-radius:16px; padding:20px; opacity:0; visibility:hidden; transition:all .3s ease; z-index:1000; backdrop-filter: blur(10px);
+    overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.4);
+  }
+  .tooltip-content::before{ content:''; position:absolute; inset:0; border-radius:16px; padding:1px;
+    background: conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; }
+  .tooltip-content p{ font-size:var(--fs-meta); line-height:1.6; color:var(--muted); margin-bottom:12px; position:relative; z-index:1; } /* цвет = muted */
+  .tooltip-content p:last-child{ margin-bottom:0; }
+  .tooltip-container:hover .tooltip-content{ opacity:1; visibility:visible; }
+  .tooltip-content::after{ content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:rgba(51,51,51,.95); }
+
+  /* Responsive */
+  @media (max-width:1024px){
+    :host{ left:0; right:0; bottom:auto; top:auto; }
+    .widget{ width:100%; max-width:640px; margin:0 auto; border-radius:16px 16px 0 0; transform:translateY(100%); transition:transform .28s ease, opacity .28s ease; }
+    :host(.open) .widget{ transform:translateY(0); }
+  }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+  </style>
+
+  <!-- Launcher -->
+  <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
+    <img src="./assets/Voice-big-btn.svg" alt="Voice" />
+  </button>
+
+  <div class="scrim" id="scrim"></div>
+
+  <div class="widget" role="dialog" aria-modal="true" aria-label="Voice Assistant">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left"><img src="./assets/logo-group-resized.svg" alt="VIA logo" /></div>
+      <div class="header-center">
+        <div class="understanding-title">deep understanding: 10%</div>
+        <div class="understanding-scale"><div class="understanding-track"></div><div class="understanding-fill" id="understandingFill"></div></div>
+      </div>
+      <div class="header-actions">
+        <button class="header-question-btn" id="btnToggle" title="Details"><img src="./assets/details-btn.svg" alt="Details" /></button>
+        <button class="header-switch-btn" title="Switch Mode"><img src="./assets/switch-mode.svg" alt="Switch Mode" /></button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Main Screen -->
+      <div class="main-screen" id="mainScreen">
+        <div class="main-content">
+          <button class="big-mic" id="mainButton" aria-pressed="false"><img src="./assets/Voice-big-btn.svg" alt="Voice" /></button>
+          <div>
+            <div class="main-title">Voice Intelligent Assistance</div>
+            <div class="main-subtitle">Press To Speak</div>
+          </div>
         </div>
+
+        <div class="input-container">
+          <div class="text-input-wrapper">
+            <input class="text-input" id="mainTextInput" type="text" placeholder="Введите ваш вопрос…"/>
+            <div class="recording-indicator" id="mainRecordingIndicator" style="display: none;">
+              <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+            </div>
+          </div>
+          <button class="icon-btn" id="mainToggleButton" aria-pressed="false" title="Говорить"><img src="./assets/mic-btn.svg" alt="Microphone" /></button>
+          <button class="icon-btn" id="mainSendButton" title="Отправить"><img src="./assets/send-btn.svg" alt="Send" /></button>
+        </div>
+      </div>
+
+      <!-- Chat Screen -->
+      <div class="chat-screen hidden" id="chatScreen">
+        <div class="messages-frame">
+          <div class="messages" id="messagesContainer">
+            <div class="thread" id="thread"></div>
+            <div class="loading" id="loadingIndicator"><span>Обрабатываю запрос…</span></div>
+          </div>
+        </div>
+
+        <div class="input-container">
+          <div class="text-input-wrapper">
+            <input class="text-input" id="textInput" type="text" placeholder="Введите ваш вопрос…"/>
+            <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+              <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+            </div>
+          </div>
+          <button class="icon-btn" id="toggleButton" aria-pressed="false" title="Говорить"><img src="./assets/mic-btn.svg" alt="Microphone" /></button>
+          <button class="icon-btn" id="sendButton" title="Отправить"><img src="./assets/send-btn.svg" alt="Send" /></button>
+        </div>
+      </div>
+
+      <!-- Details Screen -->
+      <div class="details-screen hidden" id="detailsScreen">
+        <div class="details-content">
+          <div class="progress-section">
+            <div class="details-title">Понимание запроса</div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text" id="progressText">0% — ожидание</div>
+          </div>
+
+          <div class="legal-text">
+            <div class="tooltip-container">
+              <span class="tooltip-trigger">Хранение данных</span>
+              <div class="tooltip-content">
+                <p>Данные зашифрованы и используются только для определения лучшего варианта недвижимости. Не сохраняются после завершения сессии.</p>
+                <p>Данные могут быть использованы для записи на встречу, передачи менеджеру и в рекламных целях только с согласия пользователя. Будут храниться в зашифрованном виде по закону.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn-back" id="btnBackToChat">Назад к диалогу</button>
+            <button class="btn-refresh" id="btnRefreshSession">Обновить сессию</button>
+          </div>
+
+          <div class="details-section">
+            <div class="details-title">Основная информация</div>
+            <div class="param-list">
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Имя клиента</div><div class="param-value" id="nameValue" title="не определено">не определено</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Тип операции</div><div class="param-value" id="operationValue" title="не определена">не определена</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Бюджет</div><div class="param-value" id="budgetValue" title="не определен">не определен</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Тип недвижимости</div><div class="param-value" id="typeValue" title="не определен">не определен</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Город/район</div><div class="param-value" id="locationValue" title="не определен">не определен</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Количество комнат</div><div class="param-value" id="roomsValue" title="не определено">не определено</div></div>
+            </div>
+          </div>
+
+          <div class="details-section">
+            <div class="details-title">Детали и предпочтения</div>
+            <div class="param-list">
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Площадь</div><div class="param-value" id="areaValue" title="не определена">не определена</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Детали локации</div><div class="param-value" id="detailsValue" title="не определены">не определены</div></div>
+              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Дополнительно</div><div class="param-value" id="preferencesValue" title="не определены">не определены</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+
+
+  /* ...весь остальной JS из твоего рендера (обработчики, showScreen и т.д.) без изменений... */
+
+
+
+  const $ = s => this.shadowRoot.querySelector(s);
+
+  // Screen management
+  const screens = {
+    main: $('#mainScreen'),
+    chat: $('#chatScreen'),
+    details: $('#detailsScreen')
+  };
+
+  const showScreen = (screenName) => {
+    Object.values(screens).forEach(screen => screen?.classList.add('hidden'));
+    screens[screenName]?.classList.remove('hidden');
+    
+    // Add/remove understanding-mode class for content
+    const content = this.shadowRoot.querySelector('.content');
+    if (content) {
+      if (screenName === 'details') {
+        content.classList.add('understanding-mode');
+      } else {
+        content.classList.remove('understanding-mode');
+      }
+    }
+  };
+
+  // Launcher
+  $("#launcher")?.addEventListener("click", () => {
+    this.classList.add("open");
+    this.shadowRoot.getElementById("textInput")?.focus();
+  });
+
+  // Header toggle button
+  $("#btnToggle")?.addEventListener("click", () => {
+    const isDetailsMode = screens.details?.classList.contains('hidden') === false;
+    if (isDetailsMode) {
+      showScreen('chat');
+      this.events.emit('details-close');
+      this.updateHeaderToggleButton('dialog');
+    } else {
+      showScreen('details');
+      this.events.emit('details-open');
+      this.updateHeaderToggleButton('details');
+    }
+  });
+  
+  // Details screen buttons
+  $("#btnBackToChat")?.addEventListener("click", () => {
+    if (this.messages && this.messages.length > 0) {
+      showScreen('chat');
+      this.events.emit('details-close');
+      this.updateHeaderToggleButton('dialog');
+    } else {
+      showScreen('main');
+      this.events.emit('details-close');
+      this.updateHeaderToggleButton('main');
+    }
+  });
+  
+  $("#btnRefreshSession")?.addEventListener("click", () => {
+    this.messages = [];
+    this.sessionId = null;
+    try {
+      localStorage.removeItem('vw_sessionId');
+      localStorage.removeItem('voiceWidgetSessionId');
+    } catch (e) {
+      console.warn('Could not clear localStorage:', e);
+    }
+    const thread = this.shadowRoot.getElementById('thread');
+    if (thread) thread.innerHTML = '';
+    const mainTextInput = this.shadowRoot.getElementById('mainTextInput');
+    if (mainTextInput) mainTextInput.value = '';
+    const textInput = this.shadowRoot.getElementById('textInput');
+    if (textInput) textInput.value = '';
+    this.updateUnderstanding(10);
+    showScreen('main');
+    this.events.emit('details-close');
+    this.updateHeaderToggleButton('main');
+    console.log('Session reset successfully');
+  });
+
+  // Escape key
+  this.shadowRoot.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (screens.details?.classList.contains('hidden') === false) {
+        showScreen('chat');
+        this.events.emit('details-close');
+      } else if (screens.chat?.classList.contains('hidden') === false) {
+        showScreen('main');
+      } else {
+        this.classList.remove("open");
+      }
+    }
+  });
+
+  // Expose helpers
+  this.showScreen = showScreen;
+  this.showMainScreen = () => showScreen('main');
+  this.showChatScreen = () => showScreen('chat');
+  this.showDetailsScreen = () => showScreen('details');
+
+  // Property card (как было)
+  this.renderPropertyCard = (property) => {
+    return `
+      <div class="property-card" data-variant-id="\${property.id || ''}">
+        <div class="card-image" style="background-image: url('\${property.image || ''}')"></div>
+        <div class="card-content">
+          <div class="card-title">\${property.title || 'Название не указано'}</div>
+          <div class="card-location">\${property.location || 'Локация не указана'}</div>
+          <div class="card-price">\${property.price || 'Цена не указана'}</div>
+          <div class="card-actions">
+            <button class="card-btn like" data-action="like" data-variant-id="\${property.id || ''}">Мне нравится!</button>
+            <button class="card-btn next" data-action="next" data-variant-id="\${property.id || ''}">Ещё вариант</button>
+          </div>
+        </div>
+      </div>
     `;
+  };
+
+  // Card events
+  this.shadowRoot.addEventListener('click', (e) => {
+    if (e.target.matches('.card-btn[data-action="like"]')) {
+      const variantId = e.target.getAttribute('data-variant-id');
+      this.events.emit('like', { variantId });
+    } else if (e.target.matches('.card-btn[data-action="next"]')) {
+      const variantId = e.target.getAttribute('data-variant-id');
+      this.events.emit('next_option', { variantId });
+    }
+  });
 }
 
-    // 🔥 ОБНОВЛЕННЫЙ bindEvents()
-    bindEvents() {
-        // Привязываем события к старой главной кнопке (для совместимости)
-        const mainButton = this.shadowRoot.getElementById('mainButton');
-        if (mainButton) {
-            mainButton.addEventListener('click', () => {
-                if (!this.audioRecorder.isRecording && !mainButton.disabled) {
-                    this.audioRecorder.startRecording();
-                }
-            });
-        }
 
-        // 🔥 КООРДИНАЦИЯ МЕЖДУ МОДУЛЯМИ ЧЕРЕЗ СОБЫТИЯ
-        
-        // События от Audio Recorder к UI Manager
-        this.events.on('recordingStarted', () => {
-            console.log('🎤 Recording started - updating UI state');
-            // UI Manager сам обработает через свои внутренние события
-        });
 
-        this.events.on('recordingStopped', () => {
-            console.log('🎤 Recording stopped - updating UI state');
-            // UI Manager сам обработает через свои внутренние события
-        });
 
-        this.events.on('recordingCancelled', () => {
-            console.log('🎤 Recording cancelled - updating UI state');
-            // UI Manager сам обработает через свои внутренние события
-        });
 
-        // События от Understanding Manager
-        this.events.on('understandingUpdated', (understanding) => {
-            console.log('🧠 Understanding updated:', understanding);
-            // Можно добавить дополнительную логику если нужно
-        });
+  // ---------- EVENTS / COORDINATION ----------
+  bindEvents() {
+    // события рекордера → UI
+    this.events.on('recordingStarted', () => {
+      this.showChatScreen();
+      // Show recording indicator on current screen
+      const isMainScreen = this.shadowRoot.getElementById('mainScreen')?.classList.contains('hidden') === false;
+      this.showRecordingIndicator(isMainScreen ? 'main' : 'chat');
+      // Update toggle button state for both screens
+      this.updateToggleButtonState('main');
+      this.updateToggleButtonState('chat');
+    });
+    this.events.on('recordingStopped', () => {
+      // Hide recording indicators
+      this.hideRecordingIndicator('main');
+      this.hideRecordingIndicator('chat');
+      // Update toggle button state for both screens
+      this.updateToggleButtonState('main');
+      this.updateToggleButtonState('chat');
+    });
+    this.events.on('recordingCancelled', () => {
+      // Hide recording indicators
+      this.hideRecordingIndicator('main');
+      this.hideRecordingIndicator('chat');
+      // Update toggle button state for both screens
+      this.updateToggleButtonState('main');
+      this.updateToggleButtonState('chat');
+    });
 
-        // События от UI Manager (новые)
-        this.events.on('uiStateChanged', (data) => {
-            console.log(`🎯 UI State changed: ${data.from} → ${data.to}`);
-            
-            // Синхронизируем состояния между модулями
-            if (data.to === 'recording') {
-                // UI перешел в состояние записи
-                this.isRecording = true;
-            } else if (data.from === 'recording') {
-                // UI вышел из состояния записи
-                this.isRecording = false;
-            }
-        });
+    // Text message sent - switch to chat screen if on main
+    this.events.on('textMessageSent', (d) => { 
+      console.log('📤 Text message sent:', d?.text?.slice(0,50));
+      // Switch to chat screen if we're on main screen
+      if (this.shadowRoot.getElementById('mainScreen')?.classList.contains('hidden') === false) {
+        this.showChatScreen();
+      }
+    });
 
-        // События от API Client
-        this.events.on('messageReceived', (data) => {
-            console.log('📥 Message received from server:', data.type);
-        });
+    // understanding
+    this.events.on('understandingUpdated', (u) => { 
+      console.log('🧠 Understanding updated:', u);
+      this.updateDetailsScreen(u);
+    });
 
-        this.events.on('textMessageSent', (data) => {
-            console.log('📤 Text message sent:', data.text?.slice(0, 50) + '...');
-        });
+    // UI
+    this.events.on('uiStateChanged', (data) => {
+      console.log(`🎯 UI State: ${data.from} → ${data.to}`);
+      if (data.to === 'recording') this.isRecording = true;
+      else if (data.from === 'recording') this.isRecording = false;
+    });
 
-        // 🔥 ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ДЛЯ КООРДИНАЦИИ
+    // API
+    this.events.on('messageReceived', (d) => { 
+      console.log('📥 Message received:', d?.type);
+      if (d?.type === 'property_card') {
+        this.showPropertyCard(d.data);
+      }
+    });
+    this.events.on('textMessageSent', (d) => { console.log('📤 Text message sent:', d?.text?.slice(0,50)); });
 
-        // Обработка ошибок на уровне виджета
-        this.events.on('error', (error) => {
-            console.error('🚨 Widget error:', error);
-            this.ui.showNotification(`❌ Ошибка: ${error.message}`);
-        });
+    // Screen transitions
+    this.events.on('details-open', () => {
+      console.log('📊 Details screen opened');
+    });
+    this.events.on('details-close', () => {
+      console.log('📊 Details screen closed');
+    });
 
-        // Обработка уведомлений
-        this.events.on('notification', (message) => {
-            this.ui.showNotification(message);
-        });
+    // Card interactions
+    this.events.on('like', (data) => {
+      console.log('❤️ Like clicked:', data.variantId);
+      // Send variant ID back to backend
+      this.api.sendCardInteraction('like', data.variantId);
+    });
+    this.events.on('next_option', (data) => {
+      console.log('⏭️ Next option clicked:', data.variantId);
+      // Send variant ID back to backend
+      this.api.sendCardInteraction('next', data.variantId);
+    });
 
-        // Обработка состояния загрузки
-        this.events.on('loadingStart', () => {
-            this.ui.showLoading();
-        });
+    // ошибки/нотификации/лоадеры
+    this.events.on('error', (e) => { console.error('🚨 Widget error:', e); this.ui.showNotification(`❌ Ошибка: ${e.message}`); });
+    this.events.on('notification', (m) => this.ui.showNotification(m));
+    this.events.on('loadingStart', () => this.ui.showLoading());
+    this.events.on('loadingEnd', () => this.ui.hideLoading());
 
-        this.events.on('loadingEnd', () => {
-            this.ui.hideLoading();
-        });
+    console.log('🔗 Event coordination established');
+  }
 
-        console.log('🔗 Event coordination between modules established');
+  // ---------- ПУБЛИЧНЫЕ МЕТОДЫ ----------
+  
+  // Helper function to update understanding percentage
+  updateUnderstanding(percent) {
+    const fill = this.shadowRoot.getElementById('understandingFill');
+    const title = this.shadowRoot.querySelector('.understanding-title');
+    
+    if (fill) {
+      fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+    }
+    
+    if (title) {
+      title.textContent = `deep understanding: ${Math.max(0, Math.min(100, percent))}%`;
+    }
+  }
+
+  // Recording indicator management
+  showRecordingIndicator(screen = 'chat') {
+    const indicator = screen === 'main' 
+      ? this.shadowRoot.getElementById('mainRecordingIndicator')
+      : this.shadowRoot.getElementById('recordingIndicator');
+    
+    const wrapper = screen === 'main'
+      ? this.shadowRoot.querySelector('#mainTextInput').closest('.text-input-wrapper')
+      : this.shadowRoot.querySelector('#textInput').closest('.text-input-wrapper');
+    
+    if (indicator) {
+      indicator.style.display = 'flex';
+      if (wrapper) wrapper.classList.add('recording');
+    }
+  }
+
+  hideRecordingIndicator(screen = 'chat') {
+    const indicator = screen === 'main' 
+      ? this.shadowRoot.getElementById('mainRecordingIndicator')
+      : this.shadowRoot.getElementById('recordingIndicator');
+    
+    const wrapper = screen === 'main'
+      ? this.shadowRoot.querySelector('#mainTextInput').closest('.text-input-wrapper')
+      : this.shadowRoot.querySelector('#textInput').closest('.text-input-wrapper');
+    
+    if (indicator) {
+      indicator.style.display = 'none';
+      if (wrapper) wrapper.classList.remove('recording');
+    }
+  }
+
+
+
+
+  
+  startRecording() {
+    if (this.ui.getCurrentState() === 'idle' || this.ui.getCurrentState() === 'typing' || this.ui.getCurrentState() === 'main') {
+      return this.audioRecorder.startRecording();
+    }
+    console.warn('⚠️ Cannot start recording in state:', this.ui.getCurrentState());
+    return false;
+  }
+  sendTextMessage() {
+    if (this.ui.getCurrentState() === 'typing') return this.api.sendTextMessage();
+    console.warn('⚠️ Cannot send text in state:', this.ui.getCurrentState());
+    return false;
+  }
+  cancelRecording() {
+    if (this.ui.getCurrentState() === 'recording') return this.audioRecorder.cancelRecording();
+    console.warn('⚠️ No recording to cancel in state:', this.ui.getCurrentState());
+    return false;
+  }
+
+  // Update details screen with understanding data
+  updateDetailsScreen(understanding) {
+    const params = understanding.params || {};
+    
+    // Update progress
+    const progressFill = this.shadowRoot.getElementById('progressFill');
+    const progressText = this.shadowRoot.getElementById('progressText');
+    if (progressFill && progressText) {
+      const progress = understanding.progress || 0;
+      progressFill.style.width = `${progress}%`;
+      progressText.textContent = `${progress}% — ${progress === 0 ? 'ожидание' : 'обработка'}`;
     }
 
-    // 🔥 УПРОЩЕННЫЕ ПУБЛИЧНЫЕ МЕТОДЫ (обновленные)
+    // Update parameter values and dots
+    const updateParam = (id, value, dotId) => {
+      const valueEl = this.shadowRoot.getElementById(id);
+      const dotEl = this.shadowRoot.getElementById(dotId);
+      if (valueEl) valueEl.textContent = value || 'не определено';
+      if (dotEl) dotEl.classList.toggle('on', !!value);
+    };
 
-    // Эти методы теперь работают через UI Manager State Machine
-    startRecording() {
-        if (this.ui.getCurrentState() === 'idle' || this.ui.getCurrentState() === 'typing') {
-            return this.audioRecorder.startRecording();
-        } else {
-            console.warn('⚠️ Cannot start recording in current UI state:', this.ui.getCurrentState());
-            return false;
-        }
+    updateParam('nameValue', params.name, 'nameDot');
+    updateParam('operationValue', params.operationType, 'operationDot');
+    updateParam('budgetValue', params.budget, 'budgetDot');
+    updateParam('typeValue', params.propertyType, 'typeDot');
+    updateParam('locationValue', params.district, 'locationDot');
+    updateParam('roomsValue', params.rooms, 'roomsDot');
+    updateParam('areaValue', params.area, 'areaDot');
+    updateParam('detailsValue', params.locationDetails, 'detailsDot');
+    updateParam('preferencesValue', params.additional, 'preferencesDot');
+  }
+
+  // Send text from main screen
+  sendTextFromMainScreen(text) {
+    // Clear input
+    const mainTextInput = this.shadowRoot.getElementById('mainTextInput');
+    if (mainTextInput) {
+      mainTextInput.value = '';
+          // Update send button state
+    const mainSendButton = this.shadowRoot.getElementById('mainSendButton');
+    if (mainSendButton) {
+      mainSendButton.disabled = true;
+      mainSendButton.setAttribute('aria-disabled', 'true');
+    }
     }
 
-    sendTextMessage() {
-        if (this.ui.getCurrentState() === 'typing') {
-            return this.api.sendTextMessage();
-        } else {
-            console.warn('⚠️ Cannot send text in current UI state:', this.ui.getCurrentState());
-            return false;
-        }
+    // Switch to chat screen
+    this.showChatScreen();
+
+    // Add user message to chat
+    const userMessage = { type: 'user', content: text, timestamp: new Date() };
+    this.ui.addMessage(userMessage);
+
+    // Send to API
+    this.api.sendTextMessageFromText(text);
+  }
+
+  // Update toggle button state
+  updateToggleButtonState(screen) {
+    const isRecording = this.audioRecorder.isRecording;
+    let toggleButton = null;
+
+    if (screen === 'main') {
+      toggleButton = this.shadowRoot.getElementById('mainToggleButton');
+    } else if (screen === 'chat') {
+      toggleButton = this.shadowRoot.getElementById('toggleButton');
     }
 
-    cancelRecording() {
-        if (this.ui.getCurrentState() === 'recording') {
-            return this.audioRecorder.cancelRecording();
-        } else {
-            console.warn('⚠️ No recording to cancel in current UI state:', this.ui.getCurrentState());
-            return false;
-        }
+    if (toggleButton) {
+      if (isRecording) {
+        // Show stop icon
+        toggleButton.innerHTML = '<img src="./assets/stop-btn.svg" alt="Stop" />';
+        toggleButton.setAttribute('title', 'Сбросить');
+      } else {
+        // Show mic icon
+        toggleButton.innerHTML = '<img src="./assets/mic-btn.svg" alt="Microphone" />';
+        toggleButton.setAttribute('title', 'Говорить');
+      }
+    }
+  }
+
+  // Update send button state
+  updateSendButtonState(screen) {
+    let textInput = null;
+    let sendButton = null;
+
+    if (screen === 'main') {
+      textInput = this.shadowRoot.getElementById('mainTextInput');
+      sendButton = this.shadowRoot.getElementById('mainSendButton');
+    } else if (screen === 'chat') {
+      textInput = this.shadowRoot.getElementById('textInput');
+      sendButton = this.shadowRoot.getElementById('sendButton');
     }
 
-    // 🔥 ОБНОВЛЕННЫЕ УТИЛИТАРНЫЕ МЕТОДЫ
+    if (textInput && sendButton) {
+      const text = textInput.value.trim();
+      const hasText = !!text;
+      
+      // Always keep send button visible and enabled
+      sendButton.disabled = false;
+      sendButton.setAttribute('aria-disabled', 'false');
+      sendButton.style.opacity = '1';
+      sendButton.style.visibility = 'visible';
+      sendButton.style.display = 'flex';
+      
+      // Add shaking animation when empty (but keep button visible)
+      if (!hasText) {
+        textInput.classList.add('shake');
+        // Remove shake class after animation completes
+        setTimeout(() => {
+          textInput.classList.remove('shake');
+        }, 500);
+      } else {
+        textInput.classList.remove('shake');
+      }
+    }
+  }
 
-    getCurrentState() {
-        return {
-            ui: this.ui.getCurrentState(),
-            recording: this.audioRecorder.isRecording,
-            messages: this.messages.length,
-            understanding: this.understanding.export()
-        };
+  // Update header toggle button
+  updateHeaderToggleButton(mode) {
+    const toggleButton = this.shadowRoot.getElementById('btnToggle');
+    if (!toggleButton) return;
+
+    if (mode === 'details') {
+      // Show return icon when details are open
+      toggleButton.innerHTML = '<img src="./assets/return-btn.svg" alt="Return" />';
+      toggleButton.setAttribute('title', 'Return to Dialog');
+    } else {
+      // Show question icon when in dialog mode
+      toggleButton.innerHTML = '<img src="./assets/details-btn.svg" alt="Details" />';
+      toggleButton.setAttribute('title', 'Details');
+    }
+  }
+
+  // Show property card in chat
+  showPropertyCard(property) {
+    const thread = this.shadowRoot.getElementById('thread');
+    if (!thread) return;
+
+    const cardHtml = this.renderPropertyCard(property);
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message assistant';
+    messageDiv.innerHTML = `
+      <div class="bubble">
+        ${cardHtml}
+      </div>
+    `;
+    
+    thread.appendChild(messageDiv);
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  // ---------- УТИЛИТЫ ----------
+  getCurrentState() {
+    return {
+      ui: this.ui.getCurrentState(),
+      recording: this.audioRecorder.isRecording,
+      messages: this.messages.length,
+      understanding: this.understanding.export()
+    };
+  }
+  isCurrentlyRecording() { return this.ui.isRecording() && this.audioRecorder.isRecording; }
+  isIdle() { return this.ui.isIdle() && !this.audioRecorder.isRecording; }
+
+  // очистка сессии (совместимость со старыми вызовами)
+  clearSession() {
+    try {
+      localStorage.removeItem('vw_sessionId');
+      localStorage.removeItem('voiceWidgetSessionId');
+    } catch {}
+    this.sessionId = null;
+
+    this.understanding.reset();
+    this.ui.clearMessages();
+    this.ui.setState('idle');
+
+    if (this.audioRecorder.isRecording) {
+      this.audioRecorder.cancelRecording();
     }
 
-    isCurrentlyRecording() {
-        return this.ui.isRecording() && this.audioRecorder.isRecording;
-    }
+    // Reset to main screen
+    this.showMainScreen();
+    
+    console.log('🗑️ Сессия очищена, sessionId сброшен (ожидаем новый от сервера)');
+  }
 
-    isIdle() {
-        return this.ui.isIdle() && !this.audioRecorder.isRecording;
-    }
+  getDebugInfo() {
+    return {
+      sessionId: this.sessionId,
+      uiState: this.ui.getCurrentState(),
+      isRecording: this.audioRecorder.isRecording,
+      messagesCount: this.messages.length,
+      understanding: this.understanding.export(),
+      dialogStarted: this.dialogStarted
+    };
+  }
 
-    // 🔥 ОБНОВЛЕННЫЕ МЕТОДЫ ОЧИСТКИ
+  onStateChange(cb) {
+    this.events.on('uiStateChanged', cb);
+    this.events.on('understandingUpdated', cb);
+    this.events.on('messageReceived', cb);
+  }
 
-    clearSession() {
-        localStorage.removeItem('voiceWidgetSessionId');
-        this.sessionId = this.getOrCreateSessionId();
-        
-        const sessionDisplay = this.shadowRoot.getElementById('sessionDisplay');
-        if (sessionDisplay) {
-            sessionDisplay.textContent = this.sessionId.slice(-8);
-        }
-        
-        // Сбрасываем состояния всех модулей
-        this.understanding.reset();
-        this.ui.clearMessages();
-        this.ui.setState('idle'); // Явно устанавливаем idle состояние
-        
-        // Очищаем аудио состояние
-        if (this.audioRecorder.isRecording) {
-            this.audioRecorder.cancelRecording();
-        }
-        
-        console.log('🗑️ Сессия очищена, создан новый sessionId:', this.sessionId);
-    }
+  disconnectedCallback() {
+    // Clean up recording timers
+    this.stopRecordingTimer('main');
+    this.stopRecordingTimer('chat');
+    
+    this.audioRecorder?.cleanupRecording?.();
+    this.ui?.clearRecordingState?.();
+    this.events?.clear?.();
+    console.log('👋 Voice Widget disconnected and cleaned up');
+  }
 
-    // 🔥 МЕТОДЫ ДЛЯ ОТЛАДКИ И МОНИТОРИНГА
-
-    getDebugInfo() {
-        return {
-            sessionId: this.sessionId,
-            uiState: this.ui.getCurrentState(),
-            isRecording: this.audioRecorder.isRecording,
-            messagesCount: this.messages.length,
-            understanding: this.understanding.export(),
-            dialogStarted: this.dialogStarted
-        };
-    }
-
-    // Метод для внешнего мониторинга состояния
-    onStateChange(callback) {
-        this.events.on('uiStateChanged', callback);
-        this.events.on('understandingUpdated', callback);
-        this.events.on('messageReceived', callback);
-    }
-
-    // 🔥 МЕТОД ОТКЛЮЧЕНИЯ (обновленный)
-    disconnectedCallback() {
-        // Очищаем все таймеры и ресурсы
-        if (this.audioRecorder) {
-            this.audioRecorder.cleanupRecording();
-        }
-        
-        if (this.ui) {
-            this.ui.clearRecordingState();
-        }
-        
-        // Очищаем все события
-        if (this.events) {
-            this.events.clear();
-        }
-        
-        console.log('👋 Voice Widget disconnected and cleaned up');
-    }
-
-    // 🔥 СОВМЕСТИМОСТЬ СО СТАРЫМИ МЕТОДАМИ (если нужно)
-
-    // Эти методы сохраняем для обратной совместимости
-    cleanupAfterSend() {
-        this.audioRecorder.cleanupAfterSend();
-    }
-
-    updateUnderstanding(insights) {
-        this.understanding.update(insights);
-    }
-
-    getUnderstanding() {
-        return this.understanding.export();
-    }
-
-    resetUnderstanding() {
-        this.understanding.reset();
-    }
-
-    setApiUrl(url) {
-        this.apiUrl = url;
-        if (this.api) {
-            this.api.apiUrl = url;
-        }
-    }
-
-    getMessages() {
-        return [...this.messages];
-    }
-
-    getCurrentSessionId() {
-        return this.sessionId;
-    }
-
-    setUnderstanding(insights) {
-        this.understanding.update(insights);
-    }
+  // совместимость
+  cleanupAfterSend() { this.audioRecorder.cleanupAfterSend(); }
+  updateUnderstanding(i) { this.understanding.update(i); }
+  getUnderstanding() { return this.understanding.export(); }
+  resetUnderstanding() { this.understanding.reset(); }
+  setApiUrl(url) { this.apiUrl = url; if (this.api) this.api.apiUrl = url; }
+  getMessages() { return [...this.messages]; }
+  getCurrentSessionId() { return this.sessionId; }
+  setUnderstanding(insights) { this.understanding.update(insights); }
 }
 
-// Регистрируем кастомный элемент
 customElements.define('voice-widget', VoiceWidget);
