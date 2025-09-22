@@ -72,8 +72,8 @@ class VoiceWidget extends HTMLElement {
       this.api.loadSessionInfo();
     }
 
-    // Initialize understanding bar with 10%
-    this.updateUnderstanding(10);
+    // Initialize understanding bar with 0%
+    this.updateUnderstanding(0);
 
     // Initialize send buttons with disabled state
     const mainSendButton = this.shadowRoot.getElementById('mainSendButton');
@@ -195,7 +195,7 @@ render() {
   .understanding-title{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:4px; font-weight:500; }
   .understanding-scale{ width:140px; height:2px; position:relative; border-radius:2px; overflow:hidden; }
   .understanding-track{ position:absolute; inset:0; background:rgba(255,255,255,.15); border-radius:2px; }
-  .understanding-fill{ position:absolute; left:0; top:0; height:100%; width:10%; background:linear-gradient(90deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 100%); border-radius:2px; transition:width .3s ease; }
+  .understanding-fill{ position:absolute; left:0; top:0; height:100%; width:0%; background:linear-gradient(90deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 100%); border-radius:2px; transition:width .3s ease; }
 
   /* Content */
   .content{ display:flex; flex-direction:column; height:calc(100% - 60px); padding:30px 20px 30px; gap:30px; position:relative; z-index:3; }
@@ -351,9 +351,9 @@ render() {
   .tooltip-trigger{ font-size:var(--fs-meta); color:#E646B9; cursor:pointer; text-decoration:underline; text-decoration-color:rgba(230,70,185,.5); transition:color .2s ease; }
   .tooltip-trigger:hover{ color:#ffffff; }
   .tooltip-content{
-    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:320px; max-width:90vw; max-height:70vh; background:rgba(51,51,51,.95);
+    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:360px; background:rgba(51,51,51,.95);
     border:1px solid transparent; border-radius:16px; padding:20px; opacity:0; visibility:hidden; transition:all .3s ease; z-index:1000; backdrop-filter: blur(10px);
-    overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.4);
+    box-shadow:0 20px 60px rgba(0,0,0,.4); height:auto; min-height:auto;
   }
   .tooltip-content::before{ content:''; position:absolute; inset:0; border-radius:16px; padding:1px;
     background: conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
@@ -363,6 +363,20 @@ render() {
   .tooltip-content p:last-child{ margin-bottom:0; }
   .tooltip-container:hover .tooltip-content{ opacity:1; visibility:visible; }
   .tooltip-content::after{ content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:rgba(51,51,51,.95); }
+
+  /* Специальный класс для popup с хранением данных */
+  .legal-popup{
+    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:380px; background:rgba(51,51,51,.95);
+    border:1px solid transparent; border-radius:16px; padding:24px; opacity:0; visibility:hidden; transition:all .3s ease; z-index:1000; backdrop-filter: blur(10px);
+    box-shadow:0 20px 60px rgba(0,0,0,.4); height:auto; min-height:auto;
+  }
+  .legal-popup::before{ content:''; position:absolute; inset:0; border-radius:16px; padding:1px;
+    background: conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; }
+  .legal-popup p{ font-size:var(--fs-meta); line-height:1.6; color:var(--muted); margin-bottom:16px; position:relative; z-index:1; }
+  .legal-popup p:last-child{ margin-bottom:0; }
+  .tooltip-container:hover .legal-popup{ opacity:1; visibility:visible; }
 
   /* Responsive */
   @media (max-width:1024px){
@@ -385,7 +399,7 @@ render() {
     <div class="header">
       <div class="header-left"><img src="./assets/logo-group-resized.svg" alt="VIA logo" /></div>
       <div class="header-center">
-        <div class="understanding-title">deep understanding: 10%</div>
+        <div class="understanding-title">deep understanding: 0%</div>
         <div class="understanding-scale"><div class="understanding-track"></div><div class="understanding-fill" id="understandingFill"></div></div>
       </div>
       <div class="header-actions">
@@ -451,7 +465,7 @@ render() {
           <div class="legal-text">
             <div class="tooltip-container">
               <span class="tooltip-trigger">Хранение данных</span>
-              <div class="tooltip-content">
+              <div class="legal-popup">
                 <p>Данные зашифрованы и используются только для определения лучшего варианта недвижимости. Не сохраняются после завершения сессии.</p>
                 <p>Данные могут быть использованы для записи на встречу, передачи менеджеру и в рекламных целях только с согласия пользователя. Будут храниться в зашифрованном виде по закону.</p>
               </div>
@@ -567,7 +581,7 @@ render() {
     if (mainTextInput) mainTextInput.value = '';
     const textInput = this.shadowRoot.getElementById('textInput');
     if (textInput) textInput.value = '';
-    this.updateUnderstanding(10);
+    this.updateUnderstanding(0);
     showScreen('main');
     this.events.emit('details-close');
     this.updateHeaderToggleButton('main');
