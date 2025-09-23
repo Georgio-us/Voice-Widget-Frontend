@@ -1,6 +1,8 @@
 // ========================================
 // 📁 modules/ui-manager.js (ФИНАЛ, Reset/Restore)
 // ========================================
+import { renderMarkdown, isInlineMessage } from './markdown.js';
+
 export class UIManager {
   constructor(widget) {
     this.widget = widget;
@@ -189,7 +191,7 @@ export class UIManager {
   handleTextInput() {
     const { textInput } = this.elements;
     const hasText = !!textInput?.value?.trim();
-    if (hasText && this.inputState === 'idle') this.setState('typing');
+    if (hasText && (this.inputState === 'idle' || this.inputState === 'main')) this.setState('typing');
     else if (!hasText && this.inputState === 'typing') this.setState('idle');
     else if (this.inputState === 'typing') this.applyTypingState();
     
@@ -231,7 +233,13 @@ export class UIManager {
       const { textInput, mainTextInput } = this.elements;
       const currentTextInput = textInput || mainTextInput;
       const text = currentTextInput?.value?.trim();
-      if (!text) {
+      if (text) {
+        if (currentTextInput === mainTextInput) {
+          this.widget.sendTextFromMainScreen(text);
+        } else {
+          this.handleSendText();
+        }
+      } else {
         // Trigger shake animation for empty textfield
         this.triggerShakeAnimation(textInput ? 'chat' : 'main');
       }
@@ -386,10 +394,17 @@ export class UIManager {
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     if (message.type === 'assistant') {
-      if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-        bubble.innerHTML = marked.parse(message.content);
-      } else { bubble.textContent = message.content; }
-    } else { bubble.textContent = message.content; }
+      try {
+        const html = renderMarkdown(message.content);
+        bubble.classList.add('vw-md');
+        bubble.innerHTML = html;
+      } catch (e) {
+        console.warn('Markdown render fallback:', e);
+        bubble.textContent = message.content;
+      }
+    } else {
+      bubble.textContent = message.content;
+    }
     wrapper.appendChild(bubble);
     thread.appendChild(wrapper);
   }

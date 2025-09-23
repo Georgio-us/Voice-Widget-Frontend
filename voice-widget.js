@@ -3,7 +3,17 @@
 // ========================================
 
 // Базовый путь для ассетов
-const ASSETS_BASE = window.__VW_ASSETS_BASE__ || '${ASSETS_BASE}';
+const ASSETS_BASE = (() => {
+  try {
+    const fromWindow = typeof window !== 'undefined' ? window.__VW_ASSETS_BASE__ : '';
+    const base = fromWindow || new URL('./assets/', import.meta.url).toString();
+    return base.endsWith('/') ? base : base + '/';
+  } catch (e) {
+    // Fallback на относительный путь, если import.meta.url недоступен
+    const base = 'assets/';
+    return base;
+  }
+})();
 
 import { AudioRecorder } from './modules/audio-recorder.js';
 import { UnderstandingManager } from './modules/understanding-manager.js';
@@ -76,7 +86,7 @@ class VoiceWidget extends HTMLElement {
     }
 
     // Initialize understanding bar with 0%
-    this.updateUnderstanding(0);
+    this.updateHeaderUnderstanding(0);
 
     // Initialize send buttons with disabled state
     const mainSendButton = this.shadowRoot.getElementById('mainSendButton');
@@ -198,7 +208,7 @@ render() {
   .understanding-title{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:4px; font-weight:500; }
   .understanding-scale{ width:140px; height:2px; position:relative; border-radius:2px; overflow:hidden; }
   .understanding-track{ position:absolute; inset:0; background:rgba(255,255,255,.15); border-radius:2px; }
-  .understanding-fill{ position:absolute; left:0; top:0; height:100%; width:0%; background:linear-gradient(90deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 100%); border-radius:2px; transition:width .3s ease; }
+  .understanding-fill{ position:absolute; left:0; top:0; height:100%; width:0%; background:#A78BFA; border-radius:2px; transition:width .3s ease; }
 
   /* Content */
   .content{ display:flex; flex-direction:column; height:calc(100% - 60px); padding:30px 20px 30px; gap:30px; position:relative; z-index:3; }
@@ -242,12 +252,54 @@ render() {
   .message{ display:flex; }
   .message.user{ justify-content:flex-end; }
   .message.assistant{ justify-content:flex-start; }
-  .bubble{ max-width:90%; padding:12px 16px; border-radius:20px; line-height:1.45; font-size:var(--fs-body); box-shadow:0 4px 16px rgba(0,0,0,.08); word-break:break-word; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .bubble{ max-width:97%; padding:12px 16px; border-radius:20px; line-height:1.45; font-size:var(--fs-body); box-shadow:0 4px 16px rgba(0,0,0,.08); word-break:break-word; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
+  .message.assistant .bubble--full{ border-bottom-left-radius:16px; }
+  .message.user .bubble--full{ border-bottom-right-radius:16px; }
+
+  /* Card screen message (full-bleed inside thread) */
+  .card-screen{ width:100%; margin:0; padding:0; }
+  .thread > .card-screen{ margin-top:-6px; margin-bottom:-6px; }
+  .thread > .card-screen:first-child{ margin-top:0; }
+  .thread > .card-screen:last-child{ margin-bottom:0; }
+  .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
+  .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
+  .card-screen .cs-body{ padding:8px; display:grid; gap:8px; }
+  .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
+  .card-screen .cs-title{ font-weight:700; color:#ffffff; }
+  .card-screen .cs-sub{ font-size:12px; color:#BBBBBB; }
+  .card-screen .cs-price{ font-weight:700; color:#FF8A4C; }
   .message.user .bubble{ background:#333333; color:#fff; border-bottom-right-radius:8px; }
   .message.assistant .bubble{ background:#646464; color:#fff; border-bottom-left-radius:8px; }
 
+  /* Compact markdown styles inside assistant bubbles */
+  .vw-md { line-height:1.5; }
+  .vw-md > :first-child { margin-top: 0 !important; }
+  .vw-md > :last-child { margin-bottom: 0 !important; }
+  .vw-md p { margin: 0 0 8px; }
+  .vw-md h1, .vw-md h2, .vw-md h3, .vw-md h4, .vw-md h5, .vw-md h6 { margin: 8px 0 6px; line-height:1.2; }
+  .vw-md ul, .vw-md ol { margin: 2px 0 6px 0; padding-left: 16px; }
+  .vw-md p + ul, .vw-md p + ol,
+  .vw-md h1 + ul, .vw-md h2 + ul, .vw-md h3 + ul, .vw-md h4 + ul, .vw-md h5 + ul, .vw-md h6 + ul,
+  .vw-md h1 + ol, .vw-md h2 + ol, .vw-md h3 + ol, .vw-md h4 + ol, .vw-md h5 + ol, .vw-md h6 + ol { margin-top: 4px; }
+  .vw-md li { margin: 2px 0; }
+  .vw-md blockquote { margin: 6px 0 8px; padding: 6px 10px; border-left: 2px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); border-radius: 8px; }
+  .vw-md code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: rgba(0,0,0,.25); padding: 1px 4px; border-radius: 4px; }
+  .vw-md pre { background: rgba(0,0,0,.25); padding: 10px 12px; border-radius: 10px; overflow:auto; }
+  .vw-md pre code { background: transparent; padding: 0; }
+
+  /* Links — мягкий цвет и подчёркивание */
+  .vw-md a { color: #C4B5FD; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(196,181,253,.6); }
+  .vw-md a:hover { color: #DDD6FE; text-decoration-color: rgba(221,214,254,.9); }
+  .vw-md a:visited { color: #BFA8FD; }
+
+  /* Highlight (не ссылка) */
+  .vw-md mark, .vw-md .highlight { background: rgba(167, 139, 250, 0.28); color: inherit; padding: 0 2px; border-radius: 3px; }
+  /* Ссылки, используемые как подсветка (например href="#...") — делаем как highlight и отключаем клики */
+  .vw-md a[href^="#"] { background: rgba(167, 139, 250, 0.28); color: inherit; text-decoration: none; pointer-events: none; cursor: default; border-radius: 3px; padding: 0 2px; }
+
   /* Property Card */
-  .property-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:8px; }
+  .property-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:8px; width:100%; }
   .card-image{ width:100%; height:200px; background-size:cover; background-position:center; background-color:#f5f5f5; }
   .card-content{ padding:16px; }
   .card-title{ font-weight:700; font-size:var(--fs-body); color:var(--txt); margin-bottom:4px; }
@@ -259,13 +311,32 @@ render() {
   .card-btn.like{ background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; }
   .card-btn.next{ background:rgba(255,255,255,.9); color:var(--txt); border:1px solid rgba(0,0,0,.1); }
 
+  /* Card mock inside assistant message */
+  .card-mock{ background:#fff; color:#2b2b2b; border-radius:14px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); width:100%; }
+  .card-mock .cm-image{ height: 220px; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg, #e9e9e9, #e9e9e9 12px, #f5f5f5 12px, #f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
+  .card-mock .cm-body{ padding:5px; display:grid; gap:8px; }
+  .card-mock .cm-row{ display:flex; justify-content:space-between; gap:12px; }
+  .card-mock .cm-title{ font-weight:700; color:#2b2b2b; }
+  .card-mock .cm-sub{ font-size:12px; color:#666; }
+  .card-mock .cm-price{ font-weight:700; color:#FF8A4C; }
+  .card-actions-panel{ margin-top:8px; display:flex; gap:16px; align-items:center; }
+  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; }
+  /* like → как .btn-back */
+  .card-actions-panel .card-btn.like{ height:40px; padding:0 24px; border:none; border-radius:12px; font-size:var(--fs-button); font-weight:600; cursor:pointer; transition:all .2s ease; background:rgba(51,51,51,.8); color:#fff; border:1px solid transparent; }
+  .card-actions-panel .card-btn.like::before{ content:''; position:absolute; inset:0; border-radius:12px; padding:1px; background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none; }
+  .card-actions-panel .card-btn.like{ position:relative; }
+  .card-actions-panel .card-btn.like:hover{ background:#646464; transform:translateY(-1px); }
+  /* next → как .btn-refresh (текстовая) */
+  .card-actions-panel .card-btn.next{ background:transparent; color:#BBBBBB; padding:0; border:none; height:40px; font-weight:600; font-size:var(--fs-button); }
+  .card-actions-panel .card-btn.next:hover{ color:#ffffff; }
+
   /* Input */
   .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
   .input-container::before{ content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
     background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
     -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
     -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
-  .text-input{ flex:1; background:transparent; border:none; outline:none; color:var(--txt); font-size:var(--fs-body); padding:8px 0; position:relative; z-index:4; }
+  .text-input{ flex:1; background:transparent; border:none; outline:none; color:#FFFFFF; font-size:calc(var(--fs-body) + 2px); padding:8px 0; position:relative; z-index:4; }
   .text-input::placeholder{ color:#ffffff; opacity:.6; font-size:var(--fs-placeholder); font-weight:400; }
   .text-input-wrapper.recording .text-input::placeholder { opacity:0; }
   .text-input-wrapper{ flex:1; position:relative; display:flex; align-items:center; }
@@ -283,7 +354,7 @@ render() {
   .details-btn svg{ width:100%; height:100%; fill:#fff; }
   .details-btn.dialog-mode{ background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); }
 
-  .loading{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:linear-gradient(180deg, rgba(255,255,255,.6), rgba(255,255,255,.4)); backdrop-filter: blur(2px); border-radius:20px; z-index:2; font-weight:600; color:#3b2a86; pointer-events:none; }
+  .loading{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(255,255,255,.40); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; font-weight:600; color:#3b2a86; pointer-events:none; }
   .loading.active{ display:flex; }
 
   /* ======= DETAILS ======= */
@@ -319,7 +390,7 @@ render() {
   .details-title{ font-weight:400; font-size:var(--fs-subtitle); color:#ffffff; margin-bottom:18px; position:relative; z-index:1; }
 
   .progress-bar{ height:4px; border-radius:2px; overflow:hidden; background:rgba(255,255,255,.18); margin-bottom:10px; position:relative; z-index:1; }
-  .progress-fill{ height:100%; width:0%; background:conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%); transition:width .28s ease; }
+  .progress-fill{ height:100%; width:0%; background:#A78BFA; transition:width .28s ease; }
   .progress-text{ font-size:var(--fs-meta); color:var(--muted); text-align:left; z-index:1; position:relative; }
 
   .param-list{ display:grid; grid-auto-rows:minmax(18px, auto); row-gap:10px; position:relative; z-index:1; }
@@ -336,7 +407,13 @@ render() {
     color:var(--muted);       /* было #BBBBBB */
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     justify-self:end; text-align:right; max-width:100%; font-weight:400;
+    position:relative; cursor: default; user-select: auto;
   }
+  .param-value:hover { outline: none; text-decoration: none; }
+  .param-value:focus { outline: none; }
+
+  /* Tooltip for param-value */
+  /* кастомный tooltip отключен — используем нативный title */
 
   .action-buttons{ display:flex; gap:16px; margin:18px 0 4px 0; align-items:center; }  /* было 18px 20px 4px 20px */
   .btn-back, .btn-refresh{ height:40px; padding:0 24px; border:none; border-radius:12px; font-size:var(--fs-button); font-weight:600; cursor:pointer; transition:all .2s ease; position:relative; z-index:1; }
@@ -440,8 +517,8 @@ render() {
         <div class="messages-frame">
           <div class="messages" id="messagesContainer">
             <div class="thread" id="thread"></div>
-            <div class="loading" id="loadingIndicator"><span>Обрабатываю запрос…</span></div>
           </div>
+          <div class="loading" id="loadingIndicator"><span>Обрабатываю запрос…</span></div>
         </div>
 
         <div class="input-container">
@@ -737,7 +814,8 @@ render() {
   // ---------- ПУБЛИЧНЫЕ МЕТОДЫ ----------
   
   // Helper function to update understanding percentage
-  updateUnderstanding(percent) {
+  // Update header understanding bar only
+  updateHeaderUnderstanding(percent) {
     const fill = this.shadowRoot.getElementById('understandingFill');
     const title = this.shadowRoot.querySelector('.understanding-title');
     
@@ -803,15 +881,15 @@ render() {
     return false;
   }
 
-  // Update details screen with understanding data
+  // Update details screen with understanding data (канонические ключи)
   updateDetailsScreen(understanding) {
-    const params = understanding.params || {};
+    const params = understanding.params || understanding;
     
     // Update progress
     const progressFill = this.shadowRoot.getElementById('progressFill');
     const progressText = this.shadowRoot.getElementById('progressText');
     if (progressFill && progressText) {
-      const progress = understanding.progress || 0;
+      const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
       progressFill.style.width = `${progress}%`;
       progressText.textContent = `${progress}% — ${progress === 0 ? 'ожидание' : 'обработка'}`;
     }
@@ -820,19 +898,24 @@ render() {
     const updateParam = (id, value, dotId) => {
       const valueEl = this.shadowRoot.getElementById(id);
       const dotEl = this.shadowRoot.getElementById(dotId);
-      if (valueEl) valueEl.textContent = value || 'не определено';
+      if (valueEl) {
+        const text = value || 'не определено';
+        valueEl.textContent = text;
+        valueEl.setAttribute('title', text);
+        valueEl.setAttribute('data-tooltip', text);
+      }
       if (dotEl) dotEl.classList.toggle('on', !!value);
     };
 
     updateParam('nameValue', params.name, 'nameDot');
-    updateParam('operationValue', params.operationType, 'operationDot');
+    updateParam('operationValue', params.operation ?? params.operationType, 'operationDot');
     updateParam('budgetValue', params.budget, 'budgetDot');
-    updateParam('typeValue', params.propertyType, 'typeDot');
-    updateParam('locationValue', params.district, 'locationDot');
+    updateParam('typeValue', params.type ?? params.propertyType, 'typeDot');
+    updateParam('locationValue', params.location ?? params.district, 'locationDot');
     updateParam('roomsValue', params.rooms, 'roomsDot');
     updateParam('areaValue', params.area, 'areaDot');
-    updateParam('detailsValue', params.locationDetails, 'detailsDot');
-    updateParam('preferencesValue', params.additional, 'preferencesDot');
+    updateParam('detailsValue', params.details ?? params.locationDetails, 'detailsDot');
+    updateParam('preferencesValue', params.preferences ?? params.additional, 'preferencesDot');
   }
 
   // Send text from main screen
@@ -874,11 +957,11 @@ render() {
     if (toggleButton) {
       if (isRecording) {
         // Show stop icon
-        toggleButton.innerHTML = '<img src="${ASSETS_BASE}stop-btn.svg" alt="Stop" />';
+        toggleButton.innerHTML = `<img src="${ASSETS_BASE}stop-btn.svg" alt="Stop" />`;
         toggleButton.setAttribute('title', 'Сбросить');
       } else {
         // Show mic icon
-        toggleButton.innerHTML = '<img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" />';
+        toggleButton.innerHTML = `<img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" />`;
         toggleButton.setAttribute('title', 'Говорить');
       }
     }
@@ -928,11 +1011,11 @@ render() {
 
     if (mode === 'details') {
       // Show return icon when details are open
-      toggleButton.innerHTML = '<img src="${ASSETS_BASE}return-btn.svg" alt="Return" />';
+      toggleButton.innerHTML = `<img src="${ASSETS_BASE}return-btn.svg" alt="Return" />`;
       toggleButton.setAttribute('title', 'Return to Dialog');
     } else {
       // Show question icon when in dialog mode
-      toggleButton.innerHTML = '<img src="${ASSETS_BASE}details-btn.svg" alt="Details" />';
+      toggleButton.innerHTML = `<img src="${ASSETS_BASE}details-btn.svg" alt="Details" />`;
       toggleButton.setAttribute('title', 'Details');
     }
   }
@@ -943,16 +1026,76 @@ render() {
     if (!thread) return;
 
     const cardHtml = this.renderPropertyCard(property);
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message assistant';
-    messageDiv.innerHTML = `
-      <div class="bubble">
-        ${cardHtml}
-      </div>
-    `;
-    
-    thread.appendChild(messageDiv);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card-screen';
+    wrapper.innerHTML = `
+      <div class="cs" data-variant-id="${property.id || ''}">
+        <div class="cs-image">Put image here</div>
+        <div class="cs-body">
+          <div class="cs-row"><div class="cs-title">${property.title || 'Title'}</div><div class="cs-title">${property.location || 'Location'}</div></div>
+          <div class="cs-row"><div class="cs-sub">${property.district || ''}</div><div class="cs-sub">${property.rooms || ''}</div></div>
+          <div class="cs-row"><div class="cs-price">${property.price || ''}</div></div>
+        </div>
+      </div>`;
+    thread.appendChild(wrapper);
     thread.scrollTop = thread.scrollHeight;
+  }
+
+  // Show mock card + action panel as separate messages and keep 70/30 viewport split
+  showMockCardWithActions(mock = {}) {
+    const thread = this.shadowRoot.getElementById('thread');
+    const messages = this.shadowRoot.getElementById('messagesContainer');
+    if (!thread || !messages) return;
+
+    // 1) Card message (assistant)
+    const cardMsg = document.createElement('div');
+    cardMsg.className = 'card-screen';
+    cardMsg.innerHTML = `
+      <div class="cs" data-variant-id="${mock.id || ''}">
+        <div class="cs-image">Put image here</div>
+        <div class="cs-body">
+          <div class="cs-row"><div class="cs-title">${mock.country || 'Country'}</div><div class="cs-title">${mock.city || 'City'}</div></div>
+          <div class="cs-row"><div class="cs-sub">${mock.district || 'District'}</div><div class="cs-sub">${(mock.rooms != null ? mock.rooms : 'Rooms')}</div></div>
+          <div class="cs-row"><div class="cs-price">${mock.price || 'Price'}</div></div>
+        </div>
+      </div>`;
+
+    thread.appendChild(cardMsg);
+
+    // 2) Actions panel (system)
+    const actionsMsg = document.createElement('div');
+    actionsMsg.className = 'card-screen';
+    actionsMsg.innerHTML = `
+      <div class="cs" style="background:transparent; box-shadow:none;">
+        <div class="card-actions-panel">
+          <button class="card-btn like" data-action="like" data-variant-id="${mock.id || ''}">Мне нравится!</button>
+          <button class="card-btn next" data-action="next" data-variant-id="${mock.id || ''}">Ещё вариант</button>
+        </div>
+      </div>`;
+
+    thread.appendChild(actionsMsg);
+
+    // 3) Scroll/height logic to keep ~70/30 split
+    requestAnimationFrame(() => {
+      const H = messages.clientHeight;
+      const targetLower = Math.max(0, Math.floor(H * 0.7));
+      const actionPanel = actionsMsg.querySelector('.card-actions-panel');
+      const gap = 12; // safety gap from thread spacing
+
+      // limit card height if needed
+      const cardEl = cardMsg.querySelector('.card-mock');
+      if (cardEl && actionPanel) {
+        // Убираем внутренний скролл — показываем полностью; просто подгоняем прокрутку контейнера
+        cardEl.style.maxHeight = '';
+        cardEl.style.overflow = 'visible';
+      }
+
+      // scroll so that ~30% remains visible above
+      messages.scrollTop = Math.max(0, messages.scrollHeight - targetLower);
+    });
+
+    // Attach click handlers (reuse existing event pipeline)
+    // Delegated globally; no extra listeners required here
   }
 
   // ---------- УТИЛИТЫ ----------

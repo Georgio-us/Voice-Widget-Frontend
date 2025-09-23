@@ -42,8 +42,10 @@ export class UnderstandingManager {
 
     console.log('🧠 Обновляю понимание:', insights);
 
-    // Обновляем локальное состояние
-    this.understanding = { ...this.understanding, ...insights };
+    // Нормализуем входящие данные (поддержка старых/альтернативных ключей и вложенного params)
+    const migrated = this.migrateInsights(insights);
+    // Обновляем локальное состояние только каноническими ключами
+    this.understanding = { ...this.understanding, ...migrated };
 
     // Пересчитываем прогресс
     this.understanding.progress = this.calculateProgress();
@@ -92,6 +94,11 @@ export class UnderstandingManager {
     }
     if (progressText) {
       progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
+    }
+
+    // Синхронизируем шкалу в хедере
+    if (typeof this.widget.updateHeaderUnderstanding === 'function') {
+      this.widget.updateHeaderUnderstanding(progress);
     }
 
     // Обновляем все поля insights
@@ -154,24 +161,35 @@ export class UnderstandingManager {
 
   // Миграция старого формата insights в новый
   migrateInsights(oldInsights = {}) {
-    return {
+    const src = oldInsights?.params ? oldInsights.params : oldInsights;
+    const pick = (...keys) => {
+      for (const k of keys) {
+        if (src && src[k] !== undefined && src[k] !== null && String(src[k]).length) return src[k];
+      }
+      return null;
+    };
+
+    const normalized = {
       // Основная информация
-      name: oldInsights.name ?? null,
-      operation: oldInsights.operation ?? null,
-      budget: oldInsights.budget ?? null,
+      name: pick('name'),
+      operation: pick('operation', 'operationType'),
+      budget: pick('budget'),
 
       // Параметры недвижимости
-      type: oldInsights.type ?? null,
-      location: oldInsights.location ?? null,
-      rooms: oldInsights.rooms ?? null,
+      type: pick('type', 'propertyType'),
+      location: pick('location', 'district'),
+      rooms: pick('rooms'),
 
       // Детали и предпочтения
-      area: oldInsights.area ?? null,
-      details: oldInsights.details ?? null,
-      preferences: oldInsights.preferences ?? null,
+      area: pick('area'),
+      details: pick('details', 'locationDetails'),
+      preferences: pick('preferences', 'additional'),
 
-      progress: oldInsights.progress ?? 0
+      // Прогресс
+      progress: oldInsights.progress ?? src?.progress ?? 0
     };
+
+    return normalized;
   }
 
   // Сброс понимания запроса
