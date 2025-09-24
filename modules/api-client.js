@@ -289,6 +289,14 @@ export class APIClient {
         const data = await response.json();
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
         
+        // Показ следующей карточки, если бэк вернул card
+        if (data && data.card) {
+          try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
+        }
+        // Сообщение ассистента после лайка/действия
+        if (data && data.assistantMessage) {
+          try { this.widget.ui.addMessage({ type:'assistant', content:data.assistantMessage, timestamp: new Date() }); } catch {}
+        }
         // Emit event for successful interaction
         this.widget.events.emit('cardInteractionSent', { action, variantId, data });
       } else {
