@@ -61,8 +61,8 @@ export class UnderstandingManager {
   calculateProgress() {
     const weights = {
       // Блок 1
-      name: 10,
-      operation: 12,
+      name: 11,
+      operation: 11,
       budget: 11,
       // Блок 2
       type: 11,

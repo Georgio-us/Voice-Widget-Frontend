@@ -4,8 +4,7 @@
 //
 // 💡 БЫСТРАЯ ЗАГРУЗКА (одна строка):
 // 
-//const s=document.createElement('script');s.src='https://georgio-us.github.io/Voice-Widget-Frontend/console-demo.js';document.head.appendChild(s)
-// ========================================
+//
 
 // Проверяем, не загружен ли уже скрипт
 if (window.VoiceWidgetDemoLoaded) {

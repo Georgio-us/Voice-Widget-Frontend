@@ -264,6 +264,7 @@ render() {
   .thread > .card-screen:last-child{ margin-bottom:0; }
   .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
   .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
+  .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
   .card-screen .cs-body{ padding:8px; display:grid; gap:8px; }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-title{ font-weight:700; color:#ffffff; }
@@ -714,6 +715,18 @@ render() {
     } else if (e.target.matches('.card-btn[data-action="next"]')) {
       const variantId = e.target.getAttribute('data-variant-id');
       this.events.emit('next_option', { variantId });
+    } else if (e.target.matches('.card-btn[data-action="send_card"]')) {
+      // Показать карточку из последнего предложения
+      const container = e.target.closest('.card-screen');
+      if (container) container.remove();
+      if (this._lastSuggestedCard) {
+        this.showMockCardWithActions(this._lastSuggestedCard);
+      }
+      this.events.emit('send_card');
+    } else if (e.target.matches('.card-btn[data-action="continue_dialog"]')) {
+      const container = e.target.closest('.card-screen');
+      if (container) container.remove();
+      this.events.emit('continue_dialog');
     }
   });
 }
@@ -1050,13 +1063,14 @@ render() {
     // 1) Card message (assistant)
     const cardMsg = document.createElement('div');
     cardMsg.className = 'card-screen';
+    const normalized = this.normalizeCardData(mock);
     cardMsg.innerHTML = `
-      <div class="cs" data-variant-id="${mock.id || ''}">
-        <div class="cs-image">Put image here</div>
+      <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+        <div class="cs-image">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
         <div class="cs-body">
-          <div class="cs-row"><div class="cs-title">${mock.country || 'Country'}</div><div class="cs-title">${mock.city || 'City'}</div></div>
-          <div class="cs-row"><div class="cs-sub">${mock.district || 'District'}</div><div class="cs-sub">${(mock.rooms != null ? mock.rooms : 'Rooms')}</div></div>
-          <div class="cs-row"><div class="cs-price">${mock.price || 'Price'}</div></div>
+          <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.country}</div></div>
+          <div class="cs-row"><div class="cs-sub">${normalized.district}</div><div class="cs-sub">${normalized.rooms}</div></div>
+          <div class="cs-row"><div class="cs-price">${normalized.priceLabel}</div></div>
         </div>
       </div>`;
 
@@ -1096,6 +1110,58 @@ render() {
 
     // Attach click handlers (reuse existing event pipeline)
     // Delegated globally; no extra listeners required here
+  }
+
+  // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------
+  suggestCardOption(data = {}) {
+    const thread = this.shadowRoot.getElementById('thread');
+    const messages = this.shadowRoot.getElementById('messagesContainer');
+    if (!thread || !messages) return;
+
+    this._lastSuggestedCard = data;
+
+    const panel = document.createElement('div');
+    panel.className = 'card-screen';
+    panel.innerHTML = `
+      <div class="cs" style="background:transparent; box-shadow:none;">
+        <div class="card-actions-panel">
+          <button class="card-btn like" data-action="send_card">Отправить квартиру</button>
+          <button class="card-btn next" data-action="continue_dialog">Продолжить диалог</button>
+        </div>
+      </div>`;
+
+    thread.appendChild(panel);
+
+    requestAnimationFrame(() => {
+      const H = messages.clientHeight;
+      messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
+    });
+  }
+
+  // ---------- НОРМАЛИЗАЦИЯ ДАННЫХ КАРТОЧКИ ----------
+  normalizeCardData(raw = {}) {
+    const toInt = (v) => {
+      if (v == null) return null;
+      const n = String(v).replace(/[^0-9]/g, '');
+      return n ? parseInt(n, 10) : null;
+    };
+    const priceNum = toInt(raw.price);
+    const roomsNum = toInt(raw.rooms);
+    const city = raw.city || raw.location || 'City';
+    const district = raw.district || raw.area || 'District';
+    const country = raw.country || 'Country';
+    const image = raw.image || raw.imageUrl || '';
+
+    return {
+      id: raw.id || '',
+      image,
+      country,
+      city,
+      district,
+      rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || 'Rooms'),
+      priceEUR: priceNum != null ? priceNum : null,
+      priceLabel: priceNum != null ? `${priceNum} €` : (raw.price || 'Price')
+    };
   }
 
   // ---------- УТИЛИТЫ ----------

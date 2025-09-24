@@ -63,13 +63,21 @@ export class APIClient {
 
       console.log('📥 Ответ на текст:', {
         sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui
       });
 
       this.widget.ui.hideLoading();
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
+
+      // 🃏 карточки по предложению
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          // сначала показать панель предложения
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error:', e); }
 
       const assistantMessage = {
         type: 'assistant',
@@ -119,13 +127,20 @@ export class APIClient {
 
       console.log('📥 Ответ на текст (main):', {
         sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui
       });
 
       this.widget.ui.hideLoading();
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
+
+      // 🃏 карточки по предложению (main)
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error (main):', e); }
 
       const assistantMessage = {
         type: 'assistant',
@@ -199,7 +214,7 @@ export class APIClient {
 
       console.log('📥 Ответ на аудио:', {
         sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui
       });
 
       this.widget.ui.hideLoading();
@@ -220,6 +235,13 @@ export class APIClient {
       }
 
       if (data.insights) this.widget.understanding.update(data.insights);
+
+      // 🃏 карточки по предложению (audio)
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error (audio):', e); }
 
       this.widget.ui.addMessage({
         type: 'assistant',
