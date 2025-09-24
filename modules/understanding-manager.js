@@ -10,8 +10,8 @@ export class UnderstandingManager {
     // Расширенная структура понимания запроса (9 параметров)
     this.understanding = {
       // Блок 1: Основная информация (33.3%)
-      name: null,        // 10%
-      operation: null,   // 12%
+      name: null,        // 11%
+      operation: null,   // 11%
       budget: null,      // 11%
 
       // Блок 2: Параметры недвижимости (33.3%)

@@ -283,11 +283,17 @@ export class UIManager {
     }, 1000);
   }
   updateRecordingTimer(time) {
-    const { textInput } = this.elements;
-    if (!textInput || this.inputState !== 'recording') return;
-    const m = Math.floor(time / 60);
+    const { textInput, mainTextInput } = this.elements;
+    if (this.inputState !== 'recording') return;
+    const m = Math.floor(time / 60).toString().padStart(2, '0');
     const s = (time % 60).toString().padStart(2, '0');
-    textInput.placeholder = `Идет запись… ${m}:${s}`;
+    // Обновляем таймеры в обоих экранах
+    const sr = this.widget.shadowRoot;
+    const chatTimer = sr.getElementById('chatRecordTimer');
+    const mainTimer = sr.getElementById('mainRecordTimer');
+    if (chatTimer) chatTimer.textContent = `${m}:${s}`;
+    if (mainTimer) mainTimer.textContent = `${m}:${s}`;
+    // На плейсхолдер больше не полагаемся
   }
   clearRecordingState() {
     if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }

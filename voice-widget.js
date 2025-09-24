@@ -336,14 +336,14 @@ render() {
   .card-mock .cm-sub{ font-size:12px; color:#666; }
   .card-mock .cm-price{ font-weight:700; color:#FF8A4C; }
   .card-actions-panel{ margin-top:8px; display:flex; gap:16px; align-items:center; }
-  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; }
+  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; font-size:12px; height:36px; }
   /* like → как .btn-back */
-  .card-actions-panel .card-btn.like{ height:40px; padding:0 24px; border:none; border-radius:12px; font-size:var(--fs-button); font-weight:600; cursor:pointer; transition:all .2s ease; background:rgba(51,51,51,.8); color:#fff; border:1px solid transparent; }
+  .card-actions-panel .card-btn.like{ height:36px; padding:0 18px; border:none; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s ease; background:rgba(51,51,51,.8); color:#fff; border:1px solid transparent; }
   .card-actions-panel .card-btn.like::before{ content:''; position:absolute; inset:0; border-radius:12px; padding:1px; background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none; }
   .card-actions-panel .card-btn.like{ position:relative; }
   .card-actions-panel .card-btn.like:hover{ background:#646464; transform:translateY(-1px); }
   /* next → как .btn-refresh (текстовая) */
-  .card-actions-panel .card-btn.next{ background:transparent; color:#BBBBBB; padding:0; border:none; height:40px; font-weight:600; font-size:var(--fs-button); }
+  .card-actions-panel .card-btn.next{ background:transparent; color:#BBBBBB; padding:0; border:none; height:36px; font-weight:600; font-size:12px; }
   .card-actions-panel .card-btn.next:hover{ color:#ffffff; }
 
   /* Input */
@@ -359,19 +359,27 @@ render() {
 
   .recording-indicator{ position:absolute; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; gap:12px; padding:8px 0; background:transparent; pointer-events:none; }
   .visualizer{ display:flex; align-items:center; gap:2px; }
-  .wave{ width:3px; height:12px; background:#FF8A4C; border-radius:2px; animation:wave 1.2s ease-in-out infinite; }
+  .wave{ width:3px; height:12px; background:#A78BFA; border-radius:2px; animation:wave 1.2s ease-in-out infinite; }
   .wave:nth-child(1){ animation-delay:0s; } .wave:nth-child(2){ animation-delay:.2s; } .wave:nth-child(3){ animation-delay:.4s; }
   @keyframes wave{ 0%,40%,100%{ height:12px; } 20%{ height:20px; } }
   @keyframes shake{ 0%,100%{ transform:translateX(0); } 10%,30%,50%,70%,90%{ transform:translateX(-2px); } 20%,40%,60%,80%{ transform:translateX(2px); } }
   .shake{ animation:shake .5s ease-in-out; }
+  .record-timer{ color:#FFFFFF; font-size:12px; font-weight:600; letter-spacing:.2px; min-width:42px; text-align:left; }
 
   .details-btn{ display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 16px; border:none; cursor:pointer; border-radius:999px; white-space:nowrap; background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); color:#fff; font-weight:600; font-size:var(--fs-button); box-shadow:0 4px 12px rgba(48,14,126,.20); transition:transform .12s ease, box-shadow .2s ease; }
   .details-btn:hover{ transform: translateY(-1px); box-shadow:0 6px 16px rgba(48,14,126,.28); }
   .details-btn svg{ width:100%; height:100%; fill:#fff; }
   .details-btn.dialog-mode{ background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); }
 
-  .loading{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(255,255,255,.40); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; font-weight:600; color:#3b2a86; pointer-events:none; }
+  .loading{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:linear-gradient(90deg, rgba(48,14,126,.10), rgba(189,101,164,.10)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
   .loading.active{ display:flex; }
+  .loading-text{ color:#ffffff; font-size:20px; font-weight:600; display:flex; align-items:center; gap:4px; }
+  .loading-text .dots{ display:inline-flex; gap:2px; margin-left:2px; }
+  .loading-text .dots span{ display:inline-block; opacity:.2; animation:dotBlink 1.2s infinite ease-in-out; }
+  .loading-text .dots .d1{ animation-delay:0s; }
+  .loading-text .dots .d2{ animation-delay:.15s; }
+  .loading-text .dots .d3{ animation-delay:.3s; }
+  @keyframes dotBlink{ 0%,100%{ opacity:.2; transform:translateY(0); } 50%{ opacity:1; transform:translateY(-2px); } }
 
   /* ======= DETAILS ======= */
   .details-screen{ display:flex; flex-direction:column; height:100%; gap:20px; }
@@ -521,6 +529,7 @@ render() {
             <input class="text-input" id="mainTextInput" type="text" placeholder="Введите ваш вопрос…"/>
             <div class="recording-indicator" id="mainRecordingIndicator" style="display: none;">
               <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+              <div class="record-timer" id="mainRecordTimer">00:00</div>
             </div>
           </div>
           <button class="icon-btn" id="mainToggleButton" aria-pressed="false" title="Говорить"><img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" /></button>
@@ -534,7 +543,7 @@ render() {
           <div class="messages" id="messagesContainer">
             <div class="thread" id="thread"></div>
           </div>
-          <div class="loading" id="loadingIndicator"><span>Обрабатываю запрос…</span></div>
+            <div class="loading" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
         </div>
 
         <div class="input-container">
@@ -542,6 +551,7 @@ render() {
             <input class="text-input" id="textInput" type="text" placeholder="Введите ваш вопрос…"/>
             <div class="recording-indicator" id="recordingIndicator" style="display: none;">
               <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+              <div class="record-timer" id="chatRecordTimer">00:00</div>
             </div>
           </div>
           <button class="icon-btn" id="toggleButton" aria-pressed="false" title="Говорить"><img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" /></button>
@@ -1091,18 +1101,32 @@ render() {
 
     thread.appendChild(cardMsg);
 
-    // 2) Actions panel (system)
-    const actionsMsg = document.createElement('div');
-    actionsMsg.className = 'card-screen';
-    actionsMsg.innerHTML = `
-      <div class="cs" style="background:transparent; box-shadow:none;">
-        <div class="card-actions-panel">
-          <button class="card-btn like" data-action="like" data-variant-id="${mock.id || ''}">Мне нравится!</button>
-          <button class="card-btn next" data-action="next" data-variant-id="${mock.id || ''}">Ещё вариант</button>
-        </div>
-      </div>`;
-
-    thread.appendChild(actionsMsg);
+    // 2) Actions panel (system) — единственный экземпляр. Если уже есть, просто переносим под последнюю карточку
+    const existingPanel = this.shadowRoot.querySelector('.card-actions-panel');
+    if (existingPanel) {
+      const panelWrapper = existingPanel.closest('.card-screen');
+      if (panelWrapper && panelWrapper.parentElement !== thread) {
+        // на всякий случай
+        panelWrapper.remove();
+        thread.appendChild(panelWrapper);
+      } else if (panelWrapper) {
+        // переместить в конец (под только что добавленную карточку)
+        thread.appendChild(panelWrapper);
+      }
+      // обновим variant-id на кнопках под новый кандидат
+      existingPanel.querySelectorAll('.card-btn').forEach(btn => btn.setAttribute('data-variant-id', normalized.id));
+    } else {
+      const actionsMsg = document.createElement('div');
+      actionsMsg.className = 'card-screen';
+      actionsMsg.innerHTML = `
+        <div class="cs" style="background:transparent; box-shadow:none;">
+          <div class="card-actions-panel">
+            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">Мне нравится!</button>
+            <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё вариант</button>
+          </div>
+        </div>`;
+      thread.appendChild(actionsMsg);
+    }
 
     // 3) Scroll/height logic to keep ~70/30 split
     requestAnimationFrame(() => {

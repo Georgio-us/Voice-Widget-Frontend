@@ -71,20 +71,19 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      // 🃏 карточки по предложению
-      try {
-        if (Array.isArray(data.cards) && data.cards.length) {
-          // сначала показать панель предложения
-          this.widget.suggestCardOption(data.cards[0]);
-        }
-      } catch (e) { console.warn('Cards handling error:', e); }
-
       const assistantMessage = {
         type: 'assistant',
         content: data[this.responseField] || 'Ответ не получен от сервера.',
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
+
+      // 🃏 карточки по предложению (после текста агента)
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error:', e); }
 
     } catch (error) {
       this.widget.ui.hideLoading();
@@ -135,19 +134,19 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      // 🃏 карточки по предложению (main)
-      try {
-        if (Array.isArray(data.cards) && data.cards.length) {
-          this.widget.suggestCardOption(data.cards[0]);
-        }
-      } catch (e) { console.warn('Cards handling error (main):', e); }
-
       const assistantMessage = {
         type: 'assistant',
         content: data[this.responseField] || 'Ответ не получен от сервера.',
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
+
+      // 🃏 карточки по предложению (main) — после текста агента
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error (main):', e); }
 
     } catch (error) {
       this.widget.ui.hideLoading();
@@ -236,18 +235,18 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      // 🃏 карточки по предложению (audio)
-      try {
-        if (Array.isArray(data.cards) && data.cards.length) {
-          this.widget.suggestCardOption(data.cards[0]);
-        }
-      } catch (e) { console.warn('Cards handling error (audio):', e); }
-
       this.widget.ui.addMessage({
         type: 'assistant',
         content: data[this.responseField] || 'Ответ не получен от сервера.',
         timestamp: new Date()
       });
+
+      // 🃏 карточки по предложению (audio) — после текста агента
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error (audio):', e); }
 
       this.widget.cleanupAfterSend();
 
@@ -289,13 +288,12 @@ export class APIClient {
         const data = await response.json();
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
         
-        // Показ следующей карточки, если бэк вернул card
-        if (data && data.card) {
-          try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
-        }
-        // Сообщение ассистента после лайка/действия
+        // Сначала сообщение ассистента (краткое превью), затем карточка
         if (data && data.assistantMessage) {
           try { this.widget.ui.addMessage({ type:'assistant', content:data.assistantMessage, timestamp: new Date() }); } catch {}
+        }
+        if (data && data.card) {
+          try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
         }
         // Emit event for successful interaction
         this.widget.events.emit('cardInteractionSent', { action, variantId, data });
