@@ -41,7 +41,22 @@ class VoiceWidget extends HTMLElement {
     this.sessionId = this.getInitialSessionId();
 
     // параметры
-    this.apiUrl = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
+    const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
+    const resolveApiUrl = (fallback) => {
+      try {
+        const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('vwApi') : null;
+        const fromGlobal = typeof window !== 'undefined' ? window.__VW_API_URL__ : null;
+        const fromStorage = (() => { try { return localStorage.getItem('vw_api_url'); } catch { return null; } })();
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        const isLocal = /^(localhost|127\.0\.0\.1|::1)$/i.test(host);
+        if (fromQuery) return fromQuery;
+        if (fromGlobal) return fromGlobal;
+        if (fromStorage) return fromStorage;
+        if (isLocal) return 'http://localhost:3001/api/audio/upload';
+      } catch {}
+      return fallback;
+    };
+    this.apiUrl = resolveApiUrl(attrApi);
     this.fieldName = this.getAttribute('field-name') || 'audio';
     this.responseField = this.getAttribute('response-field') || 'response';
 
@@ -1231,7 +1246,7 @@ render() {
   updateUnderstanding(i) { this.understanding.update(i); }
   getUnderstanding() { return this.understanding.export(); }
   resetUnderstanding() { this.understanding.reset(); }
-  setApiUrl(url) { this.apiUrl = url; if (this.api) this.api.apiUrl = url; }
+  setApiUrl(url) { this.apiUrl = url; if (this.api) this.api.apiUrl = url; try { localStorage.setItem('vw_api_url', url); } catch {} }
   getMessages() { return [...this.messages]; }
   getCurrentSessionId() { return this.sessionId; }
   setUnderstanding(insights) { this.understanding.update(insights); }
