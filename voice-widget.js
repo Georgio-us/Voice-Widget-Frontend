@@ -67,6 +67,9 @@ class VoiceWidget extends HTMLElement {
     this.ui = new UIManager(this);
     this.api = new APIClient(this);
 
+    // i18n (lead form)
+    this.leadI18n = this.buildLeadI18nDictionary();
+
     this.render();
     this.bindEvents();
     this.checkBrowserSupport();
@@ -110,6 +113,19 @@ class VoiceWidget extends HTMLElement {
     if (sendButton) sendButton.setAttribute('aria-disabled', 'true');
 
     console.log('✅ Voice Widget инициализирован');
+
+    // Применяем i18n к форме лида и кнопке
+    this.applyLeadI18n();
+
+    // Реакция на смену локали через localStorage
+    try {
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'vw_lang') {
+          this.applyLeadI18n();
+          this.populateTimeSlots();
+        }
+      });
+    } catch {}
   }
 
   checkBrowserSupport() {
@@ -218,6 +234,10 @@ render() {
   .header-question-btn{ width:24px; height:24px; } .header-switch-btn{ width:56px; height:24px; }
   .header-question-btn img, .header-switch-btn img{ width:100%; height:100%; display:block; object-fit:contain; }
   .header-question-btn:hover, .header-switch-btn:hover{ filter:brightness(1.05); }
+
+  /* Lead capture header button */
+  .header-lead-btn{ display:inline-flex; align-items:center; height:26px; padding:0 10px; border:none; cursor:pointer; border-radius:999px; white-space:nowrap; background:rgba(255,255,255,.14); color:#fff; font-weight:600; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.18); transition:transform .12s ease, box-shadow .2s ease; }
+  .header-lead-btn:hover{ transform: translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.22); }
 
   /* Understanding bar (header) — Meta System */
   .understanding-title{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:4px; font-weight:500; }
@@ -468,6 +488,25 @@ render() {
   .tooltip-container:hover .tooltip-content{ opacity:1; visibility:visible; }
   .tooltip-content::after{ content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:rgba(51,51,51,.95); }
 
+  /* Lead form overlay */
+  .lead-panel{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:1000; }
+  .lead-panel.active{ display:flex; }
+  .lead-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.40); z-index:0; }
+  .lead-box{ position:relative; width:400px; background:rgba(51,51,51,.95); border:none; border-radius:20px; padding:16px; box-shadow:0 18px 48px rgba(0,0,0,.35); z-index:1; pointer-events:auto; }
+  .lead-box::before{ content:none; }
+  .lead-title{ font-weight:600; color:#fff; margin:0 0 10px 0; font-size:14px; }
+  .lead-row{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
+  .lead-label{ font-size:12px; color:#BBBBBB; }
+  .lead-input, .lead-select, .lead-textarea{ width:100%; height:36px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#fff; padding:8px 10px; font-size:13px; outline:none; pointer-events:auto; }
+  .lead-textarea{ height:64px; resize:vertical; }
+  .lead-actions{ display:flex; gap:10px; margin-top:10px; }
+  .lead-submit{ flex:1; height:40px; border:none; border-radius:12px; background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; }
+  .lead-cancel{ flex:1; height:40px; border:none; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; }
+  .lead-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; pointer-events:auto; }
+  .lead-consent input{ margin-top:3px; pointer-events:auto; }
+  .lead-consent .consent-text{ font-size:12px; color:#BBBBBB; line-height:1.4; }
+  .lead-consent .consent-text a{ color:#C4B5FD; text-decoration:underline; }
+
   /* Специальный класс для popup с хранением данных */
   .legal-popup{
     position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:380px; background:rgba(51,51,51,.95);
@@ -508,7 +547,7 @@ render() {
       </div>
       <div class="header-actions">
         <button class="header-question-btn" id="btnToggle" title="Details"><img src="${ASSETS_BASE}details-btn.svg" alt="Details" /></button>
-        <button class="header-switch-btn" title="Switch Mode"><img src="${ASSETS_BASE}switch-mode.svg" alt="Switch Mode" /></button>
+        <button class="header-lead-btn" id="btnOpenLead"></button>
       </div>
     </div>
 
@@ -607,6 +646,46 @@ render() {
         </div>
       </div>
     </div>
+
+    <!-- Lead Panel -->
+    <div class="lead-panel" id="leadPanel" aria-hidden="true">
+      <div class="lead-overlay" id="leadOverlay"></div>
+      <div class="lead-box" role="dialog" aria-modal="true" aria-labelledby="leadTitle">
+        <div class="lead-title" id="leadTitle"></div>
+        <div class="lead-row">
+          <label class="lead-label" for="leadName" id="leadNameLabel"></label>
+          <input class="lead-input" id="leadName" type="text" />
+        </div>
+        <div class="lead-row">
+          <label class="lead-label" for="leadContact" id="leadContactLabel"></label>
+          <input class="lead-input" id="leadContact" type="text" />
+        </div>
+        <div class="lead-row">
+          <label class="lead-label" for="leadChannel" id="leadChannelLabel"></label>
+          <select class="lead-select" id="leadChannel">
+            <option value="whatsapp" id="optWhatsApp"></option>
+            <option value="phone" id="optPhone"></option>
+            <option value="email" id="optEmail"></option>
+          </select>
+        </div>
+        <div class="lead-row">
+          <label class="lead-label" for="leadTime" id="leadTimeLabel"></label>
+          <select class="lead-select" id="leadTime"></select>
+        </div>
+        <div class="lead-row">
+          <label class="lead-label" for="leadNote" id="leadNoteLabel"></label>
+          <textarea class="lead-textarea" id="leadNote"></textarea>
+        </div>
+        <div class="lead-consent">
+          <input type="checkbox" id="leadConsent" />
+          <div class="consent-text" id="leadConsentText"></div>
+        </div>
+        <div class="lead-actions">
+          <button class="lead-cancel" id="leadCancel"></button>
+          <button class="lead-submit" id="leadSubmit"></button>
+        </div>
+      </div>
+    </div>
   </div>
   `;
 
@@ -656,6 +735,112 @@ render() {
       showScreen('details');
       this.events.emit('details-open');
       this.updateHeaderToggleButton('details');
+    }
+  });
+
+  // Lead panel open/close
+  const leadPanel = $('#leadPanel');
+  $('#btnOpenLead')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    leadPanel?.classList.add('active');
+    leadPanel?.setAttribute('aria-hidden', 'false');
+    $('#leadName')?.focus();
+  });
+  $('#leadOverlay')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    leadPanel?.classList.remove('active');
+    leadPanel?.setAttribute('aria-hidden', 'true');
+  });
+  $('#leadCancel')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    leadPanel?.classList.remove('active');
+    leadPanel?.setAttribute('aria-hidden', 'true');
+  });
+
+  // Populate time slots (Europe/Madrid)
+  this.populateTimeSlots();
+
+  // Submit lead
+  $('#leadSubmit')?.addEventListener('click', async () => {
+    const name = $('#leadName')?.value?.trim();
+    const contactValue = $('#leadContact')?.value?.trim();
+    const channel = $('#leadChannel')?.value;
+    const timeValue = $('#leadTime')?.value;
+    const note = $('#leadNote')?.value?.trim();
+    const consent = $('#leadConsent')?.checked === true;
+
+    if (!name || !contactValue) {
+      this.ui.showNotification(this.tLead('fillBoth'));
+      return;
+    }
+    if (!consent) {
+      this.ui.showNotification(this.tLead('consentRequired'));
+      return;
+    }
+
+    let time_window = null;
+    try { time_window = timeValue ? JSON.parse(timeValue) : null; } catch {}
+
+    // Resolve backend base URL from existing audio API url
+    const baseApi = (() => {
+      try {
+        const audioUrl = this.apiUrl || '';
+        // typical: http://host:3001/api/audio/upload → http://host:3001
+        const u = new URL(audioUrl, window.location.href);
+        return `${u.protocol}//${u.host}`;
+      } catch {
+        return '';
+      }
+    })();
+    const leadsUrl = `${baseApi}/api/leads`;
+
+    const payload = {
+      name,
+      contact: { channel, value: contactValue },
+      time_window,
+      language: this.getLangCode(),
+      gdpr: { consent, locale: this.getLangCode() },
+      context: { sessionId: this.sessionId || null, notes: note || null, source: 'widget' }
+    };
+
+    try {
+      const resp = await fetch(leadsUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (resp.ok && data?.ok) {
+        this.ui.showNotification(this.tLead('success'));
+        // Автозакрытие и сброс формы через 2.5с
+        setTimeout(() => {
+          // Очистить поля
+          const clear = (id) => { const el = this.shadowRoot.getElementById(id); if (el) el.value = ''; };
+          clear('leadName');
+          clear('leadContact');
+          clear('leadNote');
+          const consent = this.shadowRoot.getElementById('leadConsent');
+          if (consent) consent.checked = false;
+
+          // Закрыть панель
+          leadPanel?.classList.remove('active');
+          leadPanel?.setAttribute('aria-hidden', 'true');
+        }, 2500);
+      } else {
+        // Показать ошибки валидации, если есть
+        if (data?.errors && Array.isArray(data.errors) && data.errors.length) {
+          const first = data.errors[0];
+          this.ui.showNotification(`${first.field}: ${first.message}`);
+        } else {
+          this.ui.showNotification(this.tLead('errorGeneric'));
+        }
+      }
+    } catch (e) {
+      console.error('Lead submit error:', e);
+      this.ui.showNotification(this.tLead('errorNetwork'));
     }
   });
   
@@ -713,6 +898,15 @@ render() {
   this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('chat');
   this.showDetailsScreen = () => showScreen('details');
+  this.openLeadPanel = () => {
+    const leadPanelEl = this.shadowRoot.getElementById('leadPanel');
+    if (leadPanelEl) {
+      leadPanelEl.classList.add('active');
+      leadPanelEl.setAttribute('aria-hidden', 'false');
+      const nameEl = this.shadowRoot.getElementById('leadName');
+      if (nameEl) nameEl.focus();
+    }
+  };
 
   // Property card (как было)
   this.renderPropertyCard = (property) => {
@@ -1204,6 +1398,188 @@ render() {
   }
 
   // ---------- УТИЛИТЫ ----------
+  getLangCode() {
+    try {
+      const lang = localStorage.getItem('vw_lang');
+      if (!lang) return 'en';
+      const code = lang.trim().toLowerCase().slice(0,2);
+      return ['en','es','ru','uk','fr','de','it'].includes(code) ? code : 'en';
+    } catch { return 'en'; }
+  }
+
+  buildLeadI18nDictionary() {
+    return {
+      en: {
+        openButton: 'Leave a request',
+        title: 'Leave a request',
+        nameLabel: 'Name', namePh: 'Your name',
+        contactLabel: 'Contact (phone / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / name@example.com',
+        channelLabel: 'Preferred contact method', optWhatsapp: 'WhatsApp', optPhone: 'Phone', optEmail: 'E-mail',
+        timeLabel: 'Convenient time', today: 'today', tomorrow: 'tomorrow',
+        noteLabel: 'Comment (optional)', notePh: 'Short note',
+        cancel: 'Cancel', submit: 'Send',
+        fillBoth: 'Please fill in name and contact',
+        success: 'Thanks! We will contact you in the selected time.',
+        errorGeneric: 'An error occurred, please try again',
+        errorNetwork: 'Network error. Please try again',
+        consentRequired: 'Please accept the Privacy Policy'
+      },
+      es: {
+        openButton: 'Enviar solicitud',
+        title: 'Enviar solicitud',
+        nameLabel: 'Nombre', namePh: 'Tu nombre',
+        contactLabel: 'Contacto (teléfono / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / nombre@ejemplo.com',
+        channelLabel: 'Método de contacto preferido', optWhatsapp: 'WhatsApp', optPhone: 'Teléfono', optEmail: 'E-mail',
+        timeLabel: 'Hora conveniente', today: 'hoy', tomorrow: 'mañana',
+        noteLabel: 'Comentario (opcional)', notePh: 'Nota breve',
+        cancel: 'Cancelar', submit: 'Enviar',
+        fillBoth: 'Por favor, introduce nombre y contacto',
+        success: '¡Gracias! Nos pondremos en contacto en el horario indicado.',
+        errorGeneric: 'Ocurrió un error, inténtelo de nuevo',
+        errorNetwork: 'Error de red. Inténtalo de nuevo',
+        consentRequired: 'Por favor, acepte la Política de Privacidad'
+      },
+      ru: {
+        openButton: 'Оставить заявку',
+        title: 'Оставить заявку',
+        nameLabel: 'Имя', namePh: 'Ваше имя',
+        contactLabel: 'Контакт (телефон / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / name@example.com',
+        channelLabel: 'Предпочтительный способ связи', optWhatsapp: 'WhatsApp', optPhone: 'Телефон', optEmail: 'E-mail',
+        timeLabel: 'Удобное время', today: 'сегодня', tomorrow: 'завтра',
+        noteLabel: 'Комментарий (опционально)', notePh: 'Короткая заметка',
+        cancel: 'Отмена', submit: 'Отправить заявку',
+        fillBoth: 'Заполните имя и контакт',
+        success: 'Спасибо! Мы свяжемся с вами в выбранное время.',
+        errorGeneric: 'Произошла ошибка, попробуйте снова',
+        errorNetwork: 'Сеть недоступна. Попробуйте ещё раз',
+        consentRequired: 'Пожалуйста, подтвердите согласие с Политикой конфиденциальности'
+      },
+      uk: {
+        openButton: 'Залишити заявку',
+        title: 'Залишити заявку',
+        nameLabel: "Ім'я", namePh: 'Ваше ім’я',
+        contactLabel: 'Контакт (телефон / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / name@example.com',
+        channelLabel: 'Бажаний спосіб зв’язку', optWhatsapp: 'WhatsApp', optPhone: 'Телефон', optEmail: 'E-mail',
+        timeLabel: 'Зручний час', today: 'сьогодні', tomorrow: 'завтра',
+        noteLabel: 'Коментар (необов’язково)', notePh: 'Коротка нотатка',
+        cancel: 'Скасувати', submit: 'Надіслати',
+        fillBoth: 'Заповніть ім’я та контакт',
+        success: 'Дякуємо! Зв’яжемося у вибране вікно',
+        errorGeneric: 'Не вдалося надіслати. Спробуйте ще раз',
+        errorNetwork: 'Проблема з мережею. Спробуйте ще раз',
+        consentRequired: 'Будь ласка, прийміть Політику конфіденційності'
+      },
+      fr: {
+        openButton: 'Laisser une demande',
+        title: 'Laisser une demande',
+        nameLabel: 'Nom', namePh: 'Votre nom',
+        contactLabel: 'Contact (téléphone / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / nom@exemple.com',
+        channelLabel: 'Méthode de contact préférée', optWhatsapp: 'WhatsApp', optPhone: 'Téléphone', optEmail: 'E-mail',
+        timeLabel: 'Horaire souhaité', today: 'aujourd’hui', tomorrow: 'demain',
+        noteLabel: 'Commentaire (optionnel)', notePh: 'Note courte',
+        cancel: 'Annuler', submit: 'Envoyer',
+        fillBoth: 'Veuillez indiquer le nom et le contact',
+        success: 'Merci ! Nous vous contacterons dans le créneau choisi',
+        errorGeneric: 'Échec de l’envoi. Réessayez',
+        errorNetwork: 'Erreur réseau. Réessayez',
+        consentRequired: 'Veuillez accepter la politique de confidentialité'
+      },
+      de: {
+        openButton: 'Anfrage senden',
+        title: 'Anfrage senden',
+        nameLabel: 'Name', namePh: 'Ihr Name',
+        contactLabel: 'Kontakt (Telefon / WhatsApp / E-Mail)', contactPh: '+34 600 00 00 00 / name@beispiel.com',
+        channelLabel: 'Bevorzugter Kontaktweg', optWhatsapp: 'WhatsApp', optPhone: 'Telefon', optEmail: 'E-Mail',
+        timeLabel: 'Passende Zeit', today: 'heute', tomorrow: 'morgen',
+        noteLabel: 'Kommentar (optional)', notePh: 'Kurze Notiz',
+        cancel: 'Abbrechen', submit: 'Senden',
+        fillBoth: 'Bitte Name und Kontakt ausfüllen',
+        success: 'Danke! Wir melden uns im gewählten Zeitraum',
+        errorGeneric: 'Senden fehlgeschlagen. Bitte erneut versuchen',
+        errorNetwork: 'Netzwerkfehler. Bitte erneut versuchen',
+        consentRequired: 'Bitte akzeptieren Sie die Datenschutzrichtlinie'
+      },
+      it: {
+        openButton: 'Invia richiesta',
+        title: 'Invia richiesta',
+        nameLabel: 'Nome', namePh: 'Il tuo nome',
+        contactLabel: 'Contatto (telefono / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / nome@esempio.com',
+        channelLabel: 'Metodo di contatto preferito', optWhatsapp: 'WhatsApp', optPhone: 'Telefono', optEmail: 'E-mail',
+        timeLabel: 'Orario comodo', today: 'oggi', tomorrow: 'domani',
+        noteLabel: 'Commento (opzionale)', notePh: 'Nota breve',
+        cancel: 'Annulla', submit: 'Invia',
+        fillBoth: 'Compila nome e contatto',
+        success: 'Grazie! Ti contatteremo nella fascia scelta',
+        errorGeneric: 'Invio non riuscito. Riprova',
+        errorNetwork: 'Errore di rete. Riprova',
+        consentRequired: 'Si prega di accettare l’Informativa sulla privacy'
+      }
+    };
+  }
+
+  tLead(key) {
+    const dict = this.leadI18n || {};
+    const code = this.getLangCode();
+    return (dict[code] && dict[code][key]) || (dict.en && dict.en[key]) || '';
+  }
+
+  applyLeadI18n() {
+    const setText = (sel, text) => { const el = this.shadowRoot.getElementById(sel); if (el) el.textContent = text; };
+    const setPh = (sel, text) => { const el = this.shadowRoot.getElementById(sel); if (el) el.setAttribute('placeholder', text); };
+
+    const openBtn = this.shadowRoot.getElementById('btnOpenLead');
+    if (openBtn) openBtn.textContent = this.tLead('openButton');
+
+    setText('leadTitle', this.tLead('title'));
+    setText('leadNameLabel', this.tLead('nameLabel'));
+    setPh('leadName', this.tLead('namePh'));
+    setText('leadContactLabel', this.tLead('contactLabel'));
+    setPh('leadContact', this.tLead('contactPh'));
+    setText('leadChannelLabel', this.tLead('channelLabel'));
+    const optWA = this.shadowRoot.getElementById('optWhatsApp'); if (optWA) optWA.textContent = this.tLead('optWhatsapp');
+    const optPh = this.shadowRoot.getElementById('optPhone'); if (optPh) optPh.textContent = this.tLead('optPhone');
+    const optEm = this.shadowRoot.getElementById('optEmail'); if (optEm) optEm.textContent = this.tLead('optEmail');
+    setText('leadTimeLabel', this.tLead('timeLabel'));
+    setText('leadNoteLabel', this.tLead('noteLabel'));
+    setPh('leadNote', this.tLead('notePh'));
+    const btnCancel = this.shadowRoot.getElementById('leadCancel'); if (btnCancel) btnCancel.textContent = this.tLead('cancel');
+    const btnSubmit = this.shadowRoot.getElementById('leadSubmit'); if (btnSubmit) btnSubmit.textContent = this.tLead('submit');
+
+    // Consent text (GDPR)
+    const code = this.getLangCode();
+    let consentText = '';
+    if (code === 'es') {
+      consentText = 'Acepto el tratamiento de mis datos para gestionar esta solicitud y contactar conmigo sobre inmuebles.';
+    } else if (code === 'ru') {
+      consentText = 'Я соглашаюсь на обработку моих данных для обработки этой заявки и связи со мной по вопросам недвижимости.';
+    } else {
+      consentText = 'I consent to the processing of my data for managing this request and contacting me about properties.';
+    }
+    const consentEl = this.shadowRoot.getElementById('leadConsentText');
+    if (consentEl) {
+      consentEl.innerHTML = `${consentText} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>`;
+    }
+  }
+
+  populateTimeSlots() {
+    const timeSel = this.shadowRoot.getElementById('leadTime');
+    if (!timeSel) return;
+    const now = new Date();
+    const tz = 'Europe/Madrid';
+    const locale = this.getLangCode();
+    const fmt = (d) => d.toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : locale,
+      { weekday:'short', day:'2-digit', month:'2-digit', timeZone: tz });
+    const today = fmt(now);
+    const tomorrowDate = new Date(now.getTime() + 24*60*60*1000);
+    const tomorrow = fmt(tomorrowDate);
+    const options = [
+      { v: { date: now.toISOString().slice(0,10), from:'17:00', to:'19:00', timezone: tz }, l: `${this.tLead('today')} 17–19 (${today})` },
+      { v: { date: now.toISOString().slice(0,10), from:'19:00', to:'21:00', timezone: tz }, l: `${this.tLead('today')} 19–21 (${today})` },
+      { v: { date: tomorrowDate.toISOString().slice(0,10), from:'10:00', to:'12:00', timezone: tz }, l: `${this.tLead('tomorrow')} 10–12 (${tomorrow})` },
+      { v: { date: tomorrowDate.toISOString().slice(0,10), from:'12:00', to:'14:00', timezone: tz }, l: `${this.tLead('tomorrow')} 12–14 (${tomorrow})` },
+    ];
+    timeSel.innerHTML = options.map((o, i) => `<option value='${JSON.stringify(o.v)}' ${i===0?'selected':''}>${o.l}</option>`).join('');
+  }
   getCurrentState() {
     return {
       ui: this.ui.getCurrentState(),

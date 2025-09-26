@@ -83,6 +83,10 @@ export class APIClient {
         if (Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
         }
+        // 🔔 Показ формы лида по сигналу бэка
+        if (data.ui && data.ui.suggestLeadForm && typeof this.widget.openLeadPanel === 'function') {
+          this.widget.openLeadPanel();
+        }
       } catch (e) { console.warn('Cards handling error:', e); }
 
     } catch (error) {
@@ -145,6 +149,9 @@ export class APIClient {
       try {
         if (Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
+        }
+        if (data.ui && data.ui.suggestLeadForm && typeof this.widget.openLeadPanel === 'function') {
+          this.widget.openLeadPanel();
         }
       } catch (e) { console.warn('Cards handling error (main):', e); }
 
