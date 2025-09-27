@@ -181,7 +181,6 @@ export class UIManager {
     if (sendButton) { sendButton.classList.add('active'); sendButton.disabled = false; }
     if (toggleButton) { toggleButton.disabled = false; toggleButton.classList.add('active'); }
     this.recordingTime = 0;
-    this.startRecordingTimer();
   }
 
   // RECORDED
@@ -275,13 +274,6 @@ export class UIManager {
   }
 
   // ---------- запись/таймер ----------
-  startRecordingTimer() {
-    this.recordingTime = 0;
-    this.recordingTimer = setInterval(() => {
-      this.recordingTime++;
-      this.updateRecordingTimer(this.recordingTime);
-    }, 1000);
-  }
   updateRecordingTimer(time) {
     const { textInput, mainTextInput } = this.elements;
     if (this.inputState !== 'recording') return;

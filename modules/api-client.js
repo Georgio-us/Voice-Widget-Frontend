@@ -9,6 +9,81 @@ export class APIClient {
     this.fieldName = widget.fieldName;   // оставлено для совместимости, но ключ файла — всегда 'audio'
     this.responseField = widget.responseField;
   }
+  get disableServerUI() {
+    try {
+      const v = localStorage.getItem('vw_disableServerUI');
+      return v === '1' || v === 'true';
+    } catch { return false; }
+  }
+
+  // ---------- Hidden commands parsing ----------
+  extractHiddenCommands(rawText = '') {
+    if (!rawText) return { cleaned: '', commands: [] };
+    let cleaned = String(rawText);
+    const commands = [];
+
+    // triple-backtick JSON blocks
+    const codeBlockRe = /```json\s*([\s\S]*?)```/gi;
+    cleaned = cleaned.replace(codeBlockRe, (m, body) => {
+      try {
+        const obj = JSON.parse(body.trim());
+        if (obj && obj.vw_cmd) commands.push(obj);
+      } catch {}
+      return '';
+    });
+
+    // <CMD> ... </CMD> blocks with JSON
+    const tagRe = /<CMD>([\s\S]*?)<\/CMD>/gi;
+    cleaned = cleaned.replace(tagRe, (m, body) => {
+      try {
+        const obj = JSON.parse(body.trim());
+        if (obj && obj.vw_cmd) commands.push(obj);
+      } catch {}
+      return '';
+    });
+
+    // Trim extra whitespace left by removals
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+    return { cleaned, commands };
+  }
+
+  async dispatchHiddenCommand(cmd) {
+    if (!cmd || !cmd.vw_cmd) return;
+    const name = String(cmd.vw_cmd);
+    const args = cmd.args || {};
+    try {
+      switch (name) {
+        case 'form.contact': {
+          // Open main lead panel
+          this.widget.openLeadPanel?.();
+          break;
+        }
+        case 'form.schedule_view':
+        case 'form.call_time': {
+          // Start inline flow at time selection (step A)
+          if (!this.widget.inlineLeadState.step) this.widget.inlineLeadState.step = 'A';
+          if (args && args.time_window) {
+            this.widget.inlineLeadState.data = this.widget.inlineLeadState.data || {};
+            this.widget.inlineLeadState.data.time_window = args.time_window;
+          }
+          this.widget.renderInlineLeadStep?.();
+          break;
+        }
+        case 'cards.list':
+        case 'cards.show':
+        case 'cards.more_like_this':
+        case 'cards.search_wider': {
+          // TODO: hook into card rendering pipeline (skeleton)
+          this.widget.ui?.showNotification?.('Команда карт получена (скоро будет реализовано)');
+          break;
+        }
+        default:
+          break;
+      }
+    } catch (e) {
+      console.warn('Hidden command error:', e);
+    }
+  }
 
   // Загрузка информации о сессии (только если sessionId есть)
   async loadSessionInfo() {
@@ -71,32 +146,31 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      const assistantMessage = {
-        type: 'assistant',
-        content: data[this.responseField] || 'Ответ не получен от сервера.',
-        timestamp: new Date()
-      };
-      this.widget.ui.addMessage(assistantMessage);
+      const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
+      const parsed = this.extractHiddenCommands(assistantRaw);
+      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
+      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      // Dispatch hidden commands (after showing text)
+      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
       // 🃏 карточки по предложению (после текста агента)
       try {
-        if (Array.isArray(data.cards) && data.cards.length) {
+        if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
         }
-        // Inline lead-flow: if backend parsed contact/time, fast-forward flow
-        if (data.ui && data.ui.inlineLead) {
+        // Inline lead-flow: build target step once and render once (avoid duplicates)
+        if (!this.disableServerUI && data.ui && data.ui.inlineLead) {
           const il = data.ui.inlineLead;
           try {
-            if (il.startFlow && !this.widget.inlineLeadState.step) {
-              this.widget.startInlineLeadFlow();
+            if (!this.widget.inlineLeadState.step && (il.startFlow || il.timeFound || il.contactFound)) {
+              this.widget.inlineLeadState.step = 'A';
             }
             if (il.timeFound && il.time_window) {
               this.widget.inlineLeadState.data.time_window = il.time_window;
-              if (!this.widget.inlineLeadState.step) this.widget.inlineLeadState.step = 'B';
+              if (!this.widget.inlineLeadState.step || this.widget.inlineLeadState.step === 'A') this.widget.inlineLeadState.step = 'B';
             }
             if (il.contactFound && il.contact) {
               this.widget.inlineLeadState.data.contact = il.contact;
-              // If we have contact, jump to GDPR step
               this.widget.inlineLeadState.step = 'D';
             }
             if (this.widget.inlineLeadState.step) {
@@ -155,25 +229,27 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      const assistantMessage = {
-        type: 'assistant',
-        content: data[this.responseField] || 'Ответ не получен от сервера.',
-        timestamp: new Date()
-      };
-      this.widget.ui.addMessage(assistantMessage);
+      const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
+      const parsed = this.extractHiddenCommands(assistantRaw);
+      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
+      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
       // 🃏 карточки по предложению (main) — после текста агента
       try {
-        if (Array.isArray(data.cards) && data.cards.length) {
+        if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
         }
-        // Inline lead-flow fast-forward for main screen send
-        if (data.ui && data.ui.inlineLead) {
+        // Inline lead-flow fast-forward for main screen send (single render)
+        if (!this.disableServerUI && data.ui && data.ui.inlineLead) {
           const il = data.ui.inlineLead;
           try {
+            if (!this.widget.inlineLeadState.step && (il.startFlow || il.timeFound || il.contactFound)) {
+              this.widget.inlineLeadState.step = 'A';
+            }
             if (il.timeFound && il.time_window) {
               this.widget.inlineLeadState.data.time_window = il.time_window;
-              if (!this.widget.inlineLeadState.step) this.widget.inlineLeadState.step = 'B';
+              if (!this.widget.inlineLeadState.step || this.widget.inlineLeadState.step === 'A') this.widget.inlineLeadState.step = 'B';
             }
             if (il.contactFound && il.contact) {
               this.widget.inlineLeadState.data.contact = il.contact;

@@ -508,8 +508,11 @@ render() {
   .lead-panel.active{ display:flex; }
   .lead-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.40); z-index:0; }
   .lead-box{ position:relative; width:400px; background:rgba(51,51,51,.95); border:none; border-radius:20px; padding:16px; box-shadow:0 18px 48px rgba(0,0,0,.35); z-index:1; pointer-events:auto; }
+  .lead-box.thankyou{ width:80%; height:30%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
   .lead-box::before{ content:none; }
   .lead-title{ font-weight:600; color:#fff; margin:0 0 10px 0; font-size:14px; }
+  .lead-thanks-title{ margin:0 0 8px 0; color:#fff; font-size:20px; font-weight:700; text-align:center; }
+  .lead-thanks-note{ margin:0 0 12px 0; color:#fff; opacity:.7; font-weight:300; text-align:center; }
   .lead-row{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
   .lead-label{ font-size:12px; color:#BBBBBB; }
   .lead-input, .lead-select, .lead-textarea{ width:100%; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; pointer-events:auto; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
@@ -520,6 +523,8 @@ render() {
   .lead-textarea{ height:64px; resize:vertical; }
   .lead-actions{ display:flex; gap:10px; margin-top:10px; }
   .lead-submit{ flex:1; height:40px; border:none; border-radius:12px; background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; box-shadow:0 6px 16px rgba(168,85,247,.22); transition:transform .12s ease, box-shadow .15s ease, filter .15s ease; }
+  .lead-box.thankyou .lead-actions{ justify-content:center; }
+  .lead-box.thankyou #leadContinue{ width:200px; height:50px; flex:0 0 auto; }
   .lead-submit:hover{ filter: brightness(1.06); transform: translateY(-1px); box-shadow:0 8px 20px rgba(168,85,247,.28); }
   .lead-cancel{ flex:1; height:40px; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:transparent; color:#FFFFFF; font-weight:700; cursor:pointer; pointer-events:auto; transition:transform .12s ease, background .15s ease, border-color .15s ease; }
   .lead-cancel:hover{ background:rgba(255,255,255,.08); transform: translateY(-1px); border-color: rgba(255,255,255,.28); }
@@ -932,17 +937,24 @@ render() {
         // Спасибо-форма
         const box = this.shadowRoot.querySelector('.lead-box');
         if (box) {
+          box.classList.add('thankyou');
+          const successText = this.tLead('success') || 'Thanks! We will contact you in the selected time.';
+          const m = successText.match(/^(.*?[.!?])\s*(.*)$/u);
+          const title = m ? m[1] : successText;
+          const note = m && m[2] ? m[2] : '';
+          const noteHtml = note ? `<p class="lead-thanks-note">${note}</p>` : '';
           box.innerHTML = `
-            <div class="lead-title">${this.tLead('success')}</div>
-            <div class="lead-row"><div class="lead-label">${this.tLead('title')}</div></div>
+            <h2 class="lead-thanks-title">${title}</h2>
+            ${noteHtml}
             <div class="lead-actions">
-              <button class="lead-submit" id="leadContinue">${this.tLead('cancel') || 'Continue'}</button>
+              <button class="lead-submit" id="leadContinue">${this.tLead('inlineContinue') || 'Continue'}</button>
             </div>
           `;
           const cont = this.shadowRoot.getElementById('leadContinue');
           if (cont) cont.addEventListener('click', () => {
             leadPanel?.classList.remove('active');
             leadPanel?.setAttribute('aria-hidden', 'true');
+            box.classList.remove('thankyou');
           });
         }
       } else {
@@ -1073,8 +1085,7 @@ render() {
 
   this.cancelInlineLeadFlow = () => {
     this.inlineLeadState = { step: null, data: { time_window: null, channel: null, contact: null, gdpr: false } };
-    // remove pending bubbles if needed — for now just append system note
-    this.ui.addMessage({ type:'assistant', content:this.tLead('cancel') || 'Cancelled', timestamp:new Date() });
+    // remove pending bubbles silently — без системного сообщения
   };
 
   this.renderInlineLeadStep = () => {
