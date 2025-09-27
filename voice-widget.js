@@ -366,6 +366,21 @@ render() {
   .card-actions-panel .card-btn.next{ background:transparent; color:#BBBBBB; padding:0; border:none; height:36px; font-weight:600; font-size:12px; }
   .card-actions-panel .card-btn.next:hover{ color:#ffffff; }
 
+  /* ===== Inline Lead Bubbles ===== */
+  .lead-bubble{ background:rgba(255,255,255,.06); color:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:12px; width:100%; }
+  .lead-bubble .lb-title{ font-weight:700; margin-bottom:6px; }
+  .lead-bubble .lb-text{ font-size:12px; color:#BBBBBB; margin-bottom:10px; }
+  .lead-bubble .lb-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  .lead-bubble .lb-input{ flex:1; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; }
+  .lead-bubble .lb-select{ flex:1; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; -webkit-appearance:none; appearance:none; }
+  .lead-bubble .lb-actions{ display:flex; gap:10px; margin-top:8px; }
+  .lead-bubble .lb-btn{ flex:0 0 auto; height:36px; border:none; border-radius:12px; padding:0 14px; font-weight:700; cursor:pointer; }
+  .lead-bubble .lb-btn.primary{ background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); color:#fff; box-shadow:0 6px 16px rgba(168,85,247,.22); }
+  .lead-bubble .lb-btn.primary:hover{ filter:brightness(1.06); transform:translateY(-1px); box-shadow:0 8px 20px rgba(168,85,247,.28); }
+  .lead-bubble .lb-btn.secondary{ background:transparent; border:1px solid rgba(255,255,255,.18); color:#fff; }
+  .lead-bubble .lb-btn.secondary:hover{ background:rgba(255,255,255,.08); }
+  .lead-bubble .lb-error{ font-size:11px; color:#FF9A9A; margin-top:4px; min-height:14px; }
+
   /* Input */
   .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
   .input-container::before{ content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
@@ -497,13 +512,23 @@ render() {
   .lead-title{ font-weight:600; color:#fff; margin:0 0 10px 0; font-size:14px; }
   .lead-row{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
   .lead-label{ font-size:12px; color:#BBBBBB; }
-  .lead-input, .lead-select, .lead-textarea{ width:100%; height:36px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#fff; padding:8px 10px; font-size:13px; outline:none; pointer-events:auto; }
+  .lead-input, .lead-select, .lead-textarea{ width:100%; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; pointer-events:auto; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+  .lead-input:hover, .lead-select:hover, .lead-textarea:hover{ border-color: rgba(167,139,250,.55); background: rgba(167,139,250,.16); }
+  .lead-input:focus, .lead-select:focus, .lead-textarea:focus{ border-color:#A78BFA; box-shadow:0 0 0 3px rgba(167,139,250,.25); }
+  /* Custom select styling */
+  .lead-select{ -webkit-appearance:none; appearance:none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%23C4B5FD" viewBox="0 0 16 16"><path d="M4.646 6.646a.5.5 0 0 1 .708 0L8 9.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z"/></svg>'); background-repeat:no-repeat; background-position: right 10px center; padding-right:36px; }
   .lead-textarea{ height:64px; resize:vertical; }
   .lead-actions{ display:flex; gap:10px; margin-top:10px; }
-  .lead-submit{ flex:1; height:40px; border:none; border-radius:12px; background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; }
-  .lead-cancel{ flex:1; height:40px; border:none; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; }
+  .lead-submit{ flex:1; height:40px; border:none; border-radius:12px; background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; box-shadow:0 6px 16px rgba(168,85,247,.22); transition:transform .12s ease, box-shadow .15s ease, filter .15s ease; }
+  .lead-submit:hover{ filter: brightness(1.06); transform: translateY(-1px); box-shadow:0 8px 20px rgba(168,85,247,.28); }
+  .lead-cancel{ flex:1; height:40px; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:transparent; color:#FFFFFF; font-weight:700; cursor:pointer; pointer-events:auto; transition:transform .12s ease, background .15s ease, border-color .15s ease; }
+  .lead-cancel:hover{ background:rgba(255,255,255,.08); transform: translateY(-1px); border-color: rgba(255,255,255,.28); }
   .lead-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; pointer-events:auto; }
   .lead-consent input{ margin-top:3px; pointer-events:auto; }
+  .lead-invalid{ border-color:#FF6363 !important; box-shadow:0 0 0 2px rgba(255,99,99,.25); }
+  .shake-lead{ animation: shake .5s ease-in-out; }
+  .lead-consent.lead-invalid .consent-text{ color:#FF9A9A; }
+  .lead-error{ font-size:11px; color:#FF9A9A; margin-top:4px; min-height:14px; }
   .lead-consent .consent-text{ font-size:12px; color:#BBBBBB; line-height:1.4; }
   .lead-consent .consent-text a{ color:#C4B5FD; text-decoration:underline; }
 
@@ -655,10 +680,18 @@ render() {
         <div class="lead-row">
           <label class="lead-label" for="leadName" id="leadNameLabel"></label>
           <input class="lead-input" id="leadName" type="text" />
+          <div class="lead-error" id="leadNameError"></div>
         </div>
-        <div class="lead-row">
-          <label class="lead-label" for="leadContact" id="leadContactLabel"></label>
-          <input class="lead-input" id="leadContact" type="text" />
+        <div class="lead-row" id="leadContactRow">
+          <label class="lead-label" id="leadContactLabel"></label>
+          <div style="display:flex; gap:8px;">
+            <select class="lead-select" id="leadCountryCode" style="flex:0 0 120px"></select>
+            <input class="lead-input" id="leadPhone" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="600112233" />
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <input class="lead-input" id="leadEmail" type="email" placeholder="name@example.com" />
+          </div>
+          <div class="lead-error" id="leadContactError"></div>
         </div>
         <div class="lead-row">
           <label class="lead-label" for="leadChannel" id="leadChannelLabel"></label>
@@ -680,6 +713,7 @@ render() {
           <input type="checkbox" id="leadConsent" />
           <div class="consent-text" id="leadConsentText"></div>
         </div>
+        <div class="lead-error" id="leadConsentError"></div>
         <div class="lead-actions">
           <button class="lead-cancel" id="leadCancel"></button>
           <button class="lead-submit" id="leadSubmit"></button>
@@ -763,23 +797,104 @@ render() {
   // Populate time slots (Europe/Madrid)
   this.populateTimeSlots();
 
+  // Populate country codes (basic)
+  const ccSel = $('#leadCountryCode');
+  if (ccSel) {
+    const codes = [
+      { c:'+34', l:'🇪🇸 +34' },
+      { c:'+49', l:'🇩🇪 +49' },
+      { c:'+33', l:'🇫🇷 +33' },
+      { c:'+39', l:'🇮🇹 +39' },
+      { c:'+44', l:'🇬🇧 +44' },
+      { c:'+1',  l:'🇺🇸 +1' },
+      { c:'+7',  l:'🇷🇺 +7' },
+      { c:'+380',l:'🇺🇦 +380' }
+    ];
+    ccSel.innerHTML = codes.map((o,i)=>`<option value="${o.c}" ${o.c==='+34'?'selected':''}>${o.l}</option>`).join('');
+  }
+
+  // Email domain hints on '@'
+  const emailInput = $('#leadEmail');
+  if (emailInput) {
+    emailInput.addEventListener('input', (e) => {
+      const v = String(emailInput.value || '');
+      const at = v.indexOf('@');
+      if (at >= 0) {
+        // простая подсказка: если нет домена — добавим типовые домены
+        const after = v.slice(at+1);
+        if (!after) {
+          // показываем нотификацию один раз
+          this.ui.showNotification('Try: gmail.com, outlook.com, yahoo.com');
+        }
+      }
+    });
+  }
+
   // Submit lead
   $('#leadSubmit')?.addEventListener('click', async () => {
     const name = $('#leadName')?.value?.trim();
-    const contactValue = $('#leadContact')?.value?.trim();
+    const email = $('#leadEmail')?.value?.trim();
+    const phoneRaw = $('#leadPhone')?.value?.replace(/\D/g,'') || '';
+    const cc = $('#leadCountryCode')?.value || '';
     const channel = $('#leadChannel')?.value;
     const timeValue = $('#leadTime')?.value;
     const note = $('#leadNote')?.value?.trim();
     const consent = $('#leadConsent')?.checked === true;
 
-    if (!name || !contactValue) {
-      this.ui.showNotification(this.tLead('fillBoth'));
+    // validation helpers
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const hasEmail = !!email;
+    const hasPhone = !!phoneRaw;
+
+    const markInvalid = (el) => { if (el){ el.classList.add('lead-invalid','shake-lead'); setTimeout(()=>el.classList.remove('shake-lead'),500);} };
+    const clearInvalid = (el) => { if (el){ el.classList.remove('lead-invalid'); } };
+
+    clearInvalid($('#leadName'));
+    clearInvalid($('#leadEmail'));
+    clearInvalid($('#leadPhone'));
+    $('#leadContactError') && ($('#leadContactError').textContent = '');
+    $('#leadConsentError') && ($('#leadConsentError').textContent = '');
+
+    if (!name) {
+      markInvalid($('#leadName'));
+      const eN = $('#leadNameError'); if (eN) eN.textContent = this.tLead('errNameRequired') || 'Name is required';
+    } else { const eN = $('#leadNameError'); if (eN) eN.textContent = ''; }
+    if (!hasEmail && !hasPhone) {
+      markInvalid($('#leadEmail'));
+      markInvalid($('#leadPhone'));
+      const err = this.tLead('errContactRequired') || this.tLead('fillBoth');
+      const el = $('#leadContactError'); if (el) el.textContent = err;
+      this.ui.showNotification(err);
+      return;
+    }
+    if (hasEmail && !emailRe.test(email)) {
+      markInvalid($('#leadEmail'));
+      const err = this.tLead('errEmailInvalid') || 'Invalid email';
+      const el = $('#leadContactError'); if (el) el.textContent = err;
+      this.ui.showNotification(err);
+      return;
+    }
+    if (hasPhone && phoneRaw.length < 6) {
+      markInvalid($('#leadPhone'));
+      const err = this.tLead('errPhoneInvalid') || 'Invalid phone number';
+      const el = $('#leadContactError'); if (el) el.textContent = err;
+      this.ui.showNotification(err);
       return;
     }
     if (!consent) {
-      this.ui.showNotification(this.tLead('consentRequired'));
+      const err = this.tLead('consentRequired');
+      const wrap = this.shadowRoot.querySelector('.lead-consent');
+      if (wrap) wrap.classList.add('lead-invalid','shake-lead');
+      const el = $('#leadConsentError'); if (el) el.textContent = err;
+      this.ui.showNotification(err);
+      setTimeout(()=>{ if (wrap) wrap.classList.remove('shake-lead'); }, 500);
       return;
     }
+
+    const contactValue = hasEmail ? email : (cc + phoneRaw);
+    const contactChannel = hasEmail ? 'email' : 'phone';
+
+    if (!name) { const el = $('#leadContactError'); if (el) el.textContent = this.tLead('fillBoth'); return; }
 
     let time_window = null;
     try { time_window = timeValue ? JSON.parse(timeValue) : null; } catch {}
@@ -799,7 +914,7 @@ render() {
 
     const payload = {
       name,
-      contact: { channel, value: contactValue },
+      contact: { channel: channel === 'whatsapp' && !hasEmail ? 'whatsapp' : contactChannel, value: contactValue },
       time_window,
       language: this.getLangCode(),
       gdpr: { consent, locale: this.getLangCode() },
@@ -814,21 +929,22 @@ render() {
       });
       const data = await resp.json();
       if (resp.ok && data?.ok) {
-        this.ui.showNotification(this.tLead('success'));
-        // Автозакрытие и сброс формы через 2.5с
-        setTimeout(() => {
-          // Очистить поля
-          const clear = (id) => { const el = this.shadowRoot.getElementById(id); if (el) el.value = ''; };
-          clear('leadName');
-          clear('leadContact');
-          clear('leadNote');
-          const consent = this.shadowRoot.getElementById('leadConsent');
-          if (consent) consent.checked = false;
-
-          // Закрыть панель
-          leadPanel?.classList.remove('active');
-          leadPanel?.setAttribute('aria-hidden', 'true');
-        }, 2500);
+        // Спасибо-форма
+        const box = this.shadowRoot.querySelector('.lead-box');
+        if (box) {
+          box.innerHTML = `
+            <div class="lead-title">${this.tLead('success')}</div>
+            <div class="lead-row"><div class="lead-label">${this.tLead('title')}</div></div>
+            <div class="lead-actions">
+              <button class="lead-submit" id="leadContinue">${this.tLead('cancel') || 'Continue'}</button>
+            </div>
+          `;
+          const cont = this.shadowRoot.getElementById('leadContinue');
+          if (cont) cont.addEventListener('click', () => {
+            leadPanel?.classList.remove('active');
+            leadPanel?.setAttribute('aria-hidden', 'true');
+          });
+        }
       } else {
         // Показать ошибки валидации, если есть
         if (data?.errors && Array.isArray(data.errors) && data.errors.length) {
@@ -924,6 +1040,231 @@ render() {
         </div>
       </div>
     `;
+  };
+
+  // ---------- Inline Lead Bubbles (framework) ----------
+  // State (kept per widget instance; can be augmented from session later)
+  this.inlineLeadState = { step: null, data: { time_window: null, channel: null, contact: null, gdpr: false } };
+
+  this.startInlineLeadFlow = () => {
+    if (this.inlineLeadState.step) return; // already running
+    this.inlineLeadState = { step: 'A', data: { time_window: null, channel: null, contact: null, gdpr: false } };
+    this.renderInlineLeadStep();
+  };
+
+  // CTA bubble to start inline flow or open panel form
+  this.showInlineLeadCTA = () => {
+    if (this.inlineLeadState.step) { this.ui.showNotification(this.tLead('inlineAlready') || 'Already in progress'); return; }
+    const thread = this.shadowRoot.getElementById('thread'); if (!thread) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'message assistant';
+    wrap.innerHTML = `<div class="bubble bubble--full"><div class="lead-bubble">
+      <div class="lb-title">${this.tLead('inlineCtaTitle') || 'I can take your contact and arrange a call'}</div>
+      <div class="lb-actions" style="margin-top:6px;">
+        <button class="lb-btn primary" id="lbCtaInline">${this.tLead('inlineCtaInline') || 'Write here'}</button>
+        <button class="lb-btn secondary" id="lbCtaForm">${this.tLead('inlineCtaForm') || 'Open form'}</button>
+      </div>
+    </div></div>`;
+    thread.appendChild(wrap);
+    thread.scrollTop = thread.scrollHeight;
+    wrap.querySelector('#lbCtaInline')?.addEventListener('click', ()=> this.startInlineLeadFlow());
+    wrap.querySelector('#lbCtaForm')?.addEventListener('click', ()=> this.openLeadPanel());
+  };
+
+  this.cancelInlineLeadFlow = () => {
+    this.inlineLeadState = { step: null, data: { time_window: null, channel: null, contact: null, gdpr: false } };
+    // remove pending bubbles if needed — for now just append system note
+    this.ui.addMessage({ type:'assistant', content:this.tLead('cancel') || 'Cancelled', timestamp:new Date() });
+  };
+
+  this.renderInlineLeadStep = () => {
+    const step = this.inlineLeadState.step;
+    if (!step) return;
+    const thread = this.shadowRoot.getElementById('thread');
+    if (!thread) return;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message assistant';
+    bubble.innerHTML = `<div class="bubble bubble--full"><div class="lead-bubble" id="lb-${Date.now()}"></div></div>`;
+    thread.appendChild(bubble);
+    thread.scrollTop = thread.scrollHeight;
+
+    const lb = bubble.querySelector('.lead-bubble');
+
+    if (step === 'A') {
+      lb.innerHTML = `
+        <div class="lb-title">${this.tLead('timeLabel') || 'Time'}</div>
+        <div class="lb-text">${this.tLead('inlineTzHeader') || 'Europe/Madrid · next 7 days'}</div>
+        <div class="lb-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <input class="lb-input" id="lbDate" type="date" />
+          <select class="lb-select" id="lbTime"></select>
+        </div>
+        <div class="lb-actions">
+          <button class="lb-btn secondary" id="lbSkip">${this.tLead('inlineSkip') || 'Skip / schedule later'}</button>
+          <button class="lb-btn primary" id="lbNext">${this.tLead('inlineContinue') || 'Continue'}</button>
+          <button class="lb-btn secondary" id="lbCancel">${this.tLead('inlineCancel') || 'Cancel'}</button>
+        </div>
+        <div class="lb-error" id="lbErr"></div>`;
+      // date limits for 7 days
+      const tz = 'Europe/Madrid';
+      const today = new Date();
+      const yyyy = today.toLocaleString('sv-SE', { timeZone: tz }).slice(0,10);
+      const plus7 = new Date(today.getTime() + 7*24*60*60*1000).toLocaleString('sv-SE', { timeZone: tz }).slice(0,10);
+      const dateEl = lb.querySelector('#lbDate');
+      const timeEl = lb.querySelector('#lbTime');
+      if (dateEl) { dateEl.setAttribute('min', yyyy); dateEl.setAttribute('max', plus7); dateEl.value = yyyy; }
+      if (timeEl) {
+        const slots = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
+        timeEl.innerHTML = slots.map(t=>`<option value="${t}">${t}</option>`).join('');
+      }
+      const updateTimeCta = () => {
+        const d = lb.querySelector('#lbDate')?.value;
+        const t = lb.querySelector('#lbTime')?.value;
+        const next = lb.querySelector('#lbNext');
+        if (next) next.disabled = !(d && t);
+      };
+      lb.querySelector('#lbDate')?.addEventListener('input', updateTimeCta);
+      lb.querySelector('#lbTime')?.addEventListener('change', updateTimeCta);
+      updateTimeCta();
+
+      lb.querySelector('#lbNext')?.addEventListener('click', ()=>{
+        const d = lb.querySelector('#lbDate')?.value;
+        const t = lb.querySelector('#lbTime')?.value;
+        const errEl = lb.querySelector('#lbErr');
+        if (!d || !t) { if (errEl) errEl.textContent = this.tLead('errTimeRequired') || 'Select date and time'; return; }
+        this.inlineLeadState.data.time_window = { date: d, from: t, to: null, timezone: tz };
+        this.inlineLeadState.step = 'B';
+        this.renderInlineLeadStep();
+      });
+      lb.querySelector('#lbSkip')?.addEventListener('click', ()=>{
+        this.inlineLeadState.data.time_window = null; // schedule later
+        this.inlineLeadState.step = 'B';
+        this.renderInlineLeadStep();
+      });
+      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
+      return;
+    }
+
+    if (step === 'B') {
+      lb.innerHTML = `
+        <div class="lb-title">${this.tLead('channelLabel') || 'Contact method'}</div>
+        <div class="lb-actions">
+          <button class="lb-btn secondary" id="lbPhone">${this.tLead('optPhone') || 'Phone'}</button>
+          <button class="lb-btn secondary" id="lbEmail">${this.tLead('optEmail') || 'Email'}</button>
+          <button class="lb-btn secondary" id="lbCancel">${this.tLead('cancel') || 'Cancel'}</button>
+        </div>
+        <div class="lb-error" id="lbErr"></div>`;
+      lb.querySelector('#lbPhone')?.addEventListener('click', ()=>{ this.inlineLeadState.data.channel = 'phone'; this.inlineLeadState.step = 'C'; this.renderInlineLeadStep(); });
+      lb.querySelector('#lbEmail')?.addEventListener('click', ()=>{ this.inlineLeadState.data.channel = 'email'; this.inlineLeadState.step = 'C'; this.renderInlineLeadStep(); });
+      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
+      return;
+    }
+
+    if (step === 'C') {
+      const isPhone = this.inlineLeadState.data.channel === 'phone' || this.inlineLeadState.data.channel === 'whatsapp';
+      lb.innerHTML = `
+        <div class="lb-title">${isPhone ? (this.tLead('optPhone')||'Phone') : (this.tLead('optEmail')||'Email')}</div>
+        <div class="lb-row">
+          ${isPhone ? `<input class=\"lb-input\" id=\"lbPhoneInput\" type=\"tel\" inputmode=\"tel\" placeholder=\"+34 600 112 233\" />` : `<input class=\"lb-input\" id=\"lbEmailInput\" type=\"email\" placeholder=\"name@example.com\" maxlength=\"254\" />`}
+        </div>
+        <div class="lb-actions">
+          <button class="lb-btn primary" id="lbNext" disabled>${this.tLead('inlineContinue') || 'Continue'}</button>
+          <button class="lb-btn secondary" id="lbCancel">${this.tLead('cancel') || 'Cancel'}</button>
+        </div>
+        <div class="lb-error" id="lbErr"></div>`;
+      const updateCta = () => {
+        const next = lb.querySelector('#lbNext');
+        const errEl = lb.querySelector('#lbErr');
+        if (errEl) errEl.textContent = '';
+        if (isPhone) {
+          const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
+          next.disabled = raw.length < 6;
+        } else {
+          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
+          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          next.disabled = !(re.test(em));
+        }
+      };
+      lb.querySelector('#lbPhoneInput')?.addEventListener('input', updateCta);
+      lb.querySelector('#lbEmailInput')?.addEventListener('input', updateCta);
+      updateCta();
+
+      lb.querySelector('#lbNext')?.addEventListener('click', ()=>{
+        const errEl = lb.querySelector('#lbErr');
+        if (isPhone) {
+          const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
+          if (raw.length < 6) { if (errEl) errEl.textContent = this.tLead('errPhoneInvalid')||'Invalid phone'; return; }
+          this.inlineLeadState.data.contact = { channel: 'phone', value: `+${raw}`.replace(/^\++/,'+') };
+        } else {
+          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
+          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!re.test(em)) { if (errEl) errEl.textContent = this.tLead('errEmailInvalid')||'Invalid email'; return; }
+          this.inlineLeadState.data.contact = { channel: 'email', value: em };
+        }
+        this.inlineLeadState.step = 'D';
+        this.renderInlineLeadStep();
+      });
+      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
+      return;
+    }
+
+    if (step === 'D') {
+      lb.innerHTML = `
+        <div class="lb-title">GDPR</div>
+        <div class="lb-row"><label style="display:flex; gap:8px; align-items:flex-start;">
+          <input type="checkbox" id="lbGdpr" />
+          <span>${this.tLead('consentRequired')||'Please accept the Privacy Policy'} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span>
+        </label></div>
+        <div class="lb-actions">
+          <button class="lb-btn primary" id="lbSubmit">${this.tLead('submit')||'Send'}</button>
+          <button class="lb-btn secondary" id="lbCancel">${this.tLead('cancel')||'Cancel'}</button>
+        </div>
+        <div class="lb-error" id="lbErr"></div>`;
+      lb.querySelector('#lbSubmit')?.addEventListener('click', async ()=>{
+        const ok = lb.querySelector('#lbGdpr')?.checked === true;
+        const errEl = lb.querySelector('#lbErr');
+        if (!ok) { if (errEl) errEl.textContent = this.tLead('consentRequired'); return; }
+        // submit via /api/leads (same payload shape)
+        const payload = {
+          name: this.shadowRoot.getElementById('leadName')?.value || null,
+          contact: this.inlineLeadState.data.contact,
+          time_window: this.inlineLeadState.data.time_window,
+          language: this.getLangCode(),
+          gdpr: { consent: true, locale: this.getLangCode() },
+          context: { sessionId: this.sessionId || null, notes: this.inlineLeadState.data.time_window ? null : 'schedule_later', source: 'inline' }
+        };
+        try {
+          const baseApi = (() => { try { const u = new URL(this.apiUrl, window.location.href); return `${u.protocol}//${u.host}`;} catch { return ''; }})();
+          const resp = await fetch(`${baseApi}/api/leads`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const data = await resp.json().catch(()=>({}));
+          if (resp.ok && data?.ok) {
+            // Confirmation bubble with CTA
+            const thread = this.shadowRoot.getElementById('thread');
+            const bubble = document.createElement('div');
+            bubble.className = 'message assistant';
+            bubble.innerHTML = `<div class="bubble bubble--full"><div class="lead-bubble">
+              <div class="lb-title">${this.tLead('success') || 'Thanks! We will contact you in the selected time.'}</div>
+              <div class="lb-actions" style="margin-top:6px;">
+                <button class="lb-btn primary" id="lbDoneCta">${this.tLead('inlineContinue') || 'Continue'}</button>
+              </div>
+            </div></div>`;
+            thread.appendChild(bubble);
+            thread.scrollTop = thread.scrollHeight;
+            bubble.querySelector('#lbDoneCta')?.addEventListener('click', ()=>{
+              // simply keep dialog; bubble remains as history
+            });
+            this.inlineLeadState = { step: null, data: { time_window:null, channel:null, contact:null, gdpr:false } };
+          } else {
+            if (data?.errors?.length) { if (errEl) errEl.textContent = `${data.errors[0].field}: ${data.errors[0].message}`; }
+            else { if (errEl) errEl.textContent = this.tLead('errorGeneric') || 'An error occurred'; }
+          }
+        } catch (e) {
+          if (errEl) errEl.textContent = this.tLead('errorNetwork') || 'Network error';
+        }
+      });
+      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
+      return;
+    }
   };
 
   // Card events
@@ -1422,7 +1763,23 @@ render() {
         success: 'Thanks! We will contact you in the selected time.',
         errorGeneric: 'An error occurred, please try again',
         errorNetwork: 'Network error. Please try again',
-        consentRequired: 'Please accept the Privacy Policy'
+        consentRequired: 'Please accept the Privacy Policy',
+        errNameRequired: 'Name is required',
+        errContactRequired: 'Provide either phone or email',
+        errEmailInvalid: 'Email is invalid',
+        errPhoneInvalid: 'Phone number is invalid',
+        inlineContinue: 'Continue',
+        inlineSkip: 'Skip / schedule later',
+        inlineSend: 'Send',
+        inlineCancel: 'Cancel',
+        inlineGdprTitle: 'GDPR consent',
+        inlineContactMethodQ: 'How should we contact you?',
+        errTimeRequired: 'Please select date and time',
+        inlineTzHeader: 'Europe/Madrid · next 7 days',
+        inlineCtaTitle: 'I can take your contact and arrange a call',
+        inlineCtaInline: 'Write here',
+        inlineCtaForm: 'Open form',
+        inlineAlready: 'Lead capture is already in progress'
       },
       es: {
         openButton: 'Enviar solicitud',
@@ -1437,7 +1794,23 @@ render() {
         success: '¡Gracias! Nos pondremos en contacto en el horario indicado.',
         errorGeneric: 'Ocurrió un error, inténtelo de nuevo',
         errorNetwork: 'Error de red. Inténtalo de nuevo',
-        consentRequired: 'Por favor, acepte la Política de Privacidad'
+        consentRequired: 'Por favor, acepte la Política de Privacidad',
+        errNameRequired: 'El nombre es obligatorio',
+        errContactRequired: 'Indique teléfono o e‑mail',
+        errEmailInvalid: 'E‑mail no válido',
+        errPhoneInvalid: 'Teléfono no válido',
+        inlineContinue: 'Continuar',
+        inlineSkip: 'Omitir / acordamos después',
+        inlineSend: 'Enviar',
+        inlineCancel: 'Cancelar',
+        inlineGdprTitle: 'Consentimiento GDPR',
+        inlineContactMethodQ: '¿Cómo le es más cómodo que contactemos?',
+        errTimeRequired: 'Seleccione fecha y hora',
+        inlineTzHeader: 'Europa/Madrid · próximos 7 días',
+        inlineCtaTitle: 'Puedo tomar su contacto y coordinar una llamada',
+        inlineCtaInline: 'Escribir aquí',
+        inlineCtaForm: 'Abrir formulario',
+        inlineAlready: 'Ya estamos recopilando los datos'
       },
       ru: {
         openButton: 'Оставить заявку',
@@ -1452,7 +1825,23 @@ render() {
         success: 'Спасибо! Мы свяжемся с вами в выбранное время.',
         errorGeneric: 'Произошла ошибка, попробуйте снова',
         errorNetwork: 'Сеть недоступна. Попробуйте ещё раз',
-        consentRequired: 'Пожалуйста, подтвердите согласие с Политикой конфиденциальности'
+        consentRequired: 'Пожалуйста, подтвердите согласие с Политикой конфиденциальности',
+        errNameRequired: 'Укажите имя',
+        errContactRequired: 'Укажите телефон или e‑mail',
+        errEmailInvalid: 'Некорректный e‑mail',
+        errPhoneInvalid: 'Некорректный номер телефона',
+        inlineContinue: 'Продолжить',
+        inlineSkip: 'Пропустить / согласуем позже',
+        inlineSend: 'Отправить',
+        inlineCancel: 'Отмена',
+        inlineGdprTitle: 'Согласие на обработку данных',
+        inlineContactMethodQ: 'Как с вами удобнее связаться?',
+        errTimeRequired: 'Выберите дату и время',
+        inlineTzHeader: 'Europe/Madrid · ближайшие 7 дней',
+        inlineCtaTitle: 'Могу взять ваш контакт и согласовать звонок',
+        inlineCtaInline: 'Написать здесь',
+        inlineCtaForm: 'Открыть форму',
+        inlineAlready: 'Сбор данных уже идёт'
       },
       uk: {
         openButton: 'Залишити заявку',
@@ -1467,7 +1856,23 @@ render() {
         success: 'Дякуємо! Зв’яжемося у вибране вікно',
         errorGeneric: 'Не вдалося надіслати. Спробуйте ще раз',
         errorNetwork: 'Проблема з мережею. Спробуйте ще раз',
-        consentRequired: 'Будь ласка, прийміть Політику конфіденційності'
+        consentRequired: 'Будь ласка, прийміть Політику конфіденційності',
+        errNameRequired: "Вкажіть ім'я",
+        errContactRequired: 'Вкажіть телефон або e‑mail',
+        errEmailInvalid: 'Некоректний e‑mail',
+        errPhoneInvalid: 'Некоректний номер телефону',
+        inlineContinue: 'Продовжити',
+        inlineSkip: 'Пропустити / узгодимо пізніше',
+        inlineSend: 'Надіслати',
+        inlineCancel: 'Скасувати',
+        inlineGdprTitle: 'Згода на обробку даних',
+        inlineContactMethodQ: 'Як з вами зручніше зв’язатися?',
+        errTimeRequired: 'Виберіть дату і час',
+        inlineTzHeader: 'Europe/Madrid · найближчі 7 днів',
+        inlineCtaTitle: 'Можу взяти ваш контакт і узгодити дзвінок',
+        inlineCtaInline: 'Написати тут',
+        inlineCtaForm: 'Відкрити форму',
+        inlineAlready: 'Збір даних уже триває'
       },
       fr: {
         openButton: 'Laisser une demande',
@@ -1482,7 +1887,23 @@ render() {
         success: 'Merci ! Nous vous contacterons dans le créneau choisi',
         errorGeneric: 'Échec de l’envoi. Réessayez',
         errorNetwork: 'Erreur réseau. Réessayez',
-        consentRequired: 'Veuillez accepter la politique de confidentialité'
+        consentRequired: 'Veuillez accepter la politique de confidentialité',
+        errNameRequired: 'Le nom est requis',
+        errContactRequired: 'Indiquez un téléphone ou un e‑mail',
+        errEmailInvalid: 'E‑mail invalide',
+        errPhoneInvalid: 'Numéro de téléphone invalide',
+        inlineContinue: 'Continuer',
+        inlineSkip: 'Passer / à convenir plus tard',
+        inlineSend: 'Envoyer',
+        inlineCancel: 'Annuler',
+        inlineGdprTitle: 'Consentement RGPD',
+        inlineContactMethodQ: 'Comment préférez-vous être contacté ?',
+        errTimeRequired: 'Sélectionnez la date et l’heure',
+        inlineTzHeader: 'Europe/Madrid · 7 prochains jours',
+        inlineCtaTitle: 'Je peux prendre vos coordonnées et planifier un appel',
+        inlineCtaInline: 'Écrire ici',
+        inlineCtaForm: 'Ouvrir le formulaire',
+        inlineAlready: 'La collecte est déjà en cours'
       },
       de: {
         openButton: 'Anfrage senden',
@@ -1497,7 +1918,23 @@ render() {
         success: 'Danke! Wir melden uns im gewählten Zeitraum',
         errorGeneric: 'Senden fehlgeschlagen. Bitte erneut versuchen',
         errorNetwork: 'Netzwerkfehler. Bitte erneut versuchen',
-        consentRequired: 'Bitte akzeptieren Sie die Datenschutzrichtlinie'
+        consentRequired: 'Bitte akzeptieren Sie die Datenschutzrichtlinie',
+        errNameRequired: 'Name ist erforderlich',
+        errContactRequired: 'Telefon oder E‑Mail angeben',
+        errEmailInvalid: 'E‑Mail ist ungültig',
+        errPhoneInvalid: 'Telefonnummer ist ungültig',
+        inlineContinue: 'Weiter',
+        inlineSkip: 'Überspringen / später abstimmen',
+        inlineSend: 'Senden',
+        inlineCancel: 'Abbrechen',
+        inlineGdprTitle: 'DSGVO-Zustimmung',
+        inlineContactMethodQ: 'Wie sollen wir Sie kontaktieren?',
+        errTimeRequired: 'Bitte Datum und Uhrzeit wählen',
+        inlineTzHeader: 'Europe/Madrid · nächste 7 Tage',
+        inlineCtaTitle: 'Ich kann Ihre Kontaktdaten aufnehmen und einen Anruf planen',
+        inlineCtaInline: 'Hier schreiben',
+        inlineCtaForm: 'Formular öffnen',
+        inlineAlready: 'Erfassung läuft bereits'
       },
       it: {
         openButton: 'Invia richiesta',
@@ -1512,7 +1949,23 @@ render() {
         success: 'Grazie! Ti contatteremo nella fascia scelta',
         errorGeneric: 'Invio non riuscito. Riprova',
         errorNetwork: 'Errore di rete. Riprova',
-        consentRequired: 'Si prega di accettare l’Informativa sulla privacy'
+        consentRequired: 'Si prega di accettare l’Informativa sulla privacy',
+        errNameRequired: 'Il nome è obbligatorio',
+        errContactRequired: 'Indica telefono o e‑mail',
+        errEmailInvalid: 'E‑mail non valida',
+        errPhoneInvalid: 'Numero di telefono non valido',
+        inlineContinue: 'Continua',
+        inlineSkip: 'Salta / concordiamo dopo',
+        inlineSend: 'Invia',
+        inlineCancel: 'Annulla',
+        inlineGdprTitle: 'Consenso GDPR',
+        inlineContactMethodQ: 'Come preferisci essere contattato?',
+        errTimeRequired: 'Seleziona data e ora',
+        inlineTzHeader: 'Europe/Madrid · prossimi 7 giorni',
+        inlineCtaTitle: 'Posso prendere il tuo contatto e fissare una chiamata',
+        inlineCtaInline: 'Scrivi qui',
+        inlineCtaForm: 'Apri il form',
+        inlineAlready: 'La raccolta è già in corso'
       }
     };
   }
@@ -1534,7 +1987,6 @@ render() {
     setText('leadNameLabel', this.tLead('nameLabel'));
     setPh('leadName', this.tLead('namePh'));
     setText('leadContactLabel', this.tLead('contactLabel'));
-    setPh('leadContact', this.tLead('contactPh'));
     setText('leadChannelLabel', this.tLead('channelLabel'));
     const optWA = this.shadowRoot.getElementById('optWhatsApp'); if (optWA) optWA.textContent = this.tLead('optWhatsapp');
     const optPh = this.shadowRoot.getElementById('optPhone'); if (optPh) optPh.textContent = this.tLead('optPhone');

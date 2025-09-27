@@ -83,9 +83,26 @@ export class APIClient {
         if (Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
         }
-        // 🔔 Показ формы лида по сигналу бэка
-        if (data.ui && data.ui.suggestLeadForm && typeof this.widget.openLeadPanel === 'function') {
-          this.widget.openLeadPanel();
+        // Inline lead-flow: if backend parsed contact/time, fast-forward flow
+        if (data.ui && data.ui.inlineLead) {
+          const il = data.ui.inlineLead;
+          try {
+            if (il.startFlow && !this.widget.inlineLeadState.step) {
+              this.widget.startInlineLeadFlow();
+            }
+            if (il.timeFound && il.time_window) {
+              this.widget.inlineLeadState.data.time_window = il.time_window;
+              if (!this.widget.inlineLeadState.step) this.widget.inlineLeadState.step = 'B';
+            }
+            if (il.contactFound && il.contact) {
+              this.widget.inlineLeadState.data.contact = il.contact;
+              // If we have contact, jump to GDPR step
+              this.widget.inlineLeadState.step = 'D';
+            }
+            if (this.widget.inlineLeadState.step) {
+              this.widget.renderInlineLeadStep();
+            }
+          } catch (e) { console.warn('Inline flow fast-forward error:', e); }
         }
       } catch (e) { console.warn('Cards handling error:', e); }
 
@@ -150,8 +167,22 @@ export class APIClient {
         if (Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
         }
-        if (data.ui && data.ui.suggestLeadForm && typeof this.widget.openLeadPanel === 'function') {
-          this.widget.openLeadPanel();
+        // Inline lead-flow fast-forward for main screen send
+        if (data.ui && data.ui.inlineLead) {
+          const il = data.ui.inlineLead;
+          try {
+            if (il.timeFound && il.time_window) {
+              this.widget.inlineLeadState.data.time_window = il.time_window;
+              if (!this.widget.inlineLeadState.step) this.widget.inlineLeadState.step = 'B';
+            }
+            if (il.contactFound && il.contact) {
+              this.widget.inlineLeadState.data.contact = il.contact;
+              this.widget.inlineLeadState.step = 'D';
+            }
+            if (this.widget.inlineLeadState.step) {
+              this.widget.renderInlineLeadStep();
+            }
+          } catch (e) { console.warn('Inline flow fast-forward (main) error:', e); }
         }
       } catch (e) { console.warn('Cards handling error (main):', e); }
 
