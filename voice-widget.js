@@ -363,19 +363,7 @@ render() {
   .card-actions-panel .card-btn.next:hover{ color:#ffffff; }
 
   /* ===== Inline Lead Bubbles ===== */
-  .lead-bubble{ background:rgba(255,255,255,.06); color:#fff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); padding:12px; width:100%; }
-  .lead-bubble .lb-title{ font-weight:700; margin-bottom:6px; }
-  .lead-bubble .lb-text{ font-size:12px; color:#BBBBBB; margin-bottom:10px; }
-  .lead-bubble .lb-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-  .lead-bubble .lb-input{ flex:1; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; }
-  .lead-bubble .lb-select{ flex:1; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; -webkit-appearance:none; appearance:none; }
-  .lead-bubble .lb-actions{ display:flex; gap:10px; margin-top:8px; }
-  .lead-bubble .lb-btn{ flex:0 0 auto; height:36px; border:none; border-radius:12px; padding:0 14px; font-weight:700; cursor:pointer; }
-  .lead-bubble .lb-btn.primary{ background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); color:#fff; box-shadow:0 6px 16px rgba(168,85,247,.22); }
-  .lead-bubble .lb-btn.primary:hover{ filter:brightness(1.06); transform:translateY(-1px); box-shadow:0 8px 20px rgba(168,85,247,.28); }
-  .lead-bubble .lb-btn.secondary{ background:transparent; border:1px solid rgba(255,255,255,.18); color:#fff; }
-  .lead-bubble .lb-btn.secondary:hover{ background:rgba(255,255,255,.08); }
-  .lead-bubble .lb-error{ font-size:11px; color:#FF9A9A; margin-top:4px; min-height:14px; }
+  /* Стили удалены: inline bubble наследует стили от классов большой формы (lead-*) */
 
   /* Input */
   .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
@@ -552,6 +540,30 @@ render() {
     :host{ left:0; right:0; bottom:auto; top:auto; }
     .widget{ width:100%; max-width:640px; margin:0 auto; border-radius:16px 16px 0 0; transform:translateY(100%); transition:transform .28s ease, opacity .28s ease; }
     :host(.open) .widget{ transform:translateY(0); }
+  }
+  /* Mobile iPhone range: 430, 414, 390, 375, 360 */
+  @media (max-width:430px){
+    .widget{ height:90dvh; width:100%; max-width:none; border-radius:16px 16px 0 0; }
+    .content{ padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+    .lead-box{ width:100%; max-width:100%; padding:16px; margin:8px 10px; }
+    .lead-actions .lead-submit{ min-width:160px; }
+  }
+  @media (max-width:414px){
+    .lead-box{ padding:14px; margin:8px 8px; }
+  }
+  @media (max-width:390px){
+    .lead-box{ padding:12px; }
+    .lead-row{ margin:6px 0; }
+    #lbCountryCode{ flex:0 0 110px !important; }
+  }
+  @media (max-width:375px){
+    .lead-box{ padding:12px; }
+    #lbCountryCode{ flex:0 0 100px !important; }
+  }
+  @media (max-width:360px){
+    .lead-box{ padding:10px; margin:6px; }
+    #lbCountryCode{ flex:0 0 96px !important; }
+    .lead-actions .lead-submit{ min-width:150px; }
   }
   @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
   </style>
@@ -852,10 +864,8 @@ render() {
     $('#leadContactError') && ($('#leadContactError').textContent = '');
     $('#leadConsentError') && ($('#leadConsentError').textContent = '');
 
-    if (!name) {
-      markInvalid($('#leadName'));
-      const eN = $('#leadNameError'); if (eN) eN.textContent = this.tLead('errNameRequired') || 'Name is required';
-    } else { const eN = $('#leadNameError'); if (eN) eN.textContent = ''; }
+    // Name is optional now
+    const eN = $('#leadNameError'); if (eN) eN.textContent = '';
     if (!hasEmail && !hasPhone) {
       markInvalid($('#leadEmail'));
       markInvalid($('#leadPhone'));
@@ -891,7 +901,7 @@ render() {
     const contactValue = hasEmail ? email : (cc + phoneRaw);
     const contactChannel = hasEmail ? 'email' : 'phone';
 
-    if (!name) { const el = $('#leadContactError'); if (el) el.textContent = this.tLead('fillBoth'); return; }
+    // Name is optional in big form too; no blocking on name
 
     let time_window = null;
     try { time_window = timeValue ? JSON.parse(timeValue) : null; } catch {}
@@ -1086,150 +1096,166 @@ render() {
     const thread = this.shadowRoot.getElementById('thread');
     if (!thread) return;
 
+    // Remove previous inline lead bubble (replace instead of stacking)
+    const existingInline = thread.querySelectorAll('.lead-box[id^="lb-"]');
+    if (existingInline.length) {
+      const last = existingInline[existingInline.length - 1];
+      last.closest('.message')?.remove();
+    }
+
     const bubble = document.createElement('div');
     bubble.className = 'message assistant';
-    bubble.innerHTML = `<div class="bubble bubble--full"><div class="lead-bubble" id="lb-${Date.now()}"></div></div>`;
+    // Render form as standalone (not inside chat bubble)
+    const formWrap = document.createElement('div');
+    formWrap.className = 'lead-box';
+    formWrap.id = `lb-${Date.now()}`;
+    bubble.appendChild(formWrap);
     thread.appendChild(bubble);
     thread.scrollTop = thread.scrollHeight;
 
-    const lb = bubble.querySelector('.lead-bubble');
+    const lb = formWrap;
 
     if (step === 'A') {
       lb.innerHTML = `
-        <div class="lb-title">${this.tLead('timeLabel') || 'Time'}</div>
-        <div class="lb-text">${this.tLead('inlineTzHeader') || 'Europe/Madrid · next 7 days'}</div>
-        <div class="lb-row" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-          <input class="lb-input" id="lbDate" type="date" />
-          <select class="lb-select" id="lbTime"></select>
+        <div class="lead-title">${this.tLead('timeLabel') || 'Time'}</div>
+        <div class="lead-row">
+          <label class="lead-label" for="lbTimeRange">${this.tLead('timeLabel') || 'Time'}</label>
+          <select class="lead-select" id="lbTimeRange"></select>
+          <div class="lead-error" id="lbErr"></div>
         </div>
-        <div class="lb-actions">
-          <button class="lb-btn secondary" id="lbSkip">${this.tLead('inlineSkip') || 'Skip / schedule later'}</button>
-          <button class="lb-btn primary" id="lbNext">${this.tLead('inlineContinue') || 'Continue'}</button>
-          <button class="lb-btn secondary" id="lbCancel">${this.tLead('inlineCancel') || 'Cancel'}</button>
-        </div>
-        <div class="lb-error" id="lbErr"></div>`;
-      // date limits for 7 days
+        <div class="lead-actions" style="justify-content:center;">
+          <button class="lead-submit" id="lbNext" style="width:120px; height:40px; flex:0 0 auto;">${this.tLead('inlineContinue') || 'Continue'}</button>
+        </div>`;
+
       const tz = 'Europe/Madrid';
-      const today = new Date();
-      const yyyy = today.toLocaleString('sv-SE', { timeZone: tz }).slice(0,10);
-      const plus7 = new Date(today.getTime() + 7*24*60*60*1000).toLocaleString('sv-SE', { timeZone: tz }).slice(0,10);
-      const dateEl = lb.querySelector('#lbDate');
-      const timeEl = lb.querySelector('#lbTime');
-      if (dateEl) { dateEl.setAttribute('min', yyyy); dateEl.setAttribute('max', plus7); dateEl.value = yyyy; }
-      if (timeEl) {
-        const slots = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00'];
-        timeEl.innerHTML = slots.map(t=>`<option value="${t}">${t}</option>`).join('');
-      }
+      const now = new Date();
+      const fmt = (d) => d.toLocaleString('en-US', { weekday:'short', month:'2-digit', day:'2-digit' });
+      const today = fmt(now);
+      const tomorrowDate = new Date(now.getTime() + 24*60*60*1000);
+      const tomorrow = fmt(tomorrowDate);
+      const options = [
+        { v: { date: now.toISOString().slice(0,10), from:'17:00', to:'19:00', timezone: tz }, l: `${this.tLead('today')} 17–19 (${today})` },
+        { v: { date: now.toISOString().slice(0,10), from:'19:00', to:'21:00', timezone: tz }, l: `${this.tLead('today')} 19–21 (${today})` },
+        { v: { date: tomorrowDate.toISOString().slice(0,10), from:'10:00', to:'12:00', timezone: tz }, l: `${this.tLead('tomorrow')} 10–12 (${tomorrow})` },
+        { v: { date: tomorrowDate.toISOString().slice(0,10), from:'12:00', to:'14:00', timezone: tz }, l: `${this.tLead('tomorrow')} 12–14 (${tomorrow})` }
+      ];
+      const sel = lb.querySelector('#lbTimeRange');
+      if (sel) sel.innerHTML = options.map((o,i)=>`<option value='${JSON.stringify(o.v)}' ${i===0?'selected':''}>${o.l}</option>`).join('');
+
       const updateTimeCta = () => {
-        const d = lb.querySelector('#lbDate')?.value;
-        const t = lb.querySelector('#lbTime')?.value;
+        const val = lb.querySelector('#lbTimeRange')?.value;
         const next = lb.querySelector('#lbNext');
-        if (next) next.disabled = !(d && t);
+        if (next) next.disabled = !val;
       };
-      lb.querySelector('#lbDate')?.addEventListener('input', updateTimeCta);
-      lb.querySelector('#lbTime')?.addEventListener('change', updateTimeCta);
+      lb.querySelector('#lbTimeRange')?.addEventListener('change', updateTimeCta);
       updateTimeCta();
 
       lb.querySelector('#lbNext')?.addEventListener('click', ()=>{
-        const d = lb.querySelector('#lbDate')?.value;
-        const t = lb.querySelector('#lbTime')?.value;
+        const val = lb.querySelector('#lbTimeRange')?.value;
         const errEl = lb.querySelector('#lbErr');
-        if (!d || !t) { if (errEl) errEl.textContent = this.tLead('errTimeRequired') || 'Select date and time'; return; }
-        this.inlineLeadState.data.time_window = { date: d, from: t, to: null, timezone: tz };
-        this.inlineLeadState.step = 'B';
+        if (!val) { if (errEl) errEl.textContent = this.tLead('errTimeRequired') || 'Select date and time'; return; }
+        try { this.inlineLeadState.data.time_window = JSON.parse(val); } catch { this.inlineLeadState.data.time_window = null; }
+        // Skip channel selection step; default to phone
+        this.inlineLeadState.data.channel = 'phone';
+        this.inlineLeadState.step = 'C';
         this.renderInlineLeadStep();
       });
-      lb.querySelector('#lbSkip')?.addEventListener('click', ()=>{
-        this.inlineLeadState.data.time_window = null; // schedule later
-        this.inlineLeadState.step = 'B';
-        this.renderInlineLeadStep();
-      });
-      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
+      // no cancel button per spec
       return;
     }
 
-    if (step === 'B') {
-      lb.innerHTML = `
-        <div class="lb-title">${this.tLead('channelLabel') || 'Contact method'}</div>
-        <div class="lb-actions">
-          <button class="lb-btn secondary" id="lbPhone">${this.tLead('optPhone') || 'Phone'}</button>
-          <button class="lb-btn secondary" id="lbEmail">${this.tLead('optEmail') || 'Email'}</button>
-          <button class="lb-btn secondary" id="lbCancel">${this.tLead('cancel') || 'Cancel'}</button>
-        </div>
-        <div class="lb-error" id="lbErr"></div>`;
-      lb.querySelector('#lbPhone')?.addEventListener('click', ()=>{ this.inlineLeadState.data.channel = 'phone'; this.inlineLeadState.step = 'C'; this.renderInlineLeadStep(); });
-      lb.querySelector('#lbEmail')?.addEventListener('click', ()=>{ this.inlineLeadState.data.channel = 'email'; this.inlineLeadState.step = 'C'; this.renderInlineLeadStep(); });
-      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
-      return;
-    }
+    // step B (channel selection) removed per spec
 
     if (step === 'C') {
-      const isPhone = this.inlineLeadState.data.channel === 'phone' || this.inlineLeadState.data.channel === 'whatsapp';
       lb.innerHTML = `
-        <div class="lb-title">${isPhone ? (this.tLead('optPhone')||'Phone') : (this.tLead('optEmail')||'Email')}</div>
-        <div class="lb-row">
-          ${isPhone ? `<input class=\"lb-input\" id=\"lbPhoneInput\" type=\"tel\" inputmode=\"tel\" placeholder=\"+34 600 112 233\" />` : `<input class=\"lb-input\" id=\"lbEmailInput\" type=\"email\" placeholder=\"name@example.com\" maxlength=\"254\" />`}
+        <div class="lead-title">${this.tLead('contactLabel') || 'Contact'}</div>
+        <div class="lead-row">
+          <label class="lead-label" for="lbPhoneInput">${this.tLead('optPhone')||'Phone'}</label>
+          <div style="display:flex; gap:8px;"><select class="lead-select" id="lbCountryCode" style="flex:0 0 120px"></select><input class="lead-input" id="lbPhoneInput" type="tel" inputmode="numeric" placeholder="600112233" /></div>
         </div>
-        <div class="lb-actions">
-          <button class="lb-btn primary" id="lbNext" disabled>${this.tLead('inlineContinue') || 'Continue'}</button>
-          <button class="lb-btn secondary" id="lbCancel">${this.tLead('cancel') || 'Cancel'}</button>
+        <div class="lead-row">
+          <label class="lead-label" for="lbEmailInput">${this.tLead('optEmail')||'Email'}</label>
+          <input class="lead-input" id="lbEmailInput" type="email" placeholder="name@example.com" maxlength="254" />
+          <div class="lead-error" id="lbErr"></div>
         </div>
-        <div class="lb-error" id="lbErr"></div>`;
+        <div class="lead-row">
+          <label class="lead-label" for="lbChannel">${this.tLead('channelLabel')||'Preferred method'}</label>
+          <select class="lead-select" id="lbChannel">
+            <option value="whatsapp">${this.tLead('optWhatsApp')||'WhatsApp'}</option>
+            <option value="phone" selected>${this.tLead('optPhone')||'Phone'}</option>
+            <option value="email">${this.tLead('optEmail')||'Email'}</option>
+          </select>
+        </div>
+        <div class="lead-actions" style="justify-content:center;">
+          <button class="lead-submit" id="lbNext" disabled style="width:120px; height:40px; flex:0 0 auto;">${this.tLead('inlineContinue') || 'Continue'}</button>
+        </div>`;
+
+      // populate country codes from full form
+      const src = this.shadowRoot.getElementById('leadCountryCode');
+      const dst = lb.querySelector('#lbCountryCode');
+      if (src && dst) dst.innerHTML = src.innerHTML;
+
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const updateCta = () => {
+        const selected = String(lb.querySelector('#lbChannel')?.value || 'phone');
         const next = lb.querySelector('#lbNext');
-        const errEl = lb.querySelector('#lbErr');
-        if (errEl) errEl.textContent = '';
-        if (isPhone) {
+        const errEl = lb.querySelector('#lbErr'); if (errEl) errEl.textContent = '';
+        if (selected === 'email') {
+          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
+          next.disabled = !(emailRe.test(em));
+        } else {
           const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
           next.disabled = raw.length < 6;
-        } else {
-          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
-          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          next.disabled = !(re.test(em));
         }
       };
       lb.querySelector('#lbPhoneInput')?.addEventListener('input', updateCta);
       lb.querySelector('#lbEmailInput')?.addEventListener('input', updateCta);
+      lb.querySelector('#lbChannel')?.addEventListener('change', updateCta);
       updateCta();
 
       lb.querySelector('#lbNext')?.addEventListener('click', ()=>{
-        const errEl = lb.querySelector('#lbErr');
-        if (isPhone) {
+        const selected = String(lb.querySelector('#lbChannel')?.value || 'phone');
+        const errEl = lb.querySelector('#lbErr'); if (errEl) errEl.textContent = '';
+        if (selected === 'email') {
+          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
+          if (!emailRe.test(em)) { if (errEl) errEl.textContent = this.tLead('errEmailInvalid')||'Invalid email'; return; }
+          this.inlineLeadState.data.channel = 'email';
+          this.inlineLeadState.data.contact = { channel: 'email', value: em };
+        } else {
           const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
           if (raw.length < 6) { if (errEl) errEl.textContent = this.tLead('errPhoneInvalid')||'Invalid phone'; return; }
-          this.inlineLeadState.data.contact = { channel: 'phone', value: `+${raw}`.replace(/^\++/,'+') };
-        } else {
-          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
-          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!re.test(em)) { if (errEl) errEl.textContent = this.tLead('errEmailInvalid')||'Invalid email'; return; }
-          this.inlineLeadState.data.contact = { channel: 'email', value: em };
+          const cc = String(lb.querySelector('#lbCountryCode')?.value || '');
+          this.inlineLeadState.data.channel = selected === 'whatsapp' ? 'whatsapp' : 'phone';
+          this.inlineLeadState.data.contact = { channel: 'phone', value: `+${(cc+raw).replace(/^\++/,'')}`.replace(/^\++/,'+') };
         }
         this.inlineLeadState.step = 'D';
         this.renderInlineLeadStep();
       });
-      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
       return;
     }
 
     if (step === 'D') {
       lb.innerHTML = `
-        <div class="lb-title">GDPR</div>
-        <div class="lb-row"><label style="display:flex; gap:8px; align-items:flex-start;">
-          <input type="checkbox" id="lbGdpr" />
-          <span>${this.tLead('consentRequired')||'Please accept the Privacy Policy'} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span>
-        </label></div>
-        <div class="lb-actions">
-          <button class="lb-btn primary" id="lbSubmit">${this.tLead('submit')||'Send'}</button>
-          <button class="lb-btn secondary" id="lbCancel">${this.tLead('cancel')||'Cancel'}</button>
+        <div class="lead-title">GDPR</div>
+        <div class="lead-row">
+          <label class="lead-consent"><input type="checkbox" id="lbGdpr" /><span class="consent-text">${this.tLead('consentRequired')||'Please accept the Privacy Policy'} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span></label>
+          <div class="lead-error" id="lbErr"></div>
         </div>
-        <div class="lb-error" id="lbErr"></div>`;
+        <div class="lead-row">
+          <label class="lead-label" for="lbName">${this.tLead('yourName')||'Your name'} (${this.tLead('optional')||'optional'})</label>
+          <input class="lead-input" id="lbName" type="text" />
+          <div class="lead-error" id="lbNameErr"></div>
+        </div>
+        <div class="lead-actions" style="justify-content:center;">
+          <button class="lead-submit" id="lbSubmit" style="width:120px; height:40px; flex:0 0 auto;">${this.tLead('inlineContinue')||'Continue'}</button>
+        </div>`;
       lb.querySelector('#lbSubmit')?.addEventListener('click', async ()=>{
         const ok = lb.querySelector('#lbGdpr')?.checked === true;
         const errEl = lb.querySelector('#lbErr');
         if (!ok) { if (errEl) errEl.textContent = this.tLead('consentRequired'); return; }
         // submit via /api/leads (same payload shape)
         const payload = {
-          name: this.shadowRoot.getElementById('leadName')?.value || null,
+          name: lb.querySelector('#lbName')?.value?.trim() || null,
           contact: this.inlineLeadState.data.contact,
           time_window: this.inlineLeadState.data.time_window,
           language: this.getLangCode(),
@@ -1241,21 +1267,30 @@ render() {
           const resp = await fetch(`${baseApi}/api/leads`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
           const data = await resp.json().catch(()=>({}));
           if (resp.ok && data?.ok) {
-            // Confirmation bubble with CTA
+            // Confirmation bubble with CTA (replace previous inline bubble)
             const thread = this.shadowRoot.getElementById('thread');
+            const existingInline2 = thread?.querySelectorAll('.lead-box[id^="lb-"]');
+            if (existingInline2 && existingInline2.length) {
+              const last = existingInline2[existingInline2.length - 1];
+              last.closest('.message')?.remove();
+            }
             const bubble = document.createElement('div');
             bubble.className = 'message assistant';
-            bubble.innerHTML = `<div class="bubble bubble--full"><div class="lead-bubble">
-              <div class="lb-title">${this.tLead('success') || 'Thanks! We will contact you in the selected time.'}</div>
-              <div class="lb-actions" style="margin-top:6px;">
-                <button class="lb-btn primary" id="lbDoneCta">${this.tLead('inlineContinue') || 'Continue'}</button>
-              </div>
-            </div></div>`;
+            const code = this.getLangCode();
+            const sysMsg = (code === 'ru')
+              ? 'Отлично! Я передал менеджеру информацию, а пока если у вас ещё есть вопросы — буду рад помочь.'
+              : (code === 'uk')
+                ? 'Чудово! Я передав інформацію менеджеру. Якщо виникнуть ще питання — із задоволенням допоможу.'
+                : (code === 'es')
+                  ? '¡Genial! He compartido tu información con un gestor. Si tienes más preguntas, estaré encantado de ayudar.'
+                  : (code === 'fr')
+                    ? 'Super ! J’ai transmis vos informations au manager. Si vous avez d’autres questions, je serai ravi d’aider.'
+                    : (code === 'de')
+                      ? 'Super! Ich habe Ihre Informationen an den Manager weitergegeben. Bei weiteren Fragen helfe ich gerne.'
+                      : 'Great! I have shared your info with a manager. If you have more questions, I\'m happy to help.';
+            bubble.innerHTML = `<div class=\"bubble\">${sysMsg}</div>`;
             thread.appendChild(bubble);
             thread.scrollTop = thread.scrollHeight;
-            bubble.querySelector('#lbDoneCta')?.addEventListener('click', ()=>{
-              // simply keep dialog; bubble remains as history
-            });
             this.inlineLeadState = { step: null, data: { time_window:null, channel:null, contact:null, gdpr:false } };
           } else {
             if (data?.errors?.length) { if (errEl) errEl.textContent = `${data.errors[0].field}: ${data.errors[0].message}`; }
@@ -1265,7 +1300,6 @@ render() {
           if (errEl) errEl.textContent = this.tLead('errorNetwork') || 'Network error';
         }
       });
-      lb.querySelector('#lbCancel')?.addEventListener('click', this.cancelInlineLeadFlow);
       return;
     }
   };
