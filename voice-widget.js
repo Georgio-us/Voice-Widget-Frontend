@@ -228,8 +228,8 @@ render() {
     background-clip:text; color:transparent; position:relative; z-index:4; }
   .header-left{ display:flex; align-items:center; position:relative; z-index:4; }
   .header-left img{ width:91px; height:38px; object-fit:contain; }
-  .header-center{ display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; z-index:4; }
-  .header-actions{ display:flex; align-items:center; gap:8px; position:relative; z-index:4; }
+  .header-center{ display:none; }
+  .header-actions{ margin-left:auto; display:flex; align-items:center; gap:8px; position:relative; z-index:4; }
   .header-question-btn, .header-switch-btn{ display:flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; cursor:pointer; transition:filter .2s ease; position:relative; z-index:4; }
   .header-question-btn{ width:24px; height:24px; } .header-switch-btn{ width:56px; height:24px; }
   .header-question-btn img, .header-switch-btn img{ width:100%; height:100%; display:block; object-fit:contain; }
@@ -239,11 +239,7 @@ render() {
   .header-lead-btn{ display:inline-flex; align-items:center; height:26px; padding:0 10px; border:none; cursor:pointer; border-radius:999px; white-space:nowrap; background:rgba(255,255,255,.14); color:#fff; font-weight:600; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.18); transition:transform .12s ease, box-shadow .2s ease; }
   .header-lead-btn:hover{ transform: translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.22); }
 
-  /* Understanding bar (header) — Meta System */
-  .understanding-title{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:4px; font-weight:500; }
-  .understanding-scale{ width:140px; height:2px; position:relative; border-radius:2px; overflow:hidden; }
-  .understanding-track{ position:absolute; inset:0; background:rgba(255,255,255,.15); border-radius:2px; }
-  .understanding-fill{ position:absolute; left:0; top:0; height:100%; width:0%; background:#A78BFA; border-radius:2px; transition:width .3s ease; }
+  /* Understanding bar removed */
 
   /* Content */
   .content{ display:flex; flex-direction:column; height:calc(100% - 60px); padding:30px 20px 30px; gap:30px; position:relative; z-index:3; }
@@ -571,10 +567,6 @@ render() {
     <!-- Header -->
     <div class="header">
       <div class="header-left"><img src="${ASSETS_BASE}logo-group-resized.svg" alt="VIA logo" /></div>
-      <div class="header-center">
-        <div class="understanding-title">deep understanding: 0%</div>
-        <div class="understanding-scale"><div class="understanding-track"></div><div class="understanding-fill" id="understandingFill"></div></div>
-      </div>
       <div class="header-actions">
         <button class="header-question-btn" id="btnToggle" title="Details"><img src="${ASSETS_BASE}details-btn.svg" alt="Details" /></button>
         <button class="header-lead-btn" id="btnOpenLead"></button>
@@ -1400,16 +1392,7 @@ render() {
   // Helper function to update understanding percentage
   // Update header understanding bar only
   updateHeaderUnderstanding(percent) {
-    const fill = this.shadowRoot.getElementById('understandingFill');
-    const title = this.shadowRoot.querySelector('.understanding-title');
-    
-    if (fill) {
-      fill.style.width = `${Math.max(0, Math.min(100, percent))}%`;
-    }
-    
-    if (title) {
-      title.textContent = `deep understanding: ${Math.max(0, Math.min(100, percent))}%`;
-    }
+    // Understanding bar removed — no-op
   }
 
   // Recording indicator management
@@ -1609,16 +1592,16 @@ render() {
     const thread = this.shadowRoot.getElementById('thread');
     if (!thread) return;
 
-    const cardHtml = this.renderPropertyCard(property);
+    const normalized = this.normalizeCardData(property);
     const wrapper = document.createElement('div');
     wrapper.className = 'card-screen';
     wrapper.innerHTML = `
-      <div class="cs" data-variant-id="${property.id || ''}">
-        <div class="cs-image">Put image here</div>
+      <div class="cs" data-variant-id="${normalized.id}">
+        <div class="cs-image">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
         <div class="cs-body">
-          <div class="cs-row"><div class="cs-title">${property.title || 'Title'}</div><div class="cs-title">${property.location || 'Location'}</div></div>
-          <div class="cs-row"><div class="cs-sub">${property.district || ''}</div><div class="cs-sub">${property.rooms || ''}</div></div>
-          <div class="cs-row"><div class="cs-price">${property.price || ''}</div></div>
+          <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
+          <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
+          <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
         </div>
       </div>`;
     thread.appendChild(wrapper);
@@ -1639,9 +1622,9 @@ render() {
       <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
         <div class="cs-image">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
         <div class="cs-body">
-          <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.country}</div></div>
-          <div class="cs-row"><div class="cs-sub">${normalized.district}</div><div class="cs-sub">${normalized.rooms}</div></div>
-          <div class="cs-row"><div class="cs-price">${normalized.priceLabel}</div></div>
+          <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
+          <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
+          <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
         </div>
       </div>`;
 
@@ -1732,20 +1715,28 @@ render() {
     };
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
-    const city = raw.city || raw.location || 'City';
-    const district = raw.district || raw.area || 'District';
-    const country = raw.country || 'Country';
+    const floorNum = toInt(raw.floor);
+    const city = raw.city || raw.location || '';
+    const district = raw.district || raw.area || '';
+    const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const image = raw.image || raw.imageUrl || '';
+
+    const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
+    const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
+    const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
 
     return {
       id: raw.id || '',
       image,
-      country,
       city,
       district,
-      rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || 'Rooms'),
+      neighborhood,
+      rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || ''),
+      roomsLabel,
+      floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
+      floorLabel,
       priceEUR: priceNum != null ? priceNum : null,
-      priceLabel: priceNum != null ? `${priceNum} €` : (raw.price || 'Price')
+      priceLabel
     };
   }
 
