@@ -543,27 +543,31 @@ render() {
   }
   /* Mobile iPhone range: 430, 414, 390, 375, 360 */
   @media (max-width:430px){
-    .widget{ height:90dvh; width:100%; max-width:none; border-radius:16px 16px 0 0; }
-    .content{ padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+    .widget{ height:100dvh; width:100%; max-width:none; border-radius:16px 16px 0 0; overflow:auto; }
+    .content{ padding-bottom:max(12px, env(safe-area-inset-bottom)); height:auto; min-height:100%; }
     .lead-box{ width:100%; max-width:100%; padding:16px; margin:8px 10px; }
     .lead-actions .lead-submit{ min-width:160px; }
   }
   @media (max-width:414px){
     .lead-box{ padding:14px; margin:8px 8px; }
+    .messages-frame{ overflow:auto; }
   }
   @media (max-width:390px){
     .lead-box{ padding:12px; }
     .lead-row{ margin:6px 0; }
     #lbCountryCode{ flex:0 0 110px !important; }
+    .messages-frame{ overflow:auto; }
   }
   @media (max-width:375px){
     .lead-box{ padding:12px; }
     #lbCountryCode{ flex:0 0 100px !important; }
+    .messages-frame{ overflow:auto; }
   }
   @media (max-width:360px){
     .lead-box{ padding:10px; margin:6px; }
     #lbCountryCode{ flex:0 0 96px !important; }
     .lead-actions .lead-submit{ min-width:150px; }
+    .messages-frame{ overflow:auto; }
   }
   @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
   </style>
@@ -758,6 +762,11 @@ render() {
       } else {
         content.classList.remove('understanding-mode');
       }
+    }
+
+    // Auto-scroll to bottom on returning to chat
+    if (screenName === 'chat') {
+      this.scrollThreadToBottom(true);
     }
   };
 
@@ -1028,6 +1037,29 @@ render() {
   this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('chat');
   this.showDetailsScreen = () => showScreen('details');
+  
+  // Thread auto-scroll helper
+  this._isThreadNearBottom = true;
+  this.scrollThreadToBottom = (force = false) => {
+    const thread = this.shadowRoot.getElementById('thread');
+    if (!thread) return;
+    const doScroll = () => { thread.scrollTop = thread.scrollHeight; };
+    if (force || this._isThreadNearBottom) {
+      requestAnimationFrame(doScroll);
+    }
+  };
+  // Observe user scroll to preserve natural behavior
+  (()=>{
+    const thread = this.shadowRoot.getElementById('thread');
+    if (!thread) return;
+    const updateFlag = () => {
+      const delta = thread.scrollHeight - thread.scrollTop - thread.clientHeight;
+      this._isThreadNearBottom = delta < 120; // px threshold
+    };
+    thread.addEventListener('scroll', updateFlag, { passive:true });
+    // initialize
+    updateFlag();
+  })();
   this.openLeadPanel = () => {
     const leadPanelEl = this.shadowRoot.getElementById('leadPanel');
     if (leadPanelEl) {
@@ -1080,7 +1112,7 @@ render() {
       </div>
     </div></div>`;
     thread.appendChild(wrap);
-    thread.scrollTop = thread.scrollHeight;
+    this.scrollThreadToBottom(true);
     wrap.querySelector('#lbCtaInline')?.addEventListener('click', ()=> this.startInlineLeadFlow());
     wrap.querySelector('#lbCtaForm')?.addEventListener('click', ()=> this.openLeadPanel());
   };
@@ -1111,7 +1143,7 @@ render() {
     formWrap.id = `lb-${Date.now()}`;
     bubble.appendChild(formWrap);
     thread.appendChild(bubble);
-    thread.scrollTop = thread.scrollHeight;
+    this.scrollThreadToBottom(false);
 
     const lb = formWrap;
 
@@ -1290,7 +1322,7 @@ render() {
                       : 'Great! I have shared your info with a manager. If you have more questions, I\'m happy to help.';
             bubble.innerHTML = `<div class=\"bubble\">${sysMsg}</div>`;
             thread.appendChild(bubble);
-            thread.scrollTop = thread.scrollHeight;
+            this.scrollThreadToBottom(true);
             this.inlineLeadState = { step: null, data: { time_window:null, channel:null, contact:null, gdpr:false } };
           } else {
             if (data?.errors?.length) { if (errEl) errEl.textContent = `${data.errors[0].field}: ${data.errors[0].message}`; }
@@ -1639,7 +1671,7 @@ render() {
         </div>
       </div>`;
     thread.appendChild(wrapper);
-    thread.scrollTop = thread.scrollHeight;
+    this.scrollThreadToBottom(false);
   }
 
   // Show mock card + action panel as separate messages and keep 70/30 viewport split
