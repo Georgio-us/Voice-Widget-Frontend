@@ -197,6 +197,12 @@ render() {
   .launcher img{ width:100%; height:100%; display:block; object-fit:contain; filter:brightness(0) invert(1); }
   :host(.open) .launcher{ display:none; }
 
+  /* Scroll-to-bottom FAB */
+  .scroll-bottom-btn{ position:fixed; right:20px; bottom:88px; width:48px; height:48px; border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); box-shadow:0 10px 24px rgba(168,85,247,.30); color:#fff; z-index:10002; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; }
+  .scroll-bottom-btn.visible{ opacity:1; pointer-events:auto; }
+  .scroll-bottom-btn:hover{ transform: translateY(-1px); }
+  .scroll-bottom-btn .chevron{ width:14px; height:14px; border-right:2px solid #fff; border-bottom:2px solid #fff; transform: rotate(45deg); margin-top:-2px; }
+
   .scrim{ position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .2s ease; }
   :host(.open) .scrim{ opacity:1; pointer-events:auto; }
 
@@ -266,7 +272,7 @@ render() {
   /* Chat */
   .chat-screen{ display:flex; flex-direction:column; height:100%; gap:20px; min-height:0; }
   .chat-screen.hidden{ display:none; }
-  .messages-frame{ flex:1; border-radius:20px; background:transparent; border:1px solid transparent; position:relative; display:flex; flex-direction:column; min-height:0; height:400px; }
+  .messages-frame{ flex:1; border-radius:20px; background:transparent; border:1px solid transparent; position:relative; display:flex; flex-direction:column; min-height:0; height:auto; overflow:auto; -webkit-overflow-scrolling: touch; }
   .messages-frame::before{
     content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
     background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
@@ -535,39 +541,108 @@ render() {
   .legal-popup p:last-child{ margin-bottom:0; }
   .tooltip-container:hover .legal-popup{ opacity:1; visibility:visible; }
 
-  /* Responsive */
-  @media (max-width:1024px){
-    :host{ left:0; right:0; bottom:auto; top:auto; }
-    .widget{ width:100%; max-width:640px; margin:0 auto; border-radius:16px 16px 0 0; transform:translateY(100%); transition:transform .28s ease, opacity .28s ease; }
-    :host(.open) .widget{ transform:translateY(0); }
+  /* ===== Responsive & Mobile polish (rewritten) ===== */
+
+/* Tablet & down */
+@media (max-width:1024px){
+  :host{
+    left:0;
+    right:0;
+    top:auto;
+    bottom:auto;
+    overscroll-behavior: contain; /* гасим резинки на iOS */
+    touch-action: pan-y;
   }
-  /* Mobile iPhone range: 430, 414, 390, 375, 360 */
-  @media (max-width:430px){
-    :host{ touch-action: pan-y; }
-    .widget{ height:100vh; width:100%; max-width:100vw; border-radius:16px 16px 0 0; overflow:hidden; overflow-x:hidden; }
-    .content{ padding-bottom:max(12px, env(safe-area-inset-bottom)); }
-    .messages-frame{ overflow:auto; -webkit-overflow-scrolling: touch; }
-    .lead-box{ width:100%; max-width:100%; padding:16px; margin:8px 10px; }
-    .lead-actions .lead-submit{ min-width:160px; }
+
+  .widget{
+    width:100%;
+    max-width:640px;
+    margin:0 auto;
+    border-radius:16px 16px 0 0;
+
+    /* slide-up поведение */
+    transform: translateY(100%);
+    transition: transform .28s ease, opacity .28s ease;
+
+    /* перфоманс */
+    will-change: transform;
+    backface-visibility: hidden;
   }
-  @media (max-width:414px){
-    .lead-box{ padding:14px; margin:8px 8px; }
+
+  :host(.open) .widget{
+    transform: translateY(0);
   }
-  @media (max-width:390px){
-    .lead-box{ padding:12px; }
-    .lead-row{ margin:6px 0; }
-    #lbCountryCode{ flex:0 0 110px !important; }
+}
+
+/* Mobile (iPhone range and small android) */
+@media (max-width:430px){
+  .widget{
+    /* высота с каскадом юнитов: базовый vh -> стабильный svh -> динамический dvh */
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+
+    width:100%;
+    max-width:100vw;
+    border-radius:16px 16px 0 0;
+    overflow:hidden; /* скрываем горизонтальный автоматически */
   }
-  @media (max-width:375px){
-    .lead-box{ padding:12px; }
-    #lbCountryCode{ flex:0 0 100px !important; }
+
+  /* нижняя безопасная зона под системный инсет */
+  .content{
+    /* если есть кастомная высота нижней панели — можно добавить в calc */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
   }
-  @media (max-width:360px){
-    .lead-box{ padding:10px; margin:6px; }
-    #lbCountryCode{ flex:0 0 96px !important; }
-    .lead-actions .lead-submit{ min-width:150px; }
+
+  /* прокрутка сообщений: задаём предсказуемую высоту вместо "само как-то" */
+  :root{
+    /* если используешь высоту нижнего инпут-бара — поправь цифру/переменную */
+    --vw-input-bar-h: 64px;
+    --vw-header-h: 0px; /* если мобильный хедер фиксированный — поставь его высоту */
   }
-  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+
+  .messages-frame{
+    /* занимаем всё доступное, минус фикс-элементы */
+    max-height: calc(100% - var(--vw-input-bar-h) - var(--vw-header-h) - env(safe-area-inset-bottom));
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* lead-box: вместо каскада брейкпоинтов используем clamp() */
+  .lead-box{
+    width:100%;
+    max-width:100%;
+    /* паддинги и внешние отступы адаптивно */
+    padding: clamp(10px, 3.5vw, 16px);
+    margin: clamp(6px, 2.2vw, 10px) clamp(6px, 2.2vw, 10px);
+    border-radius: 12px; /* опционально, чтобы соответствовать мобильной эстетике */
+  }
+
+  .lead-row{
+    margin: clamp(6px, 1.6vw, 8px) 0;
+  }
+
+  /* фиксированная минимальная ширина сабмита без жёстких брейкпоинтов */
+  .lead-actions .lead-submit{
+    min-width: clamp(150px, 42vw, 180px);
+  }
+
+  /* вместо #id с !important — класс + flex-basis через clamp */
+  .lbCountryCode{
+    flex: 0 0 clamp(96px, 26vw, 110px);
+  }
+}
+
+/* Доступность: минимизируем движуху */
+@media (prefers-reduced-motion: reduce){
+  *{
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
   </style>
 
   <!-- Launcher -->
@@ -618,7 +693,8 @@ render() {
           <div class="messages" id="messagesContainer">
             <div class="thread" id="thread"></div>
           </div>
-            <div class="loading" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
+          <button class="scroll-bottom-btn" id="btnScrollBottom" title="Scroll to bottom" aria-label="Scroll to bottom"><span class="chevron"></span></button>
+          <div class="loading" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
         </div>
 
         <div class="input-container">
@@ -762,16 +838,21 @@ render() {
       }
     }
 
-    // Auto-scroll to bottom on returning to chat
-    if (screenName === 'chat') {
-      this.scrollThreadToBottom(true);
-    }
+    // (cleaned) no forced auto-scroll here
   };
 
   // Launcher
   $("#launcher")?.addEventListener("click", () => {
     this.classList.add("open");
     this.shadowRoot.getElementById("textInput")?.focus();
+    // Lock host page scroll while widget is open (but allow scroll inside widget)
+    try {
+      const prev = document.documentElement.style.overflow;
+      this._prevPageOverflow = prev || '';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'pan-y';
+    } catch {}
   });
 
   // Header toggle button
@@ -1026,6 +1107,12 @@ render() {
         showScreen('main');
       } else {
         this.classList.remove("open");
+        // Restore host page scroll
+        try {
+          document.documentElement.style.overflow = this._prevPageOverflow || '';
+          document.body.style.overflow = '';
+          document.body.style.touchAction = '';
+        } catch {}
       }
     }
   });
@@ -1053,11 +1140,22 @@ render() {
     const updateFlag = () => {
       const delta = thread.scrollHeight - thread.scrollTop - thread.clientHeight;
       this._isThreadNearBottom = delta < 120; // px threshold
+      const btn = this.shadowRoot.getElementById('btnScrollBottom');
+      if (btn) {
+        if (delta > 240) btn.classList.add('visible');
+        else btn.classList.remove('visible');
+      }
     };
     thread.addEventListener('scroll', updateFlag, { passive:true });
     // initialize
     updateFlag();
   })();
+
+  // Scroll-to-bottom button behavior
+  const btnScrollBottom = this.shadowRoot.getElementById('btnScrollBottom');
+  if (btnScrollBottom) {
+    btnScrollBottom.addEventListener('click', () => this.scrollThreadToBottom(true));
+  }
   this.openLeadPanel = () => {
     const leadPanelEl = this.shadowRoot.getElementById('leadPanel');
     if (leadPanelEl) {
@@ -1110,7 +1208,6 @@ render() {
       </div>
     </div></div>`;
     thread.appendChild(wrap);
-    this.scrollThreadToBottom(true);
     wrap.querySelector('#lbCtaInline')?.addEventListener('click', ()=> this.startInlineLeadFlow());
     wrap.querySelector('#lbCtaForm')?.addEventListener('click', ()=> this.openLeadPanel());
   };
@@ -1141,7 +1238,6 @@ render() {
     formWrap.id = `lb-${Date.now()}`;
     bubble.appendChild(formWrap);
     thread.appendChild(bubble);
-    this.scrollThreadToBottom(false);
 
     const lb = formWrap;
 
@@ -1201,11 +1297,11 @@ render() {
         <div class="lead-title">${this.tLead('contactLabel') || 'Contact'}</div>
         <div class="lead-row">
           <label class="lead-label" for="lbPhoneInput">${this.tLead('optPhone')||'Phone'}</label>
-          <div style="display:flex; gap:8px;"><select class="lead-select" id="lbCountryCode" style="flex:0 0 120px"></select><input class="lead-input" id="lbPhoneInput" type="tel" inputmode="numeric" placeholder="600112233" /></div>
+          <div style="display:flex; gap:8px;"><select class="lead-select lbCountryCode"></select><input class="lead-input" id="lbPhoneInput" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="600112233" /></div>
         </div>
         <div class="lead-row">
           <label class="lead-label" for="lbEmailInput">${this.tLead('optEmail')||'Email'}</label>
-          <input class="lead-input" id="lbEmailInput" type="email" placeholder="name@example.com" maxlength="254" />
+          <input class="lead-input" id="lbEmailInput" type="email" inputmode="email" placeholder="name@example.com" maxlength="254" />
           <div class="lead-error" id="lbErr"></div>
         </div>
         <div class="lead-row">
@@ -1222,7 +1318,7 @@ render() {
 
       // populate country codes from full form
       const src = this.shadowRoot.getElementById('leadCountryCode');
-      const dst = lb.querySelector('#lbCountryCode');
+      const dst = lb.querySelector('.lbCountryCode');
       if (src && dst) dst.innerHTML = src.innerHTML;
 
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1254,7 +1350,7 @@ render() {
         } else {
           const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
           if (raw.length < 6) { if (errEl) errEl.textContent = this.tLead('errPhoneInvalid')||'Invalid phone'; return; }
-          const cc = String(lb.querySelector('#lbCountryCode')?.value || '');
+          const cc = String(lb.querySelector('.lbCountryCode')?.value || '');
           this.inlineLeadState.data.channel = selected === 'whatsapp' ? 'whatsapp' : 'phone';
           this.inlineLeadState.data.contact = { channel: 'phone', value: `+${(cc+raw).replace(/^\++/,'')}`.replace(/^\++/,'+') };
         }
@@ -1271,9 +1367,9 @@ render() {
           <label class="lead-consent"><input type="checkbox" id="lbGdpr" /><span class="consent-text">${this.tLead('consentRequired')||'Please accept the Privacy Policy'} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span></label>
           <div class="lead-error" id="lbErr"></div>
         </div>
-        <div class="lead-row">
-          <label class="lead-label" for="lbName">${this.tLead('yourName')||'Your name'} (${this.tLead('optional')||'optional'})</label>
-          <input class="lead-input" id="lbName" type="text" />
+          <div class="lead-row">
+            <label class="lead-label" for="lbName">${this.tLead('yourName')||'Your name'} (${this.tLead('optional')||'optional'})</label>
+            <input class="lead-input" id="lbName" type="text" inputmode="text" />
           <div class="lead-error" id="lbNameErr"></div>
         </div>
         <div class="lead-actions" style="justify-content:center;">
@@ -1320,7 +1416,6 @@ render() {
                       : 'Great! I have shared your info with a manager. If you have more questions, I\'m happy to help.';
             bubble.innerHTML = `<div class=\"bubble\">${sysMsg}</div>`;
             thread.appendChild(bubble);
-            this.scrollThreadToBottom(true);
             this.inlineLeadState = { step: null, data: { time_window:null, channel:null, contact:null, gdpr:false } };
           } else {
             if (data?.errors?.length) { if (errEl) errEl.textContent = `${data.errors[0].field}: ${data.errors[0].message}`; }
@@ -1669,7 +1764,6 @@ render() {
         </div>
       </div>`;
     thread.appendChild(wrapper);
-    this.scrollThreadToBottom(false);
   }
 
   // Show mock card + action panel as separate messages and keep 70/30 viewport split

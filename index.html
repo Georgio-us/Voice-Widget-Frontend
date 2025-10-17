@@ -9,15 +9,33 @@
 <body>
   
 
-  <!-- Компонент виджета -->
-  <voice-widget
+  <!-- Компонент виджета v2 -->
+  <voice-widget-v2
     api-url="https://voice-widget-backend-production.up.railway.app/api/audio/upload"
     field-name="audio"
     response-field="response">
-  </voice-widget>
+  </voice-widget-v2>
 
-  <!-- Подключение JS-модуля -->
-  <script type="module" src="voice-widget.js"></script>
+  <!-- Временные кнопки навигации по экранам (вне виджета) -->
+  <div style="position: fixed; bottom: 20px; left: 20px; display: flex; gap: 8px; z-index: 10000;">
+    <button id="vw-prev" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #fff; background: rgba(0,0,0,0.3); color: #fff; cursor: pointer;">Prev</button>
+    <button id="vw-next" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #fff; background: rgba(0,0,0,0.3); color: #fff; cursor: pointer;">Next</button>
+  </div>
+
+  <!-- Подключение JS-модуля v2 -->
+  <script type="module" src="voice-widget-v2.js"></script>
+  <script>
+    // Навешиваем обработчики после инициализации компонента
+    document.addEventListener('DOMContentLoaded', () => {
+      const widget = document.querySelector('voice-widget-v2');
+      const prevBtn = document.getElementById('vw-prev');
+      const nextBtn = document.getElementById('vw-next');
+      if (widget && prevBtn && nextBtn) {
+        prevBtn.addEventListener('click', () => widget.prevScreen());
+        nextBtn.addEventListener('click', () => widget.nextScreen());
+      }
+    });
+  </script>
 
 
 

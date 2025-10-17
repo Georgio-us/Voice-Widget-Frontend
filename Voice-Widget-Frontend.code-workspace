@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Voice-Widget-Backend"
+		}
+	],
+	"settings": {
+		"liveServer.settings.port": 5507,
+		"liveServer.settings.multiRootWorkspaceName": "Voice-Widget-Frontend"
+	}
+}
