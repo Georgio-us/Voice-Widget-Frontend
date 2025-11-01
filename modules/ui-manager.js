@@ -58,19 +58,23 @@ export class UIManager {
   bindToInternalEvents() {
     this.widget.events.on('recordingStarted', () => {
       this.setState('recording');
-      // Update send button states after recording starts
+      // show recording overlays (both screens are safe)
+      try { this.widget.showRecordingIndicator('main'); } catch {}
+      try { this.widget.showRecordingIndicator('chat'); } catch {}
       this.widget.updateSendButtonState('main');
       this.widget.updateSendButtonState('chat');
     });
     this.widget.events.on('recordingStopped', () => {
       this.setState('idle');
-      // Update send button states after recording stops
+      try { this.widget.hideRecordingIndicator('main'); } catch {}
+      try { this.widget.hideRecordingIndicator('chat'); } catch {}
       this.widget.updateSendButtonState('main');
       this.widget.updateSendButtonState('chat');
     });
     this.widget.events.on('recordingCancelled', () => {
       this.setState('idle');
-      // Update send button states after recording cancels
+      try { this.widget.hideRecordingIndicator('main'); } catch {}
+      try { this.widget.hideRecordingIndicator('chat'); } catch {}
       this.widget.updateSendButtonState('main');
       this.widget.updateSendButtonState('chat');
     });
@@ -177,7 +181,7 @@ export class UIManager {
   // RECORDING
   applyRecordingState() {
     const { textInput, sendButton, toggleButton } = this.elements;
-    if (textInput) { textInput.disabled = true; textInput.style.opacity = '0.7'; textInput.placeholder = 'Идет запись… 0:00'; }
+    if (textInput) { textInput.disabled = true; textInput.style.opacity = '0.7'; }
     if (sendButton) { sendButton.classList.add('active'); sendButton.disabled = false; }
     if (toggleButton) { toggleButton.disabled = false; toggleButton.classList.add('active'); }
     this.recordingTime = 0;
@@ -389,8 +393,9 @@ export class UIManager {
     if (!thread) return;
     const wrapper = document.createElement('div');
     wrapper.className = `message ${message.type}`;
+    // v2 bubble markup
     const bubble = document.createElement('div');
-    bubble.className = 'bubble';
+    bubble.className = 'message-bubble ' + (message.type === 'assistant' ? 'widget-bubble' : 'user-bubble');
     if (message.type === 'assistant') {
       try {
         const html = renderMarkdown(message.content);

@@ -341,7 +341,7 @@ export class APIClient {
           const userMsgs = this.widget.shadowRoot.querySelectorAll('.message.user');
           const el = userMsgs[userMsgs.length - 1];
           if (el) {
-            const bubble = el.querySelector('.bubble'); // ✅ правильный класс
+            const bubble = el.querySelector('.message-bubble');
             if (bubble) bubble.textContent = data.transcription;
           }
         }

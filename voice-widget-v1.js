@@ -114,6 +114,9 @@ class VoiceWidget extends HTMLElement {
 
     console.log('✅ Voice Widget инициализирован');
 
+    // v2 menu overlay init (after DOM is ready)
+    try { this.setupMenuOverlay(); } catch {}
+
     // Применяем i18n к форме лида и кнопке
     this.applyLeadI18n();
 
@@ -152,41 +155,6 @@ render() {
     width:100%; height:100%; display:block; object-fit:contain;
   }
 
-  .icon-btn{ width:38px; height:38px; display:flex; align-items:center; justify-content:center;
-    background:transparent; border:0; padding:0; cursor:pointer; transition:filter .2s ease; position:relative; z-index:4; }
-  .icon-btn img, .icon-btn svg{ width:100%; height:100%; display:block; object-fit:contain; }
-  .icon-btn:hover{ filter:brightness(1.05); }
-
-  :host{
-    position:fixed; right:20px; z-index:10000;
-
-    /* габариты */
-    --vw-h: 760px;
-    --vw-w: 420px;
-    --vw-radius:16px;
-
-    /* типографика (проектные + добавленные) */
-    --header-h: 60px;
-    --fs-title: 16px;
-    --fs-subtitle: 16px;
-    --fs-body: 12px;
-    --fs-meta: 12px;
-    --fs-meta-value: 12px;
-    --fs-hero: 28px;
-    --fs-button: 14px;
-    --fs-placeholder: 14px;
-
-    /* цвета */
-    --grad-1:#A18CD1; --grad-2:#FBC2EB;
-    --txt:#4E4E4E; 
-    --muted:#7F7F7F;
-    --dot:#D9DEE6; --dot-on:#8AD39D; --orange:#FF7A45;
-    --shadow:0 20px 60px rgba(0,0,0,.18);
-
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
-    top: calc(50% - var(--vw-h) / 2);
-  }
-
   /* launcher/scrim */
   .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
     border:none; cursor:pointer; z-index:10001; background:linear-gradient(135deg,#FF8A4C,#A855F7);
@@ -207,89 +175,32 @@ render() {
   :host(.open) .scrim{ opacity:1; pointer-events:auto; }
 
   /* виджет */
-  .widget{ width:400px; height:760px; border-radius:20px; overflow:hidden; box-shadow:var(--shadow);
+  .widget{ width:380px; height:720px; border-radius:20px; overflow:hidden; box-shadow:none;
     position:relative; transform-origin:bottom right; transition:opacity .2s ease, transform .2s ease;
-    opacity:0; transform: translateY(8px) scale(.98); pointer-events:none; backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); }
-  .widget::before{ content:''; position:absolute; inset:0; background:rgba(0,0,0,.7); border-radius:20px; z-index:1; }
-  .widget::after{ content:''; position:absolute; inset:0; background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); opacity:.2; border-radius:20px; z-index:2; }
+    opacity:0; transform: translateY(8px) scale(.98); pointer-events:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+  /* CLEANUP: remove legacy overlays to reveal v2 backgrounds */
+  .widget::before{ content:none; }
+  .widget::after{ content:none; }
   :host(.open) .widget{ opacity:1; transform:none; pointer-events:auto; }
 
-  /* Header (без фона и без градиентной обводки, top:10px) */
-  .header{
-    position: sticky;
-    top: 10px;
-    z-index: 3;
-    display:flex; align-items:center; justify-content:space-between;
-    width:400px; height:60px; padding:0 20px;
-    background: transparent;             /* было rgba(...) */
-    border-radius:20px 20px 0 0;
-    border:1px solid transparent;        /* оставили прозрачный 1px */
-    background-clip:padding-box;
-    position:relative;
-  }
-  .header::before{ content: none; }      /* убрана градиентная обводка */
-
-  .title{ font-weight:700; font-size:var(--fs-title); display:flex; gap:8px; align-items:center;
-    background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    background-clip:text; color:transparent; position:relative; z-index:4; }
-  .header-left{ display:flex; align-items:center; position:relative; z-index:4; }
-  .header-left img{ width:91px; height:38px; object-fit:contain; }
-  .header-center{ display:none; }
-  .header-actions{ margin-left:auto; display:flex; align-items:center; gap:8px; position:relative; z-index:4; }
-  .header-question-btn, .header-switch-btn{ display:flex; align-items:center; justify-content:center; background:transparent; border:0; padding:0; cursor:pointer; transition:filter .2s ease; position:relative; z-index:4; }
-  .header-question-btn{ width:24px; height:24px; } .header-switch-btn{ width:56px; height:24px; }
-  .header-question-btn img, .header-switch-btn img{ width:100%; height:100%; display:block; object-fit:contain; }
-  .header-question-btn:hover, .header-switch-btn:hover{ filter:brightness(1.05); }
-
-  /* Lead capture header button */
-  .header-lead-btn{ display:inline-flex; align-items:center; height:26px; padding:0 10px; border:none; cursor:pointer; border-radius:999px; white-space:nowrap; background:rgba(255,255,255,.14); color:#fff; font-weight:600; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.18); transition:transform .12s ease, box-shadow .2s ease; }
-  .header-lead-btn:hover{ transform: translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.22); }
-
-  /* Understanding bar removed */
 
   /* Content */
-  .content{ display:flex; flex-direction:column; height:calc(100% - 60px); padding:30px 20px 30px; gap:30px; position:relative; z-index:3; }
-  /* Для Details — те же отступы, что и для чата */
-  .content.understanding-mode { padding: 30px 20px 30px; }  /* было 0 20px */
+  .content{ display:flex; flex-direction:column; height:100%; padding:0; gap:0; position:relative; z-index:3; }
 
   /* Main Screen */
   .main-screen{ display:flex; flex-direction:column; height:100%; }
   .main-screen.hidden{ display:none; }
-  .main-content{ display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:24px; text-align:center; }
-  .big-mic{ width:120px; height:120px; border:none; cursor:pointer; background:transparent; display:flex; align-items:center; justify-content:center; transition:transform .15s ease; }
-  .big-mic:hover{ transform:scale(1.05); }
-  .big-mic svg{ width:100%; height:100%; fill:#fff; }
-  .big-mic img{ width:100%; height:100%; display:block; object-fit:contain; }
-
-  /* Главный экран — роли */
-  .main-title{   /* Voice Intelligent Assistance — подзаголовок */
-    font-size:var(--fs-subtitle); font-weight:400; color:var(--muted); line-height:1.35;
-  }
-  .main-subtitle{ /* Press To Speak — крупный хедер */
-    font-size:var(--fs-hero); font-weight:700; color:#FFFFFF; line-height:1.15;
-  }
+  /* v2 screens visibility */
+  .dialog-screen.hidden{ display:none; }
+  .context-screen.hidden{ display:none; }
+  .request-screen.hidden{ display:none; }
+  .support-screen.hidden{ display:none; }
 
   /* Chat */
-  .chat-screen{ display:flex; flex-direction:column; height:100%; gap:20px; min-height:0; }
-  .chat-screen.hidden{ display:none; }
-  .messages-frame{ flex:1; border-radius:20px; background:transparent; border:1px solid transparent; position:relative; display:flex; flex-direction:column; min-height:0; height:auto; overflow:auto; -webkit-overflow-scrolling: touch; }
-  .messages-frame::before{
-    content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
-    background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
-    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
-    -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude;
-  }
-  .messages{ flex:1; overflow:auto; padding:16px; border-radius:20px; background:transparent; border:none; scrollbar-gutter:stable both-edges; position:relative; z-index:1; height:100%; min-height:0; max-height:100%; margin:2px; }
-  .messages::-webkit-scrollbar{ width:2px; }
-  .messages::-webkit-scrollbar-track{ background:transparent; }
-  .messages::-webkit-scrollbar-thumb{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%); border-radius:1px; }
-  .messages::-webkit-scrollbar-thumb:hover{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%); }
-  .messages{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
   .thread{ display:flex; flex-direction:column; gap:12px; position:relative; z-index:1; min-height:0; }
   .message{ display:flex; }
   .message.user{ justify-content:flex-end; }
   .message.assistant{ justify-content:flex-start; }
-  .bubble{ max-width:97%; padding:12px 16px; border-radius:20px; line-height:1.45; font-size:var(--fs-body); box-shadow:0 4px 16px rgba(0,0,0,.08); word-break:break-word; white-space:pre-wrap; overflow-wrap:anywhere; }
   .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
   .message.assistant .bubble--full{ border-bottom-left-radius:16px; }
   .message.user .bubble--full{ border-bottom-right-radius:16px; }
@@ -307,8 +218,7 @@ render() {
   .card-screen .cs-title{ font-weight:700; color:#ffffff; }
   .card-screen .cs-sub{ font-size:12px; color:#BBBBBB; }
   .card-screen .cs-price{ font-weight:700; color:#FF8A4C; }
-  .message.user .bubble{ background:#333333; color:#fff; border-bottom-right-radius:8px; }
-  .message.assistant .bubble{ background:#646464; color:#fff; border-bottom-left-radius:8px; }
+  
 
   /* Compact markdown styles inside assistant bubbles */
   .vw-md { line-height:1.5; }
@@ -335,6 +245,8 @@ render() {
   .vw-md mark, .vw-md .highlight { background: rgba(167, 139, 250, 0.28); color: inherit; padding: 0 2px; border-radius: 3px; }
   /* Ссылки, используемые как подсветка (например href="#...") — делаем как highlight и отключаем клики */
   .vw-md a[href^="#"] { background: rgba(167, 139, 250, 0.28); color: inherit; text-decoration: none; pointer-events: none; cursor: default; border-radius: 3px; padding: 0 2px; }
+
+  /* ===== СТАРЫЕ СТИЛИ УДАЛЕНЫ, ОСТАЛСЯ ЛИШЬ СКЕЛЕТ ===== */
 
   /* Property Card */
   .property-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:8px; width:100%; }
@@ -369,36 +281,35 @@ render() {
   .card-actions-panel .card-btn.next:hover{ color:#ffffff; }
 
   /* ===== Inline Lead Bubbles ===== */
-  /* Стили удалены: inline bubble наследует стили от классов большой формы (lead-*) */
 
   /* Input */
   .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
-  .input-container::before{ content:''; position:absolute; inset:0; border-radius:20px; padding:1px;
+  .input-container::before{ content:''; position:absolute; inset:0; border-radius:20px; padding:1px; pointer-events:none; z-index:0;
     background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
     -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
     -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
-  .text-input{ flex:1; background:transparent; border:none; outline:none; color:#FFFFFF; font-size:calc(var(--fs-body) + 2px); padding:8px 0; position:relative; z-index:4; }
-  .text-input::placeholder{ color:#ffffff; opacity:.6; font-size:var(--fs-placeholder); font-weight:400; }
-  .text-input-wrapper.recording .text-input::placeholder { opacity:0; }
+  
+  /* v2 input: скрываем плейсхолдер во время записи */
+  .text-input-wrapper.recording .input-field::placeholder { opacity:0; color:transparent; }
   .text-input-wrapper{ flex:1; position:relative; display:flex; align-items:center; }
 
-  .recording-indicator{ position:absolute; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; gap:12px; padding:8px 0; background:transparent; pointer-events:none; }
-  .visualizer{ display:flex; align-items:center; gap:2px; }
-  .wave{ width:3px; height:12px; background:#A78BFA; border-radius:2px; animation:wave 1.2s ease-in-out infinite; }
-  .wave:nth-child(1){ animation-delay:0s; } .wave:nth-child(2){ animation-delay:.2s; } .wave:nth-child(3){ animation-delay:.4s; }
-  @keyframes wave{ 0%,40%,100%{ height:12px; } 20%{ height:20px; } }
+  /* Индикатор записи рендерим там же, где плейсхолдер */
+  .recording-indicator{
+    position:absolute; left:10px; right:auto; top:50%; bottom:auto;
+    transform:translateY(-50%);
+    display:flex; align-items:center; gap:6px; background:transparent; pointer-events:none;
+    height:auto; padding:0;
+  }
+  .recording-label{ color:#A0A0A0; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:14px; font-weight:400; letter-spacing:0; opacity:1; }
   @keyframes shake{ 0%,100%{ transform:translateX(0); } 10%,30%,50%,70%,90%{ transform:translateX(-2px); } 20%,40%,60%,80%{ transform:translateX(2px); } }
   .shake{ animation:shake .5s ease-in-out; }
-  .record-timer{ color:#FFFFFF; font-size:12px; font-weight:600; letter-spacing:.2px; min-width:42px; text-align:left; }
+  .record-timer{ color:#A0A0A0; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:14px; font-weight:400; letter-spacing:0; min-width:42px; text-align:left; }
 
-  .details-btn{ display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 16px; border:none; cursor:pointer; border-radius:999px; white-space:nowrap; background:linear-gradient(90deg,#300E7E 0%, #BD65A4 100%); color:#fff; font-weight:600; font-size:var(--fs-button); box-shadow:0 4px 12px rgba(48,14,126,.20); transition:transform .12s ease, box-shadow .2s ease; }
-  .details-btn:hover{ transform: translateY(-1px); box-shadow:0 6px 16px rgba(48,14,126,.28); }
-  .details-btn svg{ width:100%; height:100%; fill:#fff; }
-  .details-btn.dialog-mode{ background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); }
+  
 
-  .loading{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:linear-gradient(90deg, rgba(48,14,126,.10), rgba(189,101,164,.10)); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
+  .loading{ position:absolute; display:none; align-items:center; justify-content:center; background: rgba(53,67,96,0.10); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
   .loading.active{ display:flex; }
-  .loading-text{ color:#ffffff; font-size:20px; font-weight:600; display:flex; align-items:center; gap:4px; }
+  .loading-text{ color:#ffffff; font-size:16px; font-weight:400; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; display:flex; align-items:center; gap:4px; }
   .loading-text .dots{ display:inline-flex; gap:2px; margin-left:2px; }
   .loading-text .dots span{ display:inline-block; opacity:.2; animation:dotBlink 1.2s infinite ease-in-out; }
   .loading-text .dots .d1{ animation-delay:0s; }
@@ -406,439 +317,1058 @@ render() {
   .loading-text .dots .d3{ animation-delay:.3s; }
   @keyframes dotBlink{ 0%,100%{ opacity:.2; transform:translateY(0); } 50%{ opacity:1; transform:translateY(-2px); } }
 
-  /* ======= DETAILS ======= */
-  .details-screen{ display:flex; flex-direction:column; height:100%; gap:20px; }
-  .details-screen.hidden{ display:none; }
+  /* ===== УДАЛЕНО: старая overlay lead‑форма v1 (.lead-panel/.lead-box и т.д.).
+     Важно: inline lead поток (renderInlineLeadStep) ранее использовал классы .lead-box/.lead-input/.lead-select/.lead-textarea.
+     В v2 нужна новая реализация под requestScreen (экраны и логика уже есть). Эти стили будут переосмыслены при необходимости. ===== */
 
-  .details-content{
-    flex:1;
-    overflow:visible;
-    padding:0 0 24px;         /* было 8px 0 24px */
-    background:transparent;
-    border:none;
-    position:relative;
-  }
+  /* ===== Responsive & Mobile polish (deleted) ===== */
 
-  /* секции — без горизонтальных margin, радиус 20px как у чата */
-  .progress-section, .details-section{
-    margin:16px 0;            /* было 16px 20px */
-    padding:16px;
-    border-radius:20px;       /* было 16px */
-    background:rgba(255,255,255,0.04);
-    border:1px solid transparent;
-    position:relative;
-  }
-  .progress-section{ margin-top:12px; padding:14px 16px; }
-  .details-section::before, .progress-section::before{
-    content:''; position:absolute; inset:0; border-radius:20px; padding:1px; /* радиус 20px */
-    background:conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
-    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
-    mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
-  }
 
-  .details-title{ font-weight:400; font-size:var(--fs-subtitle); color:#ffffff; margin-bottom:18px; position:relative; z-index:1; }
 
-  .progress-bar{ height:4px; border-radius:2px; overflow:hidden; background:rgba(255,255,255,.18); margin-bottom:10px; position:relative; z-index:1; }
-  .progress-fill{ height:100%; width:0%; background:#A78BFA; transition:width .28s ease; }
-  .progress-text{ font-size:var(--fs-meta); color:var(--muted); text-align:left; z-index:1; position:relative; }
+ 
 
-  .param-list{ display:grid; grid-auto-rows:minmax(18px, auto); row-gap:10px; position:relative; z-index:1; }
-  .param-row{
-    display:grid;
-    grid-template-columns: minmax(0, 50%) minmax(0, 50%);
-    column-gap:16px; align-items:center; line-height:1.35;
-  }
-  .param-label{ font-size:var(--fs-body); color:#ffffff; display:flex; align-items:center; gap:10px; font-weight:500; }
-  .param-dot{ width:6px; height:6px; border-radius:50%; background:#E646B9; flex-shrink:0; }
+  /* === V2 styles appended (cascade override) === */
+                /* Основные стили виджета */
+                :host {
+                    display: block;
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    z-index: 9999;
+                }
+                
+                .voice-widget-container {
+                    width: 380px;
+                    height: 720px;
+                    background: #171618;
+                    background-image: url('./assets/Net_lights.svg');
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    background-size: cover;
+                    border-radius: 20px;
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                /* Логотип */
+                .logo {
+                    position: absolute;
+                    top: 35px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: auto;
+                    height: auto;
+                }
+                
+                /* Декоративная градиентная линия */
+                .gradient-line {
+                    position: absolute;
+                    top: 85px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 320px;
+                    height: 2px;
+                    border-radius: 1px;
+                    background: linear-gradient(90deg, rgba(90, 127, 227, 0) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0) 100%);
+                }
+                
+                /* Кнопка микрофона */
+                .mic-button {
+                    position: absolute;
+                    top: 225px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 100px;
+                    height: 100px;
+                    background: transparent; /* remove default button bg */
+                    border: none;            /* remove default button border */
+                    padding: 0;              /* collapse inner spacing */
+                    outline: none;           /* remove default focus ring */
+                    -webkit-tap-highlight-color: transparent; /* remove iOS highlight */
+                    cursor: pointer;
+                    transition: transform 0.3s ease;
+                }
+                
+                .mic-button img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                }
+                
+                .mic-button:hover {
+                    transform: translateX(-50%) scale(1.05);
+                }
+                .mic-button:focus, .mic-button:focus-visible { outline: none; box-shadow: none; }
+                .mic-button::-moz-focus-inner { border: 0; }
+                
+                /* Тексты под кнопкой */
+                .text-container {
+                    position: absolute;
+                    top: 350px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    text-align: center;
+                }
+                
+                .main-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-weight: 600;
+                    font-size: 20px;
+                    color: #FFFFFF;
+                    margin: 0;
+                    line-height: 1.2;
+                }
+                
+                .sub-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-weight: 300;
+                    font-size: 14px;
+                    color: #A0A0A0;
+                    margin: 20px 0 0 0;
+                    line-height: 1.2;
+                }
+                
+                /* Поле ввода */
+                .input-container {
+                    position: absolute;
+                    bottom: 25px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 360px;
+                    height: 60px;
+                    background: rgba(43, 39, 44, 0.6);
+                    border: 1px solid transparent;
+                    border-radius: 40px;
+                    display: flex;
+                    align-items: center;
+                    padding: 0 10px;
+                    box-sizing: border-box;
+                }
+                
+                .input-container::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    border-radius: 40px;
+                    padding: 1px;
+                    background: linear-gradient(90deg, #5C7FE2 0%, #F05A4F 33%, #EDA136 66%, #1C7755 100%);
+                    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                    mask-composite: exclude;
+                    -webkit-mask-composite: xor;
+                }
+                
+                .input-field {
+                    flex: 1;
+                    background: transparent;
+                    border: none;
+                    outline: none;
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 14px;
+                    font-weight: 400;
+                    padding: 0 10px;
+                }
+                
+                .input-field::placeholder {
+                    color: #A0A0A0;
+                }
+                
+                .input-buttons {
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                }
+                
+                .input-btn {
+                    width: 38px;
+                    height: 38px;
+                    background: transparent;
+                    border: none;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: opacity 0.3s ease;
+                    position: relative;
+                    z-index: 1;
+                }
+                
+                .input-btn:hover {
+                    opacity: 0.7;
+                }
+                
+                .input-btn svg {
+                    width: 38px;
+                    height: 38px;
+                    fill: #FFFFFF;
+                }
+                .input-btn img {
+                    width: 38px;
+                    height: 38px;
+                    display: block;
+                }
+                
+                /* Стили для заглушек экранов */
+                .screen-label {
+                    position: absolute;
+                    top: 20px;
+                    left: 20px;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: #FFFFFF;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 500;
+                    z-index: 10;
+                }
+                
+                .placeholder-content {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    text-align: center;
+                    color: #FFFFFF;
+                }
+                
+                .placeholder-content h3 {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 24px;
+                    font-weight: 600;
+                    margin: 0 0 16px 0;
+                }
+                
+                .placeholder-content p {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 16px;
+                    font-weight: 400;
+                    color: #A0A0A0;
+                    margin: 0;
+                }
+                
+                /* Стили для Dialog Screen */
+                .menu-button {
+                    position: absolute;
+                    top: 35px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 40px;
+                    height: 40px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10; /* поверх overlay */
+                }
+                .menu-button img { transition: transform 0.15s ease, opacity 0.15s ease; }
+                .menu-button:hover img { transform: scale(1.08); opacity: 0.85; }
+                /* При открытом меню центрируем кнопку по вертикали в зоне overlay (100px, padding-top 15px => центр на 50px) */
+                .menu-button.menu-open {
+                    top: 50px;
+                    transform: translate(-50%, -50%);
+                }
+                /* Close button inside grid (center column) */
+                .menu-close-btn{ width:40px; height:40px; background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:100px; transition: background .15s ease, transform .15s ease; }
+                .menu-close-btn:hover{ background: rgba(255,255,255,.10); }
+                .menu-close-btn:active{ transform: scale(.96); }
+                .menu-close-btn img{ width:40px; height:40px; display:block; border-radius:100px; }
+                
+                .dialogue-container {
+                    position: absolute;
+                    top: 85px;
+                    left: 10px;
+                    right: 10px;
+                    width: 360px;
+                    height: 540px;
+                    border-radius: 20px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    background: transparent;
+                    overflow-y: auto;
+                    padding: 20px;
+                    box-sizing: border-box;
+                }
+                /* overlay sized to dialogue viewport */
+                .dialog-overlay{ top:85px; left:10px; right:10px; height:540px; }
+                /* v1-like thin scrollbar for dialogue container */
+                .dialogue-container::-webkit-scrollbar{ width:2px; }
+                .dialogue-container::-webkit-scrollbar-track{ background:transparent; }
+                .dialogue-container::-webkit-scrollbar-thumb{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%); border-radius:1px; }
+                .dialogue-container::-webkit-scrollbar-thumb:hover{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%); }
+                .dialogue-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
+                
+                .message-bubble {
+                    border-radius: 10px;
+                    padding: 10px;
+                    margin-bottom: 16px;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 14px;
+                    line-height: 1.4;
+                    word-wrap: break-word;
+                    max-width: 97%;
+                }
+                
+                .widget-bubble {
+                    background: rgba(71, 106, 165, 0.5);
+                    color: #FFFFFF;
+                    margin-right: 20px;
+                    margin-left: 0;
+                }
+                
+                .user-bubble {
+                    background: transparent;
+                    border: 1px solid rgba(152, 152, 152, 0.5);
+                    color: #FFFFFF;
+                    margin-left: 20px;
+                    margin-right: 0;
+                    margin-left: auto;
+                }
+                
+                /* Стили для Context Screen */
+                .context-main-container {
+                    position: absolute;
+                    top: 135px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 360px;
+                    text-align: center;
+                }
+                
+                .progress-grid-container {
+                    display: grid;
+                    grid-template-columns: 1fr 100px 1fr;
+                    align-items: center;
+                    margin-bottom: 10px;
+                }
+                
+                .grid-column-left {
+                    /* Пустая левая колонка */
+                }
+                
+                .grid-column-center {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+                
+                .grid-column-right {
+                    display: flex;
+                    align-items: center;
+                    padding-left: 20px;
+                }
+                
+                .progress-ring {
+                    position: relative;
+                    width: 100px;
+                    height: 100px;
+                }
+                
+                .progress-text {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 18px;
+                    font-weight: 400;
+                    color: #FFFFFF;
+                }
+                
+                .data-storage-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 10px;
+                    font-weight: 400;
+                    color: #A9A9A9;
+                }
+                
+                .status-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 10px;
+                    font-weight: 400;
+                    color: #DF87F8;
+                    margin-bottom: 20px;
+                }
+                
+                .main-message {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 13px;
+                    font-weight: 400;
+                    color: #FFFFFF;
+                    line-height: 1.4;
+                    margin-bottom: 20px;
+                }
+                
+                .context-gradient-line {
+                    width: 320px;
+                    height: 2px;
+                    border-radius: 1px;
+                    background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
+                    margin: 0 auto 10px auto;
+                }
+                
+                .hint-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 200;
+                    color: #a9a9a9;
+                    line-height: 1.4;
+                    margin-bottom: 25px;
+                }
+                
+                .context-leave-request-button {
+                    text-align: center;
+                }
+                
+                .context-leave-request-btn {
+                    width: 110px;
+                    height: 25px;
+                    background: #476AA5;
+                    border: none;
+                    border-radius: 20px;
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 400;
+                    cursor: pointer;
+                    transition: opacity 0.3s ease;
+                }
+                
+                .context-leave-request-btn:hover {
+                    opacity: 0.8;
+                }
+                
+                .footer-text {
+                    position: absolute;
+                    bottom: 25px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 10px;
+                    font-weight: 400;
+                    color: #A9A9A9;
+                    text-align: center;
+                }
+                
+                /* Декоративная линия для ContextScreen */
+                .context-gradient-line {
+                    width: 320px;
+                    height: 2px;
+                    border-radius: 1px;
+                    background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
+                    margin-bottom: 10px;
+                }
+                
+                /* ========================= */
+                /*        Support Screen     */
+                /* ========================= */
+                .support-main-container {
+                    position: absolute;
+                    top: 110px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: calc(100% - 50px);
+                }
+                
+                .support-faq-title {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 16px;
+                    font-weight: 400;
+                    color: #EDCF23;
+                    text-align: left;
+                }
+                
+                .support-faq-list {
+                    margin-top: 15px;
+                }
+                
+                .support-faq-item {
+                    margin-bottom: 20px;
+                }
+                
+                .support-faq-question {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 6px;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 14px;
+                    font-weight: 400;
+                    color: #FFFFFF;
+                }
+                
+                .support-faq-question::before {
+                    content: '▸';
+                    color: #FFFFFF;
+                    line-height: 1;
+                    transform: translateY(1px);
+                }
+                
+                .support-faq-answer {
+                    margin-top: 6px;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 13px;
+                    font-weight: 300;
+                    color: #C3C3C3;
+                }
+                
+                .support-gradient-line {
+                    width: 100%;
+                    height: 2px;
+                    border-radius: 1px;
+                    background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
+                    margin: 0 auto 10px auto;
+                }
+                
+                .support-hint-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 100;
+                    color: #FFFFFF;
+                    line-height: 1.4;
+                    text-align: center;
+                }
+                
+                .support-contact-button {
+                    text-align: center;
+                }
+                
+                .support-contact-btn {
+                    width: 110px;
+                    height: 25px;
+                    margin-top: 25px;
+                    background: #EDCF23;
+                    border: none;
+                    border-radius: 20px;
+                    color: #3B3B3B;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 400;
+                    cursor: pointer;
+                    transition: opacity 0.3s ease;
+                }
+                
+                .support-contact-btn:hover {
+                    opacity: 0.9;
+                }
+                
+                .support-footer-text {
+                    position: absolute;
+                    bottom: 25px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 10px;
+                    font-weight: 400;
+                    color: #A9A9A9;
+                    text-align: center;
+                }
+                
+                /* ========================= */
+                /*        Request Screen     */
+                /* ========================= */
+                .request-main-container {
+                    position: absolute;
+                    top: 110px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: calc(100% - 50px);
+                }
+                
+                .request-title {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 16px;
+                    font-weight: 400;
+                    color: #FFFFFF;
+                    margin-bottom: 15px;
+                    text-align: left;
+                }
+                
+                .request-field {
+                    margin-bottom: 20px;
+                }
+                
+                .request-field-label {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #FFFFFF;
+                    margin-bottom: 5px;
+                }
+                
+                .request-input {
+                    width: 100%;
+                    height: 35px;
+                    border-radius: 10px;
+                    background: rgba(106, 108, 155, 0.10);
+                    border: 1px solid rgba(106, 108, 155, 0.30);
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 400;
+                    padding-left: 10px;
+                    line-height: 35px;
+                    box-sizing: border-box;
+                }
+                
+                .request-input::placeholder {
+                    color: #A0A0A0;
+                }
+                
+                .request-row {
+                    display: flex;
+                    gap: 10px;
+                    margin-bottom: 10px;
+                }
+                
+                .request-code-input {
+                    width: 100px;
+                    flex: 0 0 100px;
+                }
+                
+                .request-phone-input {
+                    flex: 1;
+                }
+                
+                .request-select {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+                    height: 35px;
+                    border-radius: 10px;
+                    background: rgba(106, 108, 155, 0.10);
+                    border: 1px solid rgba(106, 108, 155, 0.30);
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 400;
+                    padding: 0 10px;
+                    box-sizing: border-box;
+                }
+                
+                .request-caret {
+                    color: #C4C4C4;
+                    margin-left: 8px;
+                }
+                
+                .request-textarea {
+                    width: 100%;
+                    min-height: 80px;
+                    border-radius: 10px;
+                    background: rgba(106, 108, 155, 0.10);
+                    border: 1px solid rgba(106, 108, 155, 0.30);
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 400;
+                    padding: 10px;
+                    resize: vertical;
+                    box-sizing: border-box;
+                }
+                
+                .request-textarea::placeholder {
+                    color: #A0A0A0;
+                }
+                
+                .request-actions-container {
+                    width: 100%;
+                    padding: 0 5px;
+                    box-sizing: border-box;
+                }
+                
+                .request-consent {
+                    display: flex;
+                    align-items: flex-start;
+                }
+                
+                .request-checkbox {
+                    width: 12px;
+                    height: 12px;
+                    margin-right: 10px;
+                }
+                
+                .request-consent-text {
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 10px;
+                    font-weight: 400;
+                    color: #C4C4C4;
+                    line-height: 1.4;
+                }
+                
+                .request-privacy-link {
+                    color: #DF87F8;
+                    text-decoration: none;
+                }
+                
+                .request-buttons {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 20px;
+                    margin-top: 20px;
+                }
+                
+                .request-send-btn,
+                .request-cancel-btn {
+                    width: 150px;
+                    height: 40px;
+                    border-radius: 10px;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 15px;
+                    font-weight: 400;
+                    cursor: pointer;
+                }
+                
+                .request-send-btn {
+                    background: #476AA5;
+                    color: #FFFFFF;
+                    border: none;
+                }
+                
+                .request-cancel-btn {
+                    background: transparent;
+                    color: #FFFFFF;
+                    border: 1px solid #476AA5;
+                }
+                
+                /* ========================= */
+                /*         Menu Overlay      */
+                /* ========================= */
+                .menu-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100px;
+                    border-radius: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    backdrop-filter: blur(0px);
+                    -webkit-backdrop-filter: blur(0px);
+                    transition: backdrop-filter 0.3s ease-in-out;
+                    pointer-events: none;
+                    z-index: 9;
+                }
+                .menu-overlay::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    border-radius: 20px;
+                    background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(153,153,153,0.3) 100%);
+                    opacity: 0;
+                    transition: opacity 0.3s ease-in-out;
+                    pointer-events: none;
+                }
+                .menu-overlay.open {
+                    backdrop-filter: blur(14px);
+                    -webkit-backdrop-filter: blur(14px);
+                    pointer-events: auto;
+                }
+                .menu-overlay.open::before {
+                    opacity: 0.1;
+                }
+                .menu-overlay-content {
+                    width: 300px;
+                    height: 60px;
+                    margin: 0 auto;
+                    box-sizing: border-box;
+                    opacity: 0;
+                    visibility: hidden;
+                    pointer-events: none;
+                    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+                    position: relative;
+                    z-index: 1;
+                }
+                .menu-overlay.open .menu-overlay-content {
+                    opacity: 1;
+                    visibility: visible;
+                    pointer-events: auto;
+                }
+                .menu-grid {
+                    display: grid;
+                    grid-template-columns: 110px 80px 110px;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .menu-grid--selected {
+                    display: grid;
+                    grid-template-columns: 110px 80px 110px;
+                    align-items: center;
+                    justify-content: center;
+                    height: 60px;
+                }
+                .menu-col {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                }
+                .menu-col--single {
+                    flex-direction: row;
+                    gap: 0;
+                }
+                .menu-col--middle { width: 80px; }
+                .menu-btn {
+                    width: 110px;
+                    height: 25px;
+                    background: transparent;
+                    border-radius: 20px;
+                    border: 1px solid currentColor;
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 400;
+                    cursor: pointer;
+                    transition: transform 0.15s ease, opacity 0.15s ease;
+                }
+                .menu-btn:hover { transform: scale(1.05); opacity: 0.85; }
+                .menu-btn--request { color: #6A6C9B; }
+                .menu-btn--support { color: #EDCF23; }
+                .menu-btn--context { color: #E85F62; }
+                .menu-btn--reset { color: #FFFFFF; }
+                .menu-link {
+                    width: 110px;
+                    height: 25px;
+                    border-radius: 20px;
+                    background: transparent;
+                    border: none;
+                    color: #FFFFFF;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    cursor: pointer;
+                    text-decoration: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .menu-link:hover { opacity: 0.85; }
+                .menu-badge {
+                    width: 110px;
+                    height: 25px;
+                    border-radius: 20px;
+                    border: 1px solid currentColor;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    color: currentColor;
+                }
+                .menu-badge--request { color: #6A6C9B; }
+                .menu-badge--support { color: #EDCF23; }
+                .menu-badge--context { color: #E85F62; }
+  </style>
 
-  .param-value{
-    font-size:var(--fs-meta-value);
-    color:var(--muted);       /* было #BBBBBB */
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    justify-self:end; text-align:right; max-width:100%; font-weight:400;
-    position:relative; cursor: default; user-select: auto;
-  }
-  .param-value:hover { outline: none; text-decoration: none; }
-  .param-value:focus { outline: none; }
+  <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
+  <style>
+  /* COMPAT-V1: Чат — прокрутка контейнеров (v2: переносим на dialogue-container) */
+  .dialogue-container{ overflow:auto; }
+  .thread{ display:flex; flex-direction:column; }
 
-  /* Tooltip for param-value */
-  /* кастомный tooltip отключен — используем нативный title */
+  /* COMPAT-V1: Лоадер поверх чата */
+  #loadingIndicator{ position:absolute; display:none; }
+  #loadingIndicator.active{ display:flex; }
 
-  .action-buttons{ display:flex; gap:16px; margin:18px 0 4px 0; align-items:center; }  /* было 18px 20px 4px 20px */
-  .btn-back, .btn-refresh{ height:40px; padding:0 24px; border:none; border-radius:12px; font-size:var(--fs-button); font-weight:600; cursor:pointer; transition:all .2s ease; position:relative; z-index:1; }
-  .btn-back{ background:rgba(51,51,51,.8); color:#fff; border:1px solid transparent; }
-  .btn-back::before{ content:''; position:absolute; inset:0; border-radius:12px; padding:1px;
-    background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
-    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
-    mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
-  .btn-back:hover{ background:#646464; transform:translateY(-1px); }
-  .btn-refresh{ background:transparent; color:#BBBBBB; padding:0; }
-  .btn-refresh:hover{ color:#ffffff; }
-
-  .legal-text{ margin:14px 0 0 0; height:auto; display:flex; justify-content:center; }  /* центрируем контейнер */
-  .tooltip-container{ position:relative; display:inline-block; }
-  .tooltip-trigger{ font-size:var(--fs-meta); color:#E646B9; cursor:pointer; text-decoration:underline; text-decoration-color:rgba(230,70,185,.5); transition:color .2s ease; }
-  .tooltip-trigger:hover{ color:#ffffff; }
-  .tooltip-content{
-    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:360px; background:rgba(51,51,51,.95);
-    border:1px solid transparent; border-radius:16px; padding:20px; opacity:0; visibility:hidden; transition:all .3s ease; z-index:1000; backdrop-filter: blur(10px);
-    box-shadow:0 20px 60px rgba(0,0,0,.4); height:auto; min-height:auto;
-  }
-  .tooltip-content::before{ content:''; position:absolute; inset:0; border-radius:16px; padding:1px;
-    background: conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; }
-  .tooltip-content p{ font-size:var(--fs-meta); line-height:1.6; color:var(--muted); margin-bottom:12px; position:relative; z-index:1; } /* цвет = muted */
-  .tooltip-content p:last-child{ margin-bottom:0; }
-  .tooltip-container:hover .tooltip-content{ opacity:1; visibility:visible; }
-  .tooltip-content::after{ content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:6px solid transparent; border-top-color:rgba(51,51,51,.95); }
-
-  /* Lead form overlay */
-  .lead-panel{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:1000; }
+  /* COMPAT-V1: Панель лида */
+  .lead-panel{ position:absolute; inset:0; display:none; }
   .lead-panel.active{ display:flex; }
-  .lead-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.40); z-index:0; }
-  .lead-box{ position:relative; width:400px; background:rgba(51,51,51,.95); border:none; border-radius:20px; padding:16px; box-shadow:0 18px 48px rgba(0,0,0,.35); z-index:1; pointer-events:auto; }
-  .lead-box.thankyou{ width:80%; height:30%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .lead-box::before{ content:none; }
-  .lead-title{ font-weight:600; color:#fff; margin:0 0 10px 0; font-size:14px; }
-  .lead-thanks-title{ margin:0 0 8px 0; color:#fff; font-size:20px; font-weight:700; text-align:center; }
-  .lead-thanks-note{ margin:0 0 12px 0; color:#fff; opacity:.7; font-weight:300; text-align:center; }
-  .lead-row{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }
-  .lead-label{ font-size:12px; color:#BBBBBB; }
-  .lead-input, .lead-select, .lead-textarea{ width:100%; height:36px; border-radius:12px; border:1px solid rgba(167,139,250,.35); background:rgba(167,139,250,.12); color:#fff; padding:8px 12px; font-size:13px; outline:none; pointer-events:auto; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
-  .lead-input:hover, .lead-select:hover, .lead-textarea:hover{ border-color: rgba(167,139,250,.55); background: rgba(167,139,250,.16); }
-  .lead-input:focus, .lead-select:focus, .lead-textarea:focus{ border-color:#A78BFA; box-shadow:0 0 0 3px rgba(167,139,250,.25); }
-  /* Custom select styling */
-  .lead-select{ -webkit-appearance:none; appearance:none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="%23C4B5FD" viewBox="0 0 16 16"><path d="M4.646 6.646a.5.5 0 0 1 .708 0L8 9.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z"/></svg>'); background-repeat:no-repeat; background-position: right 10px center; padding-right:36px; }
-  .lead-textarea{ height:64px; resize:vertical; }
-  .lead-actions{ display:flex; gap:10px; margin-top:10px; }
-  .lead-submit{ flex:1; height:40px; border:none; border-radius:12px; background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); color:#fff; font-weight:700; cursor:pointer; pointer-events:auto; box-shadow:0 6px 16px rgba(168,85,247,.22); transition:transform .12s ease, box-shadow .15s ease, filter .15s ease; }
-  .lead-box.thankyou .lead-actions{ justify-content:center; }
-  .lead-box.thankyou #leadContinue{ width:200px; height:50px; flex:0 0 auto; }
-  .lead-submit:hover{ filter: brightness(1.06); transform: translateY(-1px); box-shadow:0 8px 20px rgba(168,85,247,.28); }
-  .lead-cancel{ flex:1; height:40px; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:transparent; color:#FFFFFF; font-weight:700; cursor:pointer; pointer-events:auto; transition:transform .12s ease, background .15s ease, border-color .15s ease; }
-  .lead-cancel:hover{ background:rgba(255,255,255,.08); transform: translateY(-1px); border-color: rgba(255,255,255,.28); }
-  .lead-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; pointer-events:auto; }
-  .lead-consent input{ margin-top:3px; pointer-events:auto; }
-  .lead-invalid{ border-color:#FF6363 !important; box-shadow:0 0 0 2px rgba(255,99,99,.25); }
-  .shake-lead{ animation: shake .5s ease-in-out; }
-  .lead-consent.lead-invalid .consent-text{ color:#FF9A9A; }
-  .lead-error{ font-size:11px; color:#FF9A9A; margin-top:4px; min-height:14px; }
-  .lead-consent .consent-text{ font-size:12px; color:#BBBBBB; line-height:1.4; }
-  .lead-consent .consent-text a{ color:#C4B5FD; text-decoration:underline; }
-
-  /* Специальный класс для popup с хранением данных */
-  .legal-popup{
-    position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; max-width:380px; background:rgba(51,51,51,.95);
-    border:1px solid transparent; border-radius:16px; padding:24px; opacity:0; visibility:hidden; transition:all .3s ease; z-index:1000; backdrop-filter: blur(10px);
-    box-shadow:0 20px 60px rgba(0,0,0,.4); height:auto; min-height:auto;
-  }
-  .legal-popup::before{ content:''; position:absolute; inset:0; border-radius:16px; padding:1px;
-    background: conic-gradient(from 0deg, #300E7E 0%, #782160 23%, #E646B9 46%, #2D065A 64%, #BD65A4 81%, #300E7E 100%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite: exclude; }
-  .legal-popup p{ font-size:var(--fs-meta); line-height:1.6; color:var(--muted); margin-bottom:16px; position:relative; z-index:1; }
-  .legal-popup p:last-child{ margin-bottom:0; }
-  .tooltip-container:hover .legal-popup{ opacity:1; visibility:visible; }
-
-  /* ===== Responsive & Mobile polish (rewritten) ===== */
-
-/* Tablet & down */
-@media (max-width:1024px){
-  :host{
-    left:0;
-    right:0;
-    top:auto;
-    bottom:auto;
-    overscroll-behavior: contain; /* гасим резинки на iOS */
-    touch-action: pan-y;
-  }
-
-  .widget{
-    width:100%;
-    max-width:640px;
-    margin:0 auto;
-    border-radius:16px 16px 0 0;
-
-    /* slide-up поведение */
-    transform: translateY(100%);
-    transition: transform .28s ease, opacity .28s ease;
-
-    /* перфоманс */
-    will-change: transform;
-    backface-visibility: hidden;
-  }
-
-  :host(.open) .widget{
-    transform: translateY(0);
-  }
-}
-
-/* Mobile (iPhone range and small android) */
-@media (max-width:430px){
-  .widget{
-    /* высота с каскадом юнитов: базовый vh -> стабильный svh -> динамический dvh */
-    height: 100vh;
-    height: 100svh;
-    height: 100dvh;
-
-    width:100%;
-    max-width:100vw;
-    border-radius:16px 16px 0 0;
-    overflow:hidden; /* скрываем горизонтальный автоматически */
-  }
-
-  /* нижняя безопасная зона под системный инсет */
-  .content{
-    /* если есть кастомная высота нижней панели — можно добавить в calc */
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-  }
-
-  /* прокрутка сообщений: задаём предсказуемую высоту вместо "само как-то" */
-  :root{
-    /* если используешь высоту нижнего инпут-бара — поправь цифру/переменную */
-    --vw-input-bar-h: 64px;
-    --vw-header-h: 0px; /* если мобильный хедер фиксированный — поставь его высоту */
-  }
-
-  .messages-frame{
-    /* занимаем всё доступное, минус фикс-элементы */
-    max-height: calc(100% - var(--vw-input-bar-h) - var(--vw-header-h) - env(safe-area-inset-bottom));
-    overflow:auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-
-  /* lead-box: вместо каскада брейкпоинтов используем clamp() */
-  .lead-box{
-    width:100%;
-    max-width:100%;
-    /* паддинги и внешние отступы адаптивно */
-    padding: clamp(10px, 3.5vw, 16px);
-    margin: clamp(6px, 2.2vw, 10px) clamp(6px, 2.2vw, 10px);
-    border-radius: 12px; /* опционально, чтобы соответствовать мобильной эстетике */
-  }
-
-  .lead-row{
-    margin: clamp(6px, 1.6vw, 8px) 0;
-  }
-
-  /* фиксированная минимальная ширина сабмита без жёстких брейкпоинтов */
-  .lead-actions .lead-submit{
-    min-width: clamp(150px, 42vw, 180px);
-  }
-
-  /* вместо #id с !important — класс + flex-basis через clamp */
-  .lbCountryCode{
-    flex: 0 0 clamp(96px, 26vw, 110px);
-  }
-}
-
-/* Доступность: минимизируем движуху */
-@media (prefers-reduced-motion: reduce){
-  *{
-    transition: none !important;
-    animation: none !important;
-    scroll-behavior: auto !important;
-  }
-}
-
   </style>
 
   <!-- Launcher -->
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
-    <img src="${ASSETS_BASE}Voice-big-btn.svg" alt="Voice" />
+    <img src="${ASSETS_BASE}MicBig.png" alt="Voice" />
   </button>
 
   <div class="scrim" id="scrim"></div>
 
   <div class="widget" role="dialog" aria-modal="true" aria-label="Voice Assistant">
-    <!-- Header -->
-    <div class="header">
-      <div class="header-left"><img src="${ASSETS_BASE}logo-group-resized.svg" alt="VIA logo" /></div>
-      <div class="header-actions">
-        <button class="header-question-btn" id="btnToggle" title="Details"><img src="${ASSETS_BASE}details-btn.svg" alt="Details" /></button>
-        <button class="header-lead-btn" id="btnOpenLead"></button>
-      </div>
-    </div>
+    <!-- Header removed for v2 UI -->
 
     <!-- Content -->
     <div class="content">
       <!-- Main Screen -->
       <div class="main-screen" id="mainScreen">
-        <div class="main-content">
-          <button class="big-mic" id="mainButton" aria-pressed="false"><img src="${ASSETS_BASE}Voice-big-btn.svg" alt="Voice" /></button>
-          <div>
-            <div class="main-title">Voice Intelligent Assistance</div>
-            <div class="main-subtitle">Press To Speak</div>
-          </div>
+        <div class="voice-widget-container">
+            <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
+            <div class="gradient-line"></div>
+            <button class="mic-button" id="mainButton" aria-pressed="false">
+                <img src="${ASSETS_BASE}MicBig.png" alt="Microphone" style="width: 100%; height: 100%;">
+            </button>
+            <div class="text-container">
+                <p class="main-text">Press to speak</p>
+                <p class="sub-text">Voice Intelligent Assistance</p>
         </div>
-
         <div class="input-container">
           <div class="text-input-wrapper">
-            <input class="text-input" id="mainTextInput" type="text" placeholder="Введите ваш вопрос…"/>
-            <div class="recording-indicator" id="mainRecordingIndicator" style="display: none;">
-              <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+                    <input id="mainTextInput" type="text" class="input-field" placeholder="Write your request...">
+                    <div class="recording-indicator" id="mainRecordingIndicator" style="display:none;">
+                        <div class="recording-label">Идёт запись</div>
               <div class="record-timer" id="mainRecordTimer">00:00</div>
             </div>
           </div>
-          <button class="icon-btn" id="mainToggleButton" aria-pressed="false" title="Говорить"><img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" /></button>
-          <button class="icon-btn" id="mainSendButton" title="Отправить"><img src="${ASSETS_BASE}send-btn.svg" alt="Send" /></button>
+                <div class="input-buttons">
+                    <button class="input-btn" id="mainToggleButton" type="button" title="Говорить">
+                        <img src="${ASSETS_BASE}mic_btn.svg" alt="Microphone">
+                    </button>
+                    <button class="input-btn" id="mainSendButton" type="button" title="Отправить">
+                        <img src="${ASSETS_BASE}send_btn.svg" alt="Send">
+                    </button>
+                </div>
+            </div>
         </div>
       </div>
 
-      <!-- Chat Screen -->
-      <div class="chat-screen hidden" id="chatScreen">
-        <div class="messages-frame">
-          <div class="messages" id="messagesContainer">
-            <div class="thread" id="thread"></div>
+      <!-- Dialogue Screen (v2) wired to v1 logic -->
+      <div class="dialog-screen hidden" id="dialogScreen">
+        <div class="voice-widget-container">
+          <div class="menu-button">
+            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
           </div>
+          <div class="dialogue-container" id="messagesContainer">
+              <div class="thread" id="thread"></div>
           <button class="scroll-bottom-btn" id="btnScrollBottom" title="Scroll to bottom" aria-label="Scroll to bottom"><span class="chevron"></span></button>
-          <div class="loading" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
         </div>
-
+          <div class="loading dialog-overlay" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
         <div class="input-container">
           <div class="text-input-wrapper">
-            <input class="text-input" id="textInput" type="text" placeholder="Введите ваш вопрос…"/>
+              <input id="textInput" type="text" class="input-field" placeholder="Write your request...">
             <div class="recording-indicator" id="recordingIndicator" style="display: none;">
-              <div class="visualizer"><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+                <div class="recording-label">Идёт запись</div>
               <div class="record-timer" id="chatRecordTimer">00:00</div>
             </div>
           </div>
-          <button class="icon-btn" id="toggleButton" aria-pressed="false" title="Говорить"><img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" /></button>
-          <button class="icon-btn" id="sendButton" title="Отправить"><img src="${ASSETS_BASE}send-btn.svg" alt="Send" /></button>
+            <div class="input-buttons">
+              <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}mic_btn.svg" alt="Microphone"></button>
+              <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}send_btn.svg" alt="Send"></button>
         </div>
       </div>
-
-      <!-- Details Screen -->
-      <div class="details-screen hidden" id="detailsScreen">
-        <div class="details-content">
-          <div class="progress-section">
-            <div class="details-title">Понимание запроса</div>
-            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="progress-text" id="progressText">0% — ожидание</div>
+        </div>
           </div>
 
-          <div class="legal-text">
-            <div class="tooltip-container">
-              <span class="tooltip-trigger">Хранение данных</span>
-              <div class="legal-popup">
-                <p>Данные зашифрованы и используются только для определения лучшего варианта недвижимости. Не сохраняются после завершения сессии.</p>
-                <p>Данные могут быть использованы для записи на встречу, передачи менеджеру и в рекламных целях только с согласия пользователя. Будут храниться в зашифрованном виде по закону.</p>
+
+      <!-- Context Screen (v2) -->
+      <div class="context-screen hidden" id="contextScreen">
+        <div class="voice-widget-container">
+          <div class="menu-button">
+            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
               </div>
+          <div class="context-main-container">
+            <div class="progress-grid-container">
+              <div class="grid-column-left"></div>
+              <div class="grid-column-center">
+                <div class="progress-ring">
+                  <svg width="100" height="100" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="12"/>
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#E85F62" stroke-width="12" stroke-dasharray="276.46" stroke-dashoffset="2.76" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                  </svg>
+                  <div class="progress-text">99%</div>
+            </div>
+          </div>
+              <div class="grid-column-right">
+                <div class="data-storage-text">Data storage & encrypting</div>
+          </div>
+            </div>
+            <div class="status-text">Status: fulfilled</div>
+            <div class="main-message">Well done! You've fulfilled the system with the data that will make search much closer to your goal!</div>
+            <div class="context-gradient-line"></div>
+            <div class="hint-text">You can leave the request to make manager start working by your case immediately</div>
+            <div class="context-leave-request-button"><button class="context-leave-request-btn">Leave request</button></div>
+          </div>
+          <div class="footer-text">What data do we know?</div>
             </div>
           </div>
 
-          <div class="action-buttons">
-            <button class="btn-back" id="btnBackToChat">Назад к диалогу</button>
-            <button class="btn-refresh" id="btnRefreshSession">Обновить сессию</button>
+      <!-- Request Screen (v2) -->
+      <div class="request-screen hidden" id="requestScreen">
+        <div class="voice-widget-container">
+          <div class="menu-button">
+            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
+        </div>
+          <div class="request-main-container">
+            <div class="request-title">Leave a request</div>
+            <div class="request-field">
+              <div class="request-field-label">Name</div>
+              <input class="request-input" type="text" placeholder="Your name" />
+      </div>
+            <div class="request-field">
+              <div class="request-field-label">Contact (phone/ WhatsApp/ e-mail)</div>
+              <div class="request-row">
+                <input class="request-input request-code-input" type="text" placeholder="+34" />
+                <input class="request-input request-phone-input" type="text" placeholder="1234567" />
+    </div>
+              <input class="request-input" type="email" placeholder="yourmail@gmail.com" />
+        </div>
+            <div class="request-field">
+              <div class="request-field-label">Preferred contact method</div>
+              <div class="request-select"><span>WhatsApp</span><span class="request-caret">▾</span></div>
           </div>
-
-          <div class="details-section">
-            <div class="details-title">Основная информация</div>
-            <div class="param-list">
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Имя клиента</div><div class="param-value" id="nameValue" title="не определено">не определено</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Тип операции</div><div class="param-value" id="operationValue" title="не определена">не определена</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Бюджет</div><div class="param-value" id="budgetValue" title="не определен">не определен</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Тип недвижимости</div><div class="param-value" id="typeValue" title="не определен">не определен</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Город/район</div><div class="param-value" id="locationValue" title="не определен">не определен</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Количество комнат</div><div class="param-value" id="roomsValue" title="не определено">не определено</div></div>
-            </div>
+            <div class="request-field">
+              <div class="request-field-label">Convenient time</div>
+              <div class="request-select"><span>Today 13–15 (Fri, 17/10)</span><span class="request-caret">▾</span></div>
           </div>
+            <div class="request-field">
+              <div class="request-field-label">Comment (optional)</div>
+              <textarea class="request-textarea" placeholder="Short note"></textarea>
+        </div>
+            <div class="request-actions-container">
+              <div class="request-consent">
+                <input class="request-checkbox" type="checkbox" />
+                <div class="request-consent-text">I consent to the processing of my data for managing this request and contacting me about properties. <a class="request-privacy-link" href="#">Privacy Policy</a></div>
+        </div>
+              <div class="request-buttons">
+                <button class="request-send-btn">Send</button>
+                <button class="request-cancel-btn">Cancel</button>
+        </div>
+        </div>
+        </div>
+        </div>
+      </div>
 
-          <div class="details-section">
-            <div class="details-title">Детали и предпочтения</div>
-            <div class="param-list">
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Площадь</div><div class="param-value" id="areaValue" title="не определена">не определена</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Детали локации</div><div class="param-value" id="detailsValue" title="не определены">не определены</div></div>
-              <div class="param-row"><div class="param-label"><span class="param-dot"></span> Дополнительно</div><div class="param-value" id="preferencesValue" title="не определены">не определены</div></div>
+      <!-- Support Screen (v2) -->
+      <div class="support-screen hidden" id="supportScreen">
+        <div class="voice-widget-container">
+          <div class="menu-button">
+            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
+    </div>
+          <div class="support-main-container">
+            <div class="support-faq-title">FAQ</div>
+            <div class="support-faq-list">
+              <div class="support-faq-item"><div class="support-faq-question">Where is my data stored?</div><div class="support-faq-answer">Your data is safely encrypted and stored on our secure EU servers.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">How can I delete my information?</div><div class="support-faq-answer">Just send us a short message — we’ll remove your data immediately.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">Why can’t I send my request?</div><div class="support-faq-answer">Check your internet connection or try again in a few minutes.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">How can I be sure my info is safe?</div><div class="support-faq-answer">We never share or sell your data. You can review our Privacy Policy anytime.</div></div>
             </div>
+            <div class="support-gradient-line"></div>
+            <div class="support-hint-text">Got questions or something doesn’t work as expected? We’re here to help you resolve it quickly.</div>
+            <div class="support-contact-button"><button class="support-contact-btn">Contact Support</button></div>
+          </div>
+          <div class="support-footer-text">Want to talk with a human</div>
+        </div>
+      </div>
           </div>
 
         </div>
       </div>
     </div>
 
-    <!-- Lead Panel -->
-    <div class="lead-panel" id="leadPanel" aria-hidden="true">
-      <div class="lead-overlay" id="leadOverlay"></div>
-      <div class="lead-box" role="dialog" aria-modal="true" aria-labelledby="leadTitle">
-        <div class="lead-title" id="leadTitle"></div>
-        <div class="lead-row">
-          <label class="lead-label" for="leadName" id="leadNameLabel"></label>
-          <input class="lead-input" id="leadName" type="text" />
-          <div class="lead-error" id="leadNameError"></div>
-        </div>
-        <div class="lead-row" id="leadContactRow">
-          <label class="lead-label" id="leadContactLabel"></label>
-          <div style="display:flex; gap:8px;">
-            <select class="lead-select" id="leadCountryCode" style="flex:0 0 120px"></select>
-            <input class="lead-input" id="leadPhone" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="600112233" />
-          </div>
-          <div style="display:flex; gap:8px; margin-top:8px;">
-            <input class="lead-input" id="leadEmail" type="email" placeholder="name@example.com" />
-          </div>
-          <div class="lead-error" id="leadContactError"></div>
-        </div>
-        <div class="lead-row">
-          <label class="lead-label" for="leadChannel" id="leadChannelLabel"></label>
-          <select class="lead-select" id="leadChannel">
-            <option value="whatsapp" id="optWhatsApp"></option>
-            <option value="phone" id="optPhone"></option>
-            <option value="email" id="optEmail"></option>
-          </select>
-        </div>
-        <div class="lead-row">
-          <label class="lead-label" for="leadTime" id="leadTimeLabel"></label>
-          <select class="lead-select" id="leadTime"></select>
-        </div>
-        <div class="lead-row">
-          <label class="lead-label" for="leadNote" id="leadNoteLabel"></label>
-          <textarea class="lead-textarea" id="leadNote"></textarea>
-        </div>
-        <div class="lead-consent">
-          <input type="checkbox" id="leadConsent" />
-          <div class="consent-text" id="leadConsentText"></div>
-        </div>
-        <div class="lead-error" id="leadConsentError"></div>
-        <div class="lead-actions">
-          <button class="lead-cancel" id="leadCancel"></button>
-          <button class="lead-submit" id="leadSubmit"></button>
-        </div>
-      </div>
-    </div>
   </div>
   `;
 
 
-  /* ...весь остальной JS из твоего рендера (обработчики, showScreen и т.д.) без изменений... */
+  /* ...ВЕСЬ КОД ПРОСМОТРЕННЫЙ ДО ЭТОЙ ЧАСТИ ЯВЛЯЕТСЯ НУЖНЫМ И АКТУАЛИЗИРОВАННЫМ... */
 
 
 
   const $ = s => this.shadowRoot.querySelector(s);
 
-  // Screen management
-  const screens = {
-    main: $('#mainScreen'),
-    chat: $('#chatScreen'),
-    details: $('#detailsScreen')
-  };
-
+  // Screen management (fresh query each time to avoid stale refs)
+  const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen','supportScreen'];
   const showScreen = (screenName) => {
-    Object.values(screens).forEach(screen => screen?.classList.add('hidden'));
-    screens[screenName]?.classList.remove('hidden');
-    
-    // Add/remove understanding-mode class for content
-    const content = this.shadowRoot.querySelector('.content');
-    if (content) {
-      if (screenName === 'details') {
-        content.classList.add('understanding-mode');
-      } else {
-        content.classList.remove('understanding-mode');
-      }
-    }
-
-    // (cleaned) no forced auto-scroll here
+    screenIds.forEach(id => this.shadowRoot.getElementById(id)?.classList.add('hidden'));
+    this.shadowRoot.getElementById(screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen')?.classList.remove('hidden');
   };
 
   // Launcher
@@ -855,40 +1385,27 @@ render() {
     } catch {}
   });
 
-  // Header toggle button
-  $("#btnToggle")?.addEventListener("click", () => {
-    const isDetailsMode = screens.details?.classList.contains('hidden') === false;
-    if (isDetailsMode) {
-      showScreen('chat');
-      this.events.emit('details-close');
-      this.updateHeaderToggleButton('dialog');
-    } else {
-      showScreen('details');
-      this.events.emit('details-open');
-      this.updateHeaderToggleButton('details');
-    }
-  });
+  // Helper: close widget and restore page scroll
+  this.closeWidget = () => {
+    this.classList.remove("open");
+    try {
+      document.documentElement.style.overflow = this._prevPageOverflow || '';
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    } catch {}
+  };
 
-  // Lead panel open/close
-  const leadPanel = $('#leadPanel');
-  $('#btnOpenLead')?.addEventListener('click', (e) => {
+  // (legacy header/details and overlay lead panel handlers removed)
+
+  // Request screen actions
+  const reqSend = this.shadowRoot.querySelector('#requestScreen .request-send-btn');
+  if (reqSend) reqSend.addEventListener('click', (e) => { e.preventDefault(); this.openLeadPanel(); });
+  const reqCancel = this.shadowRoot.querySelector('#requestScreen .request-cancel-btn');
+  if (reqCancel) reqCancel.addEventListener('click', (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    leadPanel?.classList.add('active');
-    leadPanel?.setAttribute('aria-hidden', 'false');
-    $('#leadName')?.focus();
-  });
-  $('#leadOverlay')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    leadPanel?.classList.remove('active');
-    leadPanel?.setAttribute('aria-hidden', 'true');
-  });
-  $('#leadCancel')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    leadPanel?.classList.remove('active');
-    leadPanel?.setAttribute('aria-hidden', 'true');
+    if (this.messages && this.messages.length > 0) this.showChatScreen(); else this.showMainScreen();
+    // also close menu state if any
+    this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI();
   });
 
   // Populate time slots (Europe/Madrid)
@@ -927,6 +1444,7 @@ render() {
     });
   }
 
+  /* ===== LEGACY LEAD FORM HANDLER (v1 overlay) — kept as reference =====
   // Submit lead
   $('#leadSubmit')?.addEventListener('click', async () => {
     const name = $('#leadName')?.value?.trim();
@@ -1061,67 +1579,25 @@ render() {
       this.ui.showNotification(this.tLead('errorNetwork'));
     }
   });
+  */
   
-  // Details screen buttons
-  $("#btnBackToChat")?.addEventListener("click", () => {
-    if (this.messages && this.messages.length > 0) {
-      showScreen('chat');
-      this.events.emit('details-close');
-      this.updateHeaderToggleButton('dialog');
-    } else {
-      showScreen('main');
-      this.events.emit('details-close');
-      this.updateHeaderToggleButton('main');
-    }
-  });
-  
-  $("#btnRefreshSession")?.addEventListener("click", () => {
-    this.messages = [];
-    this.sessionId = null;
-    try {
-      localStorage.removeItem('vw_sessionId');
-      localStorage.removeItem('voiceWidgetSessionId');
-    } catch (e) {
-      console.warn('Could not clear localStorage:', e);
-    }
-    const thread = this.shadowRoot.getElementById('thread');
-    if (thread) thread.innerHTML = '';
-    const mainTextInput = this.shadowRoot.getElementById('mainTextInput');
-    if (mainTextInput) mainTextInput.value = '';
-    const textInput = this.shadowRoot.getElementById('textInput');
-    if (textInput) textInput.value = '';
-    this.updateUnderstanding(0);
-    showScreen('main');
-    this.events.emit('details-close');
-    this.updateHeaderToggleButton('main');
-    console.log('Session reset successfully');
-  });
+  // (legacy details buttons removed)
 
-  // Escape key
-  this.shadowRoot.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      if (screens.details?.classList.contains('hidden') === false) {
-        showScreen('chat');
-        this.events.emit('details-close');
-      } else if (screens.chat?.classList.contains('hidden') === false) {
-        showScreen('main');
-      } else {
-        this.classList.remove("open");
-        // Restore host page scroll
-        try {
-          document.documentElement.style.overflow = this._prevPageOverflow || '';
-          document.body.style.overflow = '';
-          document.body.style.touchAction = '';
-        } catch {}
-      }
-    }
-  });
+  // Escape key (global) — закрыть виджет и вернуть скролл страницы
+  this._onGlobalKeydown = (e) => {
+    if (e.key !== 'Escape') return;
+    if (!this.classList.contains('open')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.closeWidget();
+  };
+  try { document.addEventListener('keydown', this._onGlobalKeydown, true); } catch {}
 
   // Expose helpers
   this.showScreen = showScreen;
   this.showMainScreen = () => showScreen('main');
-  this.showChatScreen = () => showScreen('chat');
-  this.showDetailsScreen = () => showScreen('details');
+  this.showChatScreen = () => showScreen('dialog');
+  // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
   // Thread auto-scroll helper
   this._isThreadNearBottom = true;
@@ -1156,6 +1632,7 @@ render() {
   if (btnScrollBottom) {
     btnScrollBottom.addEventListener('click', () => this.scrollThreadToBottom(true));
   }
+  /* ===== STUB: openLeadPanel (legacy v1 overlay) — перепривяжем позже к requestScreen =====
   this.openLeadPanel = () => {
     const leadPanelEl = this.shadowRoot.getElementById('leadPanel');
     if (leadPanelEl) {
@@ -1165,6 +1642,7 @@ render() {
       if (nameEl) nameEl.focus();
     }
   };
+  */
 
   // Property card (как было)
   this.renderPropertyCard = (property) => {
@@ -1453,6 +1931,11 @@ render() {
   });
 }
 
+  // ---------- ПРЯМО ТУТ ЗАКАНЧИВВАЕТСЯ ФУНКЦИЯ РЕНДЕР (В НЕЙ ЛЕЖАТ СТИЛИ v2/ ----------
+                  // верстка и стили всех экранов в разметке и стилях/ 
+                  // логика и верстка старой лид формы (актуализировать)/
+                  // логика и верстка инлайн лид формы/
+                  // логика карточек квартир) 
 
 
 
@@ -1515,16 +1998,8 @@ render() {
         this.showPropertyCard(d.data);
       }
     });
-    this.events.on('textMessageSent', (d) => { console.log('📤 Text message sent:', d?.text?.slice(0,50)); });
-
-    // Screen transitions
-    this.events.on('details-open', () => {
-      console.log('📊 Details screen opened');
-    });
-    this.events.on('details-close', () => {
-      console.log('📊 Details screen closed');
-    });
-
+    
+    
     // Card interactions
     this.events.on('like', (data) => {
       console.log('❤️ Like clicked:', data.variantId);
@@ -1683,11 +2158,11 @@ render() {
     if (toggleButton) {
       if (isRecording) {
         // Show stop icon
-        toggleButton.innerHTML = `<img src="${ASSETS_BASE}stop-btn.svg" alt="Stop" />`;
+        toggleButton.innerHTML = `<img src="${ASSETS_BASE}stop_btn.svg" alt="Stop" />`;
         toggleButton.setAttribute('title', 'Сбросить');
       } else {
         // Show mic icon
-        toggleButton.innerHTML = `<img src="${ASSETS_BASE}mic-btn.svg" alt="Microphone" />`;
+        toggleButton.innerHTML = `<img src="${ASSETS_BASE}mic_btn.svg" alt="Microphone" />`;
         toggleButton.setAttribute('title', 'Говорить');
       }
     }
@@ -1727,22 +2202,6 @@ render() {
       } else {
         textInput.classList.remove('shake');
       }
-    }
-  }
-
-  // Update header toggle button
-  updateHeaderToggleButton(mode) {
-    const toggleButton = this.shadowRoot.getElementById('btnToggle');
-    if (!toggleButton) return;
-
-    if (mode === 'details') {
-      // Show return icon when details are open
-      toggleButton.innerHTML = `<img src="${ASSETS_BASE}return-btn.svg" alt="Return" />`;
-      toggleButton.setAttribute('title', 'Return to Dialog');
-    } else {
-      // Show question icon when in dialog mode
-      toggleButton.innerHTML = `<img src="${ASSETS_BASE}details-btn.svg" alt="Details" />`;
-      toggleButton.setAttribute('title', 'Details');
     }
   }
 
@@ -1819,7 +2278,7 @@ render() {
     requestAnimationFrame(() => {
       const H = messages.clientHeight;
       const targetLower = Math.max(0, Math.floor(H * 0.7));
-      const actionPanel = actionsMsg.querySelector('.card-actions-panel');
+      const actionPanel = existingPanel || (actionsMsg ? actionsMsg.querySelector('.card-actions-panel') : null);
       const gap = 12; // safety gap from thread spacing
 
       // limit card height if needed
@@ -2250,7 +2709,102 @@ render() {
     this.audioRecorder?.cleanupRecording?.();
     this.ui?.clearRecordingState?.();
     this.events?.clear?.();
+    try { document.removeEventListener('keydown', this._onGlobalKeydown, true); } catch {}
     console.log('👋 Voice Widget disconnected and cleaned up');
+  }
+
+  // ===== v2 Menu Overlay integration (UI only) =====
+  setupMenuOverlay() {
+    // Создаём единый overlay на весь виджет (не привязан к конкретному экрану)
+    const container = this.shadowRoot.querySelector('.widget');
+    if (!container) return;
+    let overlay = this.shadowRoot.querySelector('.menu-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'menu-overlay';
+      const content = document.createElement('div');
+      content.className = 'menu-overlay-content';
+      overlay.appendChild(content);
+      container.appendChild(overlay);
+    }
+    this.updateMenuUI();
+    // Навешиваем обработчики на все кнопки меню на текущем экране
+    this.shadowRoot.querySelectorAll('.menu-button img').forEach(img => {
+      img.onclick = () => {
+        if (this._menuState === 'closed' || !this._menuState) this._menuState = 'open';
+        else if (this._menuState === 'open') this._menuState = 'closed';
+        else if (this._menuState === 'selected') this._menuState = 'open';
+        this.updateMenuUI();
+      };
+    });
+  }
+
+  updateMenuUI() {
+    const overlay = this.shadowRoot.querySelector('.menu-overlay');
+    if (!overlay) return;
+    if (this._menuState === 'closed' || !this._menuState) overlay.classList.remove('open'); else overlay.classList.add('open');
+
+    const menuImg = this.shadowRoot.querySelector('.menu-button img');
+    const menuBtn = this.shadowRoot.querySelector('.menu-button');
+    if (menuImg) menuImg.src = (this._menuState === 'open') ? `${ASSETS_BASE}menu_close_btn.svg` : `${ASSETS_BASE}menu_icon.svg`;
+    if (menuBtn) { if (this._menuState !== 'closed' && this._menuState) menuBtn.classList.add('menu-open'); else menuBtn.classList.remove('menu-open'); }
+
+    let content = overlay.querySelector('.menu-overlay-content');
+    if (!content) {
+      content = document.createElement('div');
+      content.className = 'menu-overlay-content';
+      overlay.appendChild(content);
+    }
+
+    if (this._menuState === 'open') {
+      content.innerHTML = `
+        <div class="menu-grid">
+          <div class="menu-col">
+            <button class="menu-btn menu-btn--request" data-action="request">Leave request</button>
+            <button class="menu-btn menu-btn--support" data-action="support">Support</button>
+          </div>
+          <div class="menu-col menu-col--middle" style="width:80px; align-items:center; justify-content:center;">
+            <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
+          </div>
+          <div class="menu-col">
+            <button class="menu-btn menu-btn--context" data-action="context">Context</button>
+            <button class="menu-btn menu-btn--reset" data-action="reset">Reset session</button>
+          </div>
+        </div>`;
+      const closeBtn = content.querySelector('.menu-close-btn');
+      if (closeBtn) closeBtn.onclick = () => { this._menuState = 'closed'; this.updateMenuUI(); };
+      content.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          const action = e.currentTarget.getAttribute('data-action');
+          if (action === 'request') { this.showScreen('request'); this._selectedMenu = 'request'; this._menuState = 'selected'; }
+          if (action === 'support') { this.showScreen('support'); this._selectedMenu = 'support'; this._menuState = 'selected'; }
+          if (action === 'context') { this.showScreen('context'); this._selectedMenu = 'context'; this._menuState = 'selected'; }
+          if (action === 'reset') { this.clearSession(); this.showMainScreen(); this._selectedMenu = null; this._menuState = 'closed'; }
+          this.updateMenuUI();
+        };
+      });
+    } else if (this._menuState === 'selected') {
+      const labelMap = { request: 'Leave request', support: 'Support', context: 'Context' };
+      const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : this._selectedMenu === 'support' ? 'menu-badge--support' : 'menu-badge--context';
+      content.innerHTML = `
+        <div class="menu-grid menu-grid--selected">
+          <div class="menu-col menu-col--single">
+            <button class="menu-link" data-action="back">Back to dialogue</button>
+          </div>
+          <div class="menu-col menu-col--single menu-col--middle" style="justify-content:center;">
+            <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
+          </div>
+          <div class="menu-col menu-col--single">
+            <div class="menu-badge ${colorClass}">${labelMap[this._selectedMenu] || ''}</div>
+          </div>
+        </div>`;
+      const closeBtn = content.querySelector('.menu-close-btn');
+      if (closeBtn) closeBtn.onclick = () => { this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
+      const backBtn = content.querySelector('[data-action="back"]');
+      if (backBtn) backBtn.onclick = () => { this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
+    } else {
+      content.innerHTML = '';
+    }
   }
 
   // совместимость

@@ -96,6 +96,22 @@ export class UnderstandingManager {
       progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
     }
 
+    // v2 Context screen sync: update circular progress and text if present
+    try {
+      const ctx = this.widget.shadowRoot.getElementById('contextScreen');
+      if (ctx) {
+        const ctxText = ctx.querySelector('.progress-text');
+        if (ctxText) ctxText.textContent = `${progress}%`;
+        const activeArc = ctx.querySelector('.progress-ring svg circle:nth-of-type(2)');
+        if (activeArc) {
+          const CIRCUMFERENCE = 276.46; // as in v2
+          const clamped = Math.max(0, Math.min(100, Number(progress) || 0));
+          const offset = Math.max(0, (1 - clamped / 100) * CIRCUMFERENCE);
+          activeArc.setAttribute('stroke-dashoffset', String(offset));
+        }
+      }
+    } catch {}
+
     // Синхронизируем шкалу в хедере
     if (typeof this.widget.updateHeaderUnderstanding === 'function') {
       this.widget.updateHeaderUnderstanding(progress);
