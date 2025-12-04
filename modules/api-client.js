@@ -53,22 +53,6 @@ export class APIClient {
     const args = cmd.args || {};
     try {
       switch (name) {
-        case 'form.contact': {
-          // Open main lead panel
-          this.widget.openLeadPanel?.();
-          break;
-        }
-        case 'form.schedule_view':
-        case 'form.call_time': {
-          // Start inline flow at time selection (step A)
-          if (!this.widget.inlineLeadState.step) this.widget.inlineLeadState.step = 'A';
-          if (args && args.time_window) {
-            this.widget.inlineLeadState.data = this.widget.inlineLeadState.data || {};
-            this.widget.inlineLeadState.data.time_window = args.time_window;
-          }
-          this.widget.renderInlineLeadStep?.();
-          break;
-        }
         case 'cards.list':
         case 'cards.show':
         case 'cards.more_like_this':
@@ -158,26 +142,6 @@ export class APIClient {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
         }
-        // Inline lead-flow: build target step once and render once (avoid duplicates)
-        if (!this.disableServerUI && data.ui && data.ui.inlineLead) {
-          const il = data.ui.inlineLead;
-          try {
-            if (!this.widget.inlineLeadState.step && (il.startFlow || il.timeFound || il.contactFound)) {
-              this.widget.inlineLeadState.step = 'A';
-            }
-            if (il.timeFound && il.time_window) {
-              this.widget.inlineLeadState.data.time_window = il.time_window;
-              if (!this.widget.inlineLeadState.step || this.widget.inlineLeadState.step === 'A') this.widget.inlineLeadState.step = 'B';
-            }
-            if (il.contactFound && il.contact) {
-              this.widget.inlineLeadState.data.contact = il.contact;
-              this.widget.inlineLeadState.step = 'D';
-            }
-            if (this.widget.inlineLeadState.step) {
-              this.widget.renderInlineLeadStep();
-            }
-          } catch (e) { console.warn('Inline flow fast-forward error:', e); }
-        }
       } catch (e) { console.warn('Cards handling error:', e); }
 
     } catch (error) {
@@ -239,26 +203,6 @@ export class APIClient {
       try {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
           this.widget.suggestCardOption(data.cards[0]);
-        }
-        // Inline lead-flow fast-forward for main screen send (single render)
-        if (!this.disableServerUI && data.ui && data.ui.inlineLead) {
-          const il = data.ui.inlineLead;
-          try {
-            if (!this.widget.inlineLeadState.step && (il.startFlow || il.timeFound || il.contactFound)) {
-              this.widget.inlineLeadState.step = 'A';
-            }
-            if (il.timeFound && il.time_window) {
-              this.widget.inlineLeadState.data.time_window = il.time_window;
-              if (!this.widget.inlineLeadState.step || this.widget.inlineLeadState.step === 'A') this.widget.inlineLeadState.step = 'B';
-            }
-            if (il.contactFound && il.contact) {
-              this.widget.inlineLeadState.data.contact = il.contact;
-              this.widget.inlineLeadState.step = 'D';
-            }
-            if (this.widget.inlineLeadState.step) {
-              this.widget.renderInlineLeadStep();
-            }
-          } catch (e) { console.warn('Inline flow fast-forward (main) error:', e); }
         }
       } catch (e) { console.warn('Cards handling error (main):', e); }
 

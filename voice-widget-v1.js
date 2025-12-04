@@ -1,5 +1,5 @@
 // ========================================
-/* 📁 voice-widget.js (ОБНОВЛЁННАЯ ВЕРСИЯ) */
+/* 📁 voice-widget.js (ОБНОВЛЁННАЯ ВЕРСИЯ v2) */
 // ========================================
 
 // Базовый путь для ассетов
@@ -67,8 +67,7 @@ class VoiceWidget extends HTMLElement {
     this.ui = new UIManager(this);
     this.api = new APIClient(this);
 
-    // i18n (lead form)
-    this.leadI18n = this.buildLeadI18nDictionary();
+    
 
     this.render();
     this.bindEvents();
@@ -117,18 +116,7 @@ class VoiceWidget extends HTMLElement {
     // v2 menu overlay init (after DOM is ready)
     try { this.setupMenuOverlay(); } catch {}
 
-    // Применяем i18n к форме лида и кнопке
-    this.applyLeadI18n();
-
-    // Реакция на смену локали через localStorage
-    try {
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'vw_lang') {
-          this.applyLeadI18n();
-          this.populateTimeSlots();
-        }
-      });
-    } catch {}
+    
   }
 
   checkBrowserSupport() {
@@ -269,16 +257,41 @@ render() {
   .card-mock .cm-title{ font-weight:700; color:#2b2b2b; }
   .card-mock .cm-sub{ font-size:12px; color:#666; }
   .card-mock .cm-price{ font-weight:700; color:#FF8A4C; }
-  .card-actions-panel{ margin-top:8px; display:flex; gap:16px; align-items:center; }
-  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; font-size:12px; height:36px; }
-  /* like → как .btn-back */
-  .card-actions-panel .card-btn.like{ height:36px; padding:0 18px; border:none; border-radius:12px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s ease; background:rgba(51,51,51,.8); color:#fff; border:1px solid transparent; }
-  .card-actions-panel .card-btn.like::before{ content:''; position:absolute; inset:0; border-radius:12px; padding:1px; background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%); -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; pointer-events:none; }
+  .card-actions-panel{ display:flex; gap:16px; align-items:center; }
+  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; font-size:12px; height:36px; padding:0 18px; border-radius:10px; border:1.25px solid #476AA5; background:transparent; color:#476AA5; font-weight:600; transition:all .2s ease; }
+                /* Unify in-process action buttons */
+                .card-actions-panel .card-btn{
+                  padding: var(--btn-py) var(--btn-px);
+                  height: auto;
+                  min-width: var(--btn-min-w);
+                  border-radius:var(--btn-radius);
+                  font: var(--fw-s) var(--fs-btn)/1 var(--ff);
+                }
+  /* like (filled) */
+  .card-actions-panel .card-btn.like{ background:#476AA5; color:#fff; border:1.25px solid #5F81BA; }
+  .card-actions-panel .card-btn.like::before{ content:none; }
   .card-actions-panel .card-btn.like{ position:relative; }
-  .card-actions-panel .card-btn.like:hover{ background:#646464; transform:translateY(-1px); }
-  /* next → как .btn-refresh (текстовая) */
-  .card-actions-panel .card-btn.next{ background:transparent; color:#BBBBBB; padding:0; border:none; height:36px; font-weight:600; font-size:12px; }
-  .card-actions-panel .card-btn.next:hover{ color:#ffffff; }
+  .card-actions-panel .card-btn.like:hover{ transform:translateY(-1px); }
+  /* next (outlined) */
+  .card-actions-panel .card-btn.next{ background:transparent; color:#476AA5; border:1.25px solid #476AA5; }
+  .card-actions-panel .card-btn.next:hover{ opacity:.9; }
+
+  /* ===== Cards Slider ===== */
+  .cards-slider{ width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; position:relative; }
+  .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
+  .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; }
+  .card-slide.active{ transform: scale(1); opacity:1; }
+  .cards-slider{ scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color: rgba(255,255,255,.02) transparent; }
+  .cards-slider::-webkit-scrollbar{ height:3px; }
+  .cards-slider::-webkit-scrollbar-track{ background:transparent; }
+  .cards-slider::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.02); border-radius:2px; }
+  /* dots row inside actions area (blue theme) */
+  .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:4px 0 10px; }
+  .cards-dot{ width:12px; height:6px; border-radius:6px; background:#5F81BA; opacity:.5; border:1px solid #476AA5; transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
+  .cards-dot.active{ width:24px; background:#476AA5; opacity:1; }
+  /* actions container for clearer boundaries */
+  .card-actions-wrap{ margin:8px; padding:10px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); }
+  .card-slide .cs{ width:100%; }
 
   /* ===== Inline Lead Bubbles ===== */
 
@@ -336,6 +349,59 @@ render() {
                     right: 20px;
                     z-index: 9999;
                 }
+                
+                /* ========================= */
+                /*      Typography tokens    */
+                /* ========================= */
+                :host {
+                  /* family */
+                  --ff: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                  /* weights */
+                  --fw-r: 400;
+                  --fw-m: 500;
+                  --fw-s: 600;
+                  --fw-b: 700;
+                  /* sizes in rem (внутри виджета, без изменения html) */
+                  --fs-display: 1.428rem;   /* ~20px */
+                  --fs-h1: 1.286rem;        /* ~18px */
+                  --fs-h2: 1.143rem;        /* ~16px */
+                  --fs-h3: 1rem;            /* 14px */
+                  --fs-body: 1rem;          /* 14px */
+                  --fs-body-alt: 0.929rem;  /* ~13px */
+                  --fs-small: 0.857rem;     /* ~12px */
+                  --fs-btn: 0.857rem;       /* ~12px */
+                  --fs-micro: 0.714rem;     /* ~10px */
+                  /* line-heights */
+                  --lh-tight: 1.2;
+                  --lh-normal: 1.4;
+                  --lh-loose: 1.6;
+                  /* unified action button sizes (rem) based on 14px scale */
+                 
+                  --btn-radius: 0.714rem;   /* ~10px */
+                  --btn-px: 1.143rem;       /* ~16px horizontal padding */
+                  --btn-py: 0.857rem;       /* ~12px vertical padding */
+                  --btn-min-w: 7.143rem;    /* ~100px min width */
+                }
+                /* semantic text classes */
+                .text-display { font: var(--fw-s) var(--fs-display)/var(--lh-tight) var(--ff); }
+                .text-h1      { font: var(--fw-s) var(--fs-h1)/var(--lh-tight) var(--ff); }
+                .text-h2      { font: var(--fw-s) var(--fs-h2)/var(--lh-tight) var(--ff); }
+                .text-h3      { font: var(--fw-s) var(--fs-h3)/var(--lh-normal) var(--ff); }
+                .text-body    { font: var(--fw-r) var(--fs-body)/var(--lh-normal) var(--ff); }
+                .text-body-alt{ font: var(--fw-r) var(--fs-body-alt)/var(--lh-normal) var(--ff); }
+                .text-small   { font: var(--fw-r) var(--fs-small)/var(--lh-normal) var(--ff); }
+                .text-micro   { font: var(--fw-r) var(--fs-micro)/var(--lh-loose) var(--ff); opacity:.85; }
+                /* placeholder helpers (назначаются на input/textarea) */
+                .placeholder-main::placeholder  { font: var(--fw-r) var(--fs-h3)/1 var(--ff); opacity:.65; }
+                .placeholder-field::placeholder { font: var(--fw-r) var(--fs-small)/1 var(--ff); opacity:.65; }
+                /* buttons text */
+                .btn-text-primary   { font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
+                .btn-text-secondary { font: var(--fw-s) var(--fs-btn)/1 var(--ff); opacity:.95; }
+                /* color helpers */
+                .text-primary  { color:#FFFFFF; }
+                .text-secondary{ color:#C3C3C3; }
+                .text-hint     { color:#A9A9A9; }
+                .text-accent   { color:#DF87F8; }
                 
                 .voice-widget-container {
                     width: 380px;
@@ -475,6 +541,24 @@ render() {
                 .input-field::placeholder {
                     color: #A0A0A0;
                 }
+                /* Multiline support for textarea inputs */
+                textarea.input-field{
+                    width:100%;
+                    height:auto;
+                    min-height:18px;
+                    max-height:100px;
+                    line-height:1.3;
+                    resize:none;
+                    overflow-y:auto; /* скроллим, но прячем полосу */
+                    padding-top:8px;
+                    padding-bottom:8px;
+                    /* скрыть полосы прокрутки во всех движках */
+                    scrollbar-width: none;          /* Firefox */
+                    -ms-overflow-style: none;       /* IE/Edge */
+                }
+                textarea.input-field::-webkit-scrollbar{
+                    width:0; height:0;             /* WebKit */
+                }
                 
                 .input-buttons {
                     display: flex;
@@ -553,7 +637,7 @@ render() {
                 /* Стили для Dialog Screen */
                 .menu-button {
                     position: absolute;
-                    top: 35px;
+                    top: 25px;
                     left: 50%;
                     transform: translateX(-50%);
                     width: 40px;
@@ -635,6 +719,7 @@ render() {
                     transform: translateX(-50%);
                     width: 360px;
                     text-align: center;
+                    padding: 20px;
                 }
                 
                 .progress-grid-container {
@@ -682,7 +767,18 @@ render() {
                     font-size: 10px;
                     font-weight: 400;
                     color: #A9A9A9;
+                    cursor: pointer;
+                    transition: transform .15s ease, opacity .15s ease;
                 }
+                .data-storage-text:hover{ transform: scale(1.1); opacity:.9; }
+                
+                /* Data storage popup */
+                .data-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:20; }
+                .data-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:left; }
+                .data-title{ font-size:14px; font-weight:600; margin:0 0 8px 0; text-align:center; }
+                .data-body{ font-size:12px; font-weight:400; color:#C3C3C3; line-height:1.5; }
+                .data-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:14px auto 0; display:flex; align-items:center; justify-content:center; }
+                .data-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 
                 .status-text {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -723,15 +819,14 @@ render() {
                 }
                 
                 .context-leave-request-btn {
-                    width: 110px;
-                    height: 25px;
+                    /* thematic color */
+                    padding: var(--btn-py) var(--btn-px);
+                    min-width: var(--btn-min-w);
                     background: #476AA5;
                     border: none;
-                    border-radius: 20px;
+                    border-radius: var(--btn-radius);
                     color: #FFFFFF;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 12px;
-                    font-weight: 400;
+                    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
                     cursor: pointer;
                     transition: opacity 0.3s ease;
                 }
@@ -739,6 +834,37 @@ render() {
                 .context-leave-request-btn:hover {
                     opacity: 0.8;
                 }
+                
+                /* ===== Context: inline request form ===== */
+                .ctx-request-form{ display:none; margin-top:16px; }
+                .ctx-field{ margin-bottom:12px; text-align:left; }
+                /* compact row for contact fields */
+                .ctx-row{ display:flex; gap:10px; }
+                .ctx-row .ctx-input{ flex:1 1 0; min-width:0; }
+                .ctx-input{ width:100%; height:35px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:0 10px; line-height:35px; box-sizing:border-box; }
+                .ctx-input.error{ border-color:#E85F62; }
+                .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
+                .ctx-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
+                .ctx-textarea::-webkit-scrollbar{ width:0; height:0; }
+                .ctx-textarea.error{ border-color:#E85F62; }
+                .ctx-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; }
+                .ctx-consent .ctx-checkbox{ width:12px; height:12px; margin-top:2px; }
+                .ctx-consent .ctx-consent-text{ font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:10px; font-weight:400; color:#C4C4C4; line-height:1.4; }
+                .ctx-consent .ctx-privacy-link{ color:#DF87F8; text-decoration:none; }
+                .ctx-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
+                .ctx-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
+                .ctx-error.visible{ display:block; }
+                .ctx-actions{ display:flex; gap:20px; justify-content: space-between; margin-top:16px; }
+                .ctx-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
+                .ctx-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:#476AA5; border:1.25px solid #476AA5; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
+                .ctx-actions .ctx-send-btn, .ctx-actions .ctx-cancel-btn{ flex:1 1 0; min-width:0; }
+                .ctx-send-btn, .ctx-cancel-btn, .ctx-done-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
+                
+                /* thanks block after send */
+                .ctx-thanks{ display:none; margin-top:16px; text-align:center; }
+                .ctx-thanks-title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; }
+                .ctx-thanks-text{ font-size:12px; font-weight:400; color:#C4C4C4; }
+                .ctx-thanks .ctx-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
                 
                 .footer-text {
                     position: absolute;
@@ -750,7 +876,10 @@ render() {
                     font-weight: 400;
                     color: #A9A9A9;
                     text-align: center;
+                    cursor: pointer;
+                    transition: transform .15s ease, opacity .15s ease;
                 }
+                .footer-text:hover{ transform: translateX(-50%) scale(1.1); opacity:.9; }
                 
                 /* Декоративная линия для ContextScreen */
                 .context-gradient-line {
@@ -770,6 +899,7 @@ render() {
                     left: 50%;
                     transform: translateX(-50%);
                     width: calc(100% - 50px);
+                    padding: 10px;
                 }
                 
                 .support-faq-title {
@@ -783,42 +913,53 @@ render() {
                 .support-faq-list {
                     margin-top: 15px;
                 }
+                .support-faq-list.disabled{ opacity:.5; pointer-events:none; }
                 
                 .support-faq-item {
-                    margin-bottom: 20px;
+                    margin-bottom: 12px;
+                    border: 1px solid rgba(106,108,155,0.30);
+                    border-radius: 10px;
+                    background: rgba(106,108,155,0.06);
+                    overflow: hidden;
                 }
                 
                 .support-faq-question {
                     display: flex;
-                    align-items: flex-start;
-                    gap: 6px;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 14px;
                     font-weight: 400;
                     color: #FFFFFF;
+                    padding: 10px 12px;
+                    cursor: pointer;
                 }
                 
                 .support-faq-question::before {
-                    content: '▸';
-                    color: #FFFFFF;
-                    line-height: 1;
-                    transform: translateY(1px);
+                    content: '';
                 }
+                .support-faq-question .faq-caret{
+                    width: 10px; height: 10px; border-right: 2px solid #A0A0A0; border-bottom: 2px solid #A0A0A0; transform: rotate(45deg); transition: transform .2s ease, opacity .2s ease;
+                }
+                .support-faq-item.open .support-faq-question .faq-caret{ transform: rotate(225deg); }
                 
                 .support-faq-answer {
-                    margin-top: 6px;
+                    display: none;
+                    padding: 12px;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 13px;
                     font-weight: 300;
                     color: #C3C3C3;
                 }
+                .support-faq-item.open .support-faq-answer{ display:block; }
                 
                 .support-gradient-line {
                     width: 100%;
                     height: 2px;
                     border-radius: 1px;
                     background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
-                    margin: 0 auto 10px auto;
+                    margin: 40px;
                 }
                 
                 .support-hint-text {
@@ -835,16 +976,14 @@ render() {
                 }
                 
                 .support-contact-btn {
-                    width: 110px;
-                    height: 25px;
+                    padding: var(--btn-py) var(--btn-px);
+                    min-width: var(--btn-min-w);
                     margin-top: 25px;
                     background: #EDCF23;
                     border: none;
-                    border-radius: 20px;
+                    border-radius: var(--btn-radius);
                     color: #3B3B3B;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 12px;
-                    font-weight: 400;
+                    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
                     cursor: pointer;
                     transition: opacity 0.3s ease;
                 }
@@ -852,6 +991,30 @@ render() {
                 .support-contact-btn:hover {
                     opacity: 0.9;
                 }
+                
+                /* Support form */
+                .support-form{ display:none; margin-top:16px; }
+                .support-form > * + *{ margin-top:10px; }
+                .support-issues{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; margin-top: 25px; }
+                .support-issue-chip{ padding:6px 10px; border-radius:10px; border:1px solid #476AA5; background:transparent; color:#fff; font-size:10px; font-weight:400; cursor:pointer; }
+                .support-issue-chip:hover{ opacity:.9; }
+                .support-issue-chip.active{ background:#476AA5; color:#fff; border-color:#5F81BA; }
+                .support-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; box-sizing:border-box; resize:vertical; }
+                .support-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
+                .support-textarea::-webkit-scrollbar{ width:0; height:0; }
+                
+                .support-actions{ display:flex; gap:20px; justify-content: space-between; margin-top:20px; }
+                .support-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
+                .support-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:#476AA5; border:1.25px solid #476AA5; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
+                .support-actions .support-send-btn, .support-actions .support-cancel-btn{ flex:1 1 0; min-width:0; }
+                .support-send-btn, .support-cancel-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
+                
+                /* Support thanks */
+                .support-thanks{ display:none; margin-top:16px; text-align:center; }
+                .support-thanks-title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; }
+                .support-thanks-text{ font-size:12px; font-weight:400; color:#C4C4C4; }
+                .support-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
+                .support-done-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 
                 .support-footer-text {
                     position: absolute;
@@ -863,7 +1026,10 @@ render() {
                     font-weight: 400;
                     color: #A9A9A9;
                     text-align: center;
+                    cursor: pointer;
+                    transition: transform .15s ease, opacity .15s ease;
                 }
+                .support-footer-text:hover{ transform: translateX(-50%) scale(1.1); opacity:.9; }
                 
                 /* ========================= */
                 /*        Request Screen     */
@@ -911,6 +1077,8 @@ render() {
                     line-height: 35px;
                     box-sizing: border-box;
                 }
+                .request-input.error{ border-color:#E85F62; }
+                
                 
                 .request-input::placeholder {
                     color: #A0A0A0;
@@ -920,6 +1088,34 @@ render() {
                     display: flex;
                     gap: 10px;
                     margin-bottom: 10px;
+                }
+                /* Dial code select */
+                .dial-select{ position:relative; }
+                .dial-btn{ display:flex; align-items:center; justify-content:center; gap:6px; padding: var(--btn-py) .75rem; height:35px; line-height:35px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; cursor:pointer; }
+                .dial-flag{ font-size:14px; line-height:1; }
+                .dial-code{ font-size:12px; }
+                .dial-list{ position:absolute; top:38px; left:0; right:auto; min-width:120px; background:#1e1d20; border:1px solid rgba(106,108,155,.30); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:6px; display:none; z-index:30; }
+                .dial-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; color:#FFFFFF; font-size:12px; }
+                .dial-item:hover{ background:rgba(106,108,155,.15); }
+                .request-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
+                .request-error.visible{ display:block; }
+                .request-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
+                
+                /* Email suggest chip */
+                .email-suggest{ display:none; margin-top:6px; }
+                .email-suggest .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; border:1px solid #476AA5; color:#476AA5; font-size:12px; font-weight:600; cursor:pointer; background:transparent; }
+                .email-suggest .chip:hover{ background:rgba(71,106,165,.12); }
+                /* Inline email ghost (completion inside input) */
+                .email-wrap{ position:relative; }
+                .email-wrap .email-ghost{
+                  position:absolute; top:0; left:0;
+                  padding-left:10px; height:35px; line-height:35px;
+                  color: rgba(255,255,255,.35);
+                  pointer-events:none; cursor:default; 
+                  white-space:nowrap; overflow:hidden;
+                  z-index:2;
+                  font: inherit;
+                  display:none;
                 }
                 
                 .request-code-input {
@@ -946,7 +1142,12 @@ render() {
                     font-weight: 400;
                     padding: 0 10px;
                     box-sizing: border-box;
+                    cursor: pointer;
                 }
+                .request-select:hover{ background: rgba(106,108,155,0.14); }
+                .request-select-list{ display:none; margin-top:6px; background:#1e1d20; border:1px solid rgba(106,108,155,.30); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:6px; }
+                .request-select-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; color:#FFFFFF; font-size:12px; }
+                .request-select-item:hover{ background:rgba(106,108,155,.15); }
                 
                 .request-caret {
                     color: #C4C4C4;
@@ -967,6 +1168,9 @@ render() {
                     resize: vertical;
                     box-sizing: border-box;
                 }
+                .request-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
+                .request-textarea::-webkit-scrollbar{ width:0; height:0; }
+                .request-textarea.error{ border-color:#E85F62; }
                 
                 .request-textarea::placeholder {
                     color: #A0A0A0;
@@ -1011,14 +1215,13 @@ render() {
                 
                 .request-send-btn,
                 .request-cancel-btn {
-                    width: 150px;
-                    height: 40px;
-                    border-radius: 10px;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 15px;
-                    font-weight: 400;
+                    padding: var(--btn-py) var(--btn-px);
+                    min-width: var(--btn-min-w);
+                    border-radius: var(--btn-radius);
+                    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
                     cursor: pointer;
                 }
+                .request-buttons .request-send-btn, .request-buttons .request-cancel-btn{ flex:1 1 0; min-width:0; }
                 
                 .request-send-btn {
                     background: #476AA5;
@@ -1160,6 +1363,15 @@ render() {
                 .menu-badge--request { color: #6A6C9B; }
                 .menu-badge--support { color: #EDCF23; }
                 .menu-badge--context { color: #E85F62; }
+
+                /* ===== Human contact popup ===== */
+                .human-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:20; }
+                .human-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:center; }
+                .human-title{ font-size:14px; font-weight:600; margin:0 0 8px 0; }
+                .human-timer{ font-size:18px; font-weight:700; color:#EDCF23; margin:6px 0 10px 0; letter-spacing:.5px; }
+                .human-note{ font-size:12px; color:#C3C3C3; margin:0 0 14px 0; }
+                .human-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:0 auto; display:inline-flex; align-items:center; justify-content:center; }
+                .human-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
   </style>
 
   <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
@@ -1172,9 +1384,7 @@ render() {
   #loadingIndicator{ position:absolute; display:none; }
   #loadingIndicator.active{ display:flex; }
 
-  /* COMPAT-V1: Панель лида */
-  .lead-panel{ position:absolute; inset:0; display:none; }
-  .lead-panel.active{ display:flex; }
+  
   </style>
 
   <!-- Launcher -->
@@ -1203,7 +1413,7 @@ render() {
         </div>
         <div class="input-container">
           <div class="text-input-wrapper">
-                    <input id="mainTextInput" type="text" class="input-field" placeholder="Write your request...">
+                    <textarea id="mainTextInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
                     <div class="recording-indicator" id="mainRecordingIndicator" style="display:none;">
                         <div class="recording-label">Идёт запись</div>
               <div class="record-timer" id="mainRecordTimer">00:00</div>
@@ -1225,7 +1435,7 @@ render() {
       <div class="dialog-screen hidden" id="dialogScreen">
         <div class="voice-widget-container">
           <div class="menu-button">
-            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
+            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 32px; height: 32px;">
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
@@ -1234,7 +1444,7 @@ render() {
           <div class="loading dialog-overlay" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
         <div class="input-container">
           <div class="text-input-wrapper">
-              <input id="textInput" type="text" class="input-field" placeholder="Write your request...">
+              <textarea id="textInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
             <div class="recording-indicator" id="recordingIndicator" style="display: none;">
                 <div class="recording-label">Идёт запись</div>
               <div class="record-timer" id="chatRecordTimer">00:00</div>
@@ -1264,18 +1474,90 @@ render() {
                     <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="12"/>
                     <circle cx="50" cy="50" r="44" fill="none" stroke="#E85F62" stroke-width="12" stroke-dasharray="276.46" stroke-dashoffset="2.76" stroke-linecap="round" transform="rotate(-90 50 50)"/>
                   </svg>
-                  <div class="progress-text">99%</div>
+                  <div class="progress-text" id="ctxProgressText">99%</div>
             </div>
           </div>
               <div class="grid-column-right">
                 <div class="data-storage-text">Data storage & encrypting</div>
           </div>
             </div>
-            <div class="status-text">Status: fulfilled</div>
-            <div class="main-message">Well done! You've fulfilled the system with the data that will make search much closer to your goal!</div>
+            <div class="status-text" id="ctxStatusText">Status: fulfilled</div>
+            <div class="main-message" id="ctxStageMessage">Well done! You've fulfilled the system with the data that will make search much closer to your goal!</div>
             <div class="context-gradient-line"></div>
             <div class="hint-text">You can leave the request to make manager start working by your case immediately</div>
-            <div class="context-leave-request-button"><button class="context-leave-request-btn">Leave request</button></div>
+            <div class="context-leave-request-button"><button class="context-leave-request-btn" id="ctxLeaveReqBtn">Leave request</button></div>
+            <div class="ctx-request-form" id="ctxRequestForm">
+              <div class="ctx-field">
+                <input class="ctx-input" id="ctxName" type="text" placeholder="Name">
+              </div>
+              <div class="ctx-field ctx-row">
+                <div class="dial-select">
+                  <button class="dial-btn" type="button" id="ctxDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <div class="dial-list" id="ctxDialList">
+                    <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
+                    <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
+                    <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
+                    <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
+                    <div class="dial-item" data-cc="RU" data-code="+7"><span class="dial-flag">🇷🇺</span><span class="dial-code">+7 RU</span></div>
+                    <div class="dial-item" data-cc="PL" data-code="+48"><span class="dial-flag">🇵🇱</span><span class="dial-code">+48 PL</span></div>
+                    <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
+                  </div>
+                </div>
+                <input class="ctx-input" id="ctxPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone">
+              </div>
+              <div class="ctx-field">
+                <div class="email-wrap">
+                  <input class="ctx-input" id="ctxEmail" type="email" autocomplete="email" placeholder="E-mail">
+                  <span class="email-ghost" id="ctxEmailGhost"></span>
+                </div>
+              </div>
+              <input type="hidden" id="ctxCode" value="+34" />
+              <div class="ctx-error" id="ctxContactError">Please provide phone or email</div>
+              <div class="ctx-field">
+                <label class="ctx-consent">
+                  <input class="ctx-checkbox" id="ctxConsent" type="checkbox">
+                  <span class="ctx-consent-text">I consent to the processing of my data for managing this request and contacting me about properties. <a class="ctx-privacy-link" href="#">Privacy Policy</a></span>
+                </label>
+              </div>
+              <div class="ctx-error" id="ctxConsentError">Please accept the Privacy Policy</div>
+              <div class="ctx-actions">
+                <button class="ctx-send-btn" id="ctxSendBtn">Send</button>
+                <button class="ctx-cancel-btn" id="ctxCancelBtn">Cancel</button>
+              </div>
+            </div>
+            <div class="ctx-thanks" id="ctxThanks">
+              <div class="ctx-thanks-title">Thank you!</div>
+              <div class="ctx-thanks-text">Your request has been received. We’ll contact you soon.</div>
+              <button class="ctx-done-btn" id="ctxThanksDoneBtn">Close</button>
+            </div>
+              <!-- Context Thanks Popup -->
+              <div class="data-overlay" id="ctxThanksOverlay" style="display:none;">
+                <div class="data-modal">
+                  <div class="data-title">Thank you!</div>
+                  <div class="data-body">Your request has been received. We’ll contact you soon.</div>
+                  <button class="data-btn" id="ctxThanksOverlayClose">Close</button>
+                </div>
+              </div>
+            <!-- What data do we know popup -->
+            <div class="data-overlay" id="whatDataOverlay" style="display:none;">
+              <div class="data-modal">
+                <div class="data-title">What data do we know?</div>
+                <div class="data-body" id="whatDataBody">
+                  <!-- filled dynamically from insights -->
+                </div>
+                <button class="data-btn" id="whatDataUnderstoodBtn">Understood</button>
+              </div>
+            </div>
+            <!-- Data storage popup -->
+            <div class="data-overlay" id="dataOverlay" style="display:none;">
+              <div class="data-modal">
+                <div class="data-title">Data storage & encrypting</div>
+                <div class="data-body">
+                  We store your data on secure EU-based servers. Data in transit is protected with modern TLS and HSTS; data at rest is encrypted (AES‑256). Access is strictly limited and audited. We never sell your personal information. You can request deletion at any time via Support.
+                </div>
+                <button class="data-btn" id="dataUnderstoodBtn">Understood</button>
+              </div>
+            </div>
           </div>
           <div class="footer-text">What data do we know?</div>
             </div>
@@ -1291,38 +1573,66 @@ render() {
             <div class="request-title">Leave a request</div>
             <div class="request-field">
               <div class="request-field-label">Name</div>
-              <input class="request-input" type="text" placeholder="Your name" />
+              <input class="request-input" id="reqName" type="text" placeholder="Your name" autocomplete="off" />
       </div>
             <div class="request-field">
               <div class="request-field-label">Contact (phone/ WhatsApp/ e-mail)</div>
               <div class="request-row">
-                <input class="request-input request-code-input" type="text" placeholder="+34" />
-                <input class="request-input request-phone-input" type="text" placeholder="1234567" />
+                <div class="dial-select">
+                  <button class="dial-btn" type="button" id="reqDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <div class="dial-list" id="reqDialList">
+                    <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
+                    <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
+                    <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
+                    <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
+                    <div class="dial-item" data-cc="RU" data-code="+7"><span class="dial-flag">🇷🇺</span><span class="dial-code">+7 RU</span></div>
+                    <div class="dial-item" data-cc="PL" data-code="+48"><span class="dial-flag">🇵🇱</span><span class="dial-code">+48 PL</span></div>
+                    <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
     </div>
-              <input class="request-input" type="email" placeholder="yourmail@gmail.com" />
+                </div>
+                <input class="request-input request-code-input" id="reqCode" type="hidden" value="+34" />
+                <input class="request-input request-phone-input" id="reqPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="1234567" />
+    </div>
+              <div class="email-wrap">
+                <input class="request-input" id="reqEmail" type="email" autocomplete="email" placeholder="yourmail@gmail.com" />
+                <span class="email-ghost" id="reqEmailGhost"></span>
+              </div>
+              <div class="request-error" id="reqContactError">Please provide phone or email</div>
         </div>
             <div class="request-field">
               <div class="request-field-label">Preferred contact method</div>
-              <div class="request-select"><span>WhatsApp</span><span class="request-caret">▾</span></div>
-          </div>
-            <div class="request-field">
-              <div class="request-field-label">Convenient time</div>
-              <div class="request-select"><span>Today 13–15 (Fri, 17/10)</span><span class="request-caret">▾</span></div>
+              <div class="request-select" id="reqMethodSelect"><span id="reqMethodLabel">WhatsApp</span><span class="request-caret">▾</span></div>
+              <div class="request-select-list" id="reqMethodList">
+                <div class="request-select-item" data-value="WhatsApp">WhatsApp</div>
+                <div class="request-select-item" data-value="Telegram">Telegram</div>
+                <div class="request-select-item" data-value="Phone Call">Phone Call</div>
+                <div class="request-select-item" data-value="Email">Email</div>
+              </div>
+              <input type="hidden" id="reqMethod" value="WhatsApp" />
           </div>
             <div class="request-field">
               <div class="request-field-label">Comment (optional)</div>
-              <textarea class="request-textarea" placeholder="Short note"></textarea>
+              <textarea class="request-textarea" id="reqComment" placeholder="Short note"></textarea>
         </div>
             <div class="request-actions-container">
               <div class="request-consent">
-                <input class="request-checkbox" type="checkbox" />
+                <input class="request-checkbox" id="reqConsent" type="checkbox" />
                 <div class="request-consent-text">I consent to the processing of my data for managing this request and contacting me about properties. <a class="request-privacy-link" href="#">Privacy Policy</a></div>
         </div>
+              <div class="request-error" id="reqConsentError">Please accept the Privacy Policy</div>
               <div class="request-buttons">
                 <button class="request-send-btn">Send</button>
                 <button class="request-cancel-btn">Cancel</button>
         </div>
         </div>
+        </div>
+        </div>
+      <!-- Request Thanks Popup -->
+      <div class="data-overlay" id="requestThanksOverlay" style="display:none;">
+        <div class="data-modal">
+          <div class="data-title">Thank you!</div>
+          <div class="data-body">Your request has been received. We’ll contact you soon.</div>
+          <button class="data-btn" id="requestThanksOverlayClose">Close</button>
         </div>
         </div>
       </div>
@@ -1336,16 +1646,53 @@ render() {
           <div class="support-main-container">
             <div class="support-faq-title">FAQ</div>
             <div class="support-faq-list">
-              <div class="support-faq-item"><div class="support-faq-question">Where is my data stored?</div><div class="support-faq-answer">Your data is safely encrypted and stored on our secure EU servers.</div></div>
-              <div class="support-faq-item"><div class="support-faq-question">How can I delete my information?</div><div class="support-faq-answer">Just send us a short message — we’ll remove your data immediately.</div></div>
-              <div class="support-faq-item"><div class="support-faq-question">Why can’t I send my request?</div><div class="support-faq-answer">Check your internet connection or try again in a few minutes.</div></div>
-              <div class="support-faq-item"><div class="support-faq-question">How can I be sure my info is safe?</div><div class="support-faq-answer">We never share or sell your data. You can review our Privacy Policy anytime.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">Where is my data stored?<span class="faq-caret"></span></div><div class="support-faq-answer">Your data is safely encrypted and stored on our secure EU servers.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">How can I delete my information?<span class="faq-caret"></span></div><div class="support-faq-answer">Just send us a short message — we’ll remove your data immediately.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">Why can’t I send my request?<span class="faq-caret"></span></div><div class="support-faq-answer">Check your internet connection or try again in a few minutes.</div></div>
+              <div class="support-faq-item"><div class="support-faq-question">How can I be sure my info is safe?<span class="faq-caret"></span></div><div class="support-faq-answer">We never share or sell your data. You can review our Privacy Policy anytime.</div></div>
             </div>
             <div class="support-gradient-line"></div>
-            <div class="support-hint-text">Got questions or something doesn’t work as expected? We’re here to help you resolve it quickly.</div>
+            <div class="support-hint-text">Got questions or something doesn't work as expected? We're here to help you resolve it quickly.</div>
             <div class="support-contact-button"><button class="support-contact-btn">Contact Support</button></div>
+              <div class="support-form" id="supportForm">
+                <div class="request-select" id="supportIssueSelect"><span id="supportIssueLabel">Choose problem</span><span class="request-caret">▾</span></div>
+                <div class="request-select-list" id="supportIssueList">
+                  <div class="request-select-item" data-issue="Lead not received">Lead not received</div>
+                  <div class="request-select-item" data-issue="Database error">Database error</div>
+                  <div class="request-select-item" data-issue="Wrong answers">Wrong answers</div>
+                  <div class="request-select-item" data-issue="Access problem">Access problem</div>
+                  <div class="request-select-item" data-issue="Billing problem">Billing problem</div>
+                </div>
+                <textarea class="support-textarea" id="supportIssueInput" placeholder="Issue / describe your problem"></textarea>
+                <div class="support-actions">
+                  <button class="support-send-btn">Send</button>
+                  <button class="support-cancel-btn">Cancel</button>
+                </div>
+              </div>
+              <div class="support-thanks" id="supportThanks">
+                <div class="support-thanks-title">Thank you!</div>
+                <div class="support-thanks-text">Your message has been received. We’ll get back to you soon.</div>
+                <button class="support-done-btn" id="supportThanksDoneBtn">Close</button>
+              </div>
+              <!-- Support Thanks Popup -->
+              <div class="data-overlay" id="supportThanksOverlay" style="display:none;">
+                <div class="data-modal">
+                  <div class="data-title">Thank you!</div>
+                  <div class="data-body">Your message has been received. We’ll get back to you soon.</div>
+                  <button class="data-btn" id="supportThanksOverlayClose">Close</button>
+                </div>
+              </div>
           </div>
           <div class="support-footer-text">Want to talk with a human</div>
+            <!-- Human contact popup -->
+            <div class="human-overlay" id="humanOverlay" style="display:none;">
+              <div class="human-modal">
+                <div class="human-title">Next human will be available in</div>
+                <div class="human-timer"><span id="humanEtaTimer">15:00</span> minutes</div>
+                <div class="human-note">You will be contacted by method you put in account.<br/>Thanks for patience!</div>
+                <button class="human-btn" id="humanContinueBtn">Continue</button>
+              </div>
+            </div>
         </div>
       </div>
           </div>
@@ -1397,191 +1744,209 @@ render() {
 
   // (legacy header/details and overlay lead panel handlers removed)
 
-  // Request screen actions
-  const reqSend = this.shadowRoot.querySelector('#requestScreen .request-send-btn');
-  if (reqSend) reqSend.addEventListener('click', (e) => { e.preventDefault(); this.openLeadPanel(); });
-  const reqCancel = this.shadowRoot.querySelector('#requestScreen .request-cancel-btn');
-  if (reqCancel) reqCancel.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (this.messages && this.messages.length > 0) this.showChatScreen(); else this.showMainScreen();
-    // also close menu state if any
-    this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI();
-  });
-
-  // Populate time slots (Europe/Madrid)
-  this.populateTimeSlots();
-
-  // Populate country codes (basic)
-  const ccSel = $('#leadCountryCode');
-  if (ccSel) {
-    const codes = [
-      { c:'+34', l:'🇪🇸 +34' },
-      { c:'+49', l:'🇩🇪 +49' },
-      { c:'+33', l:'🇫🇷 +33' },
-      { c:'+39', l:'🇮🇹 +39' },
-      { c:'+44', l:'🇬🇧 +44' },
-      { c:'+1',  l:'🇺🇸 +1' },
-      { c:'+7',  l:'🇷🇺 +7' },
-      { c:'+380',l:'🇺🇦 +380' }
-    ];
-    ccSel.innerHTML = codes.map((o,i)=>`<option value="${o.c}" ${o.c==='+34'?'selected':''}>${o.l}</option>`).join('');
-  }
-
-  // Email domain hints on '@'
-  const emailInput = $('#leadEmail');
-  if (emailInput) {
-    emailInput.addEventListener('input', (e) => {
-      const v = String(emailInput.value || '');
-      const at = v.indexOf('@');
-      if (at >= 0) {
-        // простая подсказка: если нет домена — добавим типовые домены
-        const after = v.slice(at+1);
-        if (!after) {
-          // показываем нотификацию один раз
-          this.ui.showNotification('Try: gmail.com, outlook.com, yahoo.com');
-        }
-      }
-    });
-  }
-
-  /* ===== LEGACY LEAD FORM HANDLER (v1 overlay) — kept as reference =====
-  // Submit lead
-  $('#leadSubmit')?.addEventListener('click', async () => {
-    const name = $('#leadName')?.value?.trim();
-    const email = $('#leadEmail')?.value?.trim();
-    const phoneRaw = $('#leadPhone')?.value?.replace(/\D/g,'') || '';
-    const cc = $('#leadCountryCode')?.value || '';
-    const channel = $('#leadChannel')?.value;
-    const timeValue = $('#leadTime')?.value;
-    const note = $('#leadNote')?.value?.trim();
-    const consent = $('#leadConsent')?.checked === true;
-
-    // validation helpers
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const hasEmail = !!email;
-    const hasPhone = !!phoneRaw;
-
-    const markInvalid = (el) => { if (el){ el.classList.add('lead-invalid','shake-lead'); setTimeout(()=>el.classList.remove('shake-lead'),500);} };
-    const clearInvalid = (el) => { if (el){ el.classList.remove('lead-invalid'); } };
-
-    clearInvalid($('#leadName'));
-    clearInvalid($('#leadEmail'));
-    clearInvalid($('#leadPhone'));
-    $('#leadContactError') && ($('#leadContactError').textContent = '');
-    $('#leadConsentError') && ($('#leadConsentError').textContent = '');
-
-    // Name is optional now
-    const eN = $('#leadNameError'); if (eN) eN.textContent = '';
-    if (!hasEmail && !hasPhone) {
-      markInvalid($('#leadEmail'));
-      markInvalid($('#leadPhone'));
-      const err = this.tLead('errContactRequired') || this.tLead('fillBoth');
-      const el = $('#leadContactError'); if (el) el.textContent = err;
-      this.ui.showNotification(err);
-      return;
-    }
-    if (hasEmail && !emailRe.test(email)) {
-      markInvalid($('#leadEmail'));
-      const err = this.tLead('errEmailInvalid') || 'Invalid email';
-      const el = $('#leadContactError'); if (el) el.textContent = err;
-      this.ui.showNotification(err);
-      return;
-    }
-    if (hasPhone && phoneRaw.length < 6) {
-      markInvalid($('#leadPhone'));
-      const err = this.tLead('errPhoneInvalid') || 'Invalid phone number';
-      const el = $('#leadContactError'); if (el) el.textContent = err;
-      this.ui.showNotification(err);
-      return;
-    }
-    if (!consent) {
-      const err = this.tLead('consentRequired');
-      const wrap = this.shadowRoot.querySelector('.lead-consent');
-      if (wrap) wrap.classList.add('lead-invalid','shake-lead');
-      const el = $('#leadConsentError'); if (el) el.textContent = err;
-      this.ui.showNotification(err);
-      setTimeout(()=>{ if (wrap) wrap.classList.remove('shake-lead'); }, 500);
-      return;
-    }
-
-    const contactValue = hasEmail ? email : (cc + phoneRaw);
-    const contactChannel = hasEmail ? 'email' : 'phone';
-
-    // Name is optional in big form too; no blocking on name
-
-    let time_window = null;
-    try { time_window = timeValue ? JSON.parse(timeValue) : null; } catch {}
-
-    // Resolve backend base URL from existing audio API url
-    const baseApi = (() => {
-      try {
-        const audioUrl = this.apiUrl || '';
-        // typical: http://host:3001/api/audio/upload → http://host:3001
-        const u = new URL(audioUrl, window.location.href);
-        return `${u.protocol}//${u.host}`;
-      } catch {
-        return '';
-      }
-    })();
-    const leadsUrl = `${baseApi}/api/leads`;
-
-    const payload = {
-      name,
-      contact: { channel: channel === 'whatsapp' && !hasEmail ? 'whatsapp' : contactChannel, value: contactValue },
-      time_window,
-      language: this.getLangCode(),
-      gdpr: { consent, locale: this.getLangCode() },
-      context: { sessionId: this.sessionId || null, notes: note || null, source: 'widget' }
+  // Request Screen (v2) — без логики на данном этапе
+  // Add basic validation and submit behavior
+  this.setupRequestForm = () => {
+    const root = this.shadowRoot;
+    const sendBtn = root.querySelector('.request-send-btn');
+    const cancelBtn = root.querySelector('.request-cancel-btn');
+    if (!sendBtn) return;
+    const thanksOverlay = root.getElementById('requestThanksOverlay');
+    const get = (id) => root.getElementById(id);
+    const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
+    const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
+    const isPhone = (cc, ph) => {
+      const s = `${cc||''}${ph||''}`.replace(/\s+/g,'');
+      return s.length >= 6 && /^[+0-9\-()]+$/.test(s);
     };
-
-    try {
-      const resp = await fetch(leadsUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+    // Email inline completion (request)
+    const emailSuggestDomains = ['gmail.com','mail.ru','proton.me','rambler.ru','yahoo.com'];
+    const reqEmail = get('reqEmail');
+    const reqEmailGhost = get('reqEmailGhost');
+    const measureText = (inputEl, text) => {
+      if (!inputEl) return 0;
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const cs = getComputedStyle(inputEl);
+      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      return ctx.measureText(text).width;
+    };
+    const updateReqEmailGhost = () => {
+      const v = reqEmail?.value || '';
+      const at = v.indexOf('@');
+      if (!reqEmailGhost || at < 0) { if (reqEmailGhost) reqEmailGhost.textContent=''; return; }
+      const tail = v.slice(at + 1).toLowerCase();
+      let suggestion = null;
+      if (tail.length === 0) suggestion = emailSuggestDomains[0];
+      else suggestion = emailSuggestDomains.find(d => d.startsWith(tail));
+      if (!suggestion) { reqEmailGhost.textContent=''; return; }
+      const suffix = suggestion.slice(tail.length); // "съедаем" уже введённое
+      // позиция — ширина всего введённого текста
+      const padLeft = 10; // как у инпута
+      const left = padLeft + measureText(reqEmail, v);
+      reqEmailGhost.style.left = `${left}px`;
+      reqEmailGhost.textContent = suffix;
+      reqEmailGhost.dataset.domain = suggestion;
+    };
+    reqEmail?.addEventListener('input', updateReqEmailGhost);
+    reqEmailGhost?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!reqEmail || !reqEmailGhost) return;
+      const v = reqEmail.value;
+      const at = v.indexOf('@');
+      if (at < 0) return;
+      const local = v.slice(0, at);
+      const domain = reqEmailGhost.dataset.domain || '';
+      if (!domain) return;
+      reqEmail.value = `${local}@${domain}`;
+      reqEmail.focus();
+      updateReqEmailGhost();
+    });
+    // Dial select (request)
+    const reqDialBtn = get('reqDialBtn');
+    const reqDialList = get('reqDialList');
+    const reqCode = get('reqCode');
+    const toggleReqDial = (show) => { if (reqDialList) reqDialList.style.display = show ? 'block' : 'none'; };
+    reqDialBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const visible = reqDialList && reqDialList.style.display === 'block';
+      toggleReqDial(!visible);
+    });
+    reqDialList?.querySelectorAll('.dial-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const code = item.getAttribute('data-code') || '+34';
+        const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+        if (reqDialBtn) {
+          const codeEl = reqDialBtn.querySelector('.dial-code'); const flagEl = reqDialBtn.querySelector('.dial-flag');
+          if (codeEl) codeEl.textContent = code;
+          if (flagEl) flagEl.textContent = flag;
+        }
+        if (reqCode) reqCode.value = code;
+        toggleReqDial(false);
       });
-      const data = await resp.json();
-      if (resp.ok && data?.ok) {
-        // Спасибо-форма
-        const box = this.shadowRoot.querySelector('.lead-box');
-        if (box) {
-          box.classList.add('thankyou');
-          const successText = this.tLead('success') || 'Thanks! We will contact you in the selected time.';
-          const m = successText.match(/^(.*?[.!?])\s*(.*)$/u);
-          const title = m ? m[1] : successText;
-          const note = m && m[2] ? m[2] : '';
-          const noteHtml = note ? `<p class="lead-thanks-note">${note}</p>` : '';
-          box.innerHTML = `
-            <h2 class="lead-thanks-title">${title}</h2>
-            ${noteHtml}
-            <div class="lead-actions">
-              <button class="lead-submit" id="leadContinue">${this.tLead('inlineContinue') || 'Continue'}</button>
-            </div>
-          `;
-          const cont = this.shadowRoot.getElementById('leadContinue');
-          if (cont) cont.addEventListener('click', () => {
-            leadPanel?.classList.remove('active');
-            leadPanel?.setAttribute('aria-hidden', 'true');
-            box.classList.remove('thankyou');
-          });
-        }
-      } else {
-        // Показать ошибки валидации, если есть
-        if (data?.errors && Array.isArray(data.errors) && data.errors.length) {
-          const first = data.errors[0];
-          this.ui.showNotification(`${first.field}: ${first.message}`);
-        } else {
-          this.ui.showNotification(this.tLead('errorGeneric'));
-        }
+    });
+    document.addEventListener('click', (ev) => {
+      if (!reqDialList || !reqDialBtn) return;
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (![reqDialList, reqDialBtn].some(el => path.includes(el))) toggleReqDial(false);
+    }, { capture:true });
+    // Preferred contact method select
+    const reqMethodSelect = get('reqMethodSelect');
+    const reqMethodList = get('reqMethodList');
+    const reqMethodLabel = get('reqMethodLabel');
+    const reqMethodInput = get('reqMethod');
+    const toggleReqMethod = (show) => { if (reqMethodList) reqMethodList.style.display = show ? 'block' : 'none'; };
+    reqMethodSelect?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const visible = reqMethodList && reqMethodList.style.display === 'block';
+      toggleReqMethod(!visible);
+    });
+    reqMethodList?.querySelectorAll('.request-select-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const val = item.getAttribute('data-value') || 'WhatsApp';
+        if (reqMethodLabel) reqMethodLabel.textContent = val;
+        if (reqMethodInput) reqMethodInput.value = val;
+        toggleReqMethod(false);
+      });
+    });
+    document.addEventListener('click', (ev) => {
+      if (!reqMethodList || !reqMethodSelect) return;
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (![reqMethodList, reqMethodSelect].some(el => path.includes(el))) toggleReqMethod(false);
+    }, { capture:true });
+    const showContactError = (on, msg) => {
+      const el = get('reqContactError');
+      if (el && typeof msg === 'string' && msg.length) el.textContent = msg;
+      if (el) el.classList.toggle('visible', !!on);
+    };
+    const showConsentError = (on) => {
+      const wrap = root.querySelector('.request-consent');
+      const checkbox = get('reqConsent');
+      const textEl = wrap?.querySelector('.request-consent-text');
+      const el = get('reqConsentError');
+      if (el) el.classList.toggle('visible', !!on);
+      if (checkbox) checkbox.classList.toggle('error', !!on);
+      if (on && textEl) { textEl.classList.add('shake'); setTimeout(()=>textEl.classList.remove('shake'), 500); }
+    };
+    const shake = (el) => {
+      if (!el) return;
+      el.classList.add('shake');
+      setTimeout(() => el.classList.remove('shake'), 500);
+    };
+    // Clear hints on input
+    ['reqCode','reqPhone','reqEmail'].forEach(id => {
+      get(id)?.addEventListener('input', () => {
+        showContactError(false);
+        ['reqCode','reqPhone','reqEmail'].forEach(fid => markError(get(fid), false));
+      });
+    });
+    get('reqConsent')?.addEventListener('change', () => {
+      showConsentError(false);
+      const checkbox = get('reqConsent');
+      if (checkbox) checkbox.classList.remove('error');
+    });
+    sendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // read values
+      const name = get('reqName')?.value?.trim() || '';
+      const code = get('reqCode')?.value?.trim() || '';
+      const phone = get('reqPhone')?.value?.trim() || '';
+      const email = get('reqEmail')?.value?.trim() || '';
+      const consent = !!get('reqConsent')?.checked;
+      // validate contact
+      const phoneOk = isPhone(code, phone);
+      const emailOk = isEmail(email);
+      const contactOk = phoneOk || emailOk;
+      const phoneHas = phone.length > 0;
+      const emailHas = email.length > 0;
+      // if both empty -> shake both + generic error
+      if (!phoneHas && !emailHas) {
+        markError(get('reqPhone'), true);
+        markError(get('reqEmail'), true);
+        shake(get('reqPhone')); shake(get('reqEmail'));
+        showContactError(true, 'Required: phone or email');
+        // also check consent here to shake if needed
+        if (!consent) showConsentError(true);
+        return;
       }
-    } catch (e) {
-      console.error('Lead submit error:', e);
-      this.ui.showNotification(this.tLead('errorNetwork'));
-    }
-  });
-  */
-  
-  // (legacy details buttons removed)
+      // If at least one is valid -> proceed (clear errors regardless of the other)
+      if (contactOk) {
+        markError(get('reqPhone'), false);
+        markError(get('reqEmail'), false);
+        showContactError(false);
+      } else {
+        // One or both present but invalid → show only one specific message, mark all invalid
+        markError(get('reqPhone'), phoneHas && !phoneOk);
+        markError(get('reqEmail'), emailHas && !emailOk);
+        let msg = phoneHas && !phoneOk ? 'Invalid phone number' : 'Invalid email address';
+        showContactError(true, msg);
+        if (!phoneOk && phoneHas) shake(get('reqPhone'));
+        if (!emailOk && emailHas) shake(get('reqEmail'));
+        return;
+      }
+      if (!consent) { showConsentError(true); shake(root.querySelector('.request-consent')); return; }
+      // submit stub → show thanks popup
+      if (thanksOverlay) thanksOverlay.style.display = 'flex';
+      // optional: clear
+      ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
+      if (get('reqConsent')) get('reqConsent').checked = false;
+      showContactError(false); showConsentError(false);
+    });
+    cancelBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
+      if (get('reqConsent')) get('reqConsent').checked = false;
+      ['reqCode','reqPhone','reqEmail'].forEach(id => markError(get(id), false));
+      showContactError(false); showConsentError(false);
+      if (reqEmailGhost) reqEmailGhost.textContent='';
+    });
+    root.getElementById('requestThanksOverlayClose')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (thanksOverlay) thanksOverlay.style.display = 'none';
+    });
+  };
+  try { this.setupRequestForm(); } catch {}
+ 
 
   // Escape key (global) — закрыть виджет и вернуть скролл страницы
   this._onGlobalKeydown = (e) => {
@@ -1599,6 +1964,474 @@ render() {
   this.showChatScreen = () => showScreen('dialog');
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
+  // Support FAQ toggles
+  this.setupSupportFaq = () => {
+    const items = this.shadowRoot.querySelectorAll('.support-faq-item');
+    items.forEach((it) => {
+      const q = it.querySelector('.support-faq-question');
+      if (!q) return;
+      q.addEventListener('click', () => {
+        it.classList.toggle('open');
+      });
+    });
+  };
+  try { this.setupSupportFaq(); } catch {}
+  
+  // Support Contact Form interactions
+  this.setupSupportForm = () => {
+    const wrap = this.shadowRoot.querySelector('.support-contact-button');
+    const hint = this.shadowRoot.querySelector('.support-hint-text');
+    const btn = this.shadowRoot.querySelector('.support-contact-btn');
+    const form = this.shadowRoot.getElementById('supportForm');
+    const thanks = this.shadowRoot.getElementById('supportThanks'); // legacy inline
+    const thanksOverlay = this.shadowRoot.getElementById('supportThanksOverlay');
+    const faqList = this.shadowRoot.querySelector('.support-faq-list');
+    const ta = this.shadowRoot.getElementById('supportIssueInput');
+    const issueSelect = this.shadowRoot.getElementById('supportIssueSelect');
+    const issueList = this.shadowRoot.getElementById('supportIssueList');
+    const issueLabel = this.shadowRoot.getElementById('supportIssueLabel');
+    const toggleIssueList = (show) => { if (issueList) issueList.style.display = show ? 'block' : 'none'; };
+    if (btn && form) {
+      btn.addEventListener('click', () => {
+        if (wrap) wrap.style.display = 'none';
+        if (hint) hint.style.display = 'none';
+        form.style.display = 'block';
+        // collapse and disable FAQ while form is active
+        try {
+          this.shadowRoot.querySelectorAll('.support-faq-item.open').forEach(it => it.classList.remove('open'));
+          faqList?.classList.add('disabled');
+        } catch {}
+        try { ta?.focus(); } catch {}
+        if (issueLabel) issueLabel.textContent = 'Choose problem';
+        toggleIssueList(false);
+      });
+    }
+    // Issue select → fill textarea
+    issueSelect?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const visible = issueList && issueList.style.display === 'block';
+      toggleIssueList(!visible);
+    });
+    issueList?.querySelectorAll('.request-select-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const key = item.getAttribute('data-issue') || item.textContent || '';
+        if (issueLabel) issueLabel.textContent = key || 'Choose problem';
+        // Templates for quick fill
+        const templates = {
+          'Lead not received': 'Hello Support,\n\nWe are not receiving new leads in our CRM as expected. Please check the integration and delivery pipeline.\n\nDetails: ',
+          'Database error': 'Hello Support,\n\nWe are getting a database error while working with the service. It seems related to connectivity or query failures.\n\nDetails: ',
+          'Wrong answers': 'Hello Support,\n\nAssistant responses look inconsistent/incorrect in recent dialogues. Could you review the session and adjust logic or prompts?\n\nDetails: ',
+          'Access problem': 'Hello Support,\n\nThere is an access/permissions problem for our account. Some features/pages are unavailable.\n\nDetails: ',
+          'Billing problem': 'Hello Support,\n\nWe have an issue with billing/payments. Please check our invoices and payment status.\n\nDetails: ',
+        };
+        const txt = templates[key] || (key + ': ');
+        if (ta) {
+          ta.value = txt;
+          try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch {}
+        }
+        
+        toggleIssueList(false);
+      });
+    });
+    document.addEventListener('click', (ev) => {
+      if (!issueList || !issueSelect) return;
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (![issueList, issueSelect].some(el => path.includes(el))) toggleIssueList(false);
+    }, { capture:true });
+    // Send (stub)
+    form?.querySelector('.support-send-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const text = (ta?.value || '').trim();
+      if (!text) { this.ui.showNotification('⚠️ Please describe the issue'); return; }
+      // Show thanks popup
+      form.style.display = 'none';
+      if (thanksOverlay) thanksOverlay.style.display = 'flex';
+      // reset input/chips
+      if (ta) ta.value = '';
+      if (issueLabel) issueLabel.textContent = 'Choose problem';
+      toggleIssueList(false);
+    });
+    // Cancel → hide form back
+    form?.querySelector('.support-cancel-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      form.style.display = 'none';
+      if (wrap) wrap.style.display = 'block';
+      if (hint) hint.style.display = '';
+      // enable FAQ back
+      faqList?.classList.remove('disabled');
+      if (issueLabel) issueLabel.textContent = 'Choose problem';
+      toggleIssueList(false);
+    });
+    // Thanks close (legacy inline) → back to initial state
+    this.shadowRoot.getElementById('supportThanksDoneBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (thanks) thanks.style.display = 'none';
+      if (wrap) wrap.style.display = 'block';
+      if (hint) hint.style.display = '';
+      faqList?.classList.remove('disabled');
+      if (issueLabel) issueLabel.textContent = 'Choose problem';
+      toggleIssueList(false);
+    });
+    // Thanks popup close → back to initial state
+    this.shadowRoot.getElementById('supportThanksOverlayClose')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (thanksOverlay) thanksOverlay.style.display = 'none';
+      if (wrap) wrap.style.display = 'block';
+      if (hint) hint.style.display = '';
+      faqList?.classList.remove('disabled');
+      if (issueLabel) issueLabel.textContent = 'Choose problem';
+      toggleIssueList(false);
+    });
+  };
+  try { this.setupSupportForm(); } catch {}
+  
+  // Helper: reset Support screen interactive state (acts like Cancel)
+  this.resetSupportScreen = () => {
+    try {
+      const wrap = this.shadowRoot.querySelector('.support-contact-button');
+      const hint = this.shadowRoot.querySelector('.support-hint-text');
+      const form = this.shadowRoot.getElementById('supportForm');
+      const thanks = this.shadowRoot.getElementById('supportThanks');
+      const thanksOverlay = this.shadowRoot.getElementById('supportThanksOverlay');
+      const faqList = this.shadowRoot.querySelector('.support-faq-list');
+      const issueLabel = this.shadowRoot.getElementById('supportIssueLabel');
+      const issueList = this.shadowRoot.getElementById('supportIssueList');
+      const ta = this.shadowRoot.getElementById('supportIssueInput');
+      if (form) form.style.display = 'none';
+      if (thanks) thanks.style.display = 'none';
+      if (thanksOverlay) thanksOverlay.style.display = 'none';
+      if (wrap) wrap.style.display = 'block';
+      if (hint) hint.style.display = '';
+      if (faqList) faqList.classList.remove('disabled');
+      if (issueLabel) issueLabel.textContent = 'Choose problem';
+      if (issueList) issueList.style.display = 'none';
+      if (ta) ta.value = '';
+    } catch {}
+  };
+
+  // Helper: reset Request screen state
+  this.resetRequestScreen = () => {
+    try {
+      const thanksOverlay = this.shadowRoot.getElementById('requestThanksOverlay');
+      if (thanksOverlay) thanksOverlay.style.display = 'none';
+      const get = (id) => this.shadowRoot.getElementById(id);
+      // Clear fields
+      ['reqName','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value = ''; });
+      const consent = get('reqConsent');
+      if (consent) consent.checked = false, consent.classList.remove('error');
+      // Errors and hints
+      ['reqCode','reqPhone','reqEmail'].forEach(id => { const el = get(id); if (el) el.classList.remove('error'); });
+      const errContact = get('reqContactError'); if (errContact) errContact.classList.remove('visible');
+      const errConsent = get('reqConsentError'); if (errConsent) errConsent.classList.remove('visible');
+      // Preferred method select
+      const methodLabel = get('reqMethodLabel'); if (methodLabel) methodLabel.textContent = 'WhatsApp';
+      const methodList = get('reqMethodList'); if (methodList) methodList.style.display = 'none';
+      const methodHidden = get('reqMethod'); if (methodHidden) methodHidden.value = 'WhatsApp';
+      // Dial select defaults
+      const dialBtn = get('reqDialBtn'); 
+      if (dialBtn) {
+        const codeEl = dialBtn.querySelector('.dial-code'); const flagEl = dialBtn.querySelector('.dial-flag');
+        if (codeEl) codeEl.textContent = '+34';
+        if (flagEl) flagEl.textContent = '🇪🇸';
+      }
+      const dialList = get('reqDialList'); if (dialList) dialList.style.display = 'none';
+      const codeHidden = get('reqCode'); if (codeHidden) codeHidden.value = '+34';
+    } catch {}
+  };
+
+  // Helper: reset Context screen state (Leave request form)
+  this.resetContextScreen = () => {
+    try {
+      const get = (id) => this.shadowRoot.getElementById(id);
+      const form = get('ctxRequestForm');
+      const btnWrap = this.shadowRoot.querySelector('.context-leave-request-button');
+      const thanks = get('ctxThanks');
+      const thanksOverlay = get('ctxThanksOverlay');
+      if (thanks) thanks.style.display = 'none';
+      if (thanksOverlay) thanksOverlay.style.display = 'none';
+      if (form) form.style.display = 'none';
+      if (btnWrap) btnWrap.style.display = 'block';
+      // Clear fields
+      ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = get(id); if (el) el.value = ''; });
+      const consent = get('ctxConsent'); if (consent) consent.checked = false, consent.classList.remove('error');
+      // Errors
+      ['ctxPhone','ctxEmail'].forEach(id => { const el = get(id); if (el) el.classList.remove('error'); });
+      const errContact = get('ctxContactError'); if (errContact) errContact.classList.remove('visible');
+      const errConsent = get('ctxConsentError'); if (errConsent) errConsent.classList.remove('visible');
+      // Dial defaults
+      const dialBtn = get('ctxDialBtn');
+      if (dialBtn) {
+        const codeEl = dialBtn.querySelector('.dial-code'); const flagEl = dialBtn.querySelector('.dial-flag');
+        if (codeEl) codeEl.textContent = '+34';
+        if (flagEl) flagEl.textContent = '🇪🇸';
+      }
+      const dialList = get('ctxDialList'); if (dialList) dialList.style.display = 'none';
+      const codeHidden = get('ctxCode'); if (codeHidden) codeHidden.value = '+34';
+    } catch {}
+  };
+  
+  // Human contact popup with persistent countdown
+  this.setupHumanPopup = () => {
+    const footer = this.shadowRoot.querySelector('.support-footer-text');
+    const overlay = this.shadowRoot.getElementById('humanOverlay');
+    const btnClose = this.shadowRoot.getElementById('humanContinueBtn');
+    const timerEl = this.shadowRoot.getElementById('humanEtaTimer');
+    let intervalId = null;
+    const DURATION_MS = 15 * 60 * 1000; // 15 minutes
+    const LS_KEY = 'vw_human_eta_until';
+
+    const getDeadline = () => {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        const parsed = raw ? parseInt(raw, 10) : NaN;
+        if (Number.isFinite(parsed) && parsed > Date.now()) return parsed;
+      } catch {}
+      return null;
+    };
+    const setDeadline = (ts) => { try { localStorage.setItem(LS_KEY, String(ts)); } catch {} };
+    const fmt = (ms) => {
+      const total = Math.max(0, Math.floor(ms / 1000));
+      const m = Math.floor(total / 60).toString().padStart(2, '0');
+      const s = (total % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    };
+    const startTimer = () => {
+      const dl = getDeadline() || (Date.now() + DURATION_MS);
+      if (!getDeadline()) setDeadline(dl);
+      const tick = () => {
+        const left = dl - Date.now();
+        if (timerEl) timerEl.textContent = fmt(left);
+        if (left <= 0 && intervalId) { clearInterval(intervalId); intervalId = null; }
+      };
+      tick();
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(tick, 1000);
+    };
+
+    footer?.addEventListener('click', () => {
+      if (overlay) overlay.style.display = 'flex';
+      startTimer(); // не сбрасываем, использует сохранённый дедлайн
+    });
+    btnClose?.addEventListener('click', () => {
+      if (overlay) overlay.style.display = 'none';
+    });
+  };
+  try { this.setupHumanPopup(); } catch {}
+  
+  // Context: leave request inline form toggles
+  this.setupContextRequestForm = () => {
+    const btn = this.shadowRoot.getElementById('ctxLeaveReqBtn');
+    const form = this.shadowRoot.getElementById('ctxRequestForm');
+    const ctxHint = this.shadowRoot.querySelector('#contextScreen .hint-text');
+    const thanks = this.shadowRoot.getElementById('ctxThanks'); // legacy inline
+    const thanksOverlay = this.shadowRoot.getElementById('ctxThanksOverlay');
+    if (!btn || !form) return;
+    const get = (id) => this.shadowRoot.getElementById(id);
+    const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
+    const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
+    const isPhone = (cc, v) => {
+      const s = `${cc||''}${v||''}`.replace(/\s+/g,'');
+      return s.length >= 6 && /^[+0-9\-()]+$/.test(s);
+    };
+    // Email inline completion (context)
+    const ctxEmail = get('ctxEmail');
+    const ctxEmailGhost = get('ctxEmailGhost');
+    const updateCtxEmailGhost = () => {
+      const v = ctxEmail?.value || '';
+      const at = v.indexOf('@');
+      if (!ctxEmailGhost || at < 0) { if (ctxEmailGhost) ctxEmailGhost.textContent=''; return; }
+      const tail = v.slice(at + 1).toLowerCase();
+      let suggestion = null;
+      if (tail.length === 0) suggestion = emailSuggestDomains[0];
+      else suggestion = emailSuggestDomains.find(d => d.startsWith(tail));
+      if (!suggestion) { ctxEmailGhost.textContent=''; return; }
+      const suffix = suggestion.slice(tail.length);
+      const padLeft = 10;
+      const left = padLeft + measureText(ctxEmail, v);
+      ctxEmailGhost.style.left = `${left}px`;
+      ctxEmailGhost.textContent = suffix;
+      ctxEmailGhost.dataset.domain = suggestion;
+    };
+    ctxEmail?.addEventListener('input', updateCtxEmailGhost);
+    ctxEmailGhost?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!ctxEmail || !ctxEmailGhost) return;
+      const v = ctxEmail.value;
+      const at = v.indexOf('@');
+      if (at < 0) return;
+      const local = v.slice(0, at);
+      const domain = ctxEmailGhost.dataset.domain || '';
+      if (!domain) return;
+      ctxEmail.value = `${local}@${domain}`;
+      ctxEmail.focus();
+      updateCtxEmailGhost();
+    });
+    // Dial select (context)
+    const ctxDialBtn = get('ctxDialBtn');
+    const ctxDialList = get('ctxDialList');
+    const ctxCode = get('ctxCode');
+    const toggleCtxDial = (show) => { if (ctxDialList) ctxDialList.style.display = show ? 'block' : 'none'; };
+    ctxDialBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const visible = ctxDialList && ctxDialList.style.display === 'block';
+      toggleCtxDial(!visible);
+    });
+    ctxDialList?.querySelectorAll('.dial-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const code = item.getAttribute('data-code') || '+34';
+        const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+        if (ctxDialBtn) {
+          const codeEl = ctxDialBtn.querySelector('.dial-code'); const flagEl = ctxDialBtn.querySelector('.dial-flag');
+          if (codeEl) codeEl.textContent = code;
+          if (flagEl) flagEl.textContent = flag;
+        }
+        if (ctxCode) ctxCode.value = code;
+        toggleCtxDial(false);
+      });
+    });
+    document.addEventListener('click', (ev) => {
+      if (!ctxDialList || !ctxDialBtn) return;
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (![ctxDialList, ctxDialBtn].some(el => path.includes(el))) toggleCtxDial(false);
+    }, { capture:true });
+    const showContactError = (on, msg) => { const el = get('ctxContactError'); if (el && typeof msg === 'string' && msg.length) el.textContent = msg; if (el) el.classList.toggle('visible', !!on); };
+    const showConsentError = (on) => {
+      const wrap = form.querySelector('.ctx-consent');
+      const checkbox = get('ctxConsent');
+      const textEl = wrap?.querySelector('.ctx-consent-text');
+      const el = get('ctxConsentError');
+      if (el) el.classList.toggle('visible', !!on);
+      if (checkbox) checkbox.classList.toggle('error', !!on);
+      if (on && textEl) { textEl.classList.add('shake'); setTimeout(()=>textEl.classList.remove('shake'), 500); }
+    };
+    const shake = (el) => { if (!el) return; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 500); };
+    btn.addEventListener('click', () => {
+      btn.parentElement.style.display = 'none';
+      form.style.display = 'block';
+      if (ctxHint) ctxHint.style.display = 'none';
+      try { this.shadowRoot.getElementById('ctxName')?.focus(); } catch {}
+    });
+    this.shadowRoot.getElementById('ctxCancelBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      form.style.display = 'none';
+      btn.parentElement.style.display = 'block';
+      if (ctxHint) ctxHint.style.display = '';
+      // clear errors
+      ['ctxPhone','ctxEmail'].forEach(id => markError(get(id), false));
+      showContactError(false); showConsentError(false);
+    });
+    // clear errors on input/change
+    ['ctxPhone','ctxEmail'].forEach(id => get(id)?.addEventListener('input', () => {
+      ['ctxPhone','ctxEmail'].forEach(fid => markError(get(fid), false));
+      showContactError(false);
+    }));
+    get('ctxConsent')?.addEventListener('change', () => {
+      showConsentError(false);
+      const checkbox = get('ctxConsent');
+      if (checkbox) checkbox.classList.remove('error');
+    });
+    this.shadowRoot.getElementById('ctxSendBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      // validation
+      const code = get('ctxCode')?.value?.trim() || '';
+      const phone = get('ctxPhone')?.value?.trim() || '';
+      const email = get('ctxEmail')?.value?.trim() || '';
+      const consent = !!get('ctxConsent')?.checked;
+      const phoneOk = isPhone(code, phone);
+      const emailOk = isEmail(email);
+      const contactOk = phoneOk || emailOk;
+      const phoneHas = phone.length > 0;
+      const emailHas = email.length > 0;
+      // empty both → generic error + shake both
+      if (!phoneHas && !emailHas) {
+        markError(get('ctxPhone'), true);
+        markError(get('ctxEmail'), true);
+        shake(get('ctxPhone')); shake(get('ctxEmail'));
+        showContactError(true, 'Required: phone or email');
+        if (!consent) showConsentError(true);
+        return;
+      }
+      if (contactOk) {
+        markError(get('ctxPhone'), false);
+        markError(get('ctxEmail'), false);
+        showContactError(false);
+      } else {
+        markError(get('ctxPhone'), phoneHas && !phoneOk);
+        markError(get('ctxEmail'), emailHas && !emailOk);
+        let msg = phoneHas && !phoneOk ? 'Invalid phone number' : 'Invalid email address';
+        showContactError(true, msg);
+        if (!phoneOk && phoneHas) shake(get('ctxPhone'));
+        if (!emailOk && emailHas) shake(get('ctxEmail'));
+        return;
+      }
+      if (!consent) { showConsentError(true); shake(form.querySelector('.ctx-consent')); return; }
+      // show thanks popup instead of returning button
+      form.style.display = 'none';
+      if (thanksOverlay) thanksOverlay.style.display = 'flex';
+      // clear fields
+      ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.shadowRoot.getElementById(id); if (el) el.value=''; });
+      const c = this.shadowRoot.getElementById('ctxConsent'); if (c) c.checked = false;
+      showContactError(false); showConsentError(false);
+    });
+    this.shadowRoot.getElementById('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (thanks) thanks.style.display = 'none';
+      btn.parentElement.style.display = 'block';
+      if (ctxHint) ctxHint.style.display = '';
+    });
+    this.shadowRoot.getElementById('ctxThanksOverlayClose')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (thanksOverlay) thanksOverlay.style.display = 'none';
+      btn.parentElement.style.display = 'block';
+      if (ctxHint) ctxHint.style.display = '';
+    });
+  };
+  try { this.setupContextRequestForm(); } catch {}
+  
+  // Context: Data storage info popup
+  this.setupDataStoragePopup = () => {
+    const trigger = this.shadowRoot.querySelector('.data-storage-text');
+    const overlay = this.shadowRoot.getElementById('dataOverlay');
+    const btn = this.shadowRoot.getElementById('dataUnderstoodBtn');
+    trigger?.addEventListener('click', () => { if (overlay) overlay.style.display = 'flex'; });
+    btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
+  };
+  try { this.setupDataStoragePopup(); } catch {}
+  
+  // Context: "What data do we know?" popup (insights)
+  this.setupWhatDataPopup = () => {
+    const trigger = this.shadowRoot.querySelector('#contextScreen .footer-text');
+    const overlay = this.shadowRoot.getElementById('whatDataOverlay');
+    const body = this.shadowRoot.getElementById('whatDataBody');
+    const btn = this.shadowRoot.getElementById('whatDataUnderstoodBtn');
+    const labelMap = {
+      name: 'Name',
+      operation: 'Operation',
+      budget: 'Budget',
+      type: 'Type',
+      location: 'Location',
+      rooms: 'Rooms',
+      area: 'Area',
+      details: 'Details',
+      preferences: 'Preferences'
+    };
+    const render = () => {
+      const u = (typeof this.getUnderstanding === 'function') ? this.getUnderstanding() : (this.understanding?.export?.() || {});
+      const lines = [];
+      Object.keys(labelMap).forEach((k) => {
+        const v = u?.[k];
+        if (v !== null && v !== undefined && String(v).trim().length) {
+          lines.push(`<li><b>${labelMap[k]}:</b> ${String(v)}</li>`);
+        }
+      });
+      const listHtml = lines.length ? `<ul style="padding-left:16px; margin:6px 0 10px 0;">${lines.join('')}</ul>` : `<div style="margin:6px 0 10px 0;">No data collected yet.</div>`;
+      const consent = `<div style="margin-top:10px;">We collect information only with your consent and use it non‑commercially to improve property matching.</div>`;
+      if (body) body.innerHTML = listHtml + consent;
+    };
+    trigger?.addEventListener('click', () => { render(); if (overlay) overlay.style.display = 'flex'; });
+    btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
+  };
+  try { this.setupWhatDataPopup(); } catch {}
   // Thread auto-scroll helper
   this._isThreadNearBottom = true;
   this.scrollThreadToBottom = (force = false) => {
@@ -1632,17 +2465,6 @@ render() {
   if (btnScrollBottom) {
     btnScrollBottom.addEventListener('click', () => this.scrollThreadToBottom(true));
   }
-  /* ===== STUB: openLeadPanel (legacy v1 overlay) — перепривяжем позже к requestScreen =====
-  this.openLeadPanel = () => {
-    const leadPanelEl = this.shadowRoot.getElementById('leadPanel');
-    if (leadPanelEl) {
-      leadPanelEl.classList.add('active');
-      leadPanelEl.setAttribute('aria-hidden', 'false');
-      const nameEl = this.shadowRoot.getElementById('leadName');
-      if (nameEl) nameEl.focus();
-    }
-  };
-  */
 
   // Property card (как было)
   this.renderPropertyCard = (property) => {
@@ -1662,250 +2484,6 @@ render() {
     `;
   };
 
-  // ---------- Inline Lead Bubbles (framework) ----------
-  // State (kept per widget instance; can be augmented from session later)
-  this.inlineLeadState = { step: null, data: { time_window: null, channel: null, contact: null, gdpr: false } };
-
-  this.startInlineLeadFlow = () => {
-    if (this.inlineLeadState.step) return; // already running
-    this.inlineLeadState = { step: 'A', data: { time_window: null, channel: null, contact: null, gdpr: false } };
-    this.renderInlineLeadStep();
-  };
-
-  // CTA bubble to start inline flow or open panel form
-  this.showInlineLeadCTA = () => {
-    if (this.inlineLeadState.step) { this.ui.showNotification(this.tLead('inlineAlready') || 'Already in progress'); return; }
-    const thread = this.shadowRoot.getElementById('thread'); if (!thread) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'message assistant';
-    wrap.innerHTML = `<div class="bubble bubble--full"><div class="lead-bubble">
-      <div class="lb-title">${this.tLead('inlineCtaTitle') || 'I can take your contact and arrange a call'}</div>
-      <div class="lb-actions" style="margin-top:6px;">
-        <button class="lb-btn primary" id="lbCtaInline">${this.tLead('inlineCtaInline') || 'Write here'}</button>
-        <button class="lb-btn secondary" id="lbCtaForm">${this.tLead('inlineCtaForm') || 'Open form'}</button>
-      </div>
-    </div></div>`;
-    thread.appendChild(wrap);
-    wrap.querySelector('#lbCtaInline')?.addEventListener('click', ()=> this.startInlineLeadFlow());
-    wrap.querySelector('#lbCtaForm')?.addEventListener('click', ()=> this.openLeadPanel());
-  };
-
-  this.cancelInlineLeadFlow = () => {
-    this.inlineLeadState = { step: null, data: { time_window: null, channel: null, contact: null, gdpr: false } };
-    // remove pending bubbles silently — без системного сообщения
-  };
-
-  this.renderInlineLeadStep = () => {
-    const step = this.inlineLeadState.step;
-    if (!step) return;
-    const thread = this.shadowRoot.getElementById('thread');
-    if (!thread) return;
-
-    // Remove previous inline lead bubble (replace instead of stacking)
-    const existingInline = thread.querySelectorAll('.lead-box[id^="lb-"]');
-    if (existingInline.length) {
-      const last = existingInline[existingInline.length - 1];
-      last.closest('.message')?.remove();
-    }
-
-    const bubble = document.createElement('div');
-    bubble.className = 'message assistant';
-    // Render form as standalone (not inside chat bubble)
-    const formWrap = document.createElement('div');
-    formWrap.className = 'lead-box';
-    formWrap.id = `lb-${Date.now()}`;
-    bubble.appendChild(formWrap);
-    thread.appendChild(bubble);
-
-    const lb = formWrap;
-
-    if (step === 'A') {
-      lb.innerHTML = `
-        <div class="lead-title">${this.tLead('timeLabel') || 'Time'}</div>
-        <div class="lead-row">
-          <label class="lead-label" for="lbTimeRange">${this.tLead('timeLabel') || 'Time'}</label>
-          <select class="lead-select" id="lbTimeRange"></select>
-          <div class="lead-error" id="lbErr"></div>
-        </div>
-        <div class="lead-actions" style="justify-content:center;">
-          <button class="lead-submit" id="lbNext" style="width:120px; height:40px; flex:0 0 auto;">${this.tLead('inlineContinue') || 'Continue'}</button>
-        </div>`;
-
-      const tz = 'Europe/Madrid';
-      const now = new Date();
-      const fmt = (d) => d.toLocaleString('en-US', { weekday:'short', month:'2-digit', day:'2-digit' });
-      const today = fmt(now);
-      const tomorrowDate = new Date(now.getTime() + 24*60*60*1000);
-      const tomorrow = fmt(tomorrowDate);
-      const options = [
-        { v: { date: now.toISOString().slice(0,10), from:'17:00', to:'19:00', timezone: tz }, l: `${this.tLead('today')} 17–19 (${today})` },
-        { v: { date: now.toISOString().slice(0,10), from:'19:00', to:'21:00', timezone: tz }, l: `${this.tLead('today')} 19–21 (${today})` },
-        { v: { date: tomorrowDate.toISOString().slice(0,10), from:'10:00', to:'12:00', timezone: tz }, l: `${this.tLead('tomorrow')} 10–12 (${tomorrow})` },
-        { v: { date: tomorrowDate.toISOString().slice(0,10), from:'12:00', to:'14:00', timezone: tz }, l: `${this.tLead('tomorrow')} 12–14 (${tomorrow})` }
-      ];
-      const sel = lb.querySelector('#lbTimeRange');
-      if (sel) sel.innerHTML = options.map((o,i)=>`<option value='${JSON.stringify(o.v)}' ${i===0?'selected':''}>${o.l}</option>`).join('');
-
-      const updateTimeCta = () => {
-        const val = lb.querySelector('#lbTimeRange')?.value;
-        const next = lb.querySelector('#lbNext');
-        if (next) next.disabled = !val;
-      };
-      lb.querySelector('#lbTimeRange')?.addEventListener('change', updateTimeCta);
-      updateTimeCta();
-
-      lb.querySelector('#lbNext')?.addEventListener('click', ()=>{
-        const val = lb.querySelector('#lbTimeRange')?.value;
-        const errEl = lb.querySelector('#lbErr');
-        if (!val) { if (errEl) errEl.textContent = this.tLead('errTimeRequired') || 'Select date and time'; return; }
-        try { this.inlineLeadState.data.time_window = JSON.parse(val); } catch { this.inlineLeadState.data.time_window = null; }
-        // Skip channel selection step; default to phone
-        this.inlineLeadState.data.channel = 'phone';
-        this.inlineLeadState.step = 'C';
-        this.renderInlineLeadStep();
-      });
-      // no cancel button per spec
-      return;
-    }
-
-    // step B (channel selection) removed per spec
-
-    if (step === 'C') {
-      lb.innerHTML = `
-        <div class="lead-title">${this.tLead('contactLabel') || 'Contact'}</div>
-        <div class="lead-row">
-          <label class="lead-label" for="lbPhoneInput">${this.tLead('optPhone')||'Phone'}</label>
-          <div style="display:flex; gap:8px;"><select class="lead-select lbCountryCode"></select><input class="lead-input" id="lbPhoneInput" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="600112233" /></div>
-        </div>
-        <div class="lead-row">
-          <label class="lead-label" for="lbEmailInput">${this.tLead('optEmail')||'Email'}</label>
-          <input class="lead-input" id="lbEmailInput" type="email" inputmode="email" placeholder="name@example.com" maxlength="254" />
-          <div class="lead-error" id="lbErr"></div>
-        </div>
-        <div class="lead-row">
-          <label class="lead-label" for="lbChannel">${this.tLead('channelLabel')||'Preferred method'}</label>
-          <select class="lead-select" id="lbChannel">
-            <option value="whatsapp">${this.tLead('optWhatsApp')||'WhatsApp'}</option>
-            <option value="phone" selected>${this.tLead('optPhone')||'Phone'}</option>
-            <option value="email">${this.tLead('optEmail')||'Email'}</option>
-          </select>
-        </div>
-        <div class="lead-actions" style="justify-content:center;">
-          <button class="lead-submit" id="lbNext" disabled style="width:120px; height:40px; flex:0 0 auto;">${this.tLead('inlineContinue') || 'Continue'}</button>
-        </div>`;
-
-      // populate country codes from full form
-      const src = this.shadowRoot.getElementById('leadCountryCode');
-      const dst = lb.querySelector('.lbCountryCode');
-      if (src && dst) dst.innerHTML = src.innerHTML;
-
-      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const updateCta = () => {
-        const selected = String(lb.querySelector('#lbChannel')?.value || 'phone');
-        const next = lb.querySelector('#lbNext');
-        const errEl = lb.querySelector('#lbErr'); if (errEl) errEl.textContent = '';
-        if (selected === 'email') {
-          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
-          next.disabled = !(emailRe.test(em));
-        } else {
-          const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
-          next.disabled = raw.length < 6;
-        }
-      };
-      lb.querySelector('#lbPhoneInput')?.addEventListener('input', updateCta);
-      lb.querySelector('#lbEmailInput')?.addEventListener('input', updateCta);
-      lb.querySelector('#lbChannel')?.addEventListener('change', updateCta);
-      updateCta();
-
-      lb.querySelector('#lbNext')?.addEventListener('click', ()=>{
-        const selected = String(lb.querySelector('#lbChannel')?.value || 'phone');
-        const errEl = lb.querySelector('#lbErr'); if (errEl) errEl.textContent = '';
-        if (selected === 'email') {
-          const em = String(lb.querySelector('#lbEmailInput')?.value||'').trim();
-          if (!emailRe.test(em)) { if (errEl) errEl.textContent = this.tLead('errEmailInvalid')||'Invalid email'; return; }
-          this.inlineLeadState.data.channel = 'email';
-          this.inlineLeadState.data.contact = { channel: 'email', value: em };
-        } else {
-          const raw = String(lb.querySelector('#lbPhoneInput')?.value||'').replace(/\D/g,'');
-          if (raw.length < 6) { if (errEl) errEl.textContent = this.tLead('errPhoneInvalid')||'Invalid phone'; return; }
-          const cc = String(lb.querySelector('.lbCountryCode')?.value || '');
-          this.inlineLeadState.data.channel = selected === 'whatsapp' ? 'whatsapp' : 'phone';
-          this.inlineLeadState.data.contact = { channel: 'phone', value: `+${(cc+raw).replace(/^\++/,'')}`.replace(/^\++/,'+') };
-        }
-        this.inlineLeadState.step = 'D';
-        this.renderInlineLeadStep();
-      });
-      return;
-    }
-
-    if (step === 'D') {
-      lb.innerHTML = `
-        <div class="lead-title">GDPR</div>
-        <div class="lead-row">
-          <label class="lead-consent"><input type="checkbox" id="lbGdpr" /><span class="consent-text">${this.tLead('consentRequired')||'Please accept the Privacy Policy'} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span></label>
-          <div class="lead-error" id="lbErr"></div>
-        </div>
-          <div class="lead-row">
-            <label class="lead-label" for="lbName">${this.tLead('yourName')||'Your name'} (${this.tLead('optional')||'optional'})</label>
-            <input class="lead-input" id="lbName" type="text" inputmode="text" />
-          <div class="lead-error" id="lbNameErr"></div>
-        </div>
-        <div class="lead-actions" style="justify-content:center;">
-          <button class="lead-submit" id="lbSubmit" style="width:120px; height:40px; flex:0 0 auto;">${this.tLead('inlineContinue')||'Continue'}</button>
-        </div>`;
-      lb.querySelector('#lbSubmit')?.addEventListener('click', async ()=>{
-        const ok = lb.querySelector('#lbGdpr')?.checked === true;
-        const errEl = lb.querySelector('#lbErr');
-        if (!ok) { if (errEl) errEl.textContent = this.tLead('consentRequired'); return; }
-        // submit via /api/leads (same payload shape)
-        const payload = {
-          name: lb.querySelector('#lbName')?.value?.trim() || null,
-          contact: this.inlineLeadState.data.contact,
-          time_window: this.inlineLeadState.data.time_window,
-          language: this.getLangCode(),
-          gdpr: { consent: true, locale: this.getLangCode() },
-          context: { sessionId: this.sessionId || null, notes: this.inlineLeadState.data.time_window ? null : 'schedule_later', source: 'inline' }
-        };
-        try {
-          const baseApi = (() => { try { const u = new URL(this.apiUrl, window.location.href); return `${u.protocol}//${u.host}`;} catch { return ''; }})();
-          const resp = await fetch(`${baseApi}/api/leads`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-          const data = await resp.json().catch(()=>({}));
-          if (resp.ok && data?.ok) {
-            // Confirmation bubble with CTA (replace previous inline bubble)
-            const thread = this.shadowRoot.getElementById('thread');
-            const existingInline2 = thread?.querySelectorAll('.lead-box[id^="lb-"]');
-            if (existingInline2 && existingInline2.length) {
-              const last = existingInline2[existingInline2.length - 1];
-              last.closest('.message')?.remove();
-            }
-            const bubble = document.createElement('div');
-            bubble.className = 'message assistant';
-            const code = this.getLangCode();
-            const sysMsg = (code === 'ru')
-              ? 'Отлично! Я передал менеджеру информацию, а пока если у вас ещё есть вопросы — буду рад помочь.'
-              : (code === 'uk')
-                ? 'Чудово! Я передав інформацію менеджеру. Якщо виникнуть ще питання — із задоволенням допоможу.'
-                : (code === 'es')
-                  ? '¡Genial! He compartido tu información con un gestor. Si tienes más preguntas, estaré encantado de ayudar.'
-                  : (code === 'fr')
-                    ? 'Super ! J’ai transmis vos informations au manager. Si vous avez d’autres questions, je serai ravi d’aider.'
-                    : (code === 'de')
-                      ? 'Super! Ich habe Ihre Informationen an den Manager weitergegeben. Bei weiteren Fragen helfe ich gerne.'
-                      : 'Great! I have shared your info with a manager. If you have more questions, I\'m happy to help.';
-            bubble.innerHTML = `<div class=\"bubble\">${sysMsg}</div>`;
-            thread.appendChild(bubble);
-            this.inlineLeadState = { step: null, data: { time_window:null, channel:null, contact:null, gdpr:false } };
-          } else {
-            if (data?.errors?.length) { if (errEl) errEl.textContent = `${data.errors[0].field}: ${data.errors[0].message}`; }
-            else { if (errEl) errEl.textContent = this.tLead('errorGeneric') || 'An error occurred'; }
-          }
-        } catch (e) {
-          if (errEl) errEl.textContent = this.tLead('errorNetwork') || 'Network error';
-        }
-      });
-      return;
-    }
-  };
 
   // Card events
   this.shadowRoot.addEventListener('click', (e) => {
@@ -1927,14 +2505,28 @@ render() {
       const container = e.target.closest('.card-screen');
       if (container) container.remove();
       this.events.emit('continue_dialog');
+    } else if (e.target.matches('.cards-dot')) {
+      // Навигация по слайдеру через точки
+      const dot = e.target;
+      const row = dot.closest('.cards-dots-row');
+      const slider = this.shadowRoot.querySelector('.cards-slider');
+      if (!row || !slider) return;
+      const dots = Array.from(row.querySelectorAll('.cards-dot'));
+      const idx = dots.indexOf(dot);
+      const slides = slider.querySelectorAll('.card-slide');
+      if (idx >= 0 && slides[idx]) {
+        const left = slides[idx].offsetLeft;
+        slider.scrollTo({ left, behavior: 'smooth' });
+        try { this.updateActiveCardSlide(); } catch {}
+      }
     }
   });
 }
 
   // ---------- ПРЯМО ТУТ ЗАКАНЧИВВАЕТСЯ ФУНКЦИЯ РЕНДЕР (В НЕЙ ЛЕЖАТ СТИЛИ v2/ ----------
                   // верстка и стили всех экранов в разметке и стилях/ 
-                  // логика и верстка старой лид формы (актуализировать)/
-                  // логика и верстка инлайн лид формы/
+                  // логика и верстка старой лид формы (удалено)/
+                  // логика и верстка инлайн лид формы (удалено)/
                   // логика карточек квартир) 
 
 
@@ -2089,10 +2681,35 @@ render() {
     // Update progress
     const progressFill = this.shadowRoot.getElementById('progressFill');
     const progressText = this.shadowRoot.getElementById('progressText');
-    if (progressFill && progressText) {
+    const ctxProgressText = this.shadowRoot.getElementById('ctxProgressText');
+    const ctxStatusText = this.shadowRoot.getElementById('ctxStatusText');
+    const ctxStageMessage = this.shadowRoot.getElementById('ctxStageMessage');
       const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
+    if (progressFill && progressText) {
       progressFill.style.width = `${progress}%`;
       progressText.textContent = `${progress}% — ${progress === 0 ? 'ожидание' : 'обработка'}`;
+    }
+    if (ctxProgressText) ctxProgressText.textContent = `${Math.max(0, Math.min(99, Math.round(progress)))}%`;
+    if (ctxStatusText || ctxStageMessage) {
+      // Map progress to state (explicit ranges with fallbacks)
+      const p = progress;
+      let status = 'initial request';
+      let message = 'We’ve received your initial request. Share a few details to get started.';
+      if ((p >= 22 && p <= 33) || (p >= 12 && p < 22)) {
+        status = 'more info added';
+        message = 'Great — we added more details. Keep going to refine the search.';
+      } else if ((p >= 44 && p <= 55) || (p > 33 && p < 44)) {
+        status = 'half path done';
+        message = 'Halfway there. A couple more details will sharpen the results.';
+      } else if ((p >= 66 && p <= 77) || (p > 55 && p < 66)) {
+        status = 'almost done';
+        message = 'Almost done. Final tweaks and we’ll have precise matches.';
+      } else if ((p >= 88 && p <= 99) || (p > 77)) {
+        status = 'fulfilled';
+        message = 'Well done! Your data is enough for a confident, targeted search.';
+      }
+      if (ctxStatusText) ctxStatusText.textContent = `Status: ${status}`;
+      if (ctxStageMessage) ctxStageMessage.textContent = message;
     }
 
     // Update parameter values and dots
@@ -2205,37 +2822,41 @@ render() {
     }
   }
 
-  // Show property card in chat
-  showPropertyCard(property) {
-    const thread = this.shadowRoot.getElementById('thread');
-    if (!thread) return;
-
-    const normalized = this.normalizeCardData(property);
-    const wrapper = document.createElement('div');
-    wrapper.className = 'card-screen';
-    wrapper.innerHTML = `
-      <div class="cs" data-variant-id="${normalized.id}">
-        <div class="cs-image">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
-        <div class="cs-body">
-          <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
-          <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
-          <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
-        </div>
-      </div>`;
-    thread.appendChild(wrapper);
-  }
-
-  // Show mock card + action panel as separate messages and keep 70/30 viewport split
-  showMockCardWithActions(mock = {}) {
+  // Ensure slider container exists in thread
+  ensureCardsSlider() {
     const thread = this.shadowRoot.getElementById('thread');
     const messages = this.shadowRoot.getElementById('messagesContainer');
-    if (!thread || !messages) return;
+    if (!thread || !messages) return null;
+    let host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+    if (!host) {
+      host = document.createElement('div');
+      host.className = 'card-screen cards-slider-host';
+      host.innerHTML = `
+        <div class="cs" style="background:transparent; box-shadow:none;">
+          <div class="cards-slider">
+            <div class="cards-track"></div>
+        </div>
+      </div>`;
+      thread.appendChild(host);
+      // attach active slide updater
+      const slider = host.querySelector('.cards-slider');
+      const update = () => { try { this.updateActiveCardSlide(); } catch {} };
+      if (slider) {
+        slider.addEventListener('scroll', update, { passive: true });
+        try { window.addEventListener('resize', update); } catch {}
+        requestAnimationFrame(update);
+      }
+    }
+    return host.querySelector('.cards-track');
+  }
 
-    // 1) Card message (assistant)
-    const cardMsg = document.createElement('div');
-    cardMsg.className = 'card-screen';
-    const normalized = this.normalizeCardData(mock);
-    cardMsg.innerHTML = `
+  // Add single card as slide into slider
+  addCardSlide(normalized) {
+    const track = this.ensureCardsSlider();
+    if (!track) return;
+    const slide = document.createElement('div');
+    slide.className = 'card-slide';
+    slide.innerHTML = `
       <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
         <div class="cs-image">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
         <div class="cs-body">
@@ -2243,58 +2864,90 @@ render() {
           <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
           <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
         </div>
-      </div>`;
-
-    thread.appendChild(cardMsg);
-
-    // 2) Actions panel (system) — единственный экземпляр. Если уже есть, просто переносим под последнюю карточку
-    const existingPanel = this.shadowRoot.querySelector('.card-actions-panel');
-    if (existingPanel) {
-      const panelWrapper = existingPanel.closest('.card-screen');
-      if (panelWrapper && panelWrapper.parentElement !== thread) {
-        // на всякий случай
-        panelWrapper.remove();
-        thread.appendChild(panelWrapper);
-      } else if (panelWrapper) {
-        // переместить в конец (под только что добавленную карточку)
-        thread.appendChild(panelWrapper);
-      }
-      // обновим variant-id на кнопках под новый кандидат
-      existingPanel.querySelectorAll('.card-btn').forEach(btn => btn.setAttribute('data-variant-id', normalized.id));
-    } else {
-      const actionsMsg = document.createElement('div');
-      actionsMsg.className = 'card-screen';
-      actionsMsg.innerHTML = `
-        <div class="cs" style="background:transparent; box-shadow:none;">
+        <div class="cards-dots-row"></div>
+        <div class="card-actions-wrap">
           <div class="card-actions-panel">
-            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">Мне нравится!</button>
-            <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё вариант</button>
+            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">I like it</button>
+            <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">One more</button>
+          </div>
           </div>
         </div>`;
-      thread.appendChild(actionsMsg);
-    }
-
-    // 3) Scroll/height logic to keep ~70/30 split
+    track.appendChild(slide);
+    // scroll to last slide
     requestAnimationFrame(() => {
-      const H = messages.clientHeight;
-      const targetLower = Math.max(0, Math.floor(H * 0.7));
-      const actionPanel = existingPanel || (actionsMsg ? actionsMsg.querySelector('.card-actions-panel') : null);
-      const gap = 12; // safety gap from thread spacing
-
-      // limit card height if needed
-      const cardEl = cardMsg.querySelector('.card-mock');
-      if (cardEl && actionPanel) {
-        // Убираем внутренний скролл — показываем полностью; просто подгоняем прокрутку контейнера
-        cardEl.style.maxHeight = '';
-        cardEl.style.overflow = 'visible';
-      }
-
-      // scroll so that ~30% remains visible above
-      messages.scrollTop = Math.max(0, messages.scrollHeight - targetLower);
+      // вычисляем целевую позицию именно нового слайда
+      const targetLeft = slide.offsetLeft;
+      track.scrollTo({ left: targetLeft, behavior: 'smooth' });
+      // пометим новый слайд активным сразу
+      try {
+        const slider = this.shadowRoot.querySelector('.cards-slider');
+        const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
+        allSlides.forEach(s => s.classList.remove('active'));
+        slide.classList.add('active');
+        // обновим dots: активная — последний индекс
+        const rows = slider ? slider.querySelectorAll('.cards-dots-row') : [];
+        const activeIdx = allSlides.length ? allSlides.length - 1 : 0;
+        rows.forEach(row => {
+          const dots = row.querySelectorAll('.cards-dot');
+          dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+        });
+      } catch {}
+      // ensure the thread scrolls to show the newly added slide
+      try { this.scrollThreadToBottom(true); } catch {}
+      try { this.renderSliderDots(); } catch {}
     });
+  }
 
-    // Attach click handlers (reuse existing event pipeline)
-    // Delegated globally; no extra listeners required here
+  // Show property card in slider
+  showPropertyCard(property) {
+    const normalized = this.normalizeCardData(property);
+    this.addCardSlide(normalized);
+  }
+
+  // Show mock card in slider (with actions)
+  showMockCardWithActions(mock = {}) {
+    const normalized = this.normalizeCardData(mock);
+    this.addCardSlide(normalized);
+  }
+
+  // Highlight active slide (nearest to center)
+  updateActiveCardSlide() {
+    const slider = this.shadowRoot.querySelector('.cards-slider');
+    if (!slider) return;
+    const slides = slider.querySelectorAll('.card-slide');
+    if (!slides.length) return;
+    const center = slider.scrollLeft + slider.clientWidth / 2;
+    let closest = null; let best = Infinity;
+    slides.forEach((s) => {
+      const mid = s.offsetLeft + s.clientWidth / 2;
+      const d = Math.abs(mid - center);
+      if (d < best) { best = d; closest = s; }
+    });
+    slides.forEach(s => s.classList.remove('active'));
+    if (closest) closest.classList.add('active');
+    const activeIdx = Array.from(slides).indexOf(closest);
+    // update each slide dots row
+    const rows = slider.querySelectorAll('.cards-dots-row');
+    rows.forEach(row => {
+      const dots = row.querySelectorAll('.cards-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+    });
+  }
+
+  // Build dots per slide count
+  renderSliderDots() {
+    const slider = this.shadowRoot.querySelector('.cards-slider');
+    if (!slider) return;
+    const slides = slider.querySelectorAll('.card-slide');
+    const count = slides.length;
+    const rows = slider.querySelectorAll('.cards-dots-row');
+    rows.forEach((wrap) => {
+      const existing = wrap.querySelectorAll('.cards-dot').length;
+      if (existing !== count) {
+        wrap.innerHTML = new Array(count).fill(0).map((_,i)=>`<span class="cards-dot${i===count-1?' active':''}"></span>`).join('');
+      }
+    });
+    try { this.updateActiveCardSlide(); } catch {}
   }
 
   // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------
@@ -2309,9 +2962,11 @@ render() {
     panel.className = 'card-screen';
     panel.innerHTML = `
       <div class="cs" style="background:transparent; box-shadow:none;">
+        <div class="card-actions-wrap">
         <div class="card-actions-panel">
-          <button class="card-btn like" data-action="send_card">Отправить квартиру</button>
-          <button class="card-btn next" data-action="continue_dialog">Продолжить диалог</button>
+            <button class="card-btn like" data-action="send_card">Показать</button>
+            <button class="card-btn next" data-action="continue_dialog">Продолжить</button>
+          </div>
         </div>
       </div>`;
 
@@ -2367,290 +3022,7 @@ render() {
     } catch { return 'en'; }
   }
 
-  buildLeadI18nDictionary() {
-    return {
-      en: {
-        openButton: 'Leave a request',
-        title: 'Leave a request',
-        nameLabel: 'Name', namePh: 'Your name',
-        contactLabel: 'Contact (phone / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / name@example.com',
-        channelLabel: 'Preferred contact method', optWhatsapp: 'WhatsApp', optPhone: 'Phone', optEmail: 'E-mail',
-        timeLabel: 'Convenient time', today: 'today', tomorrow: 'tomorrow',
-        noteLabel: 'Comment (optional)', notePh: 'Short note',
-        cancel: 'Cancel', submit: 'Send',
-        fillBoth: 'Please fill in name and contact',
-        success: 'Thanks! We will contact you in the selected time.',
-        errorGeneric: 'An error occurred, please try again',
-        errorNetwork: 'Network error. Please try again',
-        consentRequired: 'Please accept the Privacy Policy',
-        errNameRequired: 'Name is required',
-        errContactRequired: 'Provide either phone or email',
-        errEmailInvalid: 'Email is invalid',
-        errPhoneInvalid: 'Phone number is invalid',
-        inlineContinue: 'Continue',
-        inlineSkip: 'Skip / schedule later',
-        inlineSend: 'Send',
-        inlineCancel: 'Cancel',
-        inlineGdprTitle: 'GDPR consent',
-        inlineContactMethodQ: 'How should we contact you?',
-        errTimeRequired: 'Please select date and time',
-        inlineTzHeader: 'Europe/Madrid · next 7 days',
-        inlineCtaTitle: 'I can take your contact and arrange a call',
-        inlineCtaInline: 'Write here',
-        inlineCtaForm: 'Open form',
-        inlineAlready: 'Lead capture is already in progress'
-      },
-      es: {
-        openButton: 'Enviar solicitud',
-        title: 'Enviar solicitud',
-        nameLabel: 'Nombre', namePh: 'Tu nombre',
-        contactLabel: 'Contacto (teléfono / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / nombre@ejemplo.com',
-        channelLabel: 'Método de contacto preferido', optWhatsapp: 'WhatsApp', optPhone: 'Teléfono', optEmail: 'E-mail',
-        timeLabel: 'Hora conveniente', today: 'hoy', tomorrow: 'mañana',
-        noteLabel: 'Comentario (opcional)', notePh: 'Nota breve',
-        cancel: 'Cancelar', submit: 'Enviar',
-        fillBoth: 'Por favor, introduce nombre y contacto',
-        success: '¡Gracias! Nos pondremos en contacto en el horario indicado.',
-        errorGeneric: 'Ocurrió un error, inténtelo de nuevo',
-        errorNetwork: 'Error de red. Inténtalo de nuevo',
-        consentRequired: 'Por favor, acepte la Política de Privacidad',
-        errNameRequired: 'El nombre es obligatorio',
-        errContactRequired: 'Indique teléfono o e‑mail',
-        errEmailInvalid: 'E‑mail no válido',
-        errPhoneInvalid: 'Teléfono no válido',
-        inlineContinue: 'Continuar',
-        inlineSkip: 'Omitir / acordamos después',
-        inlineSend: 'Enviar',
-        inlineCancel: 'Cancelar',
-        inlineGdprTitle: 'Consentimiento GDPR',
-        inlineContactMethodQ: '¿Cómo le es más cómodo que contactemos?',
-        errTimeRequired: 'Seleccione fecha y hora',
-        inlineTzHeader: 'Europa/Madrid · próximos 7 días',
-        inlineCtaTitle: 'Puedo tomar su contacto y coordinar una llamada',
-        inlineCtaInline: 'Escribir aquí',
-        inlineCtaForm: 'Abrir formulario',
-        inlineAlready: 'Ya estamos recopilando los datos'
-      },
-      ru: {
-        openButton: 'Оставить заявку',
-        title: 'Оставить заявку',
-        nameLabel: 'Имя', namePh: 'Ваше имя',
-        contactLabel: 'Контакт (телефон / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / name@example.com',
-        channelLabel: 'Предпочтительный способ связи', optWhatsapp: 'WhatsApp', optPhone: 'Телефон', optEmail: 'E-mail',
-        timeLabel: 'Удобное время', today: 'сегодня', tomorrow: 'завтра',
-        noteLabel: 'Комментарий (опционально)', notePh: 'Короткая заметка',
-        cancel: 'Отмена', submit: 'Отправить заявку',
-        fillBoth: 'Заполните имя и контакт',
-        success: 'Спасибо! Мы свяжемся с вами в выбранное время.',
-        errorGeneric: 'Произошла ошибка, попробуйте снова',
-        errorNetwork: 'Сеть недоступна. Попробуйте ещё раз',
-        consentRequired: 'Пожалуйста, подтвердите согласие с Политикой конфиденциальности',
-        errNameRequired: 'Укажите имя',
-        errContactRequired: 'Укажите телефон или e‑mail',
-        errEmailInvalid: 'Некорректный e‑mail',
-        errPhoneInvalid: 'Некорректный номер телефона',
-        inlineContinue: 'Продолжить',
-        inlineSkip: 'Пропустить / согласуем позже',
-        inlineSend: 'Отправить',
-        inlineCancel: 'Отмена',
-        inlineGdprTitle: 'Согласие на обработку данных',
-        inlineContactMethodQ: 'Как с вами удобнее связаться?',
-        errTimeRequired: 'Выберите дату и время',
-        inlineTzHeader: 'Europe/Madrid · ближайшие 7 дней',
-        inlineCtaTitle: 'Могу взять ваш контакт и согласовать звонок',
-        inlineCtaInline: 'Написать здесь',
-        inlineCtaForm: 'Открыть форму',
-        inlineAlready: 'Сбор данных уже идёт'
-      },
-      uk: {
-        openButton: 'Залишити заявку',
-        title: 'Залишити заявку',
-        nameLabel: "Ім'я", namePh: 'Ваше ім’я',
-        contactLabel: 'Контакт (телефон / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / name@example.com',
-        channelLabel: 'Бажаний спосіб зв’язку', optWhatsapp: 'WhatsApp', optPhone: 'Телефон', optEmail: 'E-mail',
-        timeLabel: 'Зручний час', today: 'сьогодні', tomorrow: 'завтра',
-        noteLabel: 'Коментар (необов’язково)', notePh: 'Коротка нотатка',
-        cancel: 'Скасувати', submit: 'Надіслати',
-        fillBoth: 'Заповніть ім’я та контакт',
-        success: 'Дякуємо! Зв’яжемося у вибране вікно',
-        errorGeneric: 'Не вдалося надіслати. Спробуйте ще раз',
-        errorNetwork: 'Проблема з мережею. Спробуйте ще раз',
-        consentRequired: 'Будь ласка, прийміть Політику конфіденційності',
-        errNameRequired: "Вкажіть ім'я",
-        errContactRequired: 'Вкажіть телефон або e‑mail',
-        errEmailInvalid: 'Некоректний e‑mail',
-        errPhoneInvalid: 'Некоректний номер телефону',
-        inlineContinue: 'Продовжити',
-        inlineSkip: 'Пропустити / узгодимо пізніше',
-        inlineSend: 'Надіслати',
-        inlineCancel: 'Скасувати',
-        inlineGdprTitle: 'Згода на обробку даних',
-        inlineContactMethodQ: 'Як з вами зручніше зв’язатися?',
-        errTimeRequired: 'Виберіть дату і час',
-        inlineTzHeader: 'Europe/Madrid · найближчі 7 днів',
-        inlineCtaTitle: 'Можу взяти ваш контакт і узгодити дзвінок',
-        inlineCtaInline: 'Написати тут',
-        inlineCtaForm: 'Відкрити форму',
-        inlineAlready: 'Збір даних уже триває'
-      },
-      fr: {
-        openButton: 'Laisser une demande',
-        title: 'Laisser une demande',
-        nameLabel: 'Nom', namePh: 'Votre nom',
-        contactLabel: 'Contact (téléphone / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / nom@exemple.com',
-        channelLabel: 'Méthode de contact préférée', optWhatsapp: 'WhatsApp', optPhone: 'Téléphone', optEmail: 'E-mail',
-        timeLabel: 'Horaire souhaité', today: 'aujourd’hui', tomorrow: 'demain',
-        noteLabel: 'Commentaire (optionnel)', notePh: 'Note courte',
-        cancel: 'Annuler', submit: 'Envoyer',
-        fillBoth: 'Veuillez indiquer le nom et le contact',
-        success: 'Merci ! Nous vous contacterons dans le créneau choisi',
-        errorGeneric: 'Échec de l’envoi. Réessayez',
-        errorNetwork: 'Erreur réseau. Réessayez',
-        consentRequired: 'Veuillez accepter la politique de confidentialité',
-        errNameRequired: 'Le nom est requis',
-        errContactRequired: 'Indiquez un téléphone ou un e‑mail',
-        errEmailInvalid: 'E‑mail invalide',
-        errPhoneInvalid: 'Numéro de téléphone invalide',
-        inlineContinue: 'Continuer',
-        inlineSkip: 'Passer / à convenir plus tard',
-        inlineSend: 'Envoyer',
-        inlineCancel: 'Annuler',
-        inlineGdprTitle: 'Consentement RGPD',
-        inlineContactMethodQ: 'Comment préférez-vous être contacté ?',
-        errTimeRequired: 'Sélectionnez la date et l’heure',
-        inlineTzHeader: 'Europe/Madrid · 7 prochains jours',
-        inlineCtaTitle: 'Je peux prendre vos coordonnées et planifier un appel',
-        inlineCtaInline: 'Écrire ici',
-        inlineCtaForm: 'Ouvrir le formulaire',
-        inlineAlready: 'La collecte est déjà en cours'
-      },
-      de: {
-        openButton: 'Anfrage senden',
-        title: 'Anfrage senden',
-        nameLabel: 'Name', namePh: 'Ihr Name',
-        contactLabel: 'Kontakt (Telefon / WhatsApp / E-Mail)', contactPh: '+34 600 00 00 00 / name@beispiel.com',
-        channelLabel: 'Bevorzugter Kontaktweg', optWhatsapp: 'WhatsApp', optPhone: 'Telefon', optEmail: 'E-Mail',
-        timeLabel: 'Passende Zeit', today: 'heute', tomorrow: 'morgen',
-        noteLabel: 'Kommentar (optional)', notePh: 'Kurze Notiz',
-        cancel: 'Abbrechen', submit: 'Senden',
-        fillBoth: 'Bitte Name und Kontakt ausfüllen',
-        success: 'Danke! Wir melden uns im gewählten Zeitraum',
-        errorGeneric: 'Senden fehlgeschlagen. Bitte erneut versuchen',
-        errorNetwork: 'Netzwerkfehler. Bitte erneut versuchen',
-        consentRequired: 'Bitte akzeptieren Sie die Datenschutzrichtlinie',
-        errNameRequired: 'Name ist erforderlich',
-        errContactRequired: 'Telefon oder E‑Mail angeben',
-        errEmailInvalid: 'E‑Mail ist ungültig',
-        errPhoneInvalid: 'Telefonnummer ist ungültig',
-        inlineContinue: 'Weiter',
-        inlineSkip: 'Überspringen / später abstimmen',
-        inlineSend: 'Senden',
-        inlineCancel: 'Abbrechen',
-        inlineGdprTitle: 'DSGVO-Zustimmung',
-        inlineContactMethodQ: 'Wie sollen wir Sie kontaktieren?',
-        errTimeRequired: 'Bitte Datum und Uhrzeit wählen',
-        inlineTzHeader: 'Europe/Madrid · nächste 7 Tage',
-        inlineCtaTitle: 'Ich kann Ihre Kontaktdaten aufnehmen und einen Anruf planen',
-        inlineCtaInline: 'Hier schreiben',
-        inlineCtaForm: 'Formular öffnen',
-        inlineAlready: 'Erfassung läuft bereits'
-      },
-      it: {
-        openButton: 'Invia richiesta',
-        title: 'Invia richiesta',
-        nameLabel: 'Nome', namePh: 'Il tuo nome',
-        contactLabel: 'Contatto (telefono / WhatsApp / e-mail)', contactPh: '+34 600 00 00 00 / nome@esempio.com',
-        channelLabel: 'Metodo di contatto preferito', optWhatsapp: 'WhatsApp', optPhone: 'Telefono', optEmail: 'E-mail',
-        timeLabel: 'Orario comodo', today: 'oggi', tomorrow: 'domani',
-        noteLabel: 'Commento (opzionale)', notePh: 'Nota breve',
-        cancel: 'Annulla', submit: 'Invia',
-        fillBoth: 'Compila nome e contatto',
-        success: 'Grazie! Ti contatteremo nella fascia scelta',
-        errorGeneric: 'Invio non riuscito. Riprova',
-        errorNetwork: 'Errore di rete. Riprova',
-        consentRequired: 'Si prega di accettare l’Informativa sulla privacy',
-        errNameRequired: 'Il nome è obbligatorio',
-        errContactRequired: 'Indica telefono o e‑mail',
-        errEmailInvalid: 'E‑mail non valida',
-        errPhoneInvalid: 'Numero di telefono non valido',
-        inlineContinue: 'Continua',
-        inlineSkip: 'Salta / concordiamo dopo',
-        inlineSend: 'Invia',
-        inlineCancel: 'Annulla',
-        inlineGdprTitle: 'Consenso GDPR',
-        inlineContactMethodQ: 'Come preferisci essere contattato?',
-        errTimeRequired: 'Seleziona data e ora',
-        inlineTzHeader: 'Europe/Madrid · prossimi 7 giorni',
-        inlineCtaTitle: 'Posso prendere il tuo contatto e fissare una chiamata',
-        inlineCtaInline: 'Scrivi qui',
-        inlineCtaForm: 'Apri il form',
-        inlineAlready: 'La raccolta è già in corso'
-      }
-    };
-  }
-
-  tLead(key) {
-    const dict = this.leadI18n || {};
-    const code = this.getLangCode();
-    return (dict[code] && dict[code][key]) || (dict.en && dict.en[key]) || '';
-  }
-
-  applyLeadI18n() {
-    const setText = (sel, text) => { const el = this.shadowRoot.getElementById(sel); if (el) el.textContent = text; };
-    const setPh = (sel, text) => { const el = this.shadowRoot.getElementById(sel); if (el) el.setAttribute('placeholder', text); };
-
-    const openBtn = this.shadowRoot.getElementById('btnOpenLead');
-    if (openBtn) openBtn.textContent = this.tLead('openButton');
-
-    setText('leadTitle', this.tLead('title'));
-    setText('leadNameLabel', this.tLead('nameLabel'));
-    setPh('leadName', this.tLead('namePh'));
-    setText('leadContactLabel', this.tLead('contactLabel'));
-    setText('leadChannelLabel', this.tLead('channelLabel'));
-    const optWA = this.shadowRoot.getElementById('optWhatsApp'); if (optWA) optWA.textContent = this.tLead('optWhatsapp');
-    const optPh = this.shadowRoot.getElementById('optPhone'); if (optPh) optPh.textContent = this.tLead('optPhone');
-    const optEm = this.shadowRoot.getElementById('optEmail'); if (optEm) optEm.textContent = this.tLead('optEmail');
-    setText('leadTimeLabel', this.tLead('timeLabel'));
-    setText('leadNoteLabel', this.tLead('noteLabel'));
-    setPh('leadNote', this.tLead('notePh'));
-    const btnCancel = this.shadowRoot.getElementById('leadCancel'); if (btnCancel) btnCancel.textContent = this.tLead('cancel');
-    const btnSubmit = this.shadowRoot.getElementById('leadSubmit'); if (btnSubmit) btnSubmit.textContent = this.tLead('submit');
-
-    // Consent text (GDPR)
-    const code = this.getLangCode();
-    let consentText = '';
-    if (code === 'es') {
-      consentText = 'Acepto el tratamiento de mis datos para gestionar esta solicitud y contactar conmigo sobre inmuebles.';
-    } else if (code === 'ru') {
-      consentText = 'Я соглашаюсь на обработку моих данных для обработки этой заявки и связи со мной по вопросам недвижимости.';
-    } else {
-      consentText = 'I consent to the processing of my data for managing this request and contacting me about properties.';
-    }
-    const consentEl = this.shadowRoot.getElementById('leadConsentText');
-    if (consentEl) {
-      consentEl.innerHTML = `${consentText} <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>`;
-    }
-  }
-
-  populateTimeSlots() {
-    const timeSel = this.shadowRoot.getElementById('leadTime');
-    if (!timeSel) return;
-    const now = new Date();
-    const tz = 'Europe/Madrid';
-    const locale = this.getLangCode();
-    const fmt = (d) => d.toLocaleDateString(locale === 'uk' ? 'uk-UA' : locale === 'ru' ? 'ru-RU' : locale,
-      { weekday:'short', day:'2-digit', month:'2-digit', timeZone: tz });
-    const today = fmt(now);
-    const tomorrowDate = new Date(now.getTime() + 24*60*60*1000);
-    const tomorrow = fmt(tomorrowDate);
-    const options = [
-      { v: { date: now.toISOString().slice(0,10), from:'17:00', to:'19:00', timezone: tz }, l: `${this.tLead('today')} 17–19 (${today})` },
-      { v: { date: now.toISOString().slice(0,10), from:'19:00', to:'21:00', timezone: tz }, l: `${this.tLead('today')} 19–21 (${today})` },
-      { v: { date: tomorrowDate.toISOString().slice(0,10), from:'10:00', to:'12:00', timezone: tz }, l: `${this.tLead('tomorrow')} 10–12 (${tomorrow})` },
-      { v: { date: tomorrowDate.toISOString().slice(0,10), from:'12:00', to:'14:00', timezone: tz }, l: `${this.tLead('tomorrow')} 12–14 (${tomorrow})` },
-    ];
-    timeSel.innerHTML = options.map((o, i) => `<option value='${JSON.stringify(o.v)}' ${i===0?'selected':''}>${o.l}</option>`).join('');
-  }
+ 
   getCurrentState() {
     return {
       ui: this.ui.getCurrentState(),
@@ -2772,7 +3144,7 @@ render() {
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { this._menuState = 'closed'; this.updateMenuUI(); };
+      if (closeBtn) closeBtn.onclick = () => { try { this.resetSupportScreen(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
       content.querySelectorAll('.menu-btn').forEach(btn => {
         btn.onclick = (e) => {
           const action = e.currentTarget.getAttribute('data-action');
@@ -2799,7 +3171,7 @@ render() {
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
+      if (closeBtn) closeBtn.onclick = () => { try { this.resetSupportScreen(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
       const backBtn = content.querySelector('[data-action="back"]');
       if (backBtn) backBtn.onclick = () => { this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
     } else {

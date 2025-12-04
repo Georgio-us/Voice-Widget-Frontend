@@ -332,7 +332,8 @@ export class UIManager {
     // Main screen text input events
     mainTextInput?.addEventListener('input', () => this.widget.updateSendButtonState('main'));
     mainTextInput?.addEventListener('keydown', (e) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
         const text = mainTextInput.value.trim();
         if (text) {
           this.widget.sendTextFromMainScreen(text);
