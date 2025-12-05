@@ -427,6 +427,9 @@ render() {
                   --field-h: 2.5rem;        /* ~35px */
                   /* context progress ring */
                   --ring: clamp(72px, 26vw, 100px);
+                  /* iOS text zoom handling */
+                  -webkit-text-size-adjust: 100%;
+                  text-size-adjust: 100%;
                 }
                 /* semantic text classes */
                 .text-display { font: var(--fw-s) var(--fs-display)/var(--lh-tight) var(--ff); }
@@ -1093,6 +1096,19 @@ render() {
                 /* ========================= */
                 /*        Request Screen     */
                 /* ========================= */
+                /* iOS: предотвратить zoom при фокусе на полях (минимум 16px) */
+                @supports (-webkit-touch-callout: none) {
+                  .input-field,
+                  .request-input,
+                  .ctx-input,
+                  .request-select,
+                  .request-textarea,
+                  .ctx-textarea,
+                  .support-textarea,
+                  .dial-btn {
+                    font-size: 16px;
+                  }
+                }
                 .request-main-container {
                     position: static;
                     width: 100%;
@@ -1781,7 +1797,27 @@ render() {
   // Launcher
   $("#launcher")?.addEventListener("click", () => {
     this.classList.add("open");
-    this.shadowRoot.getElementById("textInput")?.focus();
+    // Не фокусируем поле на мобильных, чтобы не вызывать автопоявление клавиатуры
+    try {
+      const isDesktopPointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+      const isMobileUA = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      if (isDesktopPointer && !isMobileUA) {
+        this.shadowRoot.getElementById("textInput")?.focus();
+      }
+      // На мобильных — блокируем скролл страницы, чтобы скроллился только виджет
+      const isMobile = !isDesktopPointer || isMobileUA;
+      if (isMobile) {
+        const de = document.documentElement;
+        const b = document.body;
+        this._prevPageOverflowDoc = de.style.overflow || '';
+        this._prevPageOverflowBody = b.style.overflow || '';
+        this._prevPageTouchAction = b.style.touchAction || '';
+        de.style.overflow = 'hidden';
+        b.style.overflow = 'hidden';
+        b.style.touchAction = 'none';
+        this._scrollLockedMobile = true;
+      }
+    } catch {}
     // Не блокируем прокрутку страницы при открытом виджете
   });
 
@@ -1789,6 +1825,21 @@ render() {
   this.closeWidget = () => {
     this.classList.remove("open");
     // Ничего не меняем у страницы — скролл всегда доступен
+    // Явно снимаем фокус, чтобы на повторном открытии клавиатура не всплывала
+    try {
+      this.shadowRoot.getElementById("textInput")?.blur();
+      this.shadowRoot.getElementById("mainTextInput")?.blur();
+      this.shadowRoot.activeElement && typeof this.shadowRoot.activeElement.blur === 'function' && this.shadowRoot.activeElement.blur();
+      // Если скролл был залочен (мобилки) — вернём как было
+      if (this._scrollLockedMobile) {
+        const de = document.documentElement;
+        const b = document.body;
+        de.style.overflow = this._prevPageOverflowDoc || '';
+        b.style.overflow = this._prevPageOverflowBody || '';
+        b.style.touchAction = this._prevPageTouchAction || '';
+        this._scrollLockedMobile = false;
+      }
+    } catch {}
   };
 
   // (legacy header/details and overlay lead panel handlers removed)
