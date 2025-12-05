@@ -156,16 +156,28 @@ render() {
 
   /* (scroll-bottom-btn и scrim удалены как неиспользуемые) */
 
-  /* виджет */
-  .widget{ width:auto; height:auto; border-radius:20px; overflow:visible; box-shadow:none;
-    position:relative; transform-origin:bottom right; transition:opacity .2s ease, transform .2s ease;
-    opacity:0; transform: translateY(8px) scale(.98); pointer-events:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
-  /* CLEANUP: remove legacy overlays to reveal v2 backgrounds */
-  .widget::before{ content:none; }
-  .widget::after{ content:none; }
-  :host(.open) .widget{ opacity:1; transform:none; pointer-events:auto; }
+  /* Виджет — статичное появление без прыжков */
+.widget{
+    width:auto;
+    height:auto;
+    border-radius:20px;
+    overflow:visible;
+    box-shadow:none;
+    position:relative;
+    opacity:0;
+    transition:opacity .2s ease;
+    pointer-events:none;
+}
 
+.widget::before,
+.widget::after{
+    content:none;
+}
 
+:host(.open) .widget{
+    opacity:1;
+    pointer-events:auto;
+}
   /* Content */
   .content{ display:flex; flex-direction:column; height:100%; padding:0; gap:0; position:relative; z-index:3; }
 
@@ -3153,12 +3165,19 @@ render() {
 
   // ===== v2 Menu Overlay integration (UI only) =====
   setupMenuOverlay() {
-    // Привязываем overlay к header активного экрана
-    const container =
-      this.shadowRoot.querySelector('.dialog-screen:not(.hidden) .screen-header, .context-screen:not(.hidden) .screen-header, .request-screen:not(.hidden) .screen-header, .support-screen:not(.hidden) .screen-header')
-      || this.shadowRoot.querySelector('.widget');
-    if (!container) return;
+    // Привязываем overlay ТОЛЬКО к header активных экранов v2 (main не использует overlay)
+    const container = this.shadowRoot.querySelector(
+      '.dialog-screen:not(.hidden) .screen-header, ' +
+      '.context-screen:not(.hidden) .screen-header, ' +
+      '.request-screen:not(.hidden) .screen-header, ' +
+      '.support-screen:not(.hidden) .screen-header'
+    );
     let overlay = this.shadowRoot.querySelector('.menu-overlay');
+    if (!container) {
+      // Нет подходящего header — удаляем overlay, чтобы не мешал низу виджета
+      if (overlay && overlay.parentElement) overlay.parentElement.removeChild(overlay);
+      return;
+    }
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.className = 'menu-overlay';
@@ -3166,11 +3185,8 @@ render() {
       content.className = 'menu-overlay-content';
       overlay.appendChild(content);
       container.appendChild(overlay);
-    } else {
-      // если overlay уже есть, но висит не в активном header — переместим
-      if (overlay.parentElement !== container) {
-        container.appendChild(overlay);
-      }
+    } else if (overlay.parentElement !== container) {
+      container.appendChild(overlay);
     }
     this.updateMenuUI();
     // Навешиваем обработчики на все кнопки меню на текущем экране
