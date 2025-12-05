@@ -82,10 +82,6 @@
     const cfg = Object.assign({}, DEFAULTS, options || {});
     const addSafe = (axis) => (cfg.safeArea ? ` + env(safe-area-inset-${axis})` : ``);
     const px = (v) => (typeof v === 'number' ? `${v}px` : String(v || 0));
-    // Mobile-first check for centering via flex on small screens
-    const isMobile = (typeof window !== 'undefined' && window.matchMedia)
-      ? window.matchMedia('(max-width: 768px)').matches
-      : false;
     host.style.position = 'fixed';
     host.style.zIndex = String(cfg.zIndex || DEFAULTS.zIndex);
     host.style.top = host.style.right = host.style.bottom = host.style.left = 'auto';
@@ -93,32 +89,18 @@
     host.style.justifyContent = '';
     host.style.alignItems = '';
     host.style.padding = '';
-    if (isMobile) {
-      // Full-width host, center the widget horizontally, keep bottom offset with safe-area
-      host.style.left = '0';
-      host.style.right = '0';
+    if (cfg.corner === 'right-bottom') {
+      host.style.right = `calc(${px(cfg.offsetX)}${addSafe('right')})`;
       host.style.bottom = `calc(${px(cfg.offsetY)}${addSafe('bottom')})`;
-      host.style.top = 'auto';
-      host.style.display = 'flex';
-      host.style.justifyContent = 'center';
-      // Optional: include lateral safe-areas as padding to avoid cutouts
-      host.style.paddingLeft = cfg.safeArea ? 'env(safe-area-inset-left)' : '';
-      host.style.paddingRight = cfg.safeArea ? 'env(safe-area-inset-right)' : '';
-    } else {
-      // Corner anchoring on larger screens
-      if (cfg.corner === 'right-bottom') {
-        host.style.right = `calc(${px(cfg.offsetX)}${addSafe('right')})`;
-        host.style.bottom = `calc(${px(cfg.offsetY)}${addSafe('bottom')})`;
-      } else if (cfg.corner === 'right-top') {
-        host.style.right = `calc(${px(cfg.offsetX)}${addSafe('right')})`;
-        host.style.top = `calc(${px(cfg.offsetY)}${addSafe('top')})`;
-      } else if (cfg.corner === 'left-bottom') {
-        host.style.left = `calc(${px(cfg.offsetX)}${addSafe('left')})`;
-        host.style.bottom = `calc(${px(cfg.offsetY)}${addSafe('bottom')})`;
-      } else { // left-top
-        host.style.left = `calc(${px(cfg.offsetX)}${addSafe('left')})`;
-        host.style.top = `calc(${px(cfg.offsetY)}${addSafe('top')})`;
-      }
+    } else if (cfg.corner === 'right-top') {
+      host.style.right = `calc(${px(cfg.offsetX)}${addSafe('right')})`;
+      host.style.top = `calc(${px(cfg.offsetY)}${addSafe('top')})`;
+    } else if (cfg.corner === 'left-bottom') {
+      host.style.left = `calc(${px(cfg.offsetX)}${addSafe('left')})`;
+      host.style.bottom = `calc(${px(cfg.offsetY)}${addSafe('bottom')})`;
+    } else { // left-top
+      host.style.left = `calc(${px(cfg.offsetX)}${addSafe('left')})`;
+      host.style.top = `calc(${px(cfg.offsetY)}${addSafe('top')})`;
     }
   }
 
