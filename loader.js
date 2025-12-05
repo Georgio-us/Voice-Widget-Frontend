@@ -98,6 +98,18 @@
     }
   }
 
+  // стабилизируем позицию при изменении визуального вьюпорта (iOS клавиатура/toolbar)
+  function bindViewportStabilizer(host, options) {
+    try {
+      if (!window.visualViewport) return;
+      const handler = () => positionHost(host, options);
+      window.visualViewport.addEventListener('resize', handler);
+      window.visualViewport.addEventListener('scroll', handler);
+      // сохраним для потенциального удаления (не обязательно)
+      host.__vw_vv_handler__ = handler;
+    } catch {}
+  }
+
   function ensureElement(host, options) {
     let el = host.querySelector('voice-widget');
     if (!el) {
@@ -124,6 +136,7 @@
       return ensureWidgetLoaded(options).then(() => {
         const host = createHostIfNeeded(options);
         positionHost(host, options);
+        bindViewportStabilizer(host, options);
         const el = ensureElement(host, options);
         return { host, el };
       });
@@ -141,6 +154,7 @@
           document.body.appendChild(host);
         }
         positionHost(host, options);
+        bindViewportStabilizer(host, options);
         // переместим существующий тег внутрь host
         let el = document.querySelector('voice-widget');
         if (el && el.parentElement !== host) host.appendChild(el);

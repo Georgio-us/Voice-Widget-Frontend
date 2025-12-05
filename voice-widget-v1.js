@@ -181,7 +181,7 @@ render() {
   }
 
   /* launcher/scrim */
-  .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
+  .launcher{ position:absolute; right:0; bottom:0; width:60px; height:60px; border-radius:50%;
     border:none; cursor:pointer; z-index:10001; background:linear-gradient(135deg,#FF8A4C,#A855F7);
     box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
     transition:transform .15s ease, box-shadow .15s ease; }
