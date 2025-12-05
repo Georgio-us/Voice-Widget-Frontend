@@ -2,6 +2,16 @@
 (function (window, document) {
   if (window.VoiceWidget && window.VoiceWidget.init) return;
 
+  // База URL по loader.js (для поиска voice-widget-v1.js по умолчанию)
+  const SCRIPT_BASE = (() => {
+    try {
+      const src = (document.currentScript && document.currentScript.src) || '';
+      if (!src) return '';
+      const clean = src.split('?')[0].split('#')[0];
+      return clean.slice(0, clean.lastIndexOf('/') + 1);
+    } catch { return ''; }
+  })();
+
   const DEFAULTS = {
     apiUrl: undefined,
     corner: 'right-bottom',         // 'right-bottom' | 'right-top' | 'left-bottom' | 'left-top'
@@ -9,8 +19,49 @@
     offsetY: 20,                    // px
     safeArea: true,                 // учитывать env(safe-area-inset-*)
     zIndex: 9999,                   // поверх контента сайта
-    autoOpen: false                 // сразу открыть виджет
+    autoOpen: false,                // сразу открыть виджет
+    widgetUrl: undefined,           // явный URL на voice-widget-v1.js (если не указан — берём из SCRIPT_BASE)
+    assetsBase: undefined           // опционально: база для ассетов (передадим в window.__VW_ASSETS_BASE__)
   };
+
+  function ensureWidgetLoaded(options) {
+    // Уже зарегистрирован
+    if (window.customElements && window.customElements.get && window.customElements.get('voice-widget')) {
+      return Promise.resolve();
+    }
+    // Укажем базу ассетов, если задано
+    if (options && options.assetsBase) {
+      try { window.__VW_ASSETS_BASE__ = options.assetsBase; } catch {}
+    }
+    // Добавим <script type="module" src=".../voice-widget-v1.js">
+    return new Promise((resolve, reject) => {
+      try {
+        const url = (options && options.widgetUrl) || (SCRIPT_BASE ? (SCRIPT_BASE + 'voice-widget-v1.js') : '');
+        if (!url) return reject(new Error('widgetUrl is not defined and SCRIPT_BASE is empty'));
+        // Если уже добавлен такой скрипт — не дублируем
+        const exists = Array.from(document.querySelectorAll('script[type="module"]'))
+          .some(s => (s.src || '').split('?')[0].endsWith('/voice-widget-v1.js'));
+        if (!exists) {
+          const s = document.createElement('script');
+          s.type = 'module';
+          s.src = url;
+          s.onerror = (e) => reject(new Error('Failed to load voice-widget-v1.js'));
+          document.head.appendChild(s);
+        }
+        // Ждём регистрации кастом-элемента
+        if (window.customElements && window.customElements.whenDefined) {
+          window.customElements.whenDefined('voice-widget').then(resolve).catch(reject);
+        } else {
+          // Фоллбек — небольшая задержка
+          const check = () => {
+            if (window.customElements && window.customElements.get && window.customElements.get('voice-widget')) resolve();
+            else setTimeout(check, 50);
+          };
+          check();
+        }
+      } catch (e) { reject(e); }
+    });
+  }
 
   function createHostIfNeeded(options) {
     let host = document.getElementById('vw-host');
@@ -70,28 +121,32 @@
   window.VoiceWidget = {
     init(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
-      const host = createHostIfNeeded(options);
-      positionHost(host, options);
-      const el = ensureElement(host, options);
-      return { host, el };
+      return ensureWidgetLoaded(options).then(() => {
+        const host = createHostIfNeeded(options);
+        positionHost(host, options);
+        const el = ensureElement(host, options);
+        return { host, el };
+      });
     },
     // на случай, если тег уже вёрстан на странице (необязательное)
     upgrade(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
-      let host = document.getElementById('vw-host');
-      if (!host) {
-        host = document.createElement('div');
-        host.id = 'vw-host';
-        host.style.position = 'fixed';
-        host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
-        document.body.appendChild(host);
-      }
-      positionHost(host, options);
-      // переместим существующий тег внутрь host
-      let el = document.querySelector('voice-widget');
-      if (el && el.parentElement !== host) host.appendChild(el);
-      if (!el) el = ensureElement(host, options);
-      return { host, el };
+      return ensureWidgetLoaded(options).then(() => {
+        let host = document.getElementById('vw-host');
+        if (!host) {
+          host = document.createElement('div');
+          host.id = 'vw-host';
+          host.style.position = 'fixed';
+          host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
+          document.body.appendChild(host);
+        }
+        positionHost(host, options);
+        // переместим существующий тег внутрь host
+        let el = document.querySelector('voice-widget');
+        if (el && el.parentElement !== host) host.appendChild(el);
+        if (!el) el = ensureElement(host, options);
+        return { host, el };
+      });
     }
   };
 })(window, document);
