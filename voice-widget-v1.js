@@ -96,43 +96,7 @@ class VoiceWidget extends HTMLElement {
     this.ui.bindUnifiedInputEvents();
     this.ui.bindFunctionButtons();
     this.ui.bindAccordionEvents();
-    // клик по затемнению — закрыть (моб/десктоп)
-    try {
-      const scrim = this.shadowRoot.querySelector('.scrim');
-      scrim?.addEventListener('click', () => this.closeWidget());
-    } catch {}
-    // жест закрытия на мобильных: свайп вверх по затемнению
-    try {
-      const scrim = this.shadowRoot.querySelector('.scrim');
-      let startY = null, startX = null, moved = false;
-      const onStart = (e) => {
-        const t = e.touches?.[0];
-        if (!t) return;
-        startY = t.clientY;
-        startX = t.clientX;
-        moved = false;
-      };
-      const onMove = (e) => {
-        moved = true;
-      };
-      const onEnd = (e) => {
-        if (startY == null) return;
-        const t = e.changedTouches?.[0];
-        if (!t) { startY = null; startX = null; return; }
-        const dy = startY - t.clientY; // вверх => положительное
-        const dx = Math.abs((startX || 0) - t.clientX);
-        // Порог: движение вверх >= 40px, горизонтальный снос небольшой
-        if (dy >= 40 && dx < 60) {
-          this.closeWidget();
-        }
-        startY = null; startX = null; moved = false;
-      };
-      if (scrim) {
-        scrim.addEventListener('touchstart', onStart, { passive: true });
-        scrim.addEventListener('touchmove', onMove, { passive: true });
-        scrim.addEventListener('touchend', onEnd, { passive: true });
-      }
-    } catch {}
+    // (scrim удалён как неиспользуемый)
 
     // грузим данные сессии только если id есть
     if (this.sessionId) {
@@ -181,7 +145,7 @@ render() {
   }
 
   /* launcher/scrim */
-  .launcher{ position:absolute; right:0; bottom:0; width:60px; height:60px; border-radius:50%;
+  .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
     border:none; cursor:pointer; z-index:10001; background:linear-gradient(135deg,#FF8A4C,#A855F7);
     box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
     transition:transform .15s ease, box-shadow .15s ease; }
@@ -190,14 +154,7 @@ render() {
   .launcher img{ width:100%; height:100%; display:block; object-fit:contain; filter:brightness(0) invert(1); }
   :host(.open) .launcher{ display:none; }
 
-  /* Scroll-to-bottom FAB */
-  .scroll-bottom-btn{ position:fixed; right:20px; bottom:88px; width:48px; height:48px; border:none; border-radius:999px; cursor:pointer; display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg,#8B5CF6 0%, #A855F7 100%); box-shadow:0 10px 24px rgba(168,85,247,.30); color:#fff; z-index:10002; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; }
-  .scroll-bottom-btn.visible{ opacity:1; pointer-events:auto; }
-  .scroll-bottom-btn:hover{ transform: translateY(-1px); }
-  .scroll-bottom-btn .chevron{ width:14px; height:14px; border-right:2px solid #fff; border-bottom:2px solid #fff; transform: rotate(45deg); margin-top:-2px; }
-
-  .scrim{ position:fixed; inset:0; background:rgba(0,0,0,.28); opacity:0; pointer-events:none; transition:opacity .2s ease; }
-  :host(.open) .scrim{ opacity:1; pointer-events:auto; }
+  /* (scroll-bottom-btn и scrim удалены как неиспользуемые) */
 
   /* виджет */
   .widget{ width:auto; height:auto; border-radius:20px; overflow:visible; box-shadow:none;
@@ -562,10 +519,25 @@ render() {
                     /* override legacy absolute layout */
                     position: static; top: auto; left: auto; right: auto; bottom: auto;
                     width: 100%; max-width: 360px; margin: 0 auto;
-                    flex:1; min-height:0; overflow:auto;
+                    flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
                 }
                 .dialog-screen .input-container{
                     margin: auto 0 var(--space-s) 0; /* top:auto pushes input to bottom */
+                }
+                
+                /* Make other v2 screens scrollable within widget bounds */
+                .context-screen .voice-widget-container,
+                .request-screen .voice-widget-container,
+                .support-screen .voice-widget-container{
+                    display:flex;
+                    flex-direction:column;
+                }
+                .context-screen .context-main-container,
+                .request-screen .request-main-container,
+                .support-screen .support-main-container{
+                    flex:1;
+                    min-height:0;
+                    overflow-y:auto; overflow-x:hidden;
                 }
                 
                 
@@ -735,6 +707,27 @@ render() {
                 .dialogue-container::-webkit-scrollbar-thumb{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%); border-radius:1px; }
                 .dialogue-container::-webkit-scrollbar-thumb:hover{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%); }
                 .dialogue-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
+                /* Thin scrollbar for other scrollable screens */
+                .context-main-container::-webkit-scrollbar,
+                .request-main-container::-webkit-scrollbar,
+                .support-main-container::-webkit-scrollbar{ width:2px; }
+                .context-main-container::-webkit-scrollbar-track,
+                .request-main-container::-webkit-scrollbar-track,
+                .support-main-container::-webkit-scrollbar-track{ background:transparent; }
+                .context-main-container::-webkit-scrollbar-thumb,
+                .request-main-container::-webkit-scrollbar-thumb,
+                .support-main-container::-webkit-scrollbar-thumb{
+                    background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%);
+                    border-radius:1px;
+                }
+                .context-main-container::-webkit-scrollbar-thumb:hover,
+                .request-main-container::-webkit-scrollbar-thumb:hover,
+                .support-main-container::-webkit-scrollbar-thumb:hover{
+                    background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%);
+                }
+                .context-main-container,
+                .request-main-container,
+                .support-main-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
                 
                 .message-bubble {
                     border-radius: 10px;
@@ -923,10 +916,8 @@ render() {
                 .ctx-thanks .ctx-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
                 
                 .footer-text {
-                    position: absolute;
-                    bottom: 25px;
-                    left: 50%;
-                    transform: translateX(-50%);
+                    position: relative;
+                    margin: 0 auto;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 10px;
                     font-weight: 400;
@@ -1079,10 +1070,8 @@ render() {
                 .support-done-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 
                 .support-footer-text {
-                    position: absolute;
-                    bottom: 25px;
-                    left: 50%;
-                    transform: translateX(-50%);
+                    position: relative;
+                    margin: 0 auto;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 10px;
                     font-weight: 400;
@@ -1444,7 +1433,7 @@ render() {
   <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
   <style>
   /* COMPAT-V1: Чат — прокрутка контейнеров (v2: переносим на dialogue-container) */
-  .dialogue-container{ overflow:auto; }
+  .dialogue-container{ overflow-y:auto; overflow-x:hidden; }
   .thread{ display:flex; flex-direction:column; }
 
   /* COMPAT-V1: Лоадер поверх чата */
@@ -1459,7 +1448,7 @@ render() {
     <img src="${ASSETS_BASE}MicBig.png" alt="Voice" />
   </button>
 
-  <div class="scrim" id="scrim"></div>
+  
 
   <div class="widget" role="dialog" aria-modal="true" aria-label="Voice Assistant">
     <!-- Header removed for v2 UI -->
@@ -1516,7 +1505,6 @@ render() {
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
-          <button class="scroll-bottom-btn" id="btnScrollBottom" title="Scroll to bottom" aria-label="Scroll to bottom"><span class="chevron"></span></button>
         </div>
           <div class="loading dialog-overlay" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
         <div class="input-container">
@@ -2542,29 +2530,7 @@ render() {
       requestAnimationFrame(doScroll);
     }
   };
-  // Observe user scroll to preserve natural behavior
-  (()=>{
-    const thread = this.shadowRoot.getElementById('thread');
-    if (!thread) return;
-    const updateFlag = () => {
-      const delta = thread.scrollHeight - thread.scrollTop - thread.clientHeight;
-      this._isThreadNearBottom = delta < 120; // px threshold
-      const btn = this.shadowRoot.getElementById('btnScrollBottom');
-      if (btn) {
-        if (delta > 240) btn.classList.add('visible');
-        else btn.classList.remove('visible');
-      }
-    };
-    thread.addEventListener('scroll', updateFlag, { passive:true });
-    // initialize
-    updateFlag();
-  })();
-
-  // Scroll-to-bottom button behavior
-  const btnScrollBottom = this.shadowRoot.getElementById('btnScrollBottom');
-  if (btnScrollBottom) {
-    btnScrollBottom.addEventListener('click', () => this.scrollThreadToBottom(true));
-  }
+  // (scroll-to-bottom функционал удалён как неиспользуемый)
 
   // Property card (как было)
   this.renderPropertyCard = (property) => {
