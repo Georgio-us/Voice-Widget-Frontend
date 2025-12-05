@@ -163,7 +163,7 @@ render() {
   :host(.open) .scrim{ opacity:1; pointer-events:auto; }
 
   /* виджет */
-  .widget{ width:380px; height:720px; border-radius:20px; overflow:hidden; box-shadow:none;
+  .widget{ width:auto; height:auto; border-radius:20px; overflow:visible; box-shadow:none;
     position:relative; transform-origin:bottom right; transition:opacity .2s ease, transform .2s ease;
     opacity:0; transform: translateY(8px) scale(.98); pointer-events:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
   /* CLEANUP: remove legacy overlays to reveal v2 backgrounds */
@@ -297,10 +297,7 @@ render() {
 
   /* Input */
   .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
-  .input-container::before{ content:''; position:absolute; inset:0; border-radius:20px; padding:1px; pointer-events:none; z-index:0;
-    background:conic-gradient(from 0deg,#300E7E 0%,#782160 23%,#E646B9 46%,#2D065A 64%,#BD65A4 81%,#300E7E 100%);
-    -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
-    -webkit-mask-composite:xor; mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); mask-composite:exclude; }
+ 
   
   /* v2 input: скрываем плейсхолдер во время записи */
   .text-input-wrapper.recording .input-field::placeholder { opacity:0; color:transparent; }
@@ -375,12 +372,24 @@ render() {
                   --lh-tight: 1.2;
                   --lh-normal: 1.4;
                   --lh-loose: 1.6;
+                  /* spacing tokens (based on 14px root) */
+                  --space-xxs: 0.286rem;   /* ~4px */
+                  --space-xs:  0.571rem;   /* ~8px */
+                  --space-s:   0.714rem;   /* ~10px */
+                  --space-m:   0.857rem;   /* ~12px */
+                  --space-l:   1.143rem;   /* ~16px */
+                  --space-xl:  1.714rem;   /* ~24px */
+                  --space-xxl: 4.286rem;   /* ~60px */
                   /* unified action button sizes (rem) based on 14px scale */
                  
                   --btn-radius: 0.714rem;   /* ~10px */
                   --btn-px: 1.143rem;       /* ~16px horizontal padding */
                   --btn-py: 0.857rem;       /* ~12px vertical padding */
                   --btn-min-w: 7.143rem;    /* ~100px min width */
+                  /* form field height */
+                  --field-h: 2.5rem;        /* ~35px */
+                  /* context progress ring */
+                  --ring: clamp(72px, 26vw, 100px);
                 }
                 /* semantic text classes */
                 .text-display { font: var(--fw-s) var(--fs-display)/var(--lh-tight) var(--ff); }
@@ -404,8 +413,8 @@ render() {
                 .text-accent   { color:#DF87F8; }
                 
                 .voice-widget-container {
-                    width: 380px;
-                    height: 720px;
+                    width: clamp(320px, 92vw, 380px);
+                    height: clamp(560px, 88vh, 720px);
                     background: #171618;
                     background-image: url('./assets/Net_lights.svg');
                     background-repeat: no-repeat;
@@ -414,38 +423,42 @@ render() {
                     border-radius: 20px;
                     position: relative;
                     overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding: 16px;
+                    box-sizing: border-box;
+                    gap: 12px;
                 }
+                
+                /* Main screen sections */
+                .main-header{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; gap:20px; padding: 15px }
+                .main-center{ flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+                .main-hero{ width:100%; display:flex; justify-content:center; }
+                .main-copy{ width:100%; max-width:360px; text-align:center; }
                 
                 /* Логотип */
                 .logo {
-                    position: absolute;
-                    top: 35px;
-                    left: 50%;
-                    transform: translateX(-50%);
                     width: auto;
                     height: auto;
+                    margin-top: 8px;
+                    align-self: center;
                 }
                 
                 /* Декоративная градиентная линия */
                 .gradient-line {
-                    position: absolute;
-                    top: 85px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 320px;
+                    width: 100%;
+                    max-width: 320px;
                     height: 2px;
                     border-radius: 1px;
                     background: linear-gradient(90deg, rgba(90, 127, 227, 0) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0) 100%);
+                    margin: 4px auto 0;
                 }
                 
                 /* Кнопка микрофона */
                 .mic-button {
-                    position: absolute;
-                    top: 225px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 100px;
-                    height: 100px;
+                    width: clamp(80px, 28vw, 100px);
+                    height: clamp(80px, 28vw, 100px);
                     background: transparent; /* remove default button bg */
                     border: none;            /* remove default button border */
                     padding: 0;              /* collapse inner spacing */
@@ -461,20 +474,12 @@ render() {
                     object-fit: contain;
                 }
                 
-                .mic-button:hover {
-                    transform: translateX(-50%) scale(1.05);
-                }
+                .mic-button:hover { transform: scale(1.05); }
                 .mic-button:focus, .mic-button:focus-visible { outline: none; box-shadow: none; }
                 .mic-button::-moz-focus-inner { border: 0; }
                 
                 /* Тексты под кнопкой */
-                .text-container {
-                    position: absolute;
-                    top: 350px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    text-align: center;
-                }
+                .text-container { text-align: center; margin-top: 8px; }
                 
                 .main-text {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -496,35 +501,34 @@ render() {
                 
                 /* Поле ввода */
                 .input-container {
-                    position: absolute;
-                    bottom: 25px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 360px;
+                    width: 100%;
+                    max-width: 360px;
                     height: 60px;
-                    background: rgba(43, 39, 44, 0.6);
+                    background:
+                      linear-gradient(#2B272C, #2B272C) padding-box,
+                      linear-gradient(90deg, #5C7FE2 0%, #F05A4F 33%, #EDA136 66%, #1C7755 100%) border-box;
                     border: 1px solid transparent;
                     border-radius: 40px;
                     display: flex;
                     align-items: center;
                     padding: 0 10px;
                     box-sizing: border-box;
+                    margin: var(--space-xxl) 0 var(--space-s) 0;
                 }
                 
-                .input-container::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    border-radius: 40px;
-                    padding: 1px;
-                    background: linear-gradient(90deg, #5C7FE2 0%, #F05A4F 33%, #EDA136 66%, #1C7755 100%);
-                    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-                    mask-composite: exclude;
-                    -webkit-mask-composite: xor;
+                /* Dialogue screen layout: keep history scrollable and input at the bottom */
+                .dialog-screen .voice-widget-container{ display:flex; flex-direction:column; }
+                .dialog-screen .dialogue-container{
+                    /* override legacy absolute layout */
+                    position: static; top: auto; left: auto; right: auto; bottom: auto;
+                    width: 100%; max-width: 360px; margin: 0 auto;
+                    flex:1; min-height:0; overflow:auto;
                 }
+                .dialog-screen .input-container{
+                    margin: auto 0 var(--space-s) 0; /* top:auto pushes input to bottom */
+                }
+                
+                
                 
                 .input-field {
                     flex: 1;
@@ -635,6 +639,10 @@ render() {
                 }
                 
                 /* Стили для Dialog Screen */
+                .screen-header{
+                    width:100%; max-width:360px; height:60px; margin:0 auto;
+                    display:grid; place-items:center; position:relative; z-index:2;
+                }
                 .menu-button {
                     position: absolute;
                     top: 25px;
@@ -648,6 +656,8 @@ render() {
                     justify-content: center;
                     z-index: 10; /* поверх overlay */
                 }
+                /* inside header we use normal flow (no absolute) */
+                .screen-header .menu-button{ position: static; top:auto; left:auto; transform:none; z-index: 3; grid-area:1/1; }
                 .menu-button img { transition: transform 0.15s ease, opacity 0.15s ease; }
                 .menu-button:hover img { transform: scale(1.08); opacity: 0.85; }
                 /* При открытом меню центрируем кнопку по вертикали в зоне overlay (100px, padding-top 15px => центр на 50px) */
@@ -655,6 +665,8 @@ render() {
                     top: 50px;
                     transform: translate(-50%, -50%);
                 }
+                .screen-header .menu-button.menu-open{ top:auto; transform:none; }
+                .menu-button.hidden{ display:none; }
                 /* Close button inside grid (center column) */
                 .menu-close-btn{ width:40px; height:40px; background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:100px; transition: background .15s ease, transform .15s ease; }
                 .menu-close-btn:hover{ background: rgba(255,255,255,.10); }
@@ -713,19 +725,19 @@ render() {
                 
                 /* Стили для Context Screen */
                 .context-main-container {
-                    position: absolute;
-                    top: 135px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 360px;
+                    position: static;
+                    width: 100%;
+                    max-width: 360px;
+                    margin: var(--space-l) auto 0;
+                    padding: 0 var(--space-l);
                     text-align: center;
-                    padding: 20px;
                 }
                 
                 .progress-grid-container {
                     display: grid;
-                    grid-template-columns: 1fr 100px 1fr;
+                    grid-template-columns: minmax(0,1fr) var(--ring) minmax(0,1fr);
                     align-items: center;
+                    gap: var(--space-s);
                     margin-bottom: 10px;
                 }
                 
@@ -747,8 +759,8 @@ render() {
                 
                 .progress-ring {
                     position: relative;
-                    width: 100px;
-                    height: 100px;
+                    width: var(--ring);
+                    height: var(--ring);
                 }
                 
                 .progress-text {
@@ -757,14 +769,14 @@ render() {
                     left: 50%;
                     transform: translate(-50%, -50%);
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 18px;
+                    font-size: clamp(0.857rem, 2.8vw, 1.286rem);
                     font-weight: 400;
                     color: #FFFFFF;
                 }
                 
                 .data-storage-text {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 10px;
+                    font-size: var(--fs-micro);
                     font-weight: 400;
                     color: #A9A9A9;
                     cursor: pointer;
@@ -774,7 +786,7 @@ render() {
                 
                 /* Data storage popup */
                 .data-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:20; }
-                .data-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:left; }
+                .data-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:center; }
                 .data-title{ font-size:14px; font-weight:600; margin:0 0 8px 0; text-align:center; }
                 .data-body{ font-size:12px; font-weight:400; color:#C3C3C3; line-height:1.5; }
                 .data-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:14px auto 0; display:flex; align-items:center; justify-content:center; }
@@ -782,26 +794,26 @@ render() {
                 
                 .status-text {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 10px;
+                    font-size: var(--fs-micro);
                     font-weight: 400;
-                    color: #DF87F8;
-                    margin-bottom: 20px;
+                    color: #e85f62;
+                    margin-bottom: var(--space-xl);
                 }
                 
                 .main-message {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 13px;
+                    font-size: 12px;
                     font-weight: 400;
                     color: #FFFFFF;
                     line-height: 1.4;
-                    margin-bottom: 20px;
+                    margin-bottom: var(--space-m);
                 }
                 
                 .context-gradient-line {
                     width: 320px;
                     height: 2px;
                     border-radius: 1px;
-                    background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
+                    background: linear-gradient(to right, rgba(90, 127, 227, 0.1), rgba(232, 95, 98, 1), rgba(85, 122, 219, 0.1))
                     margin: 0 auto 10px auto;
                 }
                 
@@ -822,7 +834,7 @@ render() {
                     /* thematic color */
                     padding: var(--btn-py) var(--btn-px);
                     min-width: var(--btn-min-w);
-                    background: #476AA5;
+                    background: #e85f62;
                     border: none;
                     border-radius: var(--btn-radius);
                     color: #FFFFFF;
@@ -837,15 +849,19 @@ render() {
                 
                 /* ===== Context: inline request form ===== */
                 .ctx-request-form{ display:none; margin-top:16px; }
-                .ctx-field{ margin-bottom:12px; text-align:left; }
+                .ctx-field{ margin-bottom: var(--space-m); text-align:left; }
                 /* compact row for contact fields */
-                .ctx-row{ display:flex; gap:10px; }
+                .ctx-row{ display:flex; gap: var(--space-s); align-items: center; }
                 .ctx-row .ctx-input{ flex:1 1 0; min-width:0; }
-                .ctx-input{ width:100%; height:35px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:0 10px; line-height:35px; box-sizing:border-box; }
+                .ctx-input{ width:100%; height: var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:0 var(--space-s); line-height: var(--field-h); box-sizing:border-box; transition: border-color .15s ease; }
                 .ctx-input.error{ border-color:#E85F62; }
+                .ctx-input:focus,
+                .ctx-input:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
                 .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
                 .ctx-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
                 .ctx-textarea::-webkit-scrollbar{ width:0; height:0; }
+                .ctx-textarea:focus,
+                .ctx-textarea:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
                 .ctx-textarea.error{ border-color:#E85F62; }
                 .ctx-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; }
                 .ctx-consent .ctx-checkbox{ width:12px; height:12px; margin-top:2px; }
@@ -854,7 +870,7 @@ render() {
                 .ctx-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
                 .ctx-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
                 .ctx-error.visible{ display:block; }
-                .ctx-actions{ display:flex; gap:20px; justify-content: space-between; margin-top:16px; }
+                .ctx-actions{ display:flex; gap: var(--space-m); justify-content: space-between; margin-top: var(--space-m); }
                 .ctx-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
                 .ctx-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:#476AA5; border:1.25px solid #476AA5; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
                 .ctx-actions .ctx-send-btn, .ctx-actions .ctx-cancel-btn{ flex:1 1 0; min-width:0; }
@@ -887,19 +903,18 @@ render() {
                     height: 2px;
                     border-radius: 1px;
                     background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
-                    margin-bottom: 10px;
+                    margin: var(--space-l) 0;
                 }
                 
                 /* ========================= */
                 /*        Support Screen     */
                 /* ========================= */
                 .support-main-container {
-                    position: absolute;
-                    top: 110px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: calc(100% - 50px);
-                    padding: 10px;
+                    position: static;
+                    width: 100%;
+                    max-width: 360px;
+                    margin: var(--space-l) auto 0;
+                    padding: 0 var(--space-l);
                 }
                 
                 .support-faq-title {
@@ -911,13 +926,13 @@ render() {
                 }
                 
                 .support-faq-list {
-                    margin-top: 15px;
+                    margin-top: var(--space-m);
                 }
                 .support-faq-list.disabled{ opacity:.5; pointer-events:none; }
                 
                 .support-faq-item {
-                    margin-bottom: 12px;
-                    border: 1px solid rgba(106,108,155,0.30);
+                    margin-bottom: var(--space-m);
+                    border: 1px solid rgba(237, 207, 34, 0.38);
                     border-radius: 10px;
                     background: rgba(106,108,155,0.06);
                     overflow: hidden;
@@ -927,9 +942,9 @@ render() {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    gap: 10px;
+                    gap: 8px;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 14px;
+                    font-size: 12px;
                     font-weight: 400;
                     color: #FFFFFF;
                     padding: 10px 12px;
@@ -946,9 +961,9 @@ render() {
                 
                 .support-faq-answer {
                     display: none;
-                    padding: 12px;
+                    padding: 10px;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 13px;
+                    font-size: 11px;
                     font-weight: 300;
                     color: #C3C3C3;
                 }
@@ -958,8 +973,8 @@ render() {
                     width: 100%;
                     height: 2px;
                     border-radius: 1px;
-                    background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
-                    margin: 40px;
+                    background: linear-gradient(to right, rgba(90, 127, 227, 0.1), rgba(237, 207, 34, 1), rgba(85, 122, 219, 0.1));
+                    margin: var(--space-l) 0;
                 }
                 
                 .support-hint-text {
@@ -999,7 +1014,14 @@ render() {
                 .support-issue-chip{ padding:6px 10px; border-radius:10px; border:1px solid #476AA5; background:transparent; color:#fff; font-size:10px; font-weight:400; cursor:pointer; }
                 .support-issue-chip:hover{ opacity:.9; }
                 .support-issue-chip.active{ background:#476AA5; color:#fff; border-color:#5F81BA; }
-                .support-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; box-sizing:border-box; resize:vertical; }
+                .support-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; box-sizing:border-box; resize:vertical; transition: border-color .15s ease; }
+                .support-textarea:focus,
+                .support-textarea:focus-visible{
+                  outline: none;
+                  border-width: 1px;
+                  border-color: #5F81BA;
+                  box-shadow: none;
+                }
                 .support-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
                 .support-textarea::-webkit-scrollbar{ width:0; height:0; }
                 
@@ -1035,11 +1057,11 @@ render() {
                 /*        Request Screen     */
                 /* ========================= */
                 .request-main-container {
-                    position: absolute;
-                    top: 110px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: calc(100% - 50px);
+                    position: static;
+                    width: 100%;
+                    max-width: 360px;
+                    margin: var(--space-l) auto 0 auto;
+                    padding: 0 var(--space-l);
                 }
                 
                 .request-title {
@@ -1065,7 +1087,7 @@ render() {
                 
                 .request-input {
                     width: 100%;
-                    height: 35px;
+                    height: var(--field-h);
                     border-radius: 10px;
                     background: rgba(106, 108, 155, 0.10);
                     border: 1px solid rgba(106, 108, 155, 0.30);
@@ -1073,11 +1095,14 @@ render() {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
                     font-weight: 400;
-                    padding-left: 10px;
-                    line-height: 35px;
+                    padding-left: var(--space-s);
+                    line-height: var(--field-h);
                     box-sizing: border-box;
+                    transition: border-color .15s ease;
                 }
                 .request-input.error{ border-color:#E85F62; }
+                .request-input:focus,
+                .request-input:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
                 
                 
                 .request-input::placeholder {
@@ -1086,15 +1111,15 @@ render() {
                 
                 .request-row {
                     display: flex;
-                    gap: 10px;
+                    gap: var(--space-s);
                     margin-bottom: 10px;
                 }
                 /* Dial code select */
                 .dial-select{ position:relative; }
-                .dial-btn{ display:flex; align-items:center; justify-content:center; gap:6px; padding: var(--btn-py) .75rem; height:35px; line-height:35px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; cursor:pointer; }
+                .dial-btn{ display:flex; align-items:center; justify-content:center; gap:6px; padding: 0 .75rem; height:var(--field-h); line-height:var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; cursor:pointer; }
                 .dial-flag{ font-size:14px; line-height:1; }
                 .dial-code{ font-size:12px; }
-                .dial-list{ position:absolute; top:38px; left:0; right:auto; min-width:120px; background:#1e1d20; border:1px solid rgba(106,108,155,.30); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:6px; display:none; z-index:30; }
+                .dial-list{ position:absolute; top: calc(var(--field-h) + var(--space-xxs)); left:0; right:auto; min-width:120px; background:#1e1d20; border:1px solid rgba(106,108,155,.30); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:6px; display:none; z-index:30; }
                 .dial-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; color:#FFFFFF; font-size:12px; }
                 .dial-item:hover{ background:rgba(106,108,155,.15); }
                 .request-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
@@ -1109,7 +1134,7 @@ render() {
                 .email-wrap{ position:relative; }
                 .email-wrap .email-ghost{
                   position:absolute; top:0; left:0;
-                  padding-left:10px; height:35px; line-height:35px;
+                  padding-left: var(--space-s); height: var(--field-h); line-height: var(--field-h);
                   color: rgba(255,255,255,.35);
                   pointer-events:none; cursor:default; 
                   white-space:nowrap; overflow:hidden;
@@ -1132,7 +1157,7 @@ render() {
                     align-items: center;
                     justify-content: space-between;
                     width: 100%;
-                    height: 35px;
+                    height: var(--field-h);
                     border-radius: 10px;
                     background: rgba(106, 108, 155, 0.10);
                     border: 1px solid rgba(106, 108, 155, 0.30);
@@ -1140,7 +1165,7 @@ render() {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
                     font-weight: 400;
-                    padding: 0 10px;
+                    padding: 0 var(--space-s);
                     box-sizing: border-box;
                     cursor: pointer;
                 }
@@ -1165,11 +1190,14 @@ render() {
                     font-size: 12px;
                     font-weight: 400;
                     padding: 10px;
+                    transition: border-color .15s ease;
                     resize: vertical;
                     box-sizing: border-box;
                 }
                 .request-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
                 .request-textarea::-webkit-scrollbar{ width:0; height:0; }
+                .request-textarea:focus,
+                .request-textarea:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
                 .request-textarea.error{ border-color:#E85F62; }
                 
                 .request-textarea::placeholder {
@@ -1178,7 +1206,7 @@ render() {
                 
                 .request-actions-container {
                     width: 100%;
-                    padding: 0 5px;
+                    padding: 0;
                     box-sizing: border-box;
                 }
                 
@@ -1239,38 +1267,24 @@ render() {
                 /*         Menu Overlay      */
                 /* ========================= */
                 .menu-overlay {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
+                    position: static;              /* внутри header, без абсолютов */
                     width: 100%;
-                    height: 100px;
-                    border-radius: 20px;
+                    height: 60px;                  /* высота шапки */
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    backdrop-filter: blur(0px);
-                    -webkit-backdrop-filter: blur(0px);
-                    transition: backdrop-filter 0.3s ease-in-out;
-                    pointer-events: none;
-                    z-index: 9;
+                    pointer-events: none;          /* активируем в .open */
+                    z-index: 1;
+                    grid-area:1/1;                 /* накладываемся на ту же ячейку, что и кнопка */
                 }
                 .menu-overlay::before {
-                    content: '';
-                    position: absolute;
-                    inset: 0;
-                    border-radius: 20px;
-                    background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(153,153,153,0.3) 100%);
-                    opacity: 0;
-                    transition: opacity 0.3s ease-in-out;
-                    pointer-events: none;
+                    content: none;
                 }
                 .menu-overlay.open {
-                    backdrop-filter: blur(14px);
-                    -webkit-backdrop-filter: blur(14px);
                     pointer-events: auto;
                 }
                 .menu-overlay.open::before {
-                    opacity: 0.1;
+                    opacity: 0;
                 }
                 .menu-overlay-content {
                     width: 300px;
@@ -1402,15 +1416,23 @@ render() {
       <!-- Main Screen -->
       <div class="main-screen" id="mainScreen">
         <div class="voice-widget-container">
-            <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
-            <div class="gradient-line"></div>
-            <button class="mic-button" id="mainButton" aria-pressed="false">
-                <img src="${ASSETS_BASE}MicBig.png" alt="Microphone" style="width: 100%; height: 100%;">
-            </button>
-            <div class="text-container">
-                <p class="main-text">Press to speak</p>
-                <p class="sub-text">Voice Intelligent Assistance</p>
-        </div>
+            <div class="main-header">
+              <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
+              <div class="gradient-line"></div>
+            </div>
+            <div class="main-center">
+              <div class="main-hero">
+                <button class="mic-button" id="mainButton" aria-pressed="false">
+                    <img src="${ASSETS_BASE}MicBig.png" alt="Microphone" style="width: 100%; height: 100%;">
+                </button>
+              </div>
+              <div class="main-copy">
+                <div class="text-container">
+                    <p class="main-text">Press to speak</p>
+                    <p class="sub-text">Voice Intelligent Assistance</p>
+                </div>
+              </div>
+            </div>
         <div class="input-container">
           <div class="text-input-wrapper">
                     <textarea id="mainTextInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
@@ -1434,8 +1456,10 @@ render() {
       <!-- Dialogue Screen (v2) wired to v1 logic -->
       <div class="dialog-screen hidden" id="dialogScreen">
         <div class="voice-widget-container">
-          <div class="menu-button">
-            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 32px; height: 32px;">
+          <div class="screen-header">
+            <div class="menu-button">
+              <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 32px; height: 32px;">
+            </div>
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
@@ -1462,9 +1486,8 @@ render() {
       <!-- Context Screen (v2) -->
       <div class="context-screen hidden" id="contextScreen">
         <div class="voice-widget-container">
-          <div class="menu-button">
-            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
-              </div>
+          <div class="screen-header">
+          </div>
           <div class="context-main-container">
             <div class="progress-grid-container">
               <div class="grid-column-left"></div>
@@ -1566,9 +1589,8 @@ render() {
       <!-- Request Screen (v2) -->
       <div class="request-screen hidden" id="requestScreen">
         <div class="voice-widget-container">
-          <div class="menu-button">
-            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
-        </div>
+          <div class="screen-header">
+          </div>
           <div class="request-main-container">
             <div class="request-title">Leave a request</div>
             <div class="request-field">
@@ -1640,9 +1662,8 @@ render() {
       <!-- Support Screen (v2) -->
       <div class="support-screen hidden" id="supportScreen">
         <div class="voice-widget-container">
-          <div class="menu-button">
-            <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 40px; height: 40px;">
-    </div>
+          <div class="screen-header">
+          </div>
           <div class="support-main-container">
             <div class="support-faq-title">FAQ</div>
             <div class="support-faq-list">
@@ -1716,6 +1737,8 @@ render() {
   const showScreen = (screenName) => {
     screenIds.forEach(id => this.shadowRoot.getElementById(id)?.classList.add('hidden'));
     this.shadowRoot.getElementById(screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen')?.classList.remove('hidden');
+    // ensure menu overlay is attached to the active screen header
+    try { this.setupMenuOverlay(); } catch {}
   };
 
   // Launcher
@@ -3087,8 +3110,10 @@ render() {
 
   // ===== v2 Menu Overlay integration (UI only) =====
   setupMenuOverlay() {
-    // Создаём единый overlay на весь виджет (не привязан к конкретному экрану)
-    const container = this.shadowRoot.querySelector('.widget');
+    // Привязываем overlay к header активного экрана
+    const container =
+      this.shadowRoot.querySelector('.dialog-screen:not(.hidden) .screen-header, .context-screen:not(.hidden) .screen-header, .request-screen:not(.hidden) .screen-header, .support-screen:not(.hidden) .screen-header')
+      || this.shadowRoot.querySelector('.widget');
     if (!container) return;
     let overlay = this.shadowRoot.querySelector('.menu-overlay');
     if (!overlay) {
@@ -3098,6 +3123,11 @@ render() {
       content.className = 'menu-overlay-content';
       overlay.appendChild(content);
       container.appendChild(overlay);
+    } else {
+      // если overlay уже есть, но висит не в активном header — переместим
+      if (overlay.parentElement !== container) {
+        container.appendChild(overlay);
+      }
     }
     this.updateMenuUI();
     // Навешиваем обработчики на все кнопки меню на текущем экране
@@ -3118,8 +3148,17 @@ render() {
 
     const menuImg = this.shadowRoot.querySelector('.menu-button img');
     const menuBtn = this.shadowRoot.querySelector('.menu-button');
-    if (menuImg) menuImg.src = (this._menuState === 'open') ? `${ASSETS_BASE}menu_close_btn.svg` : `${ASSETS_BASE}menu_icon.svg`;
-    if (menuBtn) { if (this._menuState !== 'closed' && this._menuState) menuBtn.classList.add('menu-open'); else menuBtn.classList.remove('menu-open'); }
+    // Keep header icon constant; hide header button when overlay is open/selected
+    if (menuImg) menuImg.src = `${ASSETS_BASE}menu_icon.svg`;
+    if (menuBtn) {
+      if (this._menuState !== 'closed' && this._menuState) { 
+        menuBtn.classList.add('hidden'); 
+      } else { 
+        menuBtn.classList.remove('hidden'); 
+      }
+      // legacy class no longer affects positioning within dialog-header
+      menuBtn.classList.remove('menu-open');
+    }
 
     let content = overlay.querySelector('.menu-overlay-content');
     if (!content) {
