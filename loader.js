@@ -17,7 +17,7 @@
     corner: 'right-bottom',         // 'right-bottom' | 'right-top' | 'left-bottom' | 'left-top'
     offsetX: 20,                    // px
     offsetY: 20,                    // px
-    safeArea: true,                 // учитывать env(safe-area-inset-*)
+    safeArea: false,                // учитывать env(safe-area-inset-*) — по умолчанию выкл, чтобы не было лишнего отступа
     zIndex: 9999,                   // поверх контента сайта
     autoOpen: false,                // сразу открыть виджет
     widgetUrl: undefined,           // явный URL на voice-widget-v1.js (если не указан — берём из SCRIPT_BASE)

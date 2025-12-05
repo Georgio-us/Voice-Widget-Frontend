@@ -96,6 +96,43 @@ class VoiceWidget extends HTMLElement {
     this.ui.bindUnifiedInputEvents();
     this.ui.bindFunctionButtons();
     this.ui.bindAccordionEvents();
+    // клик по затемнению — закрыть (моб/десктоп)
+    try {
+      const scrim = this.shadowRoot.querySelector('.scrim');
+      scrim?.addEventListener('click', () => this.closeWidget());
+    } catch {}
+    // жест закрытия на мобильных: свайп вверх по затемнению
+    try {
+      const scrim = this.shadowRoot.querySelector('.scrim');
+      let startY = null, startX = null, moved = false;
+      const onStart = (e) => {
+        const t = e.touches?.[0];
+        if (!t) return;
+        startY = t.clientY;
+        startX = t.clientX;
+        moved = false;
+      };
+      const onMove = (e) => {
+        moved = true;
+      };
+      const onEnd = (e) => {
+        if (startY == null) return;
+        const t = e.changedTouches?.[0];
+        if (!t) { startY = null; startX = null; return; }
+        const dy = startY - t.clientY; // вверх => положительное
+        const dx = Math.abs((startX || 0) - t.clientX);
+        // Порог: движение вверх >= 40px, горизонтальный снос небольшой
+        if (dy >= 40 && dx < 60) {
+          this.closeWidget();
+        }
+        startY = null; startX = null; moved = false;
+      };
+      if (scrim) {
+        scrim.addEventListener('touchstart', onStart, { passive: true });
+        scrim.addEventListener('touchmove', onMove, { passive: true });
+        scrim.addEventListener('touchend', onEnd, { passive: true });
+      }
+    } catch {}
 
     // грузим данные сессии только если id есть
     if (this.sessionId) {
@@ -1745,24 +1782,13 @@ render() {
   $("#launcher")?.addEventListener("click", () => {
     this.classList.add("open");
     this.shadowRoot.getElementById("textInput")?.focus();
-    // Lock host page scroll while widget is open (but allow scroll inside widget)
-    try {
-      const prev = document.documentElement.style.overflow;
-      this._prevPageOverflow = prev || '';
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'pan-y';
-    } catch {}
+    // Не блокируем прокрутку страницы при открытом виджете
   });
 
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
     this.classList.remove("open");
-    try {
-      document.documentElement.style.overflow = this._prevPageOverflow || '';
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
-    } catch {}
+    // Ничего не меняем у страницы — скролл всегда доступен
   };
 
   // (legacy header/details and overlay lead panel handlers removed)
