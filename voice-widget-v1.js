@@ -181,6 +181,8 @@ render() {
   /* Content */
   .content{ display:flex; flex-direction:column; height:100%; padding:0; gap:0; position:relative; z-index:3; }
 
+  /* Mobile host centering handled by loader (#vw-host); no widget overrides here */
+
   /* Main Screen */
   .main-screen{ display:flex; flex-direction:column; height:100%; }
   .main-screen.hidden{ display:none; }
@@ -351,6 +353,14 @@ render() {
                     bottom: 20px;
                     right: 20px;
                     z-index: 9999;
+                }
+                @media (max-width: 450px){
+                  /* На мобилках :host не фиксируем — пусть следует флексу #vw-host */
+                  :host{
+                    position: static;
+                    bottom: auto;
+                    right: auto;
+                  }
                 }
                 
                 /* ========================= */
