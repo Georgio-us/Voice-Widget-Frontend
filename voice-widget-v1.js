@@ -1462,7 +1462,31 @@ render() {
   #loadingIndicator{ position:absolute; display:none; }
   #loadingIndicator.active{ display:flex; }
 
-  
+    /* === Safari iOS mobile fix: стабилизируем высоту виджета на айфонах === */
+  @supports (-webkit-touch-callout: none) {
+    @media (max-width: 600px) {
+      /* Перекрываем clamp(560px, 88vh, 720px) только на iOS Safari */
+      .voice-widget-container {
+        height: auto;
+        max-height: 720px;
+      }
+
+      /* Гарантируем, что в диалоговом экране всё живёт по флексу */
+      .dialog-screen .voice-widget-container {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .dialog-screen .dialogue-container {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+    }
+  }
+
+
   </style>
 
   <!-- Launcher -->

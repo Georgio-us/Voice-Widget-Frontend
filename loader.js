@@ -80,6 +80,8 @@
 
   function positionHost(host, options) {
     const cfg = Object.assign({}, DEFAULTS, options || {});
+    // Единый источник правды: используем только offsetX/offsetY, safe-area игнорируем
+    cfg.safeArea = false;
     const addSafe = (axis) => (cfg.safeArea ? ` + env(safe-area-inset-${axis})` : ``);
     const px = (v) => (typeof v === 'number' ? `${v}px` : String(v || 0));
     host.style.position = 'fixed';
