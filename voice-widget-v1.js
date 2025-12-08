@@ -410,6 +410,13 @@ render() {
                   -webkit-text-size-adjust: 100%;
                   text-size-adjust: 100%;
                 }
+                /* Base font normalization to ensure consistent typography across screens */
+                :host { font-family: var(--ff); }
+                .voice-widget-container { font-family: var(--ff); }
+                button, input, select, textarea { font-family: inherit; }
+                /* Ensure chips and property card inherit widget font */
+                .support-issue-chip { font-family: var(--ff); }
+                .property-card { font-family: var(--ff); }
                 /* semantic text classes */
                 .text-display { font: var(--fw-s) var(--fs-display)/var(--lh-tight) var(--ff); }
                 .text-h1      { font: var(--fw-s) var(--fs-h1)/var(--lh-tight) var(--ff); }
