@@ -1494,6 +1494,18 @@ render() {
     }
   }
 
+  /* Page dim overlay (site dim when widget is open) */
+  .page-dim{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    opacity: 0;
+    pointer-events: none; /* включим на мобайле из JS для тапа-вне */
+    transition: opacity .2s ease;
+    z-index: 2;
+  }
+  :host(.open) .page-dim{ opacity: 1; }
+
 
 
   </style>
@@ -1502,6 +1514,9 @@ render() {
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
     <img src="${ASSETS_BASE}MicBig.png" alt="Voice" />
   </button>
+
+  <!-- Page dim overlay -->
+  <div class="page-dim" id="pageDim" aria-hidden="true"></div>
 
   
 
@@ -1842,14 +1857,19 @@ render() {
     this.classList.add("open");
     // Не фокусируем поле на мобильных, чтобы не вызывать автопоявление клавиатуры
     try {
-      const isDesktopPointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
-      const isMobileUA = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-      if (isDesktopPointer && !isMobileUA) {
+      const isMobileLike = (() => {
+        try {
+          const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+          const touch = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
+          const ua = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+          return Boolean(coarse || touch || ua);
+        } catch { return false; }
+      })();
+      if (!isMobileLike) {
         this.shadowRoot.getElementById("textInput")?.focus();
       }
       // На мобильных — блокируем скролл страницы, чтобы скроллился только виджет
-      const isMobile = !isDesktopPointer || isMobileUA;
-      if (isMobile) {
+      if (isMobileLike) {
         const de = document.documentElement;
         const b = document.body;
         this._prevPageOverflowDoc = de.style.overflow || '';
@@ -1859,6 +1879,13 @@ render() {
         b.style.overflow = 'hidden';
         b.style.touchAction = 'none';
         this._scrollLockedMobile = true;
+        // Разрешаем клик по затемнению закрывать виджет на мобайле
+        const dim = this.shadowRoot.getElementById('pageDim');
+        if (dim) dim.style.pointerEvents = 'auto';
+      } else {
+        // На десктопе не блокируем скролл и не даём кликом по затемнению закрывать
+        const dim = this.shadowRoot.getElementById('pageDim');
+        if (dim) dim.style.pointerEvents = 'none';
       }
     } catch {}
     // Не блокируем прокрутку страницы при открытом виджете
@@ -1882,6 +1909,9 @@ render() {
         b.style.touchAction = this._prevPageTouchAction || '';
         this._scrollLockedMobile = false;
       }
+      // Отключим обработку кликов по затемнению
+      const dim = this.shadowRoot.getElementById('pageDim');
+      if (dim) dim.style.pointerEvents = 'none';
     } catch {}
   };
 
@@ -2106,6 +2136,73 @@ render() {
   this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('dialog');
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
+  
+  // Page dim click to close on mobile
+  try {
+    const dim = this.shadowRoot.getElementById('pageDim');
+    if (dim) {
+      dim.addEventListener('click', () => {
+        try {
+          const isMobileLike = (() => {
+            try {
+              const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+              const touch = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
+              const ua = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+              return Boolean(coarse || touch || ua);
+            } catch { return false; }
+          })();
+          if (isMobileLike) this.closeWidget();
+        } catch {}
+      }, { passive: true });
+    }
+  } catch {}
+  
+  // Mobile swipe-to-close from widget corners
+  this._setupMobileGestures = () => {
+    try {
+      const containers = this.shadowRoot.querySelectorAll('.voice-widget-container');
+      containers.forEach((container) => {
+        if (!container || container._swipeBound) return;
+        let startX = 0, startY = 0, startT = 0, eligible = false;
+        const cornerPad = 24; // px
+        const distThresh = 32; // px (чуть мягче)
+        const timeThresh = 400; // ms (чуть мягче)
+        const onStart = (e) => {
+          // проверка «мобильности»
+          try {
+            const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+            const touch = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
+            const ua = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+            const isMobileLike = Boolean(coarse || touch || ua);
+            if (!isMobileLike) return;
+          } catch {}
+          const t = e.touches && e.touches[0]; if (!t) return;
+          const rect = container.getBoundingClientRect();
+          startX = t.clientX; startY = t.clientY; startT = Date.now();
+          const inLeft = startX >= rect.left && startX <= rect.left + cornerPad && startY >= rect.top && startY <= rect.top + cornerPad;
+          const inRight = startX <= rect.right && startX >= rect.right - cornerPad && startY >= rect.top && startY <= rect.top + cornerPad;
+          const inBL = startX >= rect.left && startX <= rect.left + cornerPad && startY <= rect.bottom && startY >= rect.bottom - cornerPad;
+          const inBR = startX <= rect.right && startX >= rect.right - cornerPad && startY <= rect.bottom && startY >= rect.bottom - cornerPad;
+          eligible = inLeft || inRight || inBL || inBR;
+        };
+        const onEnd = (e) => {
+          if (!eligible) return;
+          const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]); if (!t) return;
+          const dx = Math.abs(t.clientX - startX);
+          const dy = Math.abs(t.clientY - startY);
+          const dt = Date.now() - startT;
+          if (dt <= timeThresh && (dx > distThresh || dy > distThresh)) {
+            this.closeWidget();
+          }
+          eligible = false;
+        };
+        container.addEventListener('touchstart', onStart, { passive: true });
+        container.addEventListener('touchend', onEnd, { passive: true });
+        container._swipeBound = true;
+      });
+    } catch {}
+  };
+  try { this._setupMobileGestures(); } catch {}
   
   // Support FAQ toggles
   this.setupSupportFaq = () => {
