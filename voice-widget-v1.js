@@ -1472,19 +1472,7 @@ render() {
       max-height: 720px;   /* верхняя граница, чтобы не раздувалось бесконечно */
     }
 
-    /* На всякий случай — флекс-раскладка диалогового экрана */
-    .dialog-screen .voice-widget-container {
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* История чата скроллится внутри, а не раздвигает контейнер */
-    .dialog-screen .dialogue-container {
-      flex: 1;
-      min-height: 0;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
+   
   }
 
   /* 2) Если браузер умеет 100svh (iOS 16+/18, новые Chrome/Android),
