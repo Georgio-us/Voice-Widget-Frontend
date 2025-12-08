@@ -1462,29 +1462,43 @@ render() {
   #loadingIndicator{ position:absolute; display:none; }
   #loadingIndicator.active{ display:flex; }
 
-    /* === Safari iOS mobile fix: стабилизируем высоту виджета на айфонах === */
-  @supports (-webkit-touch-callout: none) {
-    @media (max-width: 600px) {
-      /* Перекрываем clamp(560px, 88vh, 720px) только на iOS Safari */
+    /* === Mobile height fix v3: стабильная карточка + адекватный скролл === */
+
+  /* 1) На мобилках задаём минимальную и максимальную высоту.
+        Это возвращает “карточный” вид: не схлопывается по контенту. */
+  @media (max-width: 450px) {
+    .voice-widget-container {
+      min-height: 560px;   /* как в твоём clamp, нижняя граница */
+      max-height: 720px;   /* верхняя граница, чтобы не раздувалось бесконечно */
+    }
+
+    /* На всякий случай — флекс-раскладка диалогового экрана */
+    .dialog-screen .voice-widget-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* История чата скроллится внутри, а не раздвигает контейнер */
+    .dialog-screen .dialogue-container {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+  }
+
+  /* 2) Если браузер умеет 100svh (iOS 16+/18, новые Chrome/Android),
+        то подменяем высоту карточки на “экран минус отступы”. */
+  @supports (height: 100svh) {
+    @media (max-width: 450px) {
       .voice-widget-container {
-        height: auto;
-        max-height: 720px;
-      }
-
-      /* Гарантируем, что в диалоговом экране всё живёт по флексу */
-      .dialog-screen .voice-widget-container {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .dialog-screen .dialogue-container {
-        flex: 1;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
+        /* Карточка занимает экран по высоте, но не больше 720
+           и не меньше 560, чтобы не была крошечной. */
+        height: min(720px, max(560px, calc(100svh - 40px)));
       }
     }
   }
+
 
 
   </style>
