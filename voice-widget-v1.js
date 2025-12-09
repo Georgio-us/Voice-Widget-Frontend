@@ -1505,6 +1505,26 @@ render() {
     z-index: 2;
   }
   :host(.open) .page-dim{ opacity: 1; }
+  
+  /* Image lightbox (fullscreen image viewer) */
+  .img-lightbox{
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.9);
+    z-index: 10002; /* above widget and launcher */
+  }
+  .img-lightbox.open{ display:flex; }
+  .img-lightbox img{
+    max-width: 96vw;
+    max-height: 96vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    background: #111;
+  }
 
 
 
@@ -1517,6 +1537,11 @@ render() {
 
   <!-- Page dim overlay -->
   <div class="page-dim" id="pageDim" aria-hidden="true"></div>
+  
+  <!-- Image lightbox overlay -->
+  <div class="img-lightbox" id="imgLightbox" aria-hidden="true">
+    <img id="imgLightboxImg" alt="">
+  </div>
 
   
 
@@ -2157,6 +2182,104 @@ render() {
     }
   } catch {}
   
+  // Image Lightbox — open/close helpers
+  this.openImageOverlay = (url) => {
+    try {
+      if (!url) return;
+      const box = this.shadowRoot.getElementById('imgLightbox');
+      const img = this.shadowRoot.getElementById('imgLightboxImg');
+      if (!box || !img) return;
+      img.src = url;
+      box.classList.add('open');
+      this._imageOverlayOpen = true;
+    } catch {}
+  };
+  this.closeImageOverlay = () => {
+    try {
+      const box = this.shadowRoot.getElementById('imgLightbox');
+      const img = this.shadowRoot.getElementById('imgLightboxImg');
+      if (img) img.src = '';
+      if (box) box.classList.remove('open');
+      this._imageOverlayOpen = false;
+    } catch {}
+  };
+  // Lightbox interactions: click on backdrop closes; click on image — no action
+  try {
+    const box = this.shadowRoot.getElementById('imgLightbox');
+    const img = this.shadowRoot.getElementById('imgLightboxImg');
+    if (box) {
+      box.addEventListener('click', (e) => {
+        if (e.target === box) { // only backdrop, not image
+          e.stopPropagation();
+          this.closeImageOverlay();
+        }
+      });
+      // Swipe-to-close on mobile corners
+      let sx = 0, sy = 0, st = 0, eligible = false;
+      const cornerPad = 24, distThresh = 32, timeThresh = 400;
+      box.addEventListener('touchstart', (e) => {
+        const t = e.touches && e.touches[0]; if (!t) return;
+        const rect = box.getBoundingClientRect();
+        sx = t.clientX; sy = t.clientY; st = Date.now();
+        const inLeft = sx >= rect.left && sx <= rect.left + cornerPad && sy >= rect.top && sy <= rect.top + cornerPad;
+        const inRight = sx <= rect.right && sx >= rect.right - cornerPad && sy >= rect.top && sy <= rect.top + cornerPad;
+        const inBL = sx >= rect.left && sx <= rect.left + cornerPad && sy <= rect.bottom && sy >= rect.bottom - cornerPad;
+        const inBR = sx <= rect.right && sx >= rect.right - cornerPad && sy <= rect.bottom && sy >= rect.bottom - cornerPad;
+        eligible = inLeft || inRight || inBL || inBR;
+      }, { passive: true });
+      box.addEventListener('touchend', (e) => {
+        if (!eligible) return;
+        const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]); if (!t) return;
+        const dx = Math.abs(t.clientX - sx);
+        const dy = Math.abs(t.clientY - sy);
+        const dt = Date.now() - st;
+        if (dt <= timeThresh && (dx > distThresh || dy > distThresh)) {
+          this.closeImageOverlay();
+        }
+        eligible = false;
+      }, { passive: true });
+    }
+    if (img) {
+      img.addEventListener('click', (e) => e.stopPropagation()); // prevent closing by clicking on image
+    }
+  } catch {}
+  // Global ESC: close image overlay first, then (if none) close widget
+  this._onGlobalKeydown = (e) => {
+    if (e.key !== 'Escape') return;
+    if (!this.classList.contains('open')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (this._imageOverlayOpen) { this.closeImageOverlay(); return; }
+    this.closeWidget();
+  };
+  try { document.addEventListener('keydown', this._onGlobalKeydown, true); } catch {}
+  
+  // Delegate clicks on images to open overlay
+  this._extractBgUrl = (el) => {
+    try {
+      const cs = getComputedStyle(el);
+      const bg = cs.backgroundImage || '';
+      const m = bg.match(/url\\([\"\\']?(.*?)[\"\\']?\\)/i);
+      return (m && m[1]) ? m[1] : '';
+    } catch { return ''; }
+  };
+  this._onImageClick = (e) => {
+    // ignore clicks on buttons/icons
+    if (e.target.closest('button')) return;
+    // 1) direct <img> inside card screen
+    const imgEl = e.target.closest('.card-screen .cs-image img');
+    if (imgEl && imgEl.src) { this.openImageOverlay(imgEl.src); return; }
+    // 2) property card background or card mock image areas
+    const bgEl = e.target.closest('.card-image, .card-mock .cm-image, .card-screen .cs-image');
+    if (bgEl) {
+      const url = this._extractBgUrl(bgEl);
+      if (url) { this.openImageOverlay(url); return; }
+      // fallback: if it contains an img, use it
+      const innerImg = bgEl.querySelector('img');
+      if (innerImg && innerImg.src) { this.openImageOverlay(innerImg.src); return; }
+    }
+  };
+  try { this.shadowRoot.addEventListener('click', this._onImageClick); } catch {}
   // Mobile swipe-to-close from widget corners
   this._setupMobileGestures = () => {
     try {
