@@ -289,10 +289,10 @@ render() {
   .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
   .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; }
   .card-slide.active{ transform: scale(1); opacity:1; }
-  .cards-slider{ scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color: rgba(255,255,255,.02) transparent; }
-  .cards-slider::-webkit-scrollbar{ height:3px; }
+  .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
+  .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
   .cards-slider::-webkit-scrollbar-track{ background:transparent; }
-  .cards-slider::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.02); border-radius:2px; }
+  .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
   /* dots row inside actions area (blue theme) */
   .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:4px 0 10px; }
   .cards-dot{ width:12px; height:6px; border-radius:6px; background:#5F81BA; opacity:.5; border:1px solid #476AA5; transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
@@ -3226,7 +3226,11 @@ render() {
     requestAnimationFrame(() => {
       // вычисляем целевую позицию именно нового слайда
       const targetLeft = slide.offsetLeft;
-      track.scrollTo({ left: targetLeft, behavior: 'smooth' });
+      try {
+        const slider = this.shadowRoot.querySelector('.cards-slider');
+        if (slider) slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
+        else track.scrollTo({ left: targetLeft, behavior: 'smooth' });
+      } catch { track.scrollTo({ left: targetLeft, behavior: 'smooth' }); }
       // пометим новый слайд активным сразу
       try {
         const slider = this.shadowRoot.querySelector('.cards-slider');
@@ -3264,13 +3268,17 @@ render() {
     try {
       const slider = this.shadowRoot.querySelector('.cards-slider');
       if (!slider) return;
-      const active = slider.querySelector('.card-slide.active');
-      const host = active || slider.querySelector('.card-slide:last-child');
-      if (!host) return;
-      const wrap = host.querySelector('.card-dynamic-comment');
-      if (wrap) {
-        wrap.textContent = text || '';
-      }
+      const apply = () => {
+        const active = slider.querySelector('.card-slide.active');
+        const host = active || slider.querySelector('.card-slide:last-child');
+        if (!host) return;
+        const wrap = host.querySelector('.card-dynamic-comment');
+        if (wrap) wrap.textContent = text || '';
+      };
+      // моментально на последний слайд
+      apply();
+      // повторим после layout/активации
+      requestAnimationFrame(apply);
     } catch {}
   }
 
