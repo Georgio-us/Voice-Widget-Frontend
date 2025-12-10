@@ -346,12 +346,12 @@ export class APIClient {
         const data = await response.json();
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
         
-        // Вместо сообщения в чат — динамический комментарий под активной карточкой
-        if (data && data.assistantMessage) {
-          try { this.widget.setCardComment(data.assistantMessage); } catch {}
-        }
+        // Сначала показываем карточку (станет активной), затем ставим динамический комментарий
         if (data && data.card) {
           try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
+        }
+        if (data && data.assistantMessage) {
+          try { this.widget.setCardComment(data.assistantMessage); } catch {}
         }
         // Emit event for successful interaction
         this.widget.events.emit('cardInteractionSent', { action, variantId, data });

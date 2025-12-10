@@ -2840,6 +2840,13 @@ render() {
       if (container) container.remove();
       if (this._lastSuggestedCard) {
         this.showMockCardWithActions(this._lastSuggestedCard);
+        // Короткая подпись под карточкой (первое "Показать")
+        try {
+          const normalized = this.normalizeCardData(this._lastSuggestedCard);
+          const lang = (this.getLangCode() === 'ru') ? 'ru' : 'en';
+          const text = this.generateCardCommentForUi(lang, normalized);
+          this.setCardComment(text);
+        } catch {}
       }
       this.events.emit('send_card');
     } else if (e.target.matches('.card-btn[data-action="continue_dialog"]')) {
@@ -3265,6 +3272,32 @@ render() {
         wrap.textContent = text || '';
       }
     } catch {}
+  }
+
+  // Сгенерировать короткий комментарий под карточкой (RU/EN)
+  generateCardCommentForUi(lang, p) {
+    const fallback = (lang === 'en') ? 'How does it feel?' : 'Как вам?';
+    const ru = [
+      (p) => `Как вам локация: ${p.city}, ${p.district}?`,
+      (p) => `${p.rooms} комнат — ${p.priceEUR} €. Что думаете?`,
+      (p) => `По сочетанию района и цены — достойный вариант. Как вам?`,
+      (p) => `Посмотрите планировку и район, потом скажете впечатления.`,
+      (p) => `Можем сравнить с соседними кварталами, если нужно.`
+    ];
+    const en = [
+      (p) => `How do you like the area: ${p.city}, ${p.district}?`,
+      (p) => `${p.rooms} rooms — ${p.priceEUR} €. Thoughts?`,
+      (p) => `Solid pick for the area and budget. How does it feel?`,
+      (p) => `Check the layout and area, then tell me your impression.`,
+      (p) => `We can compare with nearby neighborhoods if you wish.`
+    ];
+    const bank = (lang === 'en') ? en : ru;
+    try {
+      const pick = bank[Math.floor(Math.random() * bank.length)];
+      return (typeof pick === 'function') ? (p ? pick(p) : fallback) : (pick || fallback);
+    } catch {
+      return fallback;
+    }
   }
 
   // Highlight active slide (nearest to center)
