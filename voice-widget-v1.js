@@ -209,7 +209,7 @@ render() {
   .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
   .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
   .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .card-screen .cs-body{ padding:8px; display:grid; gap:8px; }
+  .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-title{ font-weight:700; color:#ffffff; }
   .card-screen .cs-sub{ font-size:12px; color:#BBBBBB; }
@@ -2838,6 +2838,11 @@ render() {
       // Показать карточку из последнего предложения
       const container = e.target.closest('.card-screen');
       if (container) container.remove();
+      // ❗ Начинаем новый показ: удалим старый слайдер (если был)
+      try {
+        const oldHost = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+        if (oldHost && oldHost.parentElement) oldHost.parentElement.removeChild(oldHost);
+      } catch {}
       if (this._lastSuggestedCard) {
         this.showMockCardWithActions(this._lastSuggestedCard);
         // Короткая подпись под карточкой (первое "Показать")
@@ -2845,8 +2850,10 @@ render() {
           const normalized = this.normalizeCardData(this._lastSuggestedCard);
           const lang = (this.getLangCode() === 'ru') ? 'ru' : 'en';
           const text = this.generateCardCommentForUi(lang, normalized);
-          this.setCardComment(text);
+          this.renderCardCommentBubble(text);
         } catch {}
+        // и прокрутка контейнера сообщений к карточке
+        try { this.scrollCardHostIntoView(); } catch {}
       }
       this.events.emit('send_card');
     } else if (e.target.matches('.card-btn[data-action="continue_dialog"]')) {
@@ -3245,8 +3252,8 @@ render() {
           dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
         });
       } catch {}
-      // ensure the thread scrolls to show the newly added slide
-      try { this.scrollThreadToBottom(true); } catch {}
+      // прокрутить именно контейнер сообщений до карточки
+      try { this.scrollCardHostIntoView(); } catch {}
       try { this.renderSliderDots(); } catch {}
     });
   }
@@ -3279,6 +3286,50 @@ render() {
       apply();
       // повторим после layout/активации
       requestAnimationFrame(apply);
+    } catch {}
+  }
+
+  // Рендер “пузыря” ассистента, синхронизированного с карточкой (не сохраняем в историю)
+  renderCardCommentBubble(text = '') {
+    try {
+      const thread = this.shadowRoot.getElementById('thread');
+      const host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+      if (!thread || !host) return;
+      // Удалим предыдущий пузырь
+      const prev = this.shadowRoot.querySelector('.message.assistant.dynamic-card-comment');
+      if (prev && prev.parentElement) prev.parentElement.removeChild(prev);
+      if (!text) return;
+      // Определим связанный variantId активной карточки
+      const active = this.shadowRoot.querySelector('.cards-slider .card-slide.active .cs');
+      const variantId = active ? active.getAttribute('data-variant-id') : '';
+      // Построим пузырь с той же разметкой, что и обычный assistant
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message assistant dynamic-card-comment';
+      if (variantId) wrapper.setAttribute('data-variant-id', variantId);
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble widget-bubble';
+      bubble.textContent = text;
+      wrapper.appendChild(bubble);
+      // Вставим сразу после слайдера
+      host.insertAdjacentElement('afterend', wrapper);
+      // И прокрутим контейнер сообщений так, чтобы карточка и пузырь были видны
+      this.scrollCardHostIntoView();
+    } catch {}
+  }
+
+  // Прокрутка контейнера сообщений так, чтобы карточка была полностью видна
+  scrollCardHostIntoView() {
+    try {
+      const messages = this.shadowRoot.getElementById('messagesContainer');
+      const host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+      if (!messages || !host) return;
+      const bottom = host.offsetTop + host.offsetHeight;
+      const viewBottom = messages.scrollTop + messages.clientHeight;
+      // если нижняя часть карточки не видна — прокрутим до низа карточки
+      if (bottom > viewBottom - 8) {
+        const target = Math.max(0, bottom - messages.clientHeight + 8);
+        messages.scrollTo({ top: target, behavior: 'smooth' });
+      }
     } catch {}
   }
 
