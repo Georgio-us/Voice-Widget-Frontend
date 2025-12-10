@@ -3211,6 +3211,7 @@ render() {
             <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">I like it</button>
             <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">One more</button>
           </div>
+          <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
           </div>
         </div>`;
     track.appendChild(slide);
@@ -3249,6 +3250,21 @@ render() {
   showMockCardWithActions(mock = {}) {
     const normalized = this.normalizeCardData(mock);
     this.addCardSlide(normalized);
+  }
+
+  // Обновить/установить динамический комментарий под активной карточкой
+  setCardComment(text = '') {
+    try {
+      const slider = this.shadowRoot.querySelector('.cards-slider');
+      if (!slider) return;
+      const active = slider.querySelector('.card-slide.active');
+      const host = active || slider.querySelector('.card-slide:last-child');
+      if (!host) return;
+      const wrap = host.querySelector('.card-dynamic-comment');
+      if (wrap) {
+        wrap.textContent = text || '';
+      }
+    } catch {}
   }
 
   // Highlight active slide (nearest to center)
