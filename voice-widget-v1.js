@@ -441,7 +441,8 @@ render() {
                     width: clamp(320px, 92vw, 380px);
                     height: clamp(560px, 88vh, 720px);
                     background: #171618;
-                    background-image: url('./assets/Net_lights.svg');
+                    /* use assets base so it works on client sites */
+                    background-image: url("${ASSETS_BASE}Net_lights.svg");
                     background-repeat: no-repeat;
                     background-position: center;
                     background-size: cover;
@@ -454,6 +455,25 @@ render() {
                     padding: 16px;
                     box-sizing: border-box;
                     gap: 12px;
+                }
+                /* Decorative mobile-friendly ellipses inside widget */
+                .bg-ellipses {
+                  position: absolute;
+                  inset: 0;
+                  pointer-events: none;
+                  z-index: 0;
+                  background:
+                    radial-gradient(60% 40% at 20% 80%, rgba(120,119,198,0.30) 0%, transparent 60%),
+                    radial-gradient(50% 35% at 80% 20%, rgba(255,122,0,0.20) 0%, transparent 60%),
+                    radial-gradient(55% 45% at 40% 40%, rgba(120,119,198,0.20) 0%, transparent 60%);
+                }
+                @media (max-width: 450px) {
+                  .bg-ellipses {
+                    background:
+                      radial-gradient(70% 45% at 25% 85%, rgba(120,119,198,0.28) 0%, transparent 65%),
+                      radial-gradient(65% 40% at 85% 25%, rgba(255,122,0,0.18) 0%, transparent 65%),
+                      radial-gradient(70% 55% at 45% 45%, rgba(120,119,198,0.18) 0%, transparent 65%);
+                  }
                 }
                 
                 /* Main screen sections */
@@ -1559,6 +1579,7 @@ render() {
       <!-- Main Screen -->
       <div class="main-screen" id="mainScreen">
         <div class="voice-widget-container">
+            <div class="bg-ellipses"></div>
             <div class="main-header">
               <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
               <div class="gradient-line"></div>
@@ -1599,6 +1620,7 @@ render() {
       <!-- Dialogue Screen (v2) wired to v1 logic -->
       <div class="dialog-screen hidden" id="dialogScreen">
         <div class="voice-widget-container">
+          <div class="bg-ellipses"></div>
           <div class="screen-header">
             <div class="menu-button">
               <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 32px; height: 32px;">
@@ -1628,6 +1650,7 @@ render() {
       <!-- Context Screen (v2) -->
       <div class="context-screen hidden" id="contextScreen">
         <div class="voice-widget-container">
+          <div class="bg-ellipses"></div>
           <div class="screen-header">
           </div>
           <div class="context-main-container">
@@ -1731,6 +1754,7 @@ render() {
       <!-- Request Screen (v2) -->
       <div class="request-screen hidden" id="requestScreen">
         <div class="voice-widget-container">
+          <div class="bg-ellipses"></div>
           <div class="screen-header">
           </div>
           <div class="request-main-container">
@@ -1804,6 +1828,7 @@ render() {
       <!-- Support Screen (v2) -->
       <div class="support-screen hidden" id="supportScreen">
         <div class="voice-widget-container">
+          <div class="bg-ellipses"></div>
           <div class="screen-header">
           </div>
           <div class="support-main-container">
