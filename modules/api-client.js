@@ -323,7 +323,8 @@ export class APIClient {
 
   // ---------- Card Interactions ----------
   async sendCardInteraction(action, variantId) {
-    if (!variantId) {
+    // Для 'show' допустимо отсутствие variantId — сервер выберет кандидат по сессии
+    if (!variantId && action !== 'show') {
       console.warn('No variant ID provided for card interaction');
       return;
     }
