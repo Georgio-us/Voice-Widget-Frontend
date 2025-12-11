@@ -345,10 +345,12 @@ export class APIClient {
       if (response.ok) {
         const data = await response.json();
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
-        
-        // Сначала показываем карточку (станет активной), затем ставим динамический комментарий-баббл
-        if (data && data.card) {
-          try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
+        // Для первого показа карточки ('show') карточку уже отрисовали локально,
+        // с бэка берём только текст-подпись. Для остальных действий — рендерим карточку.
+        if (action !== 'show') {
+          if (data && data.card) {
+            try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
+          }
         }
         if (data && data.assistantMessage) {
           try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}

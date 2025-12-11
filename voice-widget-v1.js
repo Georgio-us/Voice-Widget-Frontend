@@ -2833,7 +2833,7 @@ render() {
 
 
   // Card events
-  this.shadowRoot.addEventListener('click', (e) => {
+  this.shadowRoot.addEventListener('click', async (e) => {
     if (e.target.matches('.card-btn[data-action="like"]')) {
       const variantId = e.target.getAttribute('data-variant-id');
       this.events.emit('like', { variantId });
@@ -2849,18 +2849,19 @@ render() {
         const oldHost = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
         if (oldHost && oldHost.parentElement) oldHost.parentElement.removeChild(oldHost);
       } catch {}
-      if (this._lastSuggestedCard) {
-        this.showMockCardWithActions(this._lastSuggestedCard);
-        // Короткая подпись под карточкой (первое "Показать")
-        try {
-          const normalized = this.normalizeCardData(this._lastSuggestedCard);
-          const lang = (this.getLangCode() === 'ru') ? 'ru' : 'en';
-          const text = this.generateCardCommentForUi(lang, normalized);
-          this.renderCardCommentBubble(text);
-        } catch {}
-        // и прокрутка контейнера сообщений к карточке
-        try { this.scrollCardHostIntoView(); } catch {}
-      }
+      // Мгновенно покажем карточку локально, чтобы не ждать сети
+      try {
+        if (this._lastSuggestedCard) {
+          this.showMockCardWithActions(this._lastSuggestedCard);
+          this.scrollCardHostIntoView();
+        }
+      } catch {}
+      // Попросим у бэкенда динамический комментарий (первый показ)
+      try {
+        if (this._lastSuggestedCard && this._lastSuggestedCard.id) {
+          await this.api.sendCardInteraction('show', this._lastSuggestedCard.id);
+        }
+      } catch {}
       this.events.emit('send_card');
     } else if (e.target.matches('.card-btn[data-action="continue_dialog"]')) {
       const container = e.target.closest('.card-screen');
@@ -3228,8 +3229,8 @@ render() {
         <div class="cards-dots-row"></div>
         <div class="card-actions-wrap">
           <div class="card-actions-panel">
-            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">I like it</button>
-            <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">One more</button>
+            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">Нравится!</button>
+            <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё одну</button>
           </div>
           <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
           </div>
@@ -3339,31 +3340,8 @@ render() {
     } catch {}
   }
 
-  // Сгенерировать короткий комментарий под карточкой (RU/EN)
-  generateCardCommentForUi(lang, p) {
-    const fallback = (lang === 'en') ? 'How does it feel?' : 'Как вам?';
-    const ru = [
-      (p) => `Как вам локация: ${p.city}, ${p.district}?`,
-      (p) => `${p.rooms} комнат — ${p.priceEUR} €. Что думаете?`,
-      (p) => `По сочетанию района и цены — достойный вариант. Как вам?`,
-      (p) => `Посмотрите планировку и район, потом скажете впечатления.`,
-      (p) => `Можем сравнить с соседними кварталами, если нужно.`
-    ];
-    const en = [
-      (p) => `How do you like the area: ${p.city}, ${p.district}?`,
-      (p) => `${p.rooms} rooms — ${p.priceEUR} €. Thoughts?`,
-      (p) => `Solid pick for the area and budget. How does it feel?`,
-      (p) => `Check the layout and area, then tell me your impression.`,
-      (p) => `We can compare with nearby neighborhoods if you wish.`
-    ];
-    const bank = (lang === 'en') ? en : ru;
-    try {
-      const pick = bank[Math.floor(Math.random() * bank.length)];
-      return (typeof pick === 'function') ? (p ? pick(p) : fallback) : (pick || fallback);
-    } catch {
-      return fallback;
-    }
-  }
+  // (удалено) Генератор короткого комментария под карточкой.
+  // Источник подсказки теперь — ответ бэкенда (assistantMessage).
 
   // Highlight active slide (nearest to center)
   updateActiveCardSlide() {
