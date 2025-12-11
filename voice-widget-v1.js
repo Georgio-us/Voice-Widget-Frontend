@@ -193,7 +193,7 @@ render() {
   .support-screen.hidden{ display:none; }
 
   /* Chat */
-  .thread{ display:flex; flex-direction:column; gap:12px; position:relative; z-index:1; min-height:0; }
+  .thread{ display:flex; flex-direction:column; gap:2px; position:relative; z-index:1; min-height:0; }
   .message{ display:flex; }
   .message.user{ justify-content:flex-end; }
   .message.assistant{ justify-content:flex-start; }
@@ -206,7 +206,7 @@ render() {
   .thread > .card-screen{ margin-top:-6px; margin-bottom:-6px; }
   .thread > .card-screen:first-child{ margin-top:0; }
   .thread > .card-screen:last-child{ margin-bottom:0; }
-  .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
+  .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; margin-bottom:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
   .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
   .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
   .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
@@ -303,8 +303,7 @@ render() {
 
   /* ===== Inline Lead Bubbles ===== */
 
-  /* Input */
-  .input-container{ display:flex; gap:12px; align-items:center; padding:16px; width:360px; height:60px; background:rgba(51,51,51,.7); border-radius:20px; border:1px solid transparent; background-clip:padding-box; position:relative; box-shadow:0 8px 24px rgba(0,0,0,.10); }
+  /* Input (moved to unified block below) */
  
   
   /* v2 input: скрываем плейсхолдер во время записи */
@@ -532,13 +531,16 @@ render() {
                     height: 60px;
                     background:
                       linear-gradient(#2B272C, #2B272C) padding-box,
-                      linear-gradient(90deg, #5C7FE2 0%, #F05A4F 33%, #EDA136 66%, #1C7755 100%) border-box;
+                    #4F4F4F border-box;
                     border: 1px solid transparent;
                     border-radius: 40px;
                     display: flex;
+                    gap: 12px;
                     align-items: center;
                     padding: 0 10px;
                     box-sizing: border-box;
+                    position: relative;
+                    box-shadow: 0 8px 24px rgba(0,0,0,.10);
                     margin: var(--space-xxl) 0 var(--space-s) 0;
                 }
                 
@@ -549,6 +551,10 @@ render() {
                     position: static; top: auto; left: auto; right: auto; bottom: auto;
                     width: 100%; max-width: 360px; margin: 0 auto;
                     flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
+                    /* Anchor thread to bottom when content is short (messenger-like) */
+                    display: flex; 
+                    flex-direction: column; 
+                    justify-content: flex-end;
                 }
                 .dialog-screen .input-container{
                     margin: auto 0 var(--space-s) 0; /* top:auto pushes input to bottom */
