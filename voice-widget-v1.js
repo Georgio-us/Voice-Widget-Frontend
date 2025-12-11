@@ -441,11 +441,6 @@ render() {
                     width: clamp(320px, 92vw, 380px);
                     height: clamp(560px, 88vh, 720px);
                     background: #171618;
-                    /* use assets base so it works on client sites */
-                    background-image: url("${ASSETS_BASE}Net_lights.svg");
-                    background-repeat: no-repeat;
-                    background-position: center;
-                    background-size: cover;
                     border-radius: 20px;
                     position: relative;
                     overflow: hidden;
@@ -456,12 +451,22 @@ render() {
                     box-sizing: border-box;
                     gap: 12px;
                 }
+                /* Decorative grid overlay inside widget (1px lines) */
+                .bg-grid{
+                  position:absolute;
+                  inset:0;
+                  pointer-events:none;
+                  z-index:1; /* выше эллипсов, ниже контента */
+                  background:
+                    repeating-linear-gradient(to right, rgba(255,255,255,0.01) 0 1px, transparent 1px 50px),
+                    repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 70px);
+                }
                 /* Decorative mobile-friendly ellipses inside widget */
                 .bg-ellipses {
                   position: absolute;
                   inset: 0;
                   pointer-events: none;
-                  z-index: 0;
+                  z-index: 0; /* под сеткой */
                   background:
                     radial-gradient(60% 40% at 20% 80%, rgba(120,119,198,0.30) 0%, transparent 60%),
                     radial-gradient(50% 35% at 80% 20%, rgba(255,122,0,0.20) 0%, transparent 60%),
@@ -478,6 +483,23 @@ render() {
                 
                 /* Main screen sections */
                 .main-header{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; gap:20px; padding: 15px }
+                .main-header-grid{ width:100%; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+                .header-action{
+                  width:36px; height:36px;
+                  display:inline-flex; align-items:center; justify-content:center;
+                  border-radius:10px; background:transparent;
+                  border:none; outline:none; appearance:none; -webkit-appearance:none;
+                  cursor:pointer; -webkit-tap-highlight-color:transparent;
+                  transition: opacity .15s ease;
+                }
+                /* hover меняет только саму иконку */
+                .header-action:hover{ background: transparent; }
+                .header-action:focus, .header-action:focus-visible{ outline:none; box-shadow:none; }
+                .header-action img{ width:24px; height:24px; display:block; transition: opacity .15s ease; }
+                .header-action:hover img{ opacity:.82; }
+                .header-left{ justify-self:start; }
+                .header-right{ justify-self:end; }
+                .logo{ width:auto; height:24px; display:block; }
                 .main-center{ flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
                 .main-hero{ width:100%; display:flex; justify-content:center; }
                 .main-copy{ width:100%; max-width:360px; text-align:center; }
@@ -486,7 +508,6 @@ render() {
                 .logo {
                     width: auto;
                     height: auto;
-                    margin-top: 8px;
                     align-self: center;
                 }
                 
@@ -708,8 +729,10 @@ render() {
                 /* Стили для Dialog Screen */
                 .screen-header{
                     width:100%; max-width:360px; height:60px; margin:0 auto;
-                    display:grid; place-items:center; position:relative; z-index:2;
+                    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; position:relative; z-index:2;
                 }
+                /* overlay в диалоге должен перекрывать всю сетку хедера */
+                .screen-header .menu-overlay{ grid-column:1 / -1; grid-row:1; z-index:4; }
                 .menu-button {
                     position: absolute;
                     top: 25px;
@@ -723,8 +746,13 @@ render() {
                     justify-content: center;
                     z-index: 10; /* поверх overlay */
                 }
-                /* inside header we use normal flow (no absolute) */
-                .screen-header .menu-button{ position: static; top:auto; left:auto; transform:none; z-index: 3; grid-area:1/1; }
+                /* inside header we use normal flow (no absolute), center column for menu */
+                .screen-header .menu-button{ position: static !important; top:auto; left:auto; transform:none; z-index: 3; grid-area:1/2; justify-self:center; }
+                .screen-header .header-action{ grid-row:1; }
+                .screen-header .header-left{ grid-column:1; justify-self:start; }
+                .screen-header .header-right{ grid-column:3; justify-self:end; }
+                /* скрываем крайние кнопки при открытом меню */
+                .screen-header.menu-opened .header-action{ display:none; }
                 .menu-button img { transition: transform 0.15s ease, opacity 0.15s ease; }
                 .menu-button:hover img { transform: scale(1.08); opacity: 0.85; }
                 /* При открытом меню центрируем кнопку по вертикали в зоне overlay (100px, padding-top 15px => центр на 50px) */
@@ -1580,8 +1608,17 @@ render() {
       <div class="main-screen" id="mainScreen">
         <div class="voice-widget-container">
             <div class="bg-ellipses"></div>
+            <div class="bg-grid"></div>
             <div class="main-header">
-              <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
+              <div class="main-header-grid">
+                <button class="header-action header-left" type="button" title="Статистика">
+                  <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
+                </button>
+                <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
+                <button class="header-action header-right" type="button" title="Тема">
+                  <img src="${ASSETS_BASE}dark-theme.svg" alt="Theme">
+                </button>
+              </div>
               <div class="gradient-line"></div>
             </div>
             <div class="main-center">
@@ -1621,10 +1658,17 @@ render() {
       <div class="dialog-screen hidden" id="dialogScreen">
         <div class="voice-widget-container">
           <div class="bg-ellipses"></div>
+          <div class="bg-grid"></div>
           <div class="screen-header">
+            <button class="header-action header-left" type="button" title="Статистика">
+              <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
+            </button>
             <div class="menu-button">
               <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 32px; height: 32px;">
             </div>
+            <button class="header-action header-right" type="button" title="Тема">
+              <img src="${ASSETS_BASE}dark-theme.svg" alt="Theme">
+            </button>
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
@@ -1651,8 +1695,8 @@ render() {
       <div class="context-screen hidden" id="contextScreen">
         <div class="voice-widget-container">
           <div class="bg-ellipses"></div>
-          <div class="screen-header">
-          </div>
+          <div class="bg-grid"></div>
+          <div class="screen-header"></div>
           <div class="context-main-container">
             <div class="progress-grid-container">
               <div class="grid-column-left"></div>
@@ -1755,8 +1799,8 @@ render() {
       <div class="request-screen hidden" id="requestScreen">
         <div class="voice-widget-container">
           <div class="bg-ellipses"></div>
-          <div class="screen-header">
-          </div>
+          <div class="bg-grid"></div>
+          <div class="screen-header"></div>
           <div class="request-main-container">
             <div class="request-title">Leave a request</div>
             <div class="request-field">
@@ -1829,8 +1873,8 @@ render() {
       <div class="support-screen hidden" id="supportScreen">
         <div class="voice-widget-container">
           <div class="bg-ellipses"></div>
-          <div class="screen-header">
-          </div>
+          <div class="bg-grid"></div>
+          <div class="screen-header"></div>
           <div class="support-main-container">
             <div class="support-faq-title">FAQ</div>
             <div class="support-faq-list">
@@ -2865,6 +2909,13 @@ render() {
     } else if (e.target.matches('.card-btn[data-action="next"]')) {
       const variantId = e.target.getAttribute('data-variant-id');
       this.events.emit('next_option', { variantId });
+    } else if (e.target.closest('.header-action.header-right')) {
+      // Theme toggle button (dark <-> light), only swaps icon for now
+      try {
+        this._theme = (this._theme === 'light') ? 'dark' : 'light';
+        if (!this._theme) this._theme = 'dark';
+        this.updateThemeIcons();
+      } catch {}
     } else if (e.target.matches('.card-btn[data-action="send_card"]')) {
       // Показать карточку из последнего предложения
       const container = e.target.closest('.card-screen');
@@ -2908,6 +2959,22 @@ render() {
       }
     }
   });
+
+  // Swap theme icons in headers to match current theme flag
+  this.updateThemeIcons = () => {
+    try {
+      const themeSrc = (this._theme === 'light')
+        ? `${ASSETS_BASE}light-theme.svg`
+        : `${ASSETS_BASE}dark-theme.svg`;
+      const statsSrc = (this._theme === 'light')
+        ? `${ASSETS_BASE}stats-light-theme.svg`
+        : `${ASSETS_BASE}stats-dark-theme.svg`;
+      this.shadowRoot.querySelectorAll('.header-action.header-right img')
+        .forEach(img => { if (img) img.src = themeSrc; });
+      this.shadowRoot.querySelectorAll('.header-action.header-left img')
+        .forEach(img => { if (img) img.src = statsSrc; });
+    } catch {}
+  };
 }
 
   // ---------- ПРЯМО ТУТ ЗАКАНЧИВВАЕТСЯ ФУНКЦИЯ РЕНДЕР (В НЕЙ ЛЕЖАТ СТИЛИ v2/ ----------
@@ -3598,6 +3665,14 @@ render() {
       // legacy class no longer affects positioning within dialog-header
       menuBtn.classList.remove('menu-open');
     }
+
+    // Toggle side header actions only on dialogue screen
+    try {
+      const dialogHeader = this.shadowRoot.querySelector('.dialog-screen:not(.hidden) .screen-header');
+      if (dialogHeader) {
+        dialogHeader.classList.toggle('menu-opened', !!(this._menuState && this._menuState !== 'closed'));
+      }
+    } catch {}
 
     let content = overlay.querySelector('.menu-overlay-content');
     if (!content) {
