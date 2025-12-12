@@ -1,5 +1,5 @@
 // ========================================
-// 📁 modules/api-client.js (ФИНАЛ)
+// 📁 modules/api-client.js (DB + Cards API)
 // ========================================
 
 export class APIClient {
@@ -8,12 +8,77 @@ export class APIClient {
     this.apiUrl = widget.apiUrl;
     this.fieldName = widget.fieldName;   // оставлено для совместимости, но ключ файла — всегда 'audio'
     this.responseField = widget.responseField;
+
+    // --- Cards state (infra for future "brain") ---
+    this.lastProposedCards = [];     // последние предложенные карточки (объекты)
+    this.lastShownCardId = null;     // последняя реально показанная карточка (id)
   }
+
   get disableServerUI() {
     try {
       const v = localStorage.getItem('vw_disableServerUI');
       return v === '1' || v === 'true';
     } catch { return false; }
+  }
+
+  // ---------- Cards API helpers ----------
+  _deriveCardsBaseUrl() {
+    // this.apiUrl обычно: https://.../api/audio/upload
+    // cards base:          https://.../api/cards
+    try {
+      const u = new URL(String(this.apiUrl));
+      u.pathname = u.pathname.replace(/\/api\/audio\/upload\/?$/i, '/api/cards');
+      return u.toString().replace(/\/$/, '');
+    } catch {
+      return String(this.apiUrl)
+        .replace(/\/api\/audio\/upload\/?$/i, '/api/cards')
+        .replace(/\/$/, '');
+    }
+  }
+
+  async fetchCardsSearch(params = {}) {
+    const base = this._deriveCardsBaseUrl();
+    const url = new URL(base + '/search');
+
+    const allowed = ['city', 'district', 'rooms', 'type', 'minPrice', 'maxPrice', 'limit'];
+    for (const k of allowed) {
+      const v = params[k];
+      if (v !== undefined && v !== null && String(v).trim() !== '') {
+        url.searchParams.set(k, String(v));
+      }
+    }
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`Cards search failed: ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data.cards) ? data.cards : [];
+  }
+
+  async fetchCardById(id) {
+    const base = this._deriveCardsBaseUrl();
+    const url = `${base}/${encodeURIComponent(id)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Card fetch failed: ${res.status}`);
+    return await res.json().catch(() => null);
+  }
+
+  _rememberProposed(cards) {
+    if (Array.isArray(cards)) this.lastProposedCards = cards;
+  }
+
+  _rememberShown(cardId) {
+    if (!cardId) return;
+    this.lastShownCardId = String(cardId);
+  }
+
+  _notifyShownToServer(cardId) {
+    // show = факт видимости. Отправляем чуть позже, чтобы UI успел отрисовать.
+    if (!cardId) return;
+    try {
+      setTimeout(() => {
+        try { this.sendCardInteraction('show', cardId); } catch {}
+      }, 0);
+    } catch {}
   }
 
   // ---------- Hidden commands parsing ----------
@@ -51,21 +116,70 @@ export class APIClient {
     if (!cmd || !cmd.vw_cmd) return;
     const name = String(cmd.vw_cmd);
     const args = cmd.args || {};
+
     try {
       switch (name) {
         case 'cards.list':
-        case 'cards.show':
-        case 'cards.more_like_this':
         case 'cards.search_wider': {
-          // TODO: hook into card rendering pipeline (skeleton)
-          this.widget.ui?.showNotification?.('Команда карт получена (скоро будет реализовано)');
+          // ожидаем фильтры в args: city/district/rooms/type/minPrice/maxPrice/limit
+          const cards = await this.fetchCardsSearch(args);
+          this._rememberProposed(cards);
+
+          if (!cards.length) {
+            this.widget.ui?.showNotification?.('Карточки не найдены');
+            return;
+          }
+
+          // Минимальный UX: предложить первую карточку (как сейчас)
+          if (!this.disableServerUI) {
+            try { this.widget.suggestCardOption(cards[0]); } catch {}
+          }
           break;
         }
+
+        case 'cards.show':
+        case 'cards.more_like_this': {
+          // ожидаем args.id / args.external_id / args.property_id
+          const id = args.id || args.external_id || args.property_id || null;
+
+          let card = null;
+
+          if (id) {
+            card = await this.fetchCardById(id);
+          } else if (this.lastProposedCards.length) {
+            // если ID не передали — берём первую из предложенных
+            card = this.lastProposedCards[0];
+          }
+
+          if (!card) {
+            this.widget.ui?.showNotification?.('Карточка не найдена');
+            return;
+          }
+
+          const cardId = card.id || card.external_id || null;
+
+          // Отрисовываем карточку (у тебя уже реализовано)
+          if (typeof this.widget.showMockCardWithActions === 'function') {
+            this.widget.showMockCardWithActions(card);
+          } else {
+            // fallback: хотя бы предложить опцию
+            this.widget.suggestCardOption?.(card);
+          }
+
+          // Фиксируем факт показа (infra)
+          this._rememberShown(cardId);
+          this._notifyShownToServer(cardId);
+
+          break;
+        }
+
         default:
+          // неизвестные команды игнорируем
           break;
       }
     } catch (e) {
       console.warn('Hidden command error:', e);
+      this.widget.ui?.showNotification?.('Ошибка при обработке команды карточек');
     }
   }
 
@@ -137,9 +251,10 @@ export class APIClient {
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
-      // 🃏 карточки по предложению (после текста агента)
+      // 🃏 карточки по предложению (после текста агента) — legacy flow
       try {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
+          this._rememberProposed(data.cards);
           this.widget.suggestCardOption(data.cards[0]);
         }
       } catch (e) { console.warn('Cards handling error:', e); }
@@ -199,9 +314,10 @@ export class APIClient {
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
-      // 🃏 карточки по предложению (main) — после текста агента
+      // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
       try {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
+          this._rememberProposed(data.cards);
           this.widget.suggestCardOption(data.cards[0]);
         }
       } catch (e) { console.warn('Cards handling error (main):', e); }
@@ -293,15 +409,22 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
+      const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
+      const parsed = this.extractHiddenCommands(assistantRaw);
+
       this.widget.ui.addMessage({
         type: 'assistant',
-        content: data[this.responseField] || 'Ответ не получен от сервера.',
+        content: parsed.cleaned || 'Ответ не получен от сервера.',
         timestamp: new Date()
       });
 
-      // 🃏 карточки по предложению (audio) — после текста агента
+      // Dispatch hidden commands after showing text
+      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
+
+      // 🃏 карточки по предложению (audio) — legacy flow
       try {
         if (Array.isArray(data.cards) && data.cards.length) {
+          this._rememberProposed(data.cards);
           this.widget.suggestCardOption(data.cards[0]);
         }
       } catch (e) { console.warn('Cards handling error (audio):', e); }
@@ -337,7 +460,7 @@ export class APIClient {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: action, // 'like' or 'next'
+          action: action, // 'like' or 'next' or 'show'
           variantId: variantId,
           sessionId: this.widget.sessionId || ''
         })
@@ -346,6 +469,7 @@ export class APIClient {
       if (response.ok) {
         const data = await response.json();
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
+
         // Для первого показа карточки ('show') карточку уже отрисовали локально,
         // с бэка берём только текст-подпись. Для остальных действий — рендерим карточку.
         if (action !== 'show') {
@@ -353,9 +477,11 @@ export class APIClient {
             try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
           }
         }
+
         if (data && data.assistantMessage) {
           try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}
         }
+
         // Emit event for successful interaction
         this.widget.events.emit('cardInteractionSent', { action, variantId, data });
       } else {
