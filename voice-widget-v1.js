@@ -2907,6 +2907,25 @@ render() {
       const variantId = e.target.getAttribute('data-variant-id');
       this.events.emit('like', { variantId });
     } else if (e.target.matches('.card-btn[data-action="next"]')) {
+      // Лимит карточек в одном слайдере: максимум 12
+      try {
+        const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+        const count = track ? track.children.length : 0;
+        if (count >= 12) {
+          // shake-эффект на кнопке
+          const btn = e.target.closest('.card-btn.next') || e.target;
+          try {
+            btn.classList.add('shake');
+            setTimeout(() => btn.classList.remove('shake'), 500);
+          } catch {}
+          // системное сообщение ассистента
+          try {
+            const msg = 'Подскажите, какой из предложенных мною вариантов вам подошёл больше всего? Возможно, вы бы могли уточнить детальнее, что вы ищете, чтобы я смог предложить вам лучшие варианты?';
+            this.ui?.addMessage?.({ type: 'assistant', content: msg, timestamp: new Date() });
+          } catch {}
+          return; // не отправляем next при достигнутом лимите
+        }
+      } catch {}
       const variantId = e.target.getAttribute('data-variant-id');
       this.events.emit('next_option', { variantId });
     } else if (e.target.closest('.header-action.header-right')) {
