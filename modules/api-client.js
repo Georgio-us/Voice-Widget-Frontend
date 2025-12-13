@@ -1,6 +1,7 @@
 // ========================================
 // 📁 modules/api-client.js (DB + Cards API)
 // ========================================
+import { log as logTelemetry, EventTypes as TelemetryEventTypes } from './telemetryClient.js';
 
 export class APIClient {
   constructor(widget) {
@@ -216,6 +217,13 @@ export class APIClient {
     const userMessage = { type: 'user', content: messageText, timestamp: new Date() };
     this.widget.ui.addMessage(userMessage);
 
+    // Логируем user_message перед отправкой
+    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
+      inputType: 'text',
+      text: messageText,
+      textLength: messageText.length
+    });
+
     try {
       const fd = new FormData();
       fd.append('text', messageText);
@@ -280,6 +288,13 @@ export class APIClient {
 
     this.widget.ui.showLoading();
 
+    // Логируем user_message перед отправкой
+    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
+      inputType: 'text',
+      text: messageText,
+      textLength: messageText.length
+    });
+
     try {
       const fd = new FormData();
       fd.append('text', messageText);
@@ -312,6 +327,26 @@ export class APIClient {
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      
+      // Логируем assistant_reply после получения ответа (main screen)
+      const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
+        ? data.cards.map(card => ({
+            id: card.id,
+            city: card.city || null,
+            district: card.district || null,
+            priceEUR: card.priceEUR || null,
+            rooms: card.rooms || null
+          }))
+        : [];
+      
+      logTelemetry(TelemetryEventTypes.ASSISTANT_REPLY, {
+        messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
+        hasCards: data.cards && data.cards.length > 0,
+        cards: cardsForLog,
+        stage: data.stage || null,
+        insights: data.insights || null
+      });
+      
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
       // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
@@ -355,6 +390,12 @@ export class APIClient {
       timestamp: new Date()
     };
     this.widget.ui.addMessage(userMessage);
+
+    // Логируем user_message перед отправкой аудио
+    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
+      inputType: 'audio',
+      audioDurationMs: this.widget.audioRecorder.recordingTime * 1000
+    });
 
     try {
       const fd = new FormData();
@@ -412,10 +453,30 @@ export class APIClient {
       const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
       const parsed = this.extractHiddenCommands(assistantRaw);
 
-      this.widget.ui.addMessage({
+      const assistantMessage = {
         type: 'assistant',
         content: parsed.cleaned || 'Ответ не получен от сервера.',
         timestamp: new Date()
+      };
+      this.widget.ui.addMessage(assistantMessage);
+      
+      // Логируем assistant_reply после получения ответа (аудио)
+      const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
+        ? data.cards.map(card => ({
+            id: card.id,
+            city: card.city || null,
+            district: card.district || null,
+            priceEUR: card.priceEUR || null,
+            rooms: card.rooms || null
+          }))
+        : [];
+      
+      logTelemetry(TelemetryEventTypes.ASSISTANT_REPLY, {
+        messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
+        hasCards: data.cards && data.cards.length > 0,
+        cards: cardsForLog,
+        stage: data.stage || null,
+        insights: data.insights || null
       });
 
       // Dispatch hidden commands after showing text

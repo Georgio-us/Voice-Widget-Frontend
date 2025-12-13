@@ -20,6 +20,7 @@ import { UnderstandingManager } from './modules/understanding-manager.js';
 import { UIManager } from './modules/ui-manager.js';
 import { APIClient } from './modules/api-client.js';
 import { EventManager } from './modules/event-manager.js';
+import { initTelemetry, setConsent as setTelemetryConsent, log as logTelemetry, EventTypes as TelemetryEventTypes } from './modules/telemetryClient.js';
 
 class VoiceWidget extends HTMLElement {
   constructor() {
@@ -67,7 +68,16 @@ class VoiceWidget extends HTMLElement {
     this.ui = new UIManager(this);
     this.api = new APIClient(this);
 
+    // Инициализация телеметрии
+    const baseUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '');
+    const sessionId = this.getInitialSessionId();
+    initTelemetry({ baseUrl, sessionId });
     
+    // Устанавливаем consent из localStorage при инициализации
+    const consent = this.getConsent();
+    if (consent && consent.selections) {
+      setTelemetryConsent({ analytics: consent.selections.analytics === true });
+    }
 
     this.render();
     this.bindEvents();
@@ -2015,8 +2025,29 @@ render() {
   };
 
   // Launcher
+  let _sessionStarted = false;
   $("#launcher")?.addEventListener("click", () => {
     this.classList.add("open");
+    
+    // Логируем session_start при первом открытии
+    if (!_sessionStarted) {
+      _sessionStarted = true;
+      const consent = this.getConsent();
+      logTelemetry(TelemetryEventTypes.SESSION_START, {
+        url: window.location.href,
+        referrer: document.referrer || null,
+        lang: navigator.language || null,
+        widgetVersion: '1.0',
+        consent: consent ? {
+          analytics: consent.selections?.analytics === true,
+          performance: consent.selections?.performance === true,
+          marketing: consent.selections?.marketing === true
+        } : null
+      });
+    }
+    
+    // Логируем widget_open
+    logTelemetry(TelemetryEventTypes.WIDGET_OPEN);
     // Не фокусируем поле на мобильных, чтобы не вызывать автопоявление клавиатуры
     try {
       const isMobileLike = (() => {
@@ -2068,6 +2099,19 @@ render() {
     const obj = { v: this._CONSENT_VERSION, ts: Date.now(), selections: { ...selections, strictlyNecessary: true } };
     try { localStorage.setItem('vw_cookie_consent', JSON.stringify(obj)); } catch {}
     try { document.cookie = `vw_consent=v${this._CONSENT_VERSION}; path=/; SameSite=Lax`; } catch {}
+    
+    // Связываем с телеметрией
+    const analytics = selections.analytics === true;
+    setTelemetryConsent({ analytics });
+    
+    // Логируем изменение согласия
+    logTelemetry(TelemetryEventTypes.CONSENT_UPDATE, {
+      analytics,
+      performance: selections.performance === true,
+      marketing: selections.marketing === true,
+      timestampLocal: new Date().toISOString()
+    });
+    
     return obj;
   };
   this.maybeShowCookieBanner = () => {
@@ -2115,6 +2159,18 @@ render() {
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
     this.classList.remove("open");
+    
+    // Логируем widget_close и session_end
+    logTelemetry(TelemetryEventTypes.WIDGET_CLOSE);
+    
+    // Логируем session_end при закрытии виджета
+    const messagesCount = this.messages ? this.messages.length : 0;
+    const cardsShown = this.shadowRoot.querySelectorAll('.card-slide').length;
+    logTelemetry(TelemetryEventTypes.SESSION_END, {
+      reason: 'user_close',
+      messagesCount,
+      cardsShown
+    });
     // Ничего не меняем у страницы — скролл всегда доступен
     // Явно снимаем фокус, чтобы на повторном открытии клавиатура не всплывала
     try {
@@ -3067,6 +3123,20 @@ render() {
   this.shadowRoot.addEventListener('click', async (e) => {
     if (e.target.matches('.card-btn[data-action="like"]')) {
       const variantId = e.target.getAttribute('data-variant-id');
+      
+      // Логируем card_like
+      const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+      const slides = track ? track.querySelectorAll('.card-slide') : [];
+      const currentIndex = Array.from(slides).findIndex(slide => 
+        slide.querySelector(`[data-variant-id="${variantId}"]`)
+      );
+      
+      logTelemetry(TelemetryEventTypes.CARD_LIKE, {
+        propertyId: variantId,
+        index: currentIndex >= 0 ? currentIndex : null,
+        totalInSlider: slides.length
+      });
+      
       this.events.emit('like', { variantId });
     } else if (e.target.matches('.card-btn[data-action="next"]')) {
       // Лимит карточек в одном слайдере: максимум 12
@@ -3089,6 +3159,21 @@ render() {
         }
       } catch {}
       const variantId = e.target.getAttribute('data-variant-id');
+      
+      // Логируем card_next
+      const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+      const slides = track ? track.querySelectorAll('.card-slide') : [];
+      const currentIndex = Array.from(slides).findIndex(slide => 
+        slide.querySelector(`[data-variant-id="${variantId}"]`)
+      );
+      
+      logTelemetry(TelemetryEventTypes.CARD_NEXT, {
+        propertyId: variantId,
+        index: currentIndex >= 0 ? currentIndex : null,
+        totalInSlider: slides.length,
+        source: 'recommendation'
+      });
+      
       this.events.emit('next_option', { variantId });
     } else if (e.target.closest('.header-action.header-right')) {
       // Theme toggle button (dark <-> light), only swaps icon for now
@@ -3111,6 +3196,17 @@ render() {
         if (this._lastSuggestedCard) {
           this.showMockCardWithActions(this._lastSuggestedCard);
           this.scrollCardHostIntoView();
+          
+          // Логируем card_show
+          const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+          const slides = track ? track.querySelectorAll('.card-slide') : [];
+          
+          logTelemetry(TelemetryEventTypes.CARD_SHOW, {
+            propertyId: this._lastSuggestedCard.id,
+            index: 0,
+            totalInSlider: slides.length,
+            source: 'recommendation'
+          });
         }
       } catch {}
       // Попросим у бэкенда динамический комментарий (первый показ)
