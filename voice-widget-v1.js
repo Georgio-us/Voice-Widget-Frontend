@@ -1009,7 +1009,7 @@ render() {
                     cursor: pointer;
                     transition: transform .15s ease, opacity .15s ease;
                 }
-                .footer-text:hover{ transform: translateX(-50%) scale(1.1); opacity:.9; }
+                .footer-text:hover{ transform: scale(1.1); opacity:.9; }
                 
                 /* Декоративная линия для ContextScreen */
                 .context-gradient-line {
@@ -1163,7 +1163,7 @@ render() {
                     cursor: pointer;
                     transition: transform .15s ease, opacity .15s ease;
                 }
-                .support-footer-text:hover{ transform: translateX(-50%) scale(1.1); opacity:.9; }
+                .support-footer-text:hover{ transform: scale(1.1); opacity:.9; }
                 
                 /* ========================= */
                 /*        Request Screen     */
@@ -1757,6 +1757,20 @@ render() {
                 <button class="ctx-cancel-btn" id="ctxCancelBtn">Cancel</button>
               </div>
             </div>
+            <!-- Context Privacy confirm Popup -->
+            <div class="data-overlay" id="ctxPrivacyOverlay" style="display:none;">
+              <div class="data-modal">
+                <div class="data-title">Leaving this site</div>
+                <div class="data-body">
+                  You’re about to leave this site and open our Privacy Policy in a new tab.
+                  Do you want to continue?
+                </div>
+                <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+                  <button class="data-btn" id="ctxPrivacyCancelBtn">Cancel</button>
+                  <button class="data-btn" id="ctxPrivacyContinueBtn">Continue</button>
+                </div>
+              </div>
+            </div>
             <div class="ctx-thanks" id="ctxThanks">
               <div class="ctx-thanks-title">Thank you!</div>
               <div class="ctx-thanks-text">Your request has been received. We’ll contact you soon.</div>
@@ -1867,6 +1881,20 @@ render() {
           <button class="data-btn" id="requestThanksOverlayClose">Close</button>
         </div>
         </div>
+      <!-- Privacy confirm Popup -->
+      <div class="data-overlay" id="privacyOverlay" style="display:none;">
+        <div class="data-modal">
+          <div class="data-title">Leaving this site</div>
+          <div class="data-body">
+            You’re about to leave this site and open our Privacy Policy in a new tab.
+            Do you want to continue?
+          </div>
+          <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+            <button class="data-btn" id="privacyCancelBtn">Cancel</button>
+            <button class="data-btn" id="privacyContinueBtn">Continue</button>
+          </div>
+        </div>
+      </div>
       </div>
 
       <!-- Support Screen (v2) -->
@@ -2870,6 +2898,47 @@ render() {
     btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
   };
   try { this.setupWhatDataPopup(); } catch {}
+
+  // Request: Privacy Policy confirm
+  this.setupPrivacyConfirm = () => {
+    const link = this.shadowRoot.querySelector('.request-privacy-link');
+    const overlay = this.shadowRoot.getElementById('privacyOverlay');
+    const btnCancel = this.shadowRoot.getElementById('privacyCancelBtn');
+    const btnContinue = this.shadowRoot.getElementById('privacyContinueBtn');
+    const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
+    if (link) {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (overlay) overlay.style.display = 'flex';
+      });
+    }
+    btnCancel?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
+    btnContinue?.addEventListener('click', () => {
+      try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { location.href = url; }
+      if (overlay) overlay.style.display = 'none';
+    });
+  };
+  try { this.setupPrivacyConfirm(); } catch {}
+  // Context: Privacy Policy confirm
+  this.setupContextPrivacyConfirm = () => {
+    const link = this.shadowRoot.querySelector('.ctx-privacy-link');
+    const overlay = this.shadowRoot.getElementById('ctxPrivacyOverlay');
+    const btnCancel = this.shadowRoot.getElementById('ctxPrivacyCancelBtn');
+    const btnContinue = this.shadowRoot.getElementById('ctxPrivacyContinueBtn');
+    const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
+    if (link) {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (overlay) overlay.style.display = 'flex';
+      });
+    }
+    btnCancel?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
+    btnContinue?.addEventListener('click', () => {
+      try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { location.href = url; }
+      if (overlay) overlay.style.display = 'none';
+    });
+  };
+  try { this.setupContextPrivacyConfirm(); } catch {}
   // Thread auto-scroll helper
   this._isThreadNearBottom = true;
   this.scrollThreadToBottom = (force = false) => {
