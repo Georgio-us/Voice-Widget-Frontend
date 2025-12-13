@@ -1897,6 +1897,40 @@ render() {
       </div>
       </div>
 
+      <!-- Cookie/Telemetry Consent Banner -->
+      <div class="data-overlay" id="cookieOverlay" style="display:none;">
+        <div class="data-modal">
+          <div class="data-title">Cookies & telemetry</div>
+          <div class="data-body">
+            We use cookies and collect usage data to improve the product. No third‑party ads or retargeting. You can change settings anytime.
+            <div class="cookie-manage" id="cookieManagePanel" style="margin-top:10px; display:none;">
+              <label style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+                <input type="checkbox" id="ccStrict" checked disabled>
+                <span>Strictly necessary (always enabled)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+                <input type="checkbox" id="ccPerformance" checked>
+                <span>Performance (timings, errors)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+                <input type="checkbox" id="ccAnalytics" checked>
+                <span>Analytics (anonymous usage)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+                <input type="checkbox" id="ccMarketing">
+                <span>Marketing (off — not used)</span>
+              </label>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; justify-content:center; margin-top:8px; flex-wrap:wrap;">
+            <button class="data-btn" id="cookieAcceptAllBtn">Accept all</button>
+            <button class="data-btn" id="cookieRejectAllBtn">Reject all</button>
+            <button class="data-btn" id="cookieManageBtn">Manage</button>
+            <button class="data-btn" id="cookieSaveBtn" style="display:none;">Save</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Support Screen (v2) -->
       <div class="support-screen hidden" id="supportScreen">
         <div class="voice-widget-container">
@@ -2018,6 +2052,65 @@ render() {
     } catch {}
     // Не блокируем прокрутку страницы при открытом виджете
   });
+
+  // --------- Cookie consent logic ---------
+  this._CONSENT_VERSION = 1;
+  this.getConsent = () => {
+    try {
+      const raw = localStorage.getItem('vw_cookie_consent');
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || obj.v !== this._CONSENT_VERSION) return null;
+      return obj;
+    } catch { return null; }
+  };
+  this.setConsent = (selections) => {
+    const obj = { v: this._CONSENT_VERSION, ts: Date.now(), selections: { ...selections, strictlyNecessary: true } };
+    try { localStorage.setItem('vw_cookie_consent', JSON.stringify(obj)); } catch {}
+    try { document.cookie = `vw_consent=v${this._CONSENT_VERSION}; path=/; SameSite=Lax`; } catch {}
+    return obj;
+  };
+  this.maybeShowCookieBanner = () => {
+    const consent = this.getConsent();
+    const overlay = this.shadowRoot.getElementById('cookieOverlay');
+    if (!consent && overlay) overlay.style.display = 'flex';
+  };
+  // Initialize consent UI handlers
+  this.setupCookieBanner = () => {
+    const overlay = this.shadowRoot.getElementById('cookieOverlay');
+    const manage = this.shadowRoot.getElementById('cookieManagePanel');
+    const btnAccept = this.shadowRoot.getElementById('cookieAcceptAllBtn');
+    const btnReject = this.shadowRoot.getElementById('cookieRejectAllBtn');
+    const btnManage = this.shadowRoot.getElementById('cookieManageBtn');
+    const btnSave = this.shadowRoot.getElementById('cookieSaveBtn');
+    const ccPerf = this.shadowRoot.getElementById('ccPerformance');
+    const ccAnal = this.shadowRoot.getElementById('ccAnalytics');
+    const ccMkt = this.shadowRoot.getElementById('ccMarketing');
+    btnAccept?.addEventListener('click', () => {
+      this.setConsent({ performance: true, analytics: true, marketing: false });
+      if (overlay) overlay.style.display = 'none';
+    });
+    btnReject?.addEventListener('click', () => {
+      this.setConsent({ performance: false, analytics: false, marketing: false });
+      if (overlay) overlay.style.display = 'none';
+    });
+    btnManage?.addEventListener('click', () => {
+      if (manage && btnSave) { manage.style.display = 'block'; btnSave.style.display = 'inline-block'; }
+    });
+    btnSave?.addEventListener('click', () => {
+      const selections = {
+        performance: !!ccPerf?.checked,
+        analytics: !!ccAnal?.checked,
+        marketing: !!ccMkt?.checked
+      };
+      this.setConsent(selections);
+      if (overlay) overlay.style.display = 'none';
+    });
+  };
+  try { this.setupCookieBanner(); } catch {}
+  // show on first open of widget
+  const _origLauncher = $("#launcher");
+  _origLauncher?.addEventListener("click", () => { try { this.maybeShowCookieBanner(); } catch {} }, { once: true });
 
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
