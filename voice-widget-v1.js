@@ -2974,19 +2974,110 @@ render() {
       const path = ev.composedPath ? ev.composedPath() : [];
       if (![issueList, issueSelect].some(el => path.includes(el))) toggleIssueList(false);
     }, { capture:true });
-    // Send (stub)
-    form?.querySelector('.support-send-btn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const text = (ta?.value || '').trim();
-      if (!text) { this.ui.showNotification('⚠️ Please describe the issue'); return; }
-      // Show thanks popup
-      form.style.display = 'none';
-      if (thanksOverlay) thanksOverlay.style.display = 'flex';
-      // reset input/chips
-      if (ta) ta.value = '';
-      if (issueLabel) issueLabel.textContent = 'Choose problem';
-      toggleIssueList(false);
-    });
+    // Send - отправка тикета на бэкенд
+    const sendBtn = form?.querySelector('.support-send-btn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        // Собираем данные формы
+        const message = (ta?.value || '').trim();
+        const problemType = (issueLabel?.textContent || 'Choose problem').trim();
+        
+        // Валидация: message обязателен
+        if (!message || message.length === 0) {
+          this.ui.showNotification('⚠️ Please describe the issue');
+          if (ta) {
+            ta.style.borderColor = '#ff4444';
+            setTimeout(() => { if (ta) ta.style.borderColor = ''; }, 2000);
+          }
+          return;
+        }
+        
+        // Валидация: problemType должен быть выбран (не "Choose problem")
+        if (!problemType || problemType === 'Choose problem') {
+          this.ui.showNotification('⚠️ Please choose a problem type');
+          if (issueSelect) {
+            issueSelect.style.borderColor = '#ff4444';
+            setTimeout(() => { if (issueSelect) issueSelect.style.borderColor = ''; }, 2000);
+          }
+          return;
+        }
+        
+        // Блокируем кнопку на время запроса
+        const originalText = sendBtn.textContent || sendBtn.innerHTML;
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = '0.6';
+        sendBtn.style.cursor = 'not-allowed';
+        if (sendBtn.textContent) {
+          sendBtn.textContent = 'Sending...';
+        } else {
+          sendBtn.innerHTML = 'Sending...';
+        }
+        
+        try {
+          // Получаем данные для отправки
+          const sessionId = this.sessionId || null;
+          const language = localStorage.getItem('vw_lang') || 'en';
+          const clientId = 'demo';
+          const extra = {
+            userAgent: navigator.userAgent,
+            widgetVersion: 'v1',
+            url: window.location.href
+          };
+          
+          // Формируем URL API (заменяем /api/audio/upload на /api/support)
+          const supportApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/support');
+          
+          // Отправляем запрос
+          const response = await fetch(supportApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              sessionId,
+              clientId,
+              problemType,
+              message,
+              language,
+              extra
+            })
+          });
+          
+          const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
+          
+          if (result?.ok === true) {
+            // Успешно отправлено → показываем thanks popup
+            form.style.display = 'none';
+            if (thanksOverlay) thanksOverlay.style.display = 'flex';
+            // Очищаем форму
+            if (ta) ta.value = '';
+            if (issueLabel) issueLabel.textContent = 'Choose problem';
+            toggleIssueList(false);
+          } else {
+            // Ошибка валидации или сервера
+            const errorMsg = result.error || 'Failed to submit support request. Please try again later.';
+            this.ui.showNotification(`❌ ${errorMsg}`);
+            console.error('❌ Support request submission error:', result);
+          }
+        } catch (err) {
+          // Ошибка сети или другая непредвиденная ошибка
+          console.error('❌ Support request network error:', err);
+          this.ui.showNotification('❌ Network error. Please check your connection and try again.');
+        } finally {
+          // Разблокируем кнопку
+          sendBtn.disabled = false;
+          sendBtn.style.opacity = '';
+          sendBtn.style.cursor = '';
+          if (sendBtn.textContent) {
+            sendBtn.textContent = originalText;
+          } else {
+            sendBtn.innerHTML = originalText;
+          }
+        }
+      });
+    }
     // Cancel → hide form back
     form?.querySelector('.support-cancel-btn')?.addEventListener('click', (e) => {
       e.preventDefault();
