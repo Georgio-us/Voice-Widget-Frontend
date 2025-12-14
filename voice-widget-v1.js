@@ -2043,8 +2043,27 @@ render() {
               <div class="data-overlay" id="supportThanksOverlay" style="display:none;">
                 <div class="data-modal">
                   <div class="data-title">Thank you!</div>
-                  <div class="data-body">Your message has been received. We’ll get back to you soon.</div>
+                  <div class="data-body">Your message has been received. We'll get back to you soon.</div>
                   <button class="data-btn" id="supportThanksOverlayClose">Close</button>
+                </div>
+              </div>
+              <!-- Support Spam Warning Popup -->
+              <div class="data-overlay" id="supportSpamWarningOverlay" style="display:none;">
+                <div class="data-modal">
+                  <div class="data-title">Повторная отправка</div>
+                  <div class="data-body">Вы уже отправили заявку, желаете сделать это повторно?</div>
+                  <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+                    <button class="data-btn" id="supportSpamWarningCancelBtn">Отмена</button>
+                    <button class="data-btn" id="supportSpamWarningContinueBtn">Продолжить</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Support Spam Block Popup -->
+              <div class="data-overlay" id="supportSpamBlockOverlay" style="display:none;">
+                <div class="data-modal">
+                  <div class="data-title">Повторная отправка</div>
+                  <div class="data-body">Вы уже отправили заявку, и сможете отправить её повторно через <span id="supportSpamBlockTimer">60</span> секунд.</div>
+                  <button class="data-btn" id="supportSpamBlockCloseBtn">Понятно</button>
                 </div>
               </div>
           </div>
@@ -3004,18 +3023,76 @@ render() {
           return;
         }
         
-        // Блокируем кнопку на время запроса
-        const originalText = sendBtn.textContent || sendBtn.innerHTML;
-        sendBtn.disabled = true;
-        sendBtn.style.opacity = '0.6';
-        sendBtn.style.cursor = 'not-allowed';
-        if (sendBtn.textContent) {
-          sendBtn.textContent = 'Sending...';
-        } else {
-          sendBtn.innerHTML = 'Sending...';
+        // Проверка защиты от спама (отдельная для support)
+        const formType = 'support';
+        const submitCount = this.leadSpamProtection.getSubmitCount(formType);
+        const isBlocked = this.leadSpamProtection.isBlocked(formType);
+        const warningShown = this.leadSpamProtection.isWarningShown(formType);
+        
+        // Если заблокирован - показываем поп-ап блокировки
+        if (isBlocked) {
+          const blockOverlay = this.shadowRoot.getElementById('supportSpamBlockOverlay');
+          const timerEl = this.shadowRoot.getElementById('supportSpamBlockTimer');
+          if (blockOverlay && timerEl) {
+            const updateTimer = () => {
+              const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
+              if (timerEl) timerEl.textContent = left;
+              if (left > 0) {
+                setTimeout(updateTimer, 1000);
+              } else {
+                if (blockOverlay) blockOverlay.style.display = 'none';
+              }
+            };
+            updateTimer();
+            blockOverlay.style.display = 'flex';
+          }
+          return;
         }
         
-        try {
+        // Если счетчик уже 2 (после нажатия "Продолжить" во второй раз) - устанавливаем блокировку ПЕРЕД отправкой
+        if (submitCount === 2) {
+          this.leadSpamProtection.setBlocked(formType);
+          const blockOverlay = this.shadowRoot.getElementById('supportSpamBlockOverlay');
+          const timerEl = this.shadowRoot.getElementById('supportSpamBlockTimer');
+          if (blockOverlay && timerEl) {
+            const updateTimer = () => {
+              const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
+              if (timerEl) timerEl.textContent = left;
+              if (left > 0) {
+                setTimeout(updateTimer, 1000);
+              } else {
+                if (blockOverlay) blockOverlay.style.display = 'none';
+              }
+            };
+            updateTimer();
+            blockOverlay.style.display = 'flex';
+          }
+          return;
+        }
+        
+        // Если вторая отправка и предупреждение еще не показывали - показываем поп-ап предупреждения
+        if (submitCount === 1 && !warningShown) {
+          const warningOverlay = this.shadowRoot.getElementById('supportSpamWarningOverlay');
+          if (warningOverlay) {
+            warningOverlay.style.display = 'flex';
+          }
+          return;
+        }
+        
+        // Отправляем данные на бэкенд
+        const submitSupportRequest = async () => {
+          // Блокируем кнопку на время запроса
+          const originalText = sendBtn.textContent || sendBtn.innerHTML;
+          sendBtn.disabled = true;
+          sendBtn.style.opacity = '0.6';
+          sendBtn.style.cursor = 'not-allowed';
+          if (sendBtn.textContent) {
+            sendBtn.textContent = 'Sending...';
+          } else {
+            sendBtn.innerHTML = 'Sending...';
+          }
+          
+          try {
           // Получаем данные для отправки
           const sessionId = this.sessionId || null;
           const language = localStorage.getItem('vw_lang') || 'en';
@@ -3045,37 +3122,48 @@ render() {
             })
           });
           
-          const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
-          
-          if (result?.ok === true) {
-            // Успешно отправлено → показываем thanks popup
-            form.style.display = 'none';
-            if (thanksOverlay) thanksOverlay.style.display = 'flex';
-            // Очищаем форму
-            if (ta) ta.value = '';
-            if (issueLabel) issueLabel.textContent = 'Choose problem';
-            toggleIssueList(false);
-          } else {
-            // Ошибка валидации или сервера
-            const errorMsg = result.error || 'Failed to submit support request. Please try again later.';
-            this.ui.showNotification(`❌ ${errorMsg}`);
-            console.error('❌ Support request submission error:', result);
+            const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
+            
+            if (result?.ok === true) {
+              // Успешно отправлено → показываем thanks popup
+              form.style.display = 'none';
+              if (thanksOverlay) thanksOverlay.style.display = 'flex';
+              // Очищаем форму
+              if (ta) ta.value = '';
+              if (issueLabel) issueLabel.textContent = 'Choose problem';
+              toggleIssueList(false);
+              
+              // Увеличиваем счетчик отправок (если еще не увеличен при нажатии "Продолжить")
+              const currentCount = this.leadSpamProtection.getSubmitCount(formType);
+              // Увеличиваем только если счетчик еще не был увеличен (не был нажат "Продолжить")
+              if (currentCount < 2) {
+                this.leadSpamProtection.incrementSubmitCount(formType);
+              }
+            } else {
+              // Ошибка валидации или сервера
+              const errorMsg = result.error || 'Failed to submit support request. Please try again later.';
+              this.ui.showNotification(`❌ ${errorMsg}`);
+              console.error('❌ Support request submission error:', result);
+            }
+          } catch (err) {
+            // Ошибка сети или другая непредвиденная ошибка
+            console.error('❌ Support request network error:', err);
+            this.ui.showNotification('❌ Network error. Please check your connection and try again.');
+          } finally {
+            // Разблокируем кнопку
+            sendBtn.disabled = false;
+            sendBtn.style.opacity = '';
+            sendBtn.style.cursor = '';
+            if (sendBtn.textContent) {
+              sendBtn.textContent = originalText;
+            } else {
+              sendBtn.innerHTML = originalText;
+            }
           }
-        } catch (err) {
-          // Ошибка сети или другая непредвиденная ошибка
-          console.error('❌ Support request network error:', err);
-          this.ui.showNotification('❌ Network error. Please check your connection and try again.');
-        } finally {
-          // Разблокируем кнопку
-          sendBtn.disabled = false;
-          sendBtn.style.opacity = '';
-          sendBtn.style.cursor = '';
-          if (sendBtn.textContent) {
-            sendBtn.textContent = originalText;
-          } else {
-            sendBtn.innerHTML = originalText;
-          }
-        }
+        };
+        
+        // Вызываем асинхронную функцию отправки
+        submitSupportRequest();
       });
     }
     // Cancel → hide form back
@@ -3109,6 +3197,38 @@ render() {
       if (issueLabel) issueLabel.textContent = 'Choose problem';
       toggleIssueList(false);
     });
+    // Обработчик закрытия поп-апа блокировки для support form
+    this.shadowRoot.getElementById('supportSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const blockOverlay = this.shadowRoot.getElementById('supportSpamBlockOverlay');
+      if (blockOverlay) blockOverlay.style.display = 'none';
+    });
+    // Обработчики поп-апа предупреждения для support form
+    const supportWarningOverlay = this.shadowRoot.getElementById('supportSpamWarningOverlay');
+    const supportWarningCancelBtn = this.shadowRoot.getElementById('supportSpamWarningCancelBtn');
+    const supportWarningContinueBtn = this.shadowRoot.getElementById('supportSpamWarningContinueBtn');
+    if (supportWarningCancelBtn) {
+      supportWarningCancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (supportWarningOverlay) supportWarningOverlay.style.display = 'none';
+        this.leadSpamProtection.setWarningShown('support');
+      });
+    }
+    if (supportWarningContinueBtn) {
+      supportWarningContinueBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (supportWarningOverlay) supportWarningOverlay.style.display = 'none';
+        this.leadSpamProtection.setWarningShown('support');
+        // Увеличиваем счетчик ДО отправки, чтобы третья попытка сразу показывала блокировку
+        this.leadSpamProtection.incrementSubmitCount('support');
+        // Продолжаем отправку после закрытия поп-апа
+        // Вызываем обработчик кнопки отправки напрямую
+        if (sendBtn) {
+          // Эмулируем клик для повторной отправки
+          sendBtn.click();
+        }
+      });
+    }
   };
   try { this.setupSupportForm(); } catch {}
   
