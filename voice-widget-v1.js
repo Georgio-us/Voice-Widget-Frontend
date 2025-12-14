@@ -2398,12 +2398,78 @@ render() {
         return;
       }
       if (!consent) { showConsentError(true); shake(root.querySelector('.request-consent')); return; }
-      // submit stub → show thanks popup
-      if (thanksOverlay) thanksOverlay.style.display = 'flex';
-      // optional: clear
-      ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
-      if (get('reqConsent')) get('reqConsent').checked = false;
-      showContactError(false); showConsentError(false);
+      
+      // Отправляем данные на бэкенд
+      const submitLead = async () => {
+        try {
+          // Получаем базовый URL API (заменяем /api/audio/upload на /api/leads)
+          const leadsApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
+          
+          // Получаем значения формы
+          const comment = get('reqComment')?.value?.trim() || null;
+          const preferredMethodRaw = get('reqMethod')?.value || 'WhatsApp';
+          
+          // Нормализуем preferredContactMethod: WhatsApp -> whatsapp, Phone Call -> phone, Email -> email, Telegram -> telegram
+          const methodMap = {
+            'WhatsApp': 'whatsapp',
+            'Phone Call': 'phone',
+            'Email': 'email',
+            'Telegram': 'telegram'
+          };
+          // По умолчанию используем whatsapp, если метод не найден в мапе
+          const preferredContactMethod = methodMap[preferredMethodRaw] || 'whatsapp';
+          
+          // Получаем язык из localStorage
+          const language = localStorage.getItem('vw_lang') || 'ru';
+          
+          // Формируем данные для отправки
+          const leadData = {
+            sessionId: this.sessionId || null,
+            source: 'widget_full_form',
+            name: name,
+            phoneCountryCode: code || null,
+            phoneNumber: phone || null,
+            email: email || null,
+            preferredContactMethod: preferredContactMethod,
+            comment: comment,
+            language: language,
+            propertyId: null, // пока не передаём
+            consent: true
+          };
+          
+          // Отправляем запрос
+          const response = await fetch(leadsApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(leadData)
+          });
+          
+          const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
+          
+          if (result.ok === true) {
+            // Успешно отправлено → показываем thanks popup
+            if (thanksOverlay) thanksOverlay.style.display = 'flex';
+            // Очищаем форму
+            ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
+            if (get('reqConsent')) get('reqConsent').checked = false;
+            showContactError(false); showConsentError(false);
+          } else {
+            // Ошибка валидации или сервера
+            const errorMsg = result.error || 'Failed to submit request. Please try again later.';
+            showContactError(true, errorMsg);
+            console.error('❌ Lead submission error:', result);
+          }
+        } catch (err) {
+          // Ошибка сети или другая непредвиденная ошибка
+          console.error('❌ Lead submission network error:', err);
+          showContactError(true, 'Network error. Please check your connection and try again.');
+        }
+      };
+      
+      // Вызываем асинхронную функцию отправки
+      submitLead();
     });
     cancelBtn?.addEventListener('click', (e) => {
       e.preventDefault();
