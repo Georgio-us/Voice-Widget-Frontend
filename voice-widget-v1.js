@@ -98,6 +98,29 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  getConsent() {
+    try {
+      const raw =
+        localStorage.getItem('vw_cookie_consent') ||
+        localStorage.getItem('vw_consent') ||
+        null;
+
+      if (!raw) return null;
+
+      if (raw === 'accepted') {
+        return { selections: { analytics: true } };
+      }
+
+      if (raw === 'rejected') {
+        return { selections: { analytics: false } };
+      }
+
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
   // ---------- UI init ----------
   initializeUI() {
     this.ui.initializeUI();
