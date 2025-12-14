@@ -1813,8 +1813,27 @@ render() {
               <div class="data-overlay" id="ctxThanksOverlay" style="display:none;">
                 <div class="data-modal">
                   <div class="data-title">Thank you!</div>
-                  <div class="data-body">Your request has been received. We’ll contact you soon.</div>
+                  <div class="data-body">Your request has been received. We'll contact you soon.</div>
                   <button class="data-btn" id="ctxThanksOverlayClose">Close</button>
+                </div>
+              </div>
+              <!-- Context Spam Warning Popup -->
+              <div class="data-overlay" id="ctxSpamWarningOverlay" style="display:none;">
+                <div class="data-modal">
+                  <div class="data-title">Повторная отправка</div>
+                  <div class="data-body">Вы уже отправили заявку, желаете сделать это повторно?</div>
+                  <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+                    <button class="data-btn" id="ctxSpamWarningCancelBtn">Отмена</button>
+                    <button class="data-btn" id="ctxSpamWarningContinueBtn">Продолжить</button>
+                  </div>
+                </div>
+              </div>
+              <!-- Context Spam Block Popup -->
+              <div class="data-overlay" id="ctxSpamBlockOverlay" style="display:none;">
+                <div class="data-modal">
+                  <div class="data-title">Повторная отправка</div>
+                  <div class="data-body">Вы уже отправили заявку, и сможете отправить её повторно через <span id="ctxSpamBlockTimer">60</span> секунд.</div>
+                  <button class="data-btn" id="ctxSpamBlockCloseBtn">Понятно</button>
                 </div>
               </div>
             <!-- What data do we know popup -->
@@ -1910,10 +1929,29 @@ render() {
       <div class="data-overlay" id="requestThanksOverlay" style="display:none;">
         <div class="data-modal">
           <div class="data-title">Thank you!</div>
-          <div class="data-body">Your request has been received. We’ll contact you soon.</div>
+          <div class="data-body">Your request has been received. We'll contact you soon.</div>
           <button class="data-btn" id="requestThanksOverlayClose">Close</button>
         </div>
         </div>
+      <!-- Request Spam Warning Popup -->
+      <div class="data-overlay" id="requestSpamWarningOverlay" style="display:none;">
+        <div class="data-modal">
+          <div class="data-title">Повторная отправка</div>
+          <div class="data-body">Вы уже отправили заявку, желаете сделать это повторно?</div>
+          <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
+            <button class="data-btn" id="requestSpamWarningCancelBtn">Отмена</button>
+            <button class="data-btn" id="requestSpamWarningContinueBtn">Продолжить</button>
+          </div>
+        </div>
+      </div>
+      <!-- Request Spam Block Popup -->
+      <div class="data-overlay" id="requestSpamBlockOverlay" style="display:none;">
+        <div class="data-modal">
+          <div class="data-title">Повторная отправка</div>
+          <div class="data-body">Вы уже отправили заявку, и сможете отправить её повторно через <span id="requestSpamBlockTimer">60</span> секунд.</div>
+          <button class="data-btn" id="requestSpamBlockCloseBtn">Понятно</button>
+        </div>
+      </div>
       <!-- Privacy confirm Popup -->
       <div class="data-overlay" id="privacyOverlay" style="display:none;">
         <div class="data-modal">
@@ -2217,6 +2255,100 @@ render() {
 
   // (legacy header/details and overlay lead panel handlers removed)
 
+  // Утилита для защиты от спама лид-форм
+  this.leadSpamProtection = {
+    // Получить ключи для sessionStorage
+    getKeys: (formType) => ({
+      count: `vw_lead_submit_count_${formType}`,
+      warningShown: `vw_lead_warning_shown_${formType}`,
+      blockedUntil: `vw_lead_blocked_until_${formType}`
+    }),
+    
+    // Получить количество отправок
+    getSubmitCount: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        const count = sessionStorage.getItem(keys.count);
+        return count ? parseInt(count, 10) : 0;
+      } catch {
+        return 0;
+      }
+    },
+    
+    // Увеличить счетчик отправок
+    incrementSubmitCount: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        const current = this.leadSpamProtection.getSubmitCount(formType);
+        sessionStorage.setItem(keys.count, String(current + 1));
+      } catch {}
+    },
+    
+    // Проверить, был ли показан поп-ап предупреждения
+    isWarningShown: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        return sessionStorage.getItem(keys.warningShown) === 'true';
+      } catch {
+        return false;
+      }
+    },
+    
+    // Отметить, что поп-ап предупреждения был показан
+    setWarningShown: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        sessionStorage.setItem(keys.warningShown, 'true');
+      } catch {}
+    },
+    
+    // Проверить, заблокирован ли пользователь
+    isBlocked: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        const blockedUntil = sessionStorage.getItem(keys.blockedUntil);
+        if (!blockedUntil) return false;
+        const timestamp = parseInt(blockedUntil, 10);
+        return Date.now() < timestamp;
+      } catch {
+        return false;
+      }
+    },
+    
+    // Получить оставшееся время блокировки в секундах
+    getBlockedTimeLeft: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        const blockedUntil = sessionStorage.getItem(keys.blockedUntil);
+        if (!blockedUntil) return 0;
+        const timestamp = parseInt(blockedUntil, 10);
+        const left = Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
+        return left;
+      } catch {
+        return 0;
+      }
+    },
+    
+    // Установить блокировку на 60 секунд
+    setBlocked: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        const blockedUntil = Date.now() + 60000; // 60 секунд
+        sessionStorage.setItem(keys.blockedUntil, String(blockedUntil));
+      } catch {}
+    },
+    
+    // Сбросить защиту (после успешной отправки после предупреждения)
+    reset: (formType) => {
+      try {
+        const keys = this.leadSpamProtection.getKeys(formType);
+        sessionStorage.removeItem(keys.count);
+        sessionStorage.removeItem(keys.warningShown);
+        sessionStorage.removeItem(keys.blockedUntil);
+      } catch {}
+    }
+  };
+
   // Request Screen (v2) — без логики на данном этапе
   // Add basic validation and submit behavior
   this.setupRequestForm = () => {
@@ -2399,6 +2531,62 @@ render() {
       }
       if (!consent) { showConsentError(true); shake(root.querySelector('.request-consent')); return; }
       
+      // Проверка защиты от спама (общая для обеих форм)
+      const formType = 'lead'; // Общий тип для full и short форм
+      const submitCount = this.leadSpamProtection.getSubmitCount(formType);
+      const isBlocked = this.leadSpamProtection.isBlocked(formType);
+      const warningShown = this.leadSpamProtection.isWarningShown(formType);
+      
+      // Если заблокирован - показываем поп-ап блокировки
+      if (isBlocked) {
+        const blockOverlay = get('requestSpamBlockOverlay');
+        const timerEl = get('requestSpamBlockTimer');
+        if (blockOverlay && timerEl) {
+          const updateTimer = () => {
+            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
+            if (timerEl) timerEl.textContent = left;
+            if (left > 0) {
+              setTimeout(updateTimer, 1000);
+            } else {
+              if (blockOverlay) blockOverlay.style.display = 'none';
+            }
+          };
+          updateTimer();
+          blockOverlay.style.display = 'flex';
+        }
+        return;
+      }
+      
+      // Если счетчик уже 2 (после нажатия "Продолжить" во второй раз) - устанавливаем блокировку ПЕРЕД отправкой
+      if (submitCount === 2) {
+        this.leadSpamProtection.setBlocked(formType);
+        const blockOverlay = get('requestSpamBlockOverlay');
+        const timerEl = get('requestSpamBlockTimer');
+        if (blockOverlay && timerEl) {
+          const updateTimer = () => {
+            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
+            if (timerEl) timerEl.textContent = left;
+            if (left > 0) {
+              setTimeout(updateTimer, 1000);
+            } else {
+              if (blockOverlay) blockOverlay.style.display = 'none';
+            }
+          };
+          updateTimer();
+          blockOverlay.style.display = 'flex';
+        }
+        return;
+      }
+      
+      // Если вторая отправка и предупреждение еще не показывали - показываем поп-ап предупреждения
+      if (submitCount === 1 && !warningShown) {
+        const warningOverlay = get('requestSpamWarningOverlay');
+        if (warningOverlay) {
+          warningOverlay.style.display = 'flex';
+        }
+        return;
+      }
+      
       // Отправляем данные на бэкенд
       const submitLead = async () => {
         try {
@@ -2448,13 +2636,22 @@ render() {
           
           const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
           
-          if (result.ok === true) {
+          if (result?.ok === true) {
             // Успешно отправлено → показываем thanks popup
             if (thanksOverlay) thanksOverlay.style.display = 'flex';
             // Очищаем форму
             ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
             if (get('reqConsent')) get('reqConsent').checked = false;
             showContactError(false); showConsentError(false);
+            
+            // Увеличиваем счетчик отправок
+            const submitCount = this.leadSpamProtection.getSubmitCount(formType);
+            this.leadSpamProtection.incrementSubmitCount(formType);
+            
+            // Если это третья отправка (submitCount был 2, стал 3) - устанавливаем блокировку
+            if (submitCount === 2) {
+              this.leadSpamProtection.setBlocked(formType);
+            }
           } else {
             // Ошибка валидации или сервера
             const errorMsg = result.error || 'Failed to submit request. Please try again later.';
@@ -2468,8 +2665,10 @@ render() {
         }
       };
       
-      // Вызываем асинхронную функцию отправки
-      submitLead();
+      // Вызываем асинхронную функцию отправки (если не показан поп-ап предупреждения)
+      if (!(submitCount === 1 && !warningShown)) {
+        submitLead();
+      }
     });
     cancelBtn?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -2483,6 +2682,39 @@ render() {
       e.preventDefault();
       if (thanksOverlay) thanksOverlay.style.display = 'none';
     });
+    // Обработчик закрытия поп-апа блокировки
+    root.getElementById('requestSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const blockOverlay = root.getElementById('requestSpamBlockOverlay');
+      if (blockOverlay) blockOverlay.style.display = 'none';
+    });
+    // Обработчики поп-апа предупреждения для full form
+    const requestWarningOverlay = root.getElementById('requestSpamWarningOverlay');
+    const requestWarningCancelBtn = root.getElementById('requestSpamWarningCancelBtn');
+    const requestWarningContinueBtn = root.getElementById('requestSpamWarningContinueBtn');
+    if (requestWarningCancelBtn) {
+      requestWarningCancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (requestWarningOverlay) requestWarningOverlay.style.display = 'none';
+        this.leadSpamProtection.setWarningShown('lead');
+      });
+    }
+    if (requestWarningContinueBtn) {
+      requestWarningContinueBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (requestWarningOverlay) requestWarningOverlay.style.display = 'none';
+        this.leadSpamProtection.setWarningShown('lead');
+        // Увеличиваем счетчик ДО отправки, чтобы третья попытка сразу показывала блокировку
+        this.leadSpamProtection.incrementSubmitCount('lead');
+        // Продолжаем отправку после закрытия поп-апа
+        // Вызываем обработчик кнопки отправки напрямую
+        const sendBtn = root.querySelector('.request-send-btn');
+        if (sendBtn) {
+          // Эмулируем клик для повторной отправки
+          sendBtn.click();
+        }
+      });
+    }
   };
   try { this.setupRequestForm(); } catch {}
  
@@ -3037,10 +3269,21 @@ render() {
     this.shadowRoot.getElementById('ctxSendBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       // validation
+      const name = get('ctxName')?.value?.trim() || '';
       const code = get('ctxCode')?.value?.trim() || '';
       const phone = get('ctxPhone')?.value?.trim() || '';
       const email = get('ctxEmail')?.value?.trim() || '';
       const consent = !!get('ctxConsent')?.checked;
+      
+      // Валидация имени
+      if (!name || name.length === 0) {
+        markError(get('ctxName'), true);
+        shake(get('ctxName'));
+        showContactError(true, 'Name is required');
+        if (!consent) showConsentError(true);
+        return;
+      }
+      
       const phoneOk = isPhone(code, phone);
       const emailOk = isEmail(email);
       const contactOk = phoneOk || emailOk;
@@ -3058,6 +3301,7 @@ render() {
       if (contactOk) {
         markError(get('ctxPhone'), false);
         markError(get('ctxEmail'), false);
+        markError(get('ctxName'), false);
         showContactError(false);
       } else {
         markError(get('ctxPhone'), phoneHas && !phoneOk);
@@ -3069,13 +3313,174 @@ render() {
         return;
       }
       if (!consent) { showConsentError(true); shake(form.querySelector('.ctx-consent')); return; }
-      // show thanks popup instead of returning button
-      form.style.display = 'none';
-      if (thanksOverlay) thanksOverlay.style.display = 'flex';
-      // clear fields
-      ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.shadowRoot.getElementById(id); if (el) el.value=''; });
-      const c = this.shadowRoot.getElementById('ctxConsent'); if (c) c.checked = false;
-      showContactError(false); showConsentError(false);
+      
+      // Проверка защиты от спама (общая для обеих форм)
+      const formType = 'lead'; // Общий тип для full и short форм
+      const submitCount = this.leadSpamProtection.getSubmitCount(formType);
+      const isBlocked = this.leadSpamProtection.isBlocked(formType);
+      const warningShown = this.leadSpamProtection.isWarningShown(formType);
+      
+      // Если заблокирован - показываем поп-ап блокировки
+      if (isBlocked) {
+        const blockOverlay = get('ctxSpamBlockOverlay');
+        const timerEl = get('ctxSpamBlockTimer');
+        if (blockOverlay && timerEl) {
+          const updateTimer = () => {
+            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
+            if (timerEl) timerEl.textContent = left;
+            if (left > 0) {
+              setTimeout(updateTimer, 1000);
+            } else {
+              if (blockOverlay) blockOverlay.style.display = 'none';
+            }
+          };
+          updateTimer();
+          blockOverlay.style.display = 'flex';
+        }
+        return;
+      }
+      
+      // Если счетчик уже 2 (после нажатия "Продолжить" во второй раз) - устанавливаем блокировку ПЕРЕД отправкой
+      if (submitCount === 2) {
+        this.leadSpamProtection.setBlocked(formType);
+        const blockOverlay = get('ctxSpamBlockOverlay');
+        const timerEl = get('ctxSpamBlockTimer');
+        if (blockOverlay && timerEl) {
+          const updateTimer = () => {
+            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
+            if (timerEl) timerEl.textContent = left;
+            if (left > 0) {
+              setTimeout(updateTimer, 1000);
+            } else {
+              if (blockOverlay) blockOverlay.style.display = 'none';
+            }
+          };
+          updateTimer();
+          blockOverlay.style.display = 'flex';
+        }
+        return;
+      }
+      
+      // Если вторая отправка и предупреждение еще не показывали - показываем поп-ап предупреждения
+      if (submitCount === 1 && !warningShown) {
+        const warningOverlay = get('ctxSpamWarningOverlay');
+        if (warningOverlay) {
+          warningOverlay.style.display = 'flex';
+        }
+        return;
+      }
+      
+      // Отправляем данные на бэкенд
+      const submitShortFormLead = async () => {
+        try {
+          // Получаем базовый URL API (заменяем /api/audio/upload на /api/leads)
+          const leadsApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
+          
+          // Получаем язык из localStorage
+          const language = localStorage.getItem('vw_lang') || 'ru';
+          
+          // Формируем данные для отправки (short form не имеет preferredContactMethod и comment)
+          const leadData = {
+            sessionId: this.sessionId || null,
+            source: 'widget_short_form',
+            name: name,
+            phoneCountryCode: code || null,
+            phoneNumber: phone || null,
+            email: email || null,
+            preferredContactMethod: 'phone', // по умолчанию для short form
+            comment: null, // short form не имеет поля комментария
+            language: language,
+            propertyId: null, // пока не передаём
+            consent: true
+          };
+          
+          // Отправляем запрос
+          const response = await fetch(leadsApiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(leadData)
+          });
+          
+          const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
+          
+          if (result?.ok === true) {
+            // Успешно отправлено → показываем thanks popup
+            form.style.display = 'none';
+            if (thanksOverlay) thanksOverlay.style.display = 'flex';
+            // Очищаем поля
+            ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.shadowRoot.getElementById(id); if (el) el.value=''; });
+            const c = this.shadowRoot.getElementById('ctxConsent'); if (c) c.checked = false;
+            showContactError(false); showConsentError(false);
+            
+            // Увеличиваем счетчик отправок (если еще не увеличен при нажатии "Продолжить")
+            const currentCount = this.leadSpamProtection.getSubmitCount(formType);
+            // Увеличиваем только если счетчик еще не был увеличен (не был нажат "Продолжить")
+            if (currentCount < 2) {
+              this.leadSpamProtection.incrementSubmitCount(formType);
+            }
+            
+            // Телеметрия: логируем успешную отправку short form
+            try {
+              logTelemetry(TelemetryEventTypes.LEAD_FORM_SUBMIT, {
+                formType: 'short',
+                sessionId: this.sessionId || null,
+                language: language,
+                hasComment: false,
+                preferredContactMethod: 'phone',
+                leadId: result.leadId || null
+              });
+            } catch (err) {
+              console.error('❌ Failed to log LEAD_FORM_SUBMIT:', err);
+            }
+          } else {
+            // Ошибка валидации или сервера
+            const errorMsg = result.error || 'Failed to submit request. Please try again later.';
+            showContactError(true, errorMsg);
+            console.error('❌ Lead submission error:', result);
+            
+            // Телеметрия: логируем ошибку отправки
+            try {
+              logTelemetry(TelemetryEventTypes.LEAD_FORM_ERROR, {
+                formType: 'short',
+                sessionId: this.sessionId || null,
+                language: language,
+                error: errorMsg
+              });
+            } catch (err) {
+              console.error('❌ Failed to log LEAD_FORM_ERROR:', err);
+            }
+          }
+        } catch (err) {
+          // Ошибка сети или другая непредвиденная ошибка
+          console.error('❌ Lead submission network error:', err);
+          showContactError(true, 'Network error. Please check your connection and try again.');
+          
+          // Телеметрия: логируем сетевую ошибку
+          try {
+            logTelemetry(TelemetryEventTypes.LEAD_FORM_ERROR, {
+              formType: 'short',
+              sessionId: this.sessionId || null,
+              language: localStorage.getItem('vw_lang') || 'ru',
+              error: 'Network error'
+            });
+          } catch (telemetryErr) {
+            console.error('❌ Failed to log LEAD_FORM_ERROR:', telemetryErr);
+          }
+        }
+      };
+      
+      // Вызываем асинхронную функцию отправки (если не показан поп-ап предупреждения)
+      if (!(submitCount === 1 && !warningShown)) {
+        submitShortFormLead();
+      }
+    });
+    // Обработчик закрытия поп-апа блокировки для short form
+    this.shadowRoot.getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const blockOverlay = this.shadowRoot.getElementById('ctxSpamBlockOverlay');
+      if (blockOverlay) blockOverlay.style.display = 'none';
     });
     this.shadowRoot.getElementById('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -3089,6 +3494,39 @@ render() {
       btn.parentElement.style.display = 'block';
       if (ctxHint) ctxHint.style.display = '';
     });
+    // Обработчик закрытия поп-апа блокировки для short form
+    this.shadowRoot.getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const blockOverlay = this.shadowRoot.getElementById('ctxSpamBlockOverlay');
+      if (blockOverlay) blockOverlay.style.display = 'none';
+    });
+    // Обработчики поп-апа предупреждения для short form
+    const ctxWarningOverlay = this.shadowRoot.getElementById('ctxSpamWarningOverlay');
+    const ctxWarningCancelBtn = this.shadowRoot.getElementById('ctxSpamWarningCancelBtn');
+    const ctxWarningContinueBtn = this.shadowRoot.getElementById('ctxSpamWarningContinueBtn');
+    if (ctxWarningCancelBtn) {
+      ctxWarningCancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (ctxWarningOverlay) ctxWarningOverlay.style.display = 'none';
+        this.leadSpamProtection.setWarningShown('lead');
+      });
+    }
+    if (ctxWarningContinueBtn) {
+      ctxWarningContinueBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (ctxWarningOverlay) ctxWarningOverlay.style.display = 'none';
+        this.leadSpamProtection.setWarningShown('lead');
+        // Увеличиваем счетчик ДО отправки, чтобы третья попытка сразу показывала блокировку
+        this.leadSpamProtection.incrementSubmitCount('lead');
+        // Продолжаем отправку после закрытия поп-апа
+        // Вызываем обработчик кнопки отправки напрямую
+        const sendBtn = this.shadowRoot.getElementById('ctxSendBtn');
+        if (sendBtn) {
+          // Эмулируем клик для повторной отправки
+          sendBtn.click();
+        }
+      });
+    }
   };
   try { this.setupContextRequestForm(); } catch {}
   
