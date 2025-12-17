@@ -122,7 +122,9 @@ export class APIClient {
       switch (name) {
         case 'cards.list':
         case 'cards.search_wider': {
-          // ожидаем фильтры в args: city/district/rooms/type/minPrice/maxPrice/limit
+          // 🆕 Sprint I: client-driven путь изолирован — карточки не показываются
+          // Оставляем только сохранение для совместимости, но без визуального показа
+          // Показ карточек возможен только через server response.cards[]
           const cards = await this.fetchCardsSearch(args);
           this._rememberProposed(cards);
 
@@ -131,16 +133,16 @@ export class APIClient {
             return;
           }
 
-          // Минимальный UX: предложить первую карточку (как сейчас)
-          if (!this.disableServerUI) {
-            try { this.widget.suggestCardOption(cards[0]); } catch {}
-          }
+          // ⚠️ Изолировано: визуальный показ карточек удалён из client-driven пути
+          // Карточки могут быть показаны только через server response.cards[]
           break;
         }
 
         case 'cards.show':
         case 'cards.more_like_this': {
-          // ожидаем args.id / args.external_id / args.property_id
+          // 🆕 Sprint I: client-driven путь изолирован — карточки не показываются
+          // Оставляем только сохранение для совместимости, но без визуального показа
+          // Показ карточек возможен только через server response.cards[]
           const id = args.id || args.external_id || args.property_id || null;
 
           let card = null;
@@ -159,17 +161,11 @@ export class APIClient {
 
           const cardId = card.id || card.external_id || null;
 
-          // Отрисовываем карточку (у тебя уже реализовано)
-          if (typeof this.widget.showMockCardWithActions === 'function') {
-            this.widget.showMockCardWithActions(card);
-          } else {
-            // fallback: хотя бы предложить опцию
-            this.widget.suggestCardOption?.(card);
-          }
-
-          // Фиксируем факт показа (infra)
+          // ⚠️ Изолировано: визуальный показ карточек удалён из client-driven пути
+          // Карточки могут быть показаны только через server response.cards[]
+          // Сохраняем для совместимости, но не показываем визуально
           this._rememberShown(cardId);
-          this._notifyShownToServer(cardId);
+          // Уведомление сервера о показе также изолировано (не вызывается без server-driven показа)
 
           break;
         }
@@ -196,6 +192,12 @@ export class APIClient {
           const migrated = this.widget.understanding.migrateInsights(data.insights);
           this.widget.understanding.update(migrated);
           console.log('📥 Загружены данные сессии:', data);
+        }
+        // 🆕 Sprint I: сохраняем role из server response (read-only)
+        if (data?.role !== undefined) {
+          this.widget.role = data.role;
+        } else {
+          console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
         }
       }
     } catch {
@@ -242,9 +244,16 @@ export class APIClient {
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
 
+      // 🆕 Sprint I: сохраняем role из server response (read-only)
+      if (data?.role !== undefined) {
+        this.widget.role = data.role;
+      } else {
+        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+      }
+
       console.log('📥 Ответ на текст:', {
         sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
       });
 
       this.widget.ui.hideLoading();
@@ -313,9 +322,16 @@ export class APIClient {
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
 
+      // 🆕 Sprint I: сохраняем role из server response (read-only)
+      if (data?.role !== undefined) {
+        this.widget.role = data.role;
+      } else {
+        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+      }
+
       console.log('📥 Ответ на текст (main):', {
         sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
       });
 
       this.widget.ui.hideLoading();
@@ -426,9 +442,16 @@ export class APIClient {
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
 
+      // 🆕 Sprint I: сохраняем role из server response (read-only)
+      if (data?.role !== undefined) {
+        this.widget.role = data.role;
+      } else {
+        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+      }
+
       console.log('📥 Ответ на аудио:', {
         sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
       });
 
       this.widget.ui.hideLoading();
@@ -505,6 +528,35 @@ export class APIClient {
     this.widget.events.emit('messageSent', { duration: this.widget.audioRecorder.recordingTime });
   }
 
+  // 🆕 Sprint I: подтверждение факта рендера карточки в UI
+  async sendCardRendered(cardId) {
+    if (!cardId || !this.widget.sessionId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_card_rendered',
+          variantId: cardId,
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Card rendered confirmation sent:', { cardId, response: data });
+      } else {
+        console.warn('Failed to send card rendered confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending card rendered confirmation:', error);
+    }
+  }
+
   // ---------- Card Interactions ----------
   async sendCardInteraction(action, variantId) {
     // Для 'show' допустимо отсутствие variantId — сервер выберет кандидат по сессии
@@ -530,6 +582,13 @@ export class APIClient {
       if (response.ok) {
         const data = await response.json();
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
+
+        // 🆕 Sprint I: сохраняем role из server response (read-only)
+        if (data?.role !== undefined) {
+          this.widget.role = data.role;
+        } else {
+          console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+        }
 
         // Для первого показа карточки ('show') карточку уже отрисовали локально,
         // с бэка берём только текст-подпись. Для остальных действий — рендерим карточку.

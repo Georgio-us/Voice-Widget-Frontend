@@ -40,6 +40,9 @@ class VoiceWidget extends HTMLElement {
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
+    
+    // 🆕 Sprint I: server-side role (read-only, обновляется из server responses)
+    this.role = null;
 
     // параметры
     const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
@@ -4343,6 +4346,20 @@ render() {
           </div>
         </div>`;
     track.appendChild(slide);
+    
+    // 🆕 Sprint I: отправляем подтверждение факта рендера карточки после визуального показа
+    const cardId = normalized.id;
+    if (cardId && this.api) {
+      // Используем requestAnimationFrame для гарантии, что DOM обновлен и карточка видима
+      requestAnimationFrame(() => {
+        try {
+          this.api.sendCardRendered(cardId);
+        } catch (e) {
+          console.warn('Failed to send card rendered confirmation:', e);
+        }
+      });
+    }
+    
     // scroll to last slide
     requestAnimationFrame(() => {
       // вычисляем целевую позицию именно нового слайда
