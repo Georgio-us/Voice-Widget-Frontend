@@ -3930,7 +3930,17 @@ render() {
       // ❗ Начинаем новый показ: удалим старый слайдер (если был)
       try {
         const oldHost = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
-        if (oldHost && oldHost.parentElement) oldHost.parentElement.removeChild(oldHost);
+        if (oldHost && oldHost.parentElement) {
+          // 🆕 Sprint IV: отправляем ui_slider_ended перед удалением slider host (выход из slider-режима)
+          if (this.api) {
+            try {
+              this.api.sendSliderEnded();
+            } catch (e) {
+              console.warn('Error sending slider ended confirmation:', e);
+            }
+          }
+          oldHost.parentElement.removeChild(oldHost);
+        }
       } catch {}
       // Мгновенно покажем карточку локально, чтобы не ждать сети
       try {
@@ -4310,6 +4320,18 @@ render() {
         </div>
       </div>`;
       thread.appendChild(host);
+      
+      // 🆕 Sprint IV: отправляем ui_slider_started при создании slider host (вход в slider-режим)
+      if (this.api) {
+        requestAnimationFrame(() => {
+          try {
+            this.api.sendSliderStarted();
+          } catch (e) {
+            console.warn('Error sending slider started confirmation:', e);
+          }
+        });
+      }
+      
       // attach active slide updater
       const slider = host.querySelector('.cards-slider');
       const update = () => { try { this.updateActiveCardSlide(); } catch {} };
@@ -4326,6 +4348,7 @@ render() {
   addCardSlide(normalized) {
     const track = this.ensureCardsSlider();
     if (!track) return;
+    
     const slide = document.createElement('div');
     slide.className = 'card-slide';
     slide.innerHTML = `
@@ -4480,8 +4503,28 @@ render() {
       const d = Math.abs(mid - center);
       if (d < best) { best = d; closest = s; }
     });
+    
+    // 🆕 Sprint IV: определяем предыдущую активную карточку для сравнения
+    const previousActive = slider.querySelector('.card-slide.active');
+    const previousCardId = previousActive ? previousActive.querySelector('[data-variant-id]')?.getAttribute('data-variant-id') : null;
+    
     slides.forEach(s => s.classList.remove('active'));
     if (closest) closest.classList.add('active');
+    
+    // 🆕 Sprint IV: отправляем ui_focus_changed только если фокус реально изменился
+    if (closest) {
+      const currentCardId = closest.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
+      if (currentCardId && currentCardId !== previousCardId && this.api) {
+        requestAnimationFrame(() => {
+          try {
+            this.api.sendFocusChanged(currentCardId);
+          } catch (e) {
+            console.warn('Error sending focus changed confirmation:', e);
+          }
+        });
+      }
+    }
+    
     const activeIdx = Array.from(slides).indexOf(closest);
     // update each slide dots row
     const rows = slider.querySelectorAll('.cards-dots-row');

@@ -557,6 +557,91 @@ export class APIClient {
     }
   }
 
+  // 🆕 Sprint IV: отправка события ui_slider_started
+  async sendSliderStarted() {
+    if (!this.widget.sessionId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_slider_started',
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Slider started confirmation sent:', { response: data });
+      } else {
+        console.warn('Failed to send slider started confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending slider started confirmation:', error);
+    }
+  }
+
+  // 🆕 Sprint IV: отправка события ui_slider_ended
+  async sendSliderEnded() {
+    if (!this.widget.sessionId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_slider_ended',
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Slider ended confirmation sent:', { response: data });
+      } else {
+        console.warn('Failed to send slider ended confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending slider ended confirmation:', error);
+    }
+  }
+
+  // 🆕 Sprint IV: отправка события ui_focus_changed
+  async sendFocusChanged(cardId) {
+    if (!this.widget.sessionId || !cardId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_focus_changed',
+          cardId: cardId,
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Focus changed confirmation sent:', { cardId, response: data });
+      } else {
+        console.warn('Failed to send focus changed confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending focus changed confirmation:', error);
+    }
+  }
+
   // ---------- Card Interactions ----------
   async sendCardInteraction(action, variantId) {
     // Для 'show' допустимо отсутствие variantId — сервер выберет кандидат по сессии
