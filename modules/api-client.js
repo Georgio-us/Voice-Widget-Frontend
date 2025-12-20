@@ -230,7 +230,6 @@ export class APIClient {
       const fd = new FormData();
       fd.append('text', messageText);
       fd.append('sessionId', this.widget.sessionId || '');
-      fd.append('clientTs', String(Date.now()));
 
       const replyLang = localStorage.getItem('vw_lang') || 'ru';
       fd.append('lang', replyLang);
@@ -241,7 +240,6 @@ export class APIClient {
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
-      if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -310,7 +308,6 @@ export class APIClient {
       const fd = new FormData();
       fd.append('text', messageText);
       fd.append('sessionId', this.widget.sessionId || '');
-      fd.append('clientTs', String(Date.now()));
 
       const replyLang = localStorage.getItem('vw_lang') || 'ru';
       fd.append('lang', replyLang);
@@ -321,7 +318,6 @@ export class APIClient {
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
-      if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -426,7 +422,6 @@ export class APIClient {
       fd.append('audio', blob, fname);
 
       fd.append('sessionId', this.widget.sessionId || '');
-      fd.append('clientTs', String(Date.now()));
 
       const replyLang = localStorage.getItem('vw_lang') || 'ru';
       fd.append('lang', replyLang);
@@ -443,7 +438,6 @@ export class APIClient {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json().catch(() => ({}));
-      if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -548,14 +542,12 @@ export class APIClient {
         body: JSON.stringify({
           action: 'ui_card_rendered',
           variantId: cardId,
-          sessionId: this.widget.sessionId,
-          clientTs: Date.now()
+          sessionId: this.widget.sessionId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
         console.log('✅ Card rendered confirmation sent:', { cardId, response: data });
       } else {
         console.warn('Failed to send card rendered confirmation:', response.status);
@@ -578,14 +570,12 @@ export class APIClient {
         },
         body: JSON.stringify({
           action: 'ui_slider_started',
-          sessionId: this.widget.sessionId,
-          clientTs: Date.now()
+          sessionId: this.widget.sessionId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
         console.log('✅ Slider started confirmation sent:', { response: data });
       } else {
         console.warn('Failed to send slider started confirmation:', response.status);
@@ -608,14 +598,12 @@ export class APIClient {
         },
         body: JSON.stringify({
           action: 'ui_slider_ended',
-          sessionId: this.widget.sessionId,
-          clientTs: Date.now()
+          sessionId: this.widget.sessionId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
         console.log('✅ Slider ended confirmation sent:', { response: data });
       } else {
         console.warn('Failed to send slider ended confirmation:', response.status);
@@ -639,114 +627,18 @@ export class APIClient {
         body: JSON.stringify({
           action: 'ui_focus_changed',
           cardId: cardId,
-          sessionId: this.widget.sessionId,
-          clientTs: Date.now()
+          sessionId: this.widget.sessionId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
         console.log('✅ Focus changed confirmation sent:', { cardId, response: data });
       } else {
         console.warn('Failed to send focus changed confirmation:', response.status);
       }
     } catch (error) {
       console.warn('Error sending focus changed confirmation:', error);
-    }
-  }
-
-  // ---------- UI Anchors (Fixed Sprint) ----------
-  // Contract:
-  // A) ui_slider_set_started { sliderSetId }
-  // B) ui_slider_item_upsert { sliderSetId, uiIndex, cardId }
-  // C) ui_slider_focus_changed { sliderSetId, focusedUiIndex }
-  async sendSliderSetStarted(sliderSetId) {
-    if (!this.widget.sessionId || !sliderSetId) return;
-    const action = 'ui_slider_set_started';
-    console.log("[VW_UI_ANCHOR]", { action, sliderSetId, uiIndex: undefined, focusedUiIndex: undefined, cardId: undefined });
-
-    try {
-      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
-      const response = await fetch(interactionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          sessionId: this.widget.sessionId,
-          sliderSetId,
-          clientTs: Date.now()
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
-      } else {
-        console.warn('Failed to send ui_slider_set_started:', response.status);
-      }
-    } catch (error) {
-      console.warn('Error sending ui_slider_set_started:', error);
-    }
-  }
-
-  async sendSliderItemUpsert(sliderSetId, uiIndex, cardId) {
-    if (!this.widget.sessionId || !sliderSetId || !cardId) return;
-    if (!Number.isInteger(uiIndex) || uiIndex < 1) return;
-    const action = 'ui_slider_item_upsert';
-    console.log("[VW_UI_ANCHOR]", { action, sliderSetId, uiIndex, focusedUiIndex: undefined, cardId });
-
-    try {
-      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
-      const response = await fetch(interactionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          sessionId: this.widget.sessionId,
-          sliderSetId,
-          uiIndex,
-          cardId,
-          clientTs: Date.now()
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
-      } else {
-        console.warn('Failed to send ui_slider_item_upsert:', response.status);
-      }
-    } catch (error) {
-      console.warn('Error sending ui_slider_item_upsert:', error);
-    }
-  }
-
-  async sendSliderFocusChanged(sliderSetId, focusedUiIndex) {
-    if (!this.widget.sessionId || !sliderSetId) return;
-    if (!Number.isInteger(focusedUiIndex) || focusedUiIndex < 1) return;
-    const action = 'ui_slider_focus_changed';
-    console.log("[VW_UI_ANCHOR]", { action, sliderSetId, uiIndex: undefined, focusedUiIndex, cardId: undefined });
-
-    try {
-      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
-      const response = await fetch(interactionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          sessionId: this.widget.sessionId,
-          sliderSetId,
-          focusedUiIndex,
-          clientTs: Date.now()
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
-      } else {
-        console.warn('Failed to send ui_slider_focus_changed:', response.status);
-      }
-    } catch (error) {
-      console.warn('Error sending ui_slider_focus_changed:', error);
     }
   }
 
@@ -768,14 +660,12 @@ export class APIClient {
         body: JSON.stringify({
           action: action, // 'like' or 'next' or 'show'
           variantId: variantId,
-          sessionId: this.widget.sessionId || '',
-          clientTs: Date.now()
+          sessionId: this.widget.sessionId || ''
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
 
         // 🆕 Sprint I: сохраняем role из server response (read-only)
