@@ -4320,6 +4320,22 @@ render() {
         </div>
       </div>`;
       thread.appendChild(host);
+
+      // ---------- Fixed Sprint: UI-Anchored Card Reference ----------
+      // Новый набор слайдера → новый sliderSetId (уникален в рамках сессии)
+      try {
+        this.sliderSetId = `sls_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      } catch {
+        this.sliderSetId = `sls_${Date.now()}_fallback`;
+      }
+      // Event A: ui_slider_set_started (ровно 1 раз на создание host)
+      if (this.api && this.sliderSetId) {
+        requestAnimationFrame(() => {
+          try { this.api.sendSliderSetStarted(this.sliderSetId); } catch (e) {
+            console.warn('Error sending ui_slider_set_started:', e);
+          }
+        });
+      }
       
       // 🆕 Sprint IV: отправляем ui_slider_started при создании slider host (вход в slider-режим)
       if (this.api) {
@@ -4369,6 +4385,19 @@ render() {
           </div>
         </div>`;
     track.appendChild(slide);
+
+    // Event B: ui_slider_item_upsert (incremental mapping, 1-based index, максимум 12)
+    try {
+      const cardId = normalized.id;
+      const uiIndex = track.children ? track.children.length : (Array.from(track.querySelectorAll('.card-slide')).indexOf(slide) + 1);
+      if (this.api && this.sliderSetId && cardId && Number.isInteger(uiIndex) && uiIndex >= 1 && uiIndex <= 12) {
+        requestAnimationFrame(() => {
+          try { this.api.sendSliderItemUpsert(this.sliderSetId, uiIndex, cardId); } catch (e) {
+            console.warn('Error sending ui_slider_item_upsert:', e);
+          }
+        });
+      }
+    } catch {}
     
     // 🆕 Sprint I: отправляем подтверждение факта рендера карточки после визуального показа
     const cardId = normalized.id;
@@ -4515,11 +4544,21 @@ render() {
     if (closest) {
       const currentCardId = closest.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
       if (currentCardId && currentCardId !== previousCardId && this.api) {
+        // Fixed Sprint: ui_slider_focus_changed (по uiIndex, строго 1-based)
+        const activeIdx = Array.from(slides).indexOf(closest);
+        const focusedUiIndex = (activeIdx >= 0 ? activeIdx + 1 : null);
         requestAnimationFrame(() => {
           try {
             this.api.sendFocusChanged(currentCardId);
           } catch (e) {
             console.warn('Error sending focus changed confirmation:', e);
+          }
+          try {
+            if (this.sliderSetId && Number.isInteger(focusedUiIndex) && focusedUiIndex >= 1) {
+              this.api.sendSliderFocusChanged(this.sliderSetId, focusedUiIndex);
+            }
+          } catch (e) {
+            console.warn('Error sending ui_slider_focus_changed:', e);
           }
         });
       }

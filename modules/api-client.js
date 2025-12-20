@@ -656,6 +656,100 @@ export class APIClient {
     }
   }
 
+  // ---------- UI Anchors (Fixed Sprint) ----------
+  // Contract:
+  // A) ui_slider_set_started { sliderSetId }
+  // B) ui_slider_item_upsert { sliderSetId, uiIndex, cardId }
+  // C) ui_slider_focus_changed { sliderSetId, focusedUiIndex }
+  async sendSliderSetStarted(sliderSetId) {
+    if (!this.widget.sessionId || !sliderSetId) return;
+    const action = 'ui_slider_set_started';
+    console.log("[VW_UI_ANCHOR]", { action, sliderSetId, uiIndex: undefined, focusedUiIndex: undefined, cardId: undefined });
+
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          sessionId: this.widget.sessionId,
+          sliderSetId,
+          clientTs: Date.now()
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
+      } else {
+        console.warn('Failed to send ui_slider_set_started:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending ui_slider_set_started:', error);
+    }
+  }
+
+  async sendSliderItemUpsert(sliderSetId, uiIndex, cardId) {
+    if (!this.widget.sessionId || !sliderSetId || !cardId) return;
+    if (!Number.isInteger(uiIndex) || uiIndex < 1) return;
+    const action = 'ui_slider_item_upsert';
+    console.log("[VW_UI_ANCHOR]", { action, sliderSetId, uiIndex, focusedUiIndex: undefined, cardId });
+
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          sessionId: this.widget.sessionId,
+          sliderSetId,
+          uiIndex,
+          cardId,
+          clientTs: Date.now()
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
+      } else {
+        console.warn('Failed to send ui_slider_item_upsert:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending ui_slider_item_upsert:', error);
+    }
+  }
+
+  async sendSliderFocusChanged(sliderSetId, focusedUiIndex) {
+    if (!this.widget.sessionId || !sliderSetId) return;
+    if (!Number.isInteger(focusedUiIndex) || focusedUiIndex < 1) return;
+    const action = 'ui_slider_focus_changed';
+    console.log("[VW_UI_ANCHOR]", { action, sliderSetId, uiIndex: undefined, focusedUiIndex, cardId: undefined });
+
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          sessionId: this.widget.sessionId,
+          sliderSetId,
+          focusedUiIndex,
+          clientTs: Date.now()
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.debug) console.log("[VW_DEBUG]", data.debug);
+      } else {
+        console.warn('Failed to send ui_slider_focus_changed:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending ui_slider_focus_changed:', error);
+    }
+  }
+
   // ---------- Card Interactions ----------
   async sendCardInteraction(action, variantId) {
     // Для 'show' допустимо отсутствие variantId — сервер выберет кандидат по сессии
