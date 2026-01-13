@@ -243,7 +243,38 @@ render() {
   .thread > .card-screen:first-child{ margin-top:0; }
   .thread > .card-screen:last-child{ margin-bottom:0; }
   .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; margin-bottom:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
-  .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
+  .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
+  .card-screen .cs-image > *{ grid-area:stack; }
+  .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  /* overlay: растягиваем на всю плоскость изображения и прижимаем контент вправо-вверх (без absolute) */
+  .card-screen .cs-image .cs-image-overlay{
+    z-index:1;
+    position:relative;
+    width:100%;
+    height:100%;
+    display:flex;
+    justify-content:flex-end;
+    align-items:flex-start;
+    padding:10px;
+    box-sizing:border-box;
+  }
+  .card-screen .cs-image .card-btn.like[data-action="like"]{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px;
+    border:none;
+    background:transparent;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .card-screen .cs-image .card-btn.like[data-action="like"]:hover{ background: rgba(255,255,255,0.18); }
+  .card-screen .cs-image .card-btn.like[data-action="like"] svg,
+  .card-screen .cs-image .card-btn.like[data-action="like"] svg *{ pointer-events:none; }
+  .card-screen .cs-image .card-btn.like[data-action="like"] svg{ width:24px; height:24px; display:block; }
+  .card-screen .cs-image .card-btn.like[data-action="like"] svg path{ fill: transparent; stroke:#ffffff; stroke-width:2; }
+  .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:#476AA5; stroke:#476AA5; }
+  .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:#476AA5; stroke:#476AA5; }
   .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
   .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
@@ -288,7 +319,8 @@ render() {
   .card-location{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:8px; }
   .card-price{ font-weight:600; font-size:var(--fs-body); color:var(--orange); margin-bottom:16px; }
   .card-actions{ display:flex; gap:12px; }
-  .card-btn{ flex:1; height:40px; border:none; border-radius:12px; cursor:pointer; font-weight:600; font-size:var(--fs-button); transition:transform .12s ease; }
+  .card-actions .card-btn{ flex:1; }
+  .card-btn{ height:40px; border:none; border-radius:12px; cursor:pointer; font-weight:600; font-size:var(--fs-button); transition:transform .12s ease; }
   .card-btn:hover{ transform:translateY(-1px); }
   .card-btn.like{ background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; }
   .card-btn.next{ background:rgba(255,255,255,.9); color:var(--txt); border:1px solid rgba(0,0,0,.1); }
@@ -316,6 +348,9 @@ render() {
   .card-actions-panel .card-btn.like::before{ content:none; }
   .card-actions-panel .card-btn.like{ position:relative; }
   .card-actions-panel .card-btn.like:hover{ transform:translateY(-1px); }
+  /* select (filled like primary) */
+  .card-actions-panel .card-btn.select{ background:#476AA5; color:#fff; border:1.25px solid #5F81BA; }
+  .card-actions-panel .card-btn.select:hover{ transform:translateY(-1px); }
   /* next (outlined) */
   .card-actions-panel .card-btn.next{ background:transparent; color:#476AA5; border:1.25px solid #476AA5; }
   .card-actions-panel .card-btn.next:hover{ opacity:.9; }
@@ -336,6 +371,135 @@ render() {
   /* actions container for clearer boundaries */
   .card-actions-wrap{ margin:8px; padding:10px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); }
   .card-slide .cs{ width:100%; }
+
+  /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
+  /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */
+  .handoff-actions{ margin-top:8px; }
+  .handoff-btn{ }
+  .handoff-block{ }
+  /* RMv3 / Sprint 2 / Task 2.4: hide handoff actions when in-dialog lead block is open */
+  .handoff-actions.handoff-actions--hidden{ display:none; }
+
+  /* ===== RMv3: In-dialog lead block (UI-only, demo trigger: “Подробнее”) ===== */
+  /* ВАЖНО:
+     - новая сущность (не requestScreen/contextScreen)
+     - новые классы/ID (префикс inDialogLead*)
+     - scoped под .dialog-screen чтобы не затронуть другие экраны
+     - без ghost-email / подсказок / валидации / ошибок */
+  .dialog-screen .in-dialog-lead-block{ width:100%; margin:0; padding:0; }
+  .dialog-screen .in-dialog-lead{
+    background:#1E1D20;
+    color:#FFFFFF;
+    border-radius:14px;
+    box-shadow:0 8px 24px rgba(0,0,0,.12);
+    overflow:hidden;
+    width:100%;
+  }
+  .dialog-screen .in-dialog-lead__body{ padding:12px; display:grid; gap:10px; }
+  .dialog-screen .in-dialog-lead__title{
+    font-family: var(--ff);
+    font-size: 12px;
+    font-weight: 600;
+    color: #FFFFFF;
+    opacity: .9;
+  }
+  .dialog-screen .in-dialog-lead__row{ display:flex; gap: var(--space-s); align-items:center; }
+  .dialog-screen .in-dialog-lead__row > *{ flex:1 1 0; min-width:0; }
+  .dialog-screen .in-dialog-lead__field{ display:grid; gap:6px; }
+  .dialog-screen .in-dialog-lead__label{
+    font-family: var(--ff);
+    font-size: 10px;
+    font-weight: 400;
+    color: #A9A9A9;
+  }
+  /* Visual reference: ctx-input (Context Screen) but with new class */
+  .dialog-screen .in-dialog-lead__input{
+    width:100%;
+    height: var(--field-h);
+    border-radius:10px;
+    background:rgba(106,108,155,.10);
+    border:1px solid rgba(106,108,155,.30);
+    color:#FFFFFF;
+    font-family: var(--ff);
+    font-size:12px;
+    font-weight:400;
+    padding:0 var(--space-s);
+    line-height: var(--field-h);
+    box-sizing:border-box;
+    transition: border-color .15s ease;
+  }
+  .dialog-screen .in-dialog-lead__input.error{ border-color:#E85F62; }
+  .dialog-screen .in-dialog-lead__input::placeholder{ color:#A0A0A0; }
+  .dialog-screen .in-dialog-lead__input:focus,
+  .dialog-screen .in-dialog-lead__input:focus-visible{
+    outline:none;
+    border-width:1px;
+    border-color:#5F81BA;
+    box-shadow:none;
+  }
+  /* Visual reference: ctx-consent (Context Screen) but with new class */
+  .dialog-screen .in-dialog-lead__consent{ display:flex; align-items:flex-start; gap:8px; margin-top:2px; }
+  .dialog-screen .in-dialog-lead__checkbox{ width:12px; height:12px; margin-top:2px; }
+  .dialog-screen .in-dialog-lead__checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
+  .dialog-screen .in-dialog-lead__consent-text{
+    font-family: var(--ff);
+    font-size:10px;
+    font-weight:400;
+    color:#C4C4C4;
+    line-height:1.4;
+  }
+  .dialog-screen .in-dialog-lead__privacy-link{ color:#DF87F8; text-decoration:none; }
+  .dialog-screen .in-dialog-lead__error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
+  .dialog-screen .in-dialog-lead__error.visible{ display:block; }
+  /* Visual reference: ctx-send-btn (Context Screen) but with new class */
+  .dialog-screen .in-dialog-lead__actions{ display:flex; gap: var(--space-m); margin-top: 6px; }
+  .dialog-screen .in-dialog-lead__send{
+    flex:1 1 0;
+    min-width: var(--btn-min-w);
+    padding: var(--btn-py) var(--btn-px);
+    background:#476AA5;
+    color:#fff;
+    border:1.25px solid #5F81BA;
+    border-radius: var(--btn-radius);
+    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
+    cursor:pointer;
+    transition: opacity .15s ease, transform .12s ease;
+  }
+  .dialog-screen .in-dialog-lead__send:hover{ opacity:.9; transform: translateY(-1px); }
+  .dialog-screen .in-dialog-lead__send:active{ transform: translateY(0); opacity:.85; }
+  /* Cancel button (visual reference: ctx-cancel-btn, but isolated) */
+  .dialog-screen .in-dialog-lead__cancel{
+    flex:1 1 0;
+    min-width: var(--btn-min-w);
+    padding: var(--btn-py) var(--btn-px);
+    background:transparent;
+    color:#476AA5;
+    border:1.25px solid #476AA5;
+    border-radius: var(--btn-radius);
+    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
+    cursor:pointer;
+    transition: opacity .15s ease, transform .12s ease;
+  }
+  .dialog-screen .in-dialog-lead__cancel:hover{ opacity:.9; transform: translateY(-1px); }
+  .dialog-screen .in-dialog-lead__cancel:active{ transform: translateY(0); opacity:.85; }
+
+  /* In-dialog thanks (UI-only) */
+  .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; text-align:center; }
+  .dialog-screen .in-dialog-thanks__text{ font-size:12px; font-weight:400; color:#C4C4C4; text-align:center; line-height:1.35; }
+  .dialog-screen .in-dialog-thanks__actions{ display:flex; justify-content:center; margin-top:14px; }
+  .dialog-screen .in-dialog-thanks__close{
+    padding: var(--btn-py) var(--btn-px);
+    min-width: var(--btn-min-w);
+    background:#476AA5;
+    color:#fff;
+    border:1.25px solid #5F81BA;
+    border-radius: var(--btn-radius);
+    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
+    cursor:pointer;
+    transition: opacity .15s ease, transform .12s ease;
+  }
+  .dialog-screen .in-dialog-thanks__close:hover{ opacity:.9; transform: translateY(-1px); }
+  .dialog-screen .in-dialog-thanks__close:active{ transform: translateY(0); opacity:.85; }
 
   /* ===== Inline Lead Bubbles ===== */
 
@@ -532,6 +696,11 @@ render() {
                 .header-action:hover{ background: transparent; }
                 .header-action:focus, .header-action:focus-visible{ outline:none; box-shadow:none; }
                 .header-action img{ width:24px; height:24px; display:block; transition: opacity .15s ease; }
+                /* TEMP: скрыть только иконки в хедере (кнопки оставить, чтобы не ломать сетку/верстку) */
+                .main-header .header-action img,
+                .screen-header .header-action img{
+                  display: none !important;
+                }
                 .header-action:hover img{ opacity:.82; }
                 .header-left{ justify-self:start; }
                 .header-right{ justify-self:end; }
@@ -3863,6 +4032,11 @@ render() {
   // Card events
   this.shadowRoot.addEventListener('click', async (e) => {
     if (e.target.matches('.card-btn[data-action="like"]')) {
+      // UI toggle (фиксируем состояние сердечка). При отключении — без side-effects.
+      try {
+        e.target.classList.toggle('is-liked');
+        if (!e.target.classList.contains('is-liked')) return;
+      } catch {}
       const variantId = e.target.getAttribute('data-variant-id');
       
       // Логируем card_like
@@ -3916,6 +4090,41 @@ render() {
       });
       
       this.events.emit('next_option', { variantId });
+    } else if (e.target.matches('.card-btn[data-action="select"]')) {
+      // RMv3 / Sprint 1 / Task 1: фиксируем факт выбора карточки на сервере (server-first)
+      const variantId = e.target.getAttribute('data-variant-id');
+      try {
+        if (this.api && variantId) {
+          this.api.sendCardInteraction('select', variantId);
+        }
+      } catch {}
+    } else if (e.target.matches('[data-handoff-action="details"]')) {
+      // RMv3 demo-only: render in-dialog lead block after post-handoff block
+      // ВАЖНО: только UI, без запросов/submit/валидации
+      try {
+        this.renderInDialogLeadBlock();
+        const actions = this.shadowRoot.querySelector('.handoff-block .handoff-actions');
+        if (actions) actions.classList.add('handoff-actions--hidden');
+      } catch {}
+    } else if (e.target.matches('[data-handoff-action="cancel"]')) {
+      // RMv3 / Sprint 2 / Task 2.5: полная отмена выбора/handоff из handoff-блока
+      try { this.cancelHandoffFlowUI(); } catch {}
+      try { this.sendHandoffCancelToServer?.(); } catch {}
+    } else if (e.target.matches('#inDialogLeadSendBtn')) {
+      // RMv3 / Sprint 2 / Task 2.5: submit in-dialog lead form (isolated logic, no reuse)
+      try { this.submitInDialogLeadForm?.(); } catch {}
+    } else if (e.target.matches('#inDialogLeadCancelBtn')) {
+      // RMv3 / Sprint 2 / Task 2.5: полная отмена выбора/handоff из in-dialog lead block
+      try { this.cancelHandoffFlowUI(); } catch {}
+      try { this.sendHandoffCancelToServer?.(); } catch {}
+    } else if (e.target.matches('.in-dialog-lead__privacy-link')) {
+      // UI-only: keep link inert for demo stage (no navigation)
+      try { e.preventDefault(); } catch {}
+    } else if (e.target.matches('#inDialogThanksCloseBtn')) {
+      try {
+        const t = this.shadowRoot.getElementById('inDialogLeadThanksBlock');
+        if (t && t.parentElement) t.parentElement.removeChild(t);
+      } catch {}
     } else if (e.target.closest('.header-action.header-right')) {
       // Theme toggle button (dark <-> light), only swaps icon for now
       try {
@@ -4353,7 +4562,16 @@ render() {
     slide.className = 'card-slide';
     slide.innerHTML = `
       <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
-        <div class="cs-image">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+        <div class="cs-image">
+          <div class="cs-image-overlay">
+            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </button>
+          </div>
+          <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+        </div>
         <div class="cs-body">
           <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
           <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
@@ -4362,7 +4580,7 @@ render() {
         <div class="cards-dots-row"></div>
         <div class="card-actions-wrap">
           <div class="card-actions-panel">
-            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}">Нравится!</button>
+            <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">Выбрать</button>
             <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё одну</button>
           </div>
           <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
@@ -4565,7 +4783,7 @@ render() {
         <div class="card-actions-wrap">
         <div class="card-actions-panel">
             <button class="card-btn like" data-action="send_card">Показать</button>
-            <button class="card-btn next" data-action="continue_dialog">Продолжить</button>
+            <button class="card-btn next" data-action="continue_dialog">Отменить</button>
           </div>
         </div>
       </div>`;
@@ -4576,6 +4794,291 @@ render() {
       const H = messages.clientHeight;
       messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
     });
+  }
+
+  // ---------- RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ----------
+  // ВАЖНО:
+  // - не LLM-сообщение
+  // - не отправляет API запросы
+  // - клики по кнопкам не делают ничего, кроме стандартного :hover/:active
+  renderPostHandoffBlock({ cardId } = {}) {
+    try {
+      const thread = this.shadowRoot.getElementById('thread');
+      const messages = this.shadowRoot.getElementById('messagesContainer');
+      if (!thread || !messages) return;
+
+      // Ensure single block (replace previous if any)
+      try {
+        const existing = this.shadowRoot.querySelector('.handoff-block');
+        if (existing && existing.parentElement) existing.parentElement.removeChild(existing);
+      } catch {}
+
+      const panel = document.createElement('div');
+      panel.className = 'card-screen handoff-block';
+      panel.innerHTML = `
+        <div class="cs" style="background:transparent; box-shadow:none;">
+          <div class="card-actions-wrap">
+            <div class="cs-sub handoff-message">Вы выбрали объект. Дальше можно уточнить детали или отменить.</div>
+            <div class="card-actions-panel handoff-actions">
+              <button class="card-btn select handoff-btn" type="button" data-handoff-action="details">Подробнее</button>
+              <button class="card-btn next handoff-btn" type="button" data-handoff-action="cancel">Отмена</button>
+            </div>
+          </div>
+        </div>`;
+      thread.appendChild(panel);
+
+      // keep scroll behavior consistent with other chat inserts
+      requestAnimationFrame(() => {
+        const H = messages.clientHeight;
+        messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
+      });
+    } catch {}
+  }
+
+  // ---------- RMv3: In-dialog lead block (UI-only) ----------
+  // ВАЖНО:
+  // - новая сущность: in-dialog lead block (не requestScreen/contextScreen)
+  // - только UI: нет submit handler, нет fetch, нет валидации/ошибок
+  // - demo-only trigger: кликом по “Подробнее” в post-handoff блоке
+  cancelHandoffFlowUI() {
+    // UI-only: полная отмена handoff в чате
+    // - убрать in-dialog lead block (если открыт)
+    // - убрать handoff-блок целиком ("Вы выбрали объект…")
+    try {
+      const lead = this.shadowRoot.getElementById('inDialogLeadBlock');
+      if (lead && lead.parentElement) lead.parentElement.removeChild(lead);
+    } catch {}
+    try {
+      const handoff = this.shadowRoot.querySelector('.handoff-block');
+      if (handoff && handoff.parentElement) handoff.parentElement.removeChild(handoff);
+    } catch {}
+  }
+
+  sendHandoffCancelToServer() {
+    // Server-first: фиксируем cancel на сервере (cardId не тащим)
+    try {
+      const sessionId = this.sessionId || '';
+      if (!sessionId) return;
+      const interactionUrl = String(this.apiUrl || '').replace(/\/upload\/?$/i, '/interaction');
+      fetch(interactionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'handoff_cancel', sessionId })
+      }).catch(() => {});
+    } catch {}
+  }
+
+  renderInDialogLeadThanksBlock() {
+    // UI-only: отдельная thanks-форма для in-dialog lead form (не ctx/request overlays)
+    try {
+      const thread = this.shadowRoot.getElementById('thread');
+      const messages = this.shadowRoot.getElementById('messagesContainer');
+      if (!thread || !messages) return;
+      // deterministic: single
+      const existing = this.shadowRoot.getElementById('inDialogLeadThanksBlock');
+      if (existing) return;
+      const panel = document.createElement('div');
+      panel.className = 'card-screen';
+      panel.id = 'inDialogLeadThanksBlock';
+      panel.innerHTML = `
+        <div class="cs" style="background:transparent; box-shadow:none;">
+          <div class="card-actions-wrap">
+            <div class="in-dialog-thanks__title">Thank you!</div>
+            <div class="in-dialog-thanks__text">Your request has been received. We'll contact you soon.</div>
+            <div class="in-dialog-thanks__actions">
+              <button class="in-dialog-thanks__close" id="inDialogThanksCloseBtn" type="button">Close</button>
+            </div>
+          </div>
+        </div>
+      `;
+      thread.appendChild(panel);
+      requestAnimationFrame(() => {
+        const H = messages.clientHeight;
+        messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
+      });
+    } catch {}
+  }
+
+  submitInDialogLeadForm() {
+    // RMv3 / Sprint 2 / Task 2.5: isolated submit logic (copy of short-form patterns; name optional)
+    try {
+      const root = this.shadowRoot;
+      const get = (id) => root.getElementById(id);
+      const nameEl = get('inDialogLeadName');
+      const phoneEl = get('inDialogLeadPhone');
+      const emailEl = get('inDialogLeadEmail');
+      const consentEl = get('inDialogLeadGdpr');
+      const contactErr = get('inDialogLeadContactError');
+      const consentErr = get('inDialogLeadConsentError');
+
+      const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
+      const showErr = (el, on, msg) => {
+        if (!el) return;
+        if (typeof msg === 'string' && msg.length) el.textContent = msg;
+        el.classList.toggle('visible', !!on);
+      };
+      const shake = (el) => { if (!el) return; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 500); };
+
+      const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
+      const isPhone = (cc, v) => {
+        const s = `${cc || ''}${v || ''}`.replace(/\s+/g, '');
+        return s.length >= 6 && /^[+0-9\-()]+$/.test(s);
+      };
+
+      const name = nameEl?.value?.trim() || ''; // name optional by spec
+      const phone = phoneEl?.value?.trim() || '';
+      const email = emailEl?.value?.trim() || '';
+      const consent = !!consentEl?.checked;
+      const phoneCountryCode = '+34'; // fixed default (no country selector in in-dialog)
+
+      // Reset previous errors
+      markError(phoneEl, false);
+      markError(emailEl, false);
+      if (consentEl) consentEl.classList.remove('error');
+      showErr(contactErr, false);
+      showErr(consentErr, false);
+
+      const phoneOk = isPhone(phoneCountryCode, phone);
+      const emailOk = isEmail(email);
+      const phoneHas = phone.length > 0;
+      const emailHas = email.length > 0;
+      const contactOk = phoneOk || emailOk;
+
+      // Contact required: phone or email
+      if (!phoneHas && !emailHas) {
+        markError(phoneEl, true);
+        markError(emailEl, true);
+        shake(phoneEl); shake(emailEl);
+        showErr(contactErr, true, 'Required: phone or email');
+        if (!consent) {
+          showErr(consentErr, true, 'Please accept the Privacy Policy');
+          if (consentEl) consentEl.classList.add('error');
+        }
+        return;
+      }
+
+      if (!contactOk) {
+        markError(phoneEl, phoneHas && !phoneOk);
+        markError(emailEl, emailHas && !emailOk);
+        const msg = phoneHas && !phoneOk ? 'Invalid phone number' : 'Invalid email address';
+        showErr(contactErr, true, msg);
+        if (!phoneOk && phoneHas) shake(phoneEl);
+        if (!emailOk && emailHas) shake(emailEl);
+        return;
+      }
+
+      if (!consent) {
+        showErr(consentErr, true, 'Please accept the Privacy Policy');
+        if (consentEl) consentEl.classList.add('error');
+        shake(consentEl);
+        return;
+      }
+
+      // Submit to backend (/api/leads), isolated from other forms
+      const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
+      const language = localStorage.getItem('vw_lang') || 'ru';
+      const payload = {
+        sessionId: this.sessionId || null,
+        source: 'widget_in_dialog',
+        name: name,
+        phoneCountryCode: phoneCountryCode,
+        phoneNumber: phone || null,
+        email: email || null,
+        preferredContactMethod: 'phone',
+        comment: null,
+        language: language,
+        propertyId: null,
+        consent: true
+      };
+
+      fetch(leadsApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+        .then(r => r.json().catch(() => ({ ok: false, error: 'Failed to parse server response' })))
+        .then((result) => {
+          if (result?.ok === true) {
+            // Remove lead form + handoff UI clutter and show dedicated thanks
+            try { this.cancelHandoffFlowUI(); } catch {}
+            try { this.renderInDialogLeadThanksBlock(); } catch {}
+          } else {
+            const msg = result?.error || 'Failed to submit request. Please try again later.';
+            showErr(contactErr, true, msg);
+          }
+        })
+        .catch(() => {
+          showErr(contactErr, true, 'Network error. Please check your connection and try again.');
+        });
+    } catch {}
+  }
+
+  renderInDialogLeadBlock() {
+    try {
+      const thread = this.shadowRoot.getElementById('thread');
+      const messages = this.shadowRoot.getElementById('messagesContainer');
+      if (!thread || !messages) return;
+
+      // Deterministic: allow only one in-dialog lead block
+      const existing = this.shadowRoot.getElementById('inDialogLeadBlock');
+      if (existing) return;
+
+      const panel = document.createElement('div');
+      panel.className = 'in-dialog-lead-block';
+      panel.id = 'inDialogLeadBlock';
+      panel.innerHTML = `
+        <div class="in-dialog-lead" role="group" aria-label="In-dialog lead block">
+          <div class="in-dialog-lead__body">
+            <div class="in-dialog-lead__title">Leave your contact details</div>
+
+            <div class="in-dialog-lead__field">
+              <label class="in-dialog-lead__label" for="inDialogLeadName">Name</label>
+              <input class="in-dialog-lead__input" id="inDialogLeadName" type="text" autocomplete="name" placeholder="Name">
+            </div>
+
+            <div class="in-dialog-lead__row">
+              <div class="in-dialog-lead__field">
+                <label class="in-dialog-lead__label" for="inDialogLeadPhone">Phone</label>
+                <input class="in-dialog-lead__input" id="inDialogLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone">
+              </div>
+              <div class="in-dialog-lead__field">
+                <label class="in-dialog-lead__label" for="inDialogLeadEmail">Email</label>
+                <input class="in-dialog-lead__input" id="inDialogLeadEmail" type="email" autocomplete="email" placeholder="E-mail">
+              </div>
+            </div>
+
+            <label class="in-dialog-lead__consent">
+              <input class="in-dialog-lead__checkbox" id="inDialogLeadGdpr" type="checkbox">
+              <span class="in-dialog-lead__consent-text">
+                I consent to the processing of my data for managing this request and contacting me about properties.
+                <a class="in-dialog-lead__privacy-link" href="#" aria-label="Privacy Policy">Privacy Policy</a>
+              </span>
+            </label>
+            <div class="in-dialog-lead__error" id="inDialogLeadConsentError">Please accept the Privacy Policy</div>
+            <div class="in-dialog-lead__error" id="inDialogLeadContactError">Required: phone or email</div>
+
+            <div class="in-dialog-lead__actions">
+              <button class="in-dialog-lead__send" id="inDialogLeadSendBtn" type="button">Отправить</button>
+              <button class="in-dialog-lead__cancel" id="inDialogLeadCancelBtn" type="button">Отменить</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Insert strictly after post-handoff block, and only inside Dialog Screen thread
+      const handoffBlock = this.shadowRoot.querySelector('.handoff-block');
+      if (handoffBlock && handoffBlock.parentElement) {
+        handoffBlock.insertAdjacentElement('afterend', panel);
+      } else {
+        // Fallback: if no handoff block, do not render (demo constraint: only after post-handoff)
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        const H = messages.clientHeight;
+        messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
+      });
+    } catch {}
   }
 
   // ---------- НОРМАЛИЗАЦИЯ ДАННЫХ КАРТОЧКИ ----------

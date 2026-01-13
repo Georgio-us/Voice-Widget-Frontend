@@ -268,6 +268,16 @@ export class APIClient {
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
+      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта
+      // Сервер отдаёт ui.autoSelectCardId; фронт запускает тот же путь, что и кнопка "Выбрать"
+      // (sendCardInteraction('select', id) → /interaction select → handoff UX).
+      try {
+        const autoId = data?.ui?.autoSelectCardId || null;
+        if (autoId) {
+          await this.sendCardInteraction('select', String(autoId));
+        }
+      } catch {}
+
       // 🃏 карточки по предложению (после текста агента) — legacy flow
       try {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
@@ -364,6 +374,14 @@ export class APIClient {
       });
       
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
+
+      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта (main)
+      try {
+        const autoId = data?.ui?.autoSelectCardId || null;
+        if (autoId) {
+          await this.sendCardInteraction('select', String(autoId));
+        }
+      } catch {}
 
       // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
       try {
@@ -504,6 +522,14 @@ export class APIClient {
 
       // Dispatch hidden commands after showing text
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
+
+      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта (audio)
+      try {
+        const autoId = data?.ui?.autoSelectCardId || null;
+        if (autoId) {
+          await this.sendCardInteraction('select', String(autoId));
+        }
+      } catch {}
 
       // 🃏 карточки по предложению (audio) — legacy flow
       try {
@@ -685,6 +711,12 @@ export class APIClient {
 
         if (data && data.assistantMessage) {
           try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}
+        }
+
+        // RMv3 / Sprint 2 / Task 2.2: post-handoff visual block in chat (UI-only)
+        // Triggered only after successful server response to action='select'.
+        if (action === 'select') {
+          try { this.widget.renderPostHandoffBlock?.({ cardId: variantId }); } catch {}
         }
 
         // Emit event for successful interaction
