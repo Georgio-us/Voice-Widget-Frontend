@@ -2457,6 +2457,8 @@ render() {
     
     // Получить количество отправок
     getSubmitCount: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return 0;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         const count = sessionStorage.getItem(keys.count);
@@ -2468,6 +2470,8 @@ render() {
     
     // Увеличить счетчик отправок
     incrementSubmitCount: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         const current = this.leadSpamProtection.getSubmitCount(formType);
@@ -2477,6 +2481,8 @@ render() {
     
     // Проверить, был ли показан поп-ап предупреждения
     isWarningShown: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return false;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         return sessionStorage.getItem(keys.warningShown) === 'true';
@@ -2487,6 +2493,8 @@ render() {
     
     // Отметить, что поп-ап предупреждения был показан
     setWarningShown: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         sessionStorage.setItem(keys.warningShown, 'true');
@@ -2495,6 +2503,8 @@ render() {
     
     // Проверить, заблокирован ли пользователь
     isBlocked: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return false;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         const blockedUntil = sessionStorage.getItem(keys.blockedUntil);
@@ -2508,6 +2518,8 @@ render() {
     
     // Получить оставшееся время блокировки в секундах
     getBlockedTimeLeft: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return 0;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         const blockedUntil = sessionStorage.getItem(keys.blockedUntil);
@@ -2522,6 +2534,8 @@ render() {
     
     // Установить блокировку на 60 секунд
     setBlocked: (formType) => {
+      // TEMP (demo): антиспам для lead-форм отключён
+      if (formType === 'lead') return;
       try {
         const keys = this.leadSpamProtection.getKeys(formType);
         const blockedUntil = Date.now() + 60000; // 60 секунд
