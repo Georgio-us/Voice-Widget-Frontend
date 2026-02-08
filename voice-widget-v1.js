@@ -394,6 +394,7 @@ render() {
     box-shadow:0 8px 24px rgba(0,0,0,.12);
     overflow:hidden;
     width:100%;
+    margin-bottom: 10px;
   }
   .dialog-screen .in-dialog-lead__body{ padding:12px; display:grid; gap:10px; }
   .dialog-screen .in-dialog-lead__title{
@@ -412,6 +413,10 @@ render() {
     font-weight: 400;
     color: #A9A9A9;
   }
+  /* Phone: dial selector + input (reuse existing .dial-select/.dial-btn/.dial-list styles) */
+  .dialog-screen .in-dialog-lead__phone-row{ display:flex; gap: var(--space-s); align-items:center; }
+  .dialog-screen .in-dialog-lead__phone-row .dial-select{ flex:0 0 auto; }
+  .dialog-screen .in-dialog-lead__phone-row .in-dialog-lead__input{ flex:1 1 auto; min-width:0; }
   /* Visual reference: ctx-input (Context Screen) but with new class */
   .dialog-screen .in-dialog-lead__input{
     width:100%;
@@ -2564,10 +2569,18 @@ render() {
     const thanksOverlay = root.getElementById('requestThanksOverlay');
     const get = (id) => root.getElementById(id);
     const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
-    const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toDigits = (v) => String(v || '').replace(/\D+/g, '');
+    const isEmail = (v) => emailRe.test(String(v || '').trim());
+    // Phone format (demo): country code + 9–10 national digits (operator 3 digits + 6–7 digits).
     const isPhone = (cc, ph) => {
-      const s = `${cc||''}${ph||''}`.replace(/\s+/g,'');
-      return s.length >= 6 && /^[+0-9\-()]+$/.test(s);
+      const ccDigits = toDigits(cc);
+      const phDigits = toDigits(ph);
+      if (!ccDigits || ccDigits.length < 1 || ccDigits.length > 3) return false;
+      if (!phDigits) return false;
+      if (phDigits.length < 9 || phDigits.length > 10) return false;
+      if (ccDigits.length + phDigits.length > 15) return false;
+      return true;
     };
     // Email inline completion (request)
     const emailSuggestDomains = ['gmail.com','mail.ru','proton.me','rambler.ru','yahoo.com'];
@@ -2728,7 +2741,9 @@ render() {
         // One or both present but invalid → show only one specific message, mark all invalid
         markError(get('reqPhone'), phoneHas && !phoneOk);
         markError(get('reqEmail'), emailHas && !emailOk);
-        let msg = phoneHas && !phoneOk ? 'Invalid phone number' : 'Invalid email address';
+        let msg = phoneHas && !phoneOk
+          ? 'Invalid phone number. Use 9–10 digits after country code.'
+          : 'Invalid email address. Example: name@domain.com';
         showContactError(true, msg);
         if (!phoneOk && phoneHas) shake(get('reqPhone'));
         if (!emailOk && emailHas) shake(get('reqEmail'));
@@ -3561,10 +3576,17 @@ render() {
     if (!btn || !form) return;
     const get = (id) => this.shadowRoot.getElementById(id);
     const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
-    const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toDigits = (v) => String(v || '').replace(/\D+/g, '');
+    const isEmail = (v) => emailRe.test(String(v || '').trim());
     const isPhone = (cc, v) => {
-      const s = `${cc||''}${v||''}`.replace(/\s+/g,'');
-      return s.length >= 6 && /^[+0-9\-()]+$/.test(s);
+      const ccDigits = toDigits(cc);
+      const phDigits = toDigits(v);
+      if (!ccDigits || ccDigits.length < 1 || ccDigits.length > 3) return false;
+      if (!phDigits) return false;
+      if (phDigits.length < 9 || phDigits.length > 10) return false;
+      if (ccDigits.length + phDigits.length > 15) return false;
+      return true;
     };
     // Email inline completion (context)
     const ctxEmail = get('ctxEmail');
@@ -3703,7 +3725,9 @@ render() {
       } else {
         markError(get('ctxPhone'), phoneHas && !phoneOk);
         markError(get('ctxEmail'), emailHas && !emailOk);
-        let msg = phoneHas && !phoneOk ? 'Invalid phone number' : 'Invalid email address';
+        let msg = phoneHas && !phoneOk
+          ? 'Invalid phone number. Use 9–10 digits after country code.'
+          : 'Invalid email address. Example: name@domain.com';
         showContactError(true, msg);
         if (!phoneOk && phoneHas) shake(get('ctxPhone'));
         if (!emailOk && emailHas) shake(get('ctxEmail'));
@@ -4859,6 +4883,11 @@ render() {
     // - убрать in-dialog lead block (если открыт)
     // - убрать handoff-блок целиком ("Вы выбрали объект…")
     try {
+      // cleanup: in-dialog dial outside-click handler (if attached)
+      if (this._inDialogLeadDialOutsideHandler) {
+        try { document.removeEventListener('click', this._inDialogLeadDialOutsideHandler, true); } catch {}
+        this._inDialogLeadDialOutsideHandler = null;
+      }
       const lead = this.shadowRoot.getElementById('inDialogLeadBlock');
       if (lead && lead.parentElement) lead.parentElement.removeChild(lead);
     } catch {}
@@ -4933,17 +4962,26 @@ render() {
       };
       const shake = (el) => { if (!el) return; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 500); };
 
-      const isEmail = (v) => /\S+@\S+\.\S+/.test(v);
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const toDigits = (v) => String(v || '').replace(/\D+/g, '');
+      const isEmail = (v) => emailRe.test(String(v || '').trim());
+      // Phone format (demo): country code + 9–10 national digits (operator 3 digits + 6–7 digits).
+      // No guessing: only format checks.
       const isPhone = (cc, v) => {
-        const s = `${cc || ''}${v || ''}`.replace(/\s+/g, '');
-        return s.length >= 6 && /^[+0-9\-()]+$/.test(s);
+        const ccDigits = toDigits(cc);
+        const phDigits = toDigits(v);
+        if (!ccDigits || ccDigits.length < 1 || ccDigits.length > 3) return false;
+        if (!phDigits) return false;
+        if (phDigits.length < 9 || phDigits.length > 10) return false;
+        if (ccDigits.length + phDigits.length > 15) return false; // E.164 sanity
+        return true;
       };
 
       const name = nameEl?.value?.trim() || ''; // name optional by spec
       const phone = phoneEl?.value?.trim() || '';
       const email = emailEl?.value?.trim() || '';
       const consent = !!consentEl?.checked;
-      const phoneCountryCode = '+34'; // fixed default (no country selector in in-dialog)
+      const phoneCountryCode = get('inDialogLeadCode')?.value?.trim() || '+34';
 
       // Reset previous errors
       markError(phoneEl, false);
@@ -4974,7 +5012,9 @@ render() {
       if (!contactOk) {
         markError(phoneEl, phoneHas && !phoneOk);
         markError(emailEl, emailHas && !emailOk);
-        const msg = phoneHas && !phoneOk ? 'Invalid phone number' : 'Invalid email address';
+        const msg = phoneHas && !phoneOk
+          ? 'Invalid phone number. Use 9–10 digits after country code.'
+          : 'Invalid email address. Example: name@domain.com';
         showErr(contactErr, true, msg);
         if (!phoneOk && phoneHas) shake(phoneEl);
         if (!emailOk && emailHas) shake(emailEl);
@@ -5050,15 +5090,29 @@ render() {
               <input class="in-dialog-lead__input" id="inDialogLeadName" type="text" autocomplete="name" placeholder="Name">
             </div>
 
-            <div class="in-dialog-lead__row">
-              <div class="in-dialog-lead__field">
-                <label class="in-dialog-lead__label" for="inDialogLeadPhone">Phone</label>
-                <input class="in-dialog-lead__input" id="inDialogLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone">
+            <div class="in-dialog-lead__field">
+              <label class="in-dialog-lead__label" for="inDialogLeadPhone">Phone</label>
+              <div class="in-dialog-lead__phone-row">
+                <div class="dial-select">
+                  <button class="dial-btn" type="button" id="inDialogLeadDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <div class="dial-list" id="inDialogLeadDialList">
+                    <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
+                    <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
+                    <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
+                    <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
+                    <div class="dial-item" data-cc="RU" data-code="+7"><span class="dial-flag">🇷🇺</span><span class="dial-code">+7 RU</span></div>
+                    <div class="dial-item" data-cc="PL" data-code="+48"><span class="dial-flag">🇵🇱</span><span class="dial-code">+48 PL</span></div>
+                    <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
+                  </div>
+                </div>
+                <input class="in-dialog-lead__input" id="inDialogLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="123456789">
+                <input id="inDialogLeadCode" type="hidden" value="+34" />
               </div>
-              <div class="in-dialog-lead__field">
-                <label class="in-dialog-lead__label" for="inDialogLeadEmail">Email</label>
-                <input class="in-dialog-lead__input" id="inDialogLeadEmail" type="email" autocomplete="email" placeholder="E-mail">
-              </div>
+            </div>
+
+            <div class="in-dialog-lead__field">
+              <label class="in-dialog-lead__label" for="inDialogLeadEmail">Email</label>
+              <input class="in-dialog-lead__input" id="inDialogLeadEmail" type="email" autocomplete="email" placeholder="E-mail">
             </div>
 
             <label class="in-dialog-lead__consent">
@@ -5087,6 +5141,67 @@ render() {
         // Fallback: if no handoff block, do not render (demo constraint: only after post-handoff)
         return;
       }
+
+      // In-dialog dial select (copy of request/context pattern; isolated IDs)
+      try {
+        const get = (id) => this.shadowRoot.getElementById(id);
+        const dialBtn = get('inDialogLeadDialBtn');
+        const dialList = get('inDialogLeadDialList');
+        const codeInput = get('inDialogLeadCode');
+        const phoneEl = get('inDialogLeadPhone');
+        const emailEl = get('inDialogLeadEmail');
+        const consentEl = get('inDialogLeadGdpr');
+        const contactErr = get('inDialogLeadContactError');
+        const consentErr = get('inDialogLeadConsentError');
+
+        const toggleDial = (show) => { if (dialList) dialList.style.display = show ? 'block' : 'none'; };
+        dialBtn?.addEventListener('click', (e) => {
+          e.preventDefault();
+          const visible = dialList && dialList.style.display === 'block';
+          toggleDial(!visible);
+        });
+        dialList?.querySelectorAll('.dial-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const code = item.getAttribute('data-code') || '+34';
+            const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+            if (dialBtn) {
+              const codeEl = dialBtn.querySelector('.dial-code');
+              const flagEl = dialBtn.querySelector('.dial-flag');
+              if (codeEl) codeEl.textContent = code;
+              if (flagEl) flagEl.textContent = flag;
+            }
+            if (codeInput) codeInput.value = code;
+            toggleDial(false);
+          });
+        });
+
+        // Close dial list on outside click (capture), cleaned up in cancelHandoffFlowUI()
+        try {
+          if (this._inDialogLeadDialOutsideHandler) {
+            try { document.removeEventListener('click', this._inDialogLeadDialOutsideHandler, true); } catch {}
+          }
+          this._inDialogLeadDialOutsideHandler = (ev) => {
+            if (!dialList || !dialBtn) return;
+            const path = ev.composedPath ? ev.composedPath() : [];
+            if (![dialList, dialBtn].some(el => path.includes(el))) toggleDial(false);
+          };
+          document.addEventListener('click', this._inDialogLeadDialOutsideHandler, { capture: true });
+        } catch {}
+
+        // Clear errors on input/change (UX parity with other forms)
+        const clearContactErr = () => {
+          try { if (contactErr) contactErr.classList.remove('visible'); } catch {}
+          try { if (phoneEl) phoneEl.classList.remove('error'); } catch {}
+          try { if (emailEl) emailEl.classList.remove('error'); } catch {}
+        };
+        const clearConsentErr = () => {
+          try { if (consentErr) consentErr.classList.remove('visible'); } catch {}
+          try { if (consentEl) consentEl.classList.remove('error'); } catch {}
+        };
+        phoneEl?.addEventListener('input', () => { clearContactErr(); });
+        emailEl?.addEventListener('input', () => { clearContactErr(); });
+        consentEl?.addEventListener('change', () => { clearConsentErr(); });
+      } catch {}
 
       requestAnimationFrame(() => {
         const H = messages.clientHeight;
