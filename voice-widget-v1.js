@@ -1758,18 +1758,6 @@ render() {
     }
   }
 
-  /* Page dim overlay (site dim when widget is open) */
-  .page-dim{
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.35);
-    opacity: 0;
-    pointer-events: none; /* включим на мобайле из JS для тапа-вне */
-    transition: opacity .2s ease;
-    z-index: 2;
-  }
-  :host(.open) .page-dim{ opacity: 1; }
-  
   /* Image lightbox (fullscreen image viewer) */
   .img-lightbox{
     position: fixed;
@@ -1798,9 +1786,6 @@ render() {
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
     <img src="${ASSETS_BASE}MicBig.png" alt="Voice" />
   </button>
-
-  <!-- Page dim overlay -->
-  <div class="page-dim" id="pageDim" aria-hidden="true"></div>
   
   <!-- Image lightbox overlay -->
   <div class="img-lightbox" id="imgLightbox" aria-hidden="true">
@@ -2281,10 +2266,45 @@ render() {
     try { this.setupMenuOverlay(); } catch {}
   };
 
+  // Outside tap-to-close (no overlay, no page blocking)
+  // Important: we do NOT preventDefault / stopPropagation, so the host page remains fully interactive.
+  if (!this._onOutsidePointerDown) {
+    this._onOutsidePointerDown = (ev) => {
+      try {
+        if (!this.classList.contains('open')) return;
+        const path = (ev && typeof ev.composedPath === 'function') ? ev.composedPath() : [];
+        // In Shadow DOM, composedPath includes the host element (`this`) for internal clicks.
+        const isInside = Array.isArray(path) ? path.includes(this) : false;
+        if (isInside) return;
+        if (typeof this.closeWidget === 'function') this.closeWidget();
+      } catch {}
+    };
+  }
+  this._enableOutsideClose = () => {
+    try {
+      if (this._outsideCloseEnabled) return;
+      this._outsideCloseEnabled = true;
+      // pointerdown is preferred; touchstart/mousedown are fallbacks
+      document.addEventListener('pointerdown', this._onOutsidePointerDown, true);
+      document.addEventListener('touchstart', this._onOutsidePointerDown, true);
+      document.addEventListener('mousedown', this._onOutsidePointerDown, true);
+    } catch {}
+  };
+  this._disableOutsideClose = () => {
+    try {
+      if (!this._outsideCloseEnabled) return;
+      this._outsideCloseEnabled = false;
+      document.removeEventListener('pointerdown', this._onOutsidePointerDown, true);
+      document.removeEventListener('touchstart', this._onOutsidePointerDown, true);
+      document.removeEventListener('mousedown', this._onOutsidePointerDown, true);
+    } catch {}
+  };
+
   // Launcher
   let _sessionStarted = false;
   $("#launcher")?.addEventListener("click", () => {
     this.classList.add("open");
+    try { this._enableOutsideClose?.(); } catch {}
     
     // Логируем session_start при первом открытии
     if (!_sessionStarted) {
@@ -2317,25 +2337,6 @@ render() {
       })();
       if (!isMobileLike) {
         this.shadowRoot.getElementById("textInput")?.focus();
-      }
-      // На мобильных — блокируем скролл страницы, чтобы скроллился только виджет
-      if (isMobileLike) {
-        const de = document.documentElement;
-        const b = document.body;
-        this._prevPageOverflowDoc = de.style.overflow || '';
-        this._prevPageOverflowBody = b.style.overflow || '';
-        this._prevPageTouchAction = b.style.touchAction || '';
-        de.style.overflow = 'hidden';
-        b.style.overflow = 'hidden';
-        b.style.touchAction = 'none';
-        this._scrollLockedMobile = true;
-        // Разрешаем клик по затемнению закрывать виджет на мобайле
-        const dim = this.shadowRoot.getElementById('pageDim');
-        if (dim) dim.style.pointerEvents = 'auto';
-      } else {
-        // На десктопе не блокируем скролл и не даём кликом по затемнению закрывать
-        const dim = this.shadowRoot.getElementById('pageDim');
-        if (dim) dim.style.pointerEvents = 'none';
       }
     } catch {}
     // Не блокируем прокрутку страницы при открытом виджете
@@ -2416,6 +2417,7 @@ render() {
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
     this.classList.remove("open");
+    try { this._disableOutsideClose?.(); } catch {}
     
     // Логируем widget_close и session_end
     logTelemetry(TelemetryEventTypes.WIDGET_CLOSE);
@@ -2443,9 +2445,6 @@ render() {
         b.style.touchAction = this._prevPageTouchAction || '';
         this._scrollLockedMobile = false;
       }
-      // Отключим обработку кликов по затемнению
-      const dim = this.shadowRoot.getElementById('pageDim');
-      if (dim) dim.style.pointerEvents = 'none';
     } catch {}
   };
 
@@ -2939,41 +2938,11 @@ render() {
   try { this.setupRequestForm(); } catch {}
  
 
-  // Escape key (global) — закрыть виджет и вернуть скролл страницы
-  this._onGlobalKeydown = (e) => {
-    if (e.key !== 'Escape') return;
-    if (!this.classList.contains('open')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    this.closeWidget();
-  };
-  try { document.addEventListener('keydown', this._onGlobalKeydown, true); } catch {}
-
   // Expose helpers
   this.showScreen = showScreen;
   this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('dialog');
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
-  
-  // Page dim click to close on mobile
-  try {
-    const dim = this.shadowRoot.getElementById('pageDim');
-    if (dim) {
-      dim.addEventListener('click', () => {
-        try {
-          const isMobileLike = (() => {
-            try {
-              const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-              const touch = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
-              const ua = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-              return Boolean(coarse || touch || ua);
-            } catch { return false; }
-          })();
-          if (isMobileLike) this.closeWidget();
-        } catch {}
-      }, { passive: true });
-    }
-  } catch {}
   
   // Image Lightbox — open/close helpers
   this.openImageOverlay = (url) => {
@@ -5314,6 +5283,18 @@ render() {
     this.ui?.clearRecordingState?.();
     this.events?.clear?.();
     try { document.removeEventListener('keydown', this._onGlobalKeydown, true); } catch {}
+    try { this._disableOutsideClose?.(); } catch {}
+    // Safety: if an older build locked the page and didn't restore, try to restore only if we know we locked it.
+    try {
+      if (this._scrollLockedMobile) {
+        const de = document.documentElement;
+        const b = document.body;
+        de.style.overflow = this._prevPageOverflowDoc || '';
+        b.style.overflow = this._prevPageOverflowBody || '';
+        b.style.touchAction = this._prevPageTouchAction || '';
+        this._scrollLockedMobile = false;
+      }
+    } catch {}
     console.log('👋 Voice Widget disconnected and cleaned up');
   }
 
