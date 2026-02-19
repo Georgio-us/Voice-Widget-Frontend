@@ -182,12 +182,115 @@ render() {
 
   /* launcher/scrim */
   .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
-    border:none; cursor:pointer; z-index:10001; background:linear-gradient(135deg,#FF8A4C,#A855F7);
+    border:none; padding:0; cursor:pointer; z-index:10001; background:transparent; -webkit-appearance:none; appearance:none;
     box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
     transition:transform .15s ease, box-shadow .15s ease; }
   .launcher:hover{ transform:scale(1.05); box-shadow:0 14px 32px rgba(0,0,0,.22); }
-  .launcher svg{ width:100%; height:100%; fill:#fff }
-  .launcher img{ width:100%; height:100%; display:block; object-fit:contain; filter:brightness(0) invert(1); }
+  /* Legacy icon kept in markup, not used in current launcher variants */
+  .launcher__desktopIcon{ width:100%; height:100%; display:none; object-fit:contain; filter:brightness(0) invert(1); }
+  .launcher__textBlock{ display:none; }
+  .launcher__iconSlot{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex:0 0 auto; padding:0; margin:0; }
+  
+  /* Flip logos (coin-like): used on both mobile and desktop */
+  .launcher__flip{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; perspective: 800px; pointer-events:none; }
+  .launcher__flipInner{ width:100%; height:100%; display:block; position:relative; transform-style: preserve-3d; transition: transform 650ms cubic-bezier(.2,.8,.2,1); will-change: transform; }
+  .launcher__face{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+  .launcher__face img{ width:100%; height:100%; display:block; object-fit:contain; filter:none !important; }
+  .launcher__face svg{ width:100%; height:100%; display:block; }
+  .launcher__face--back{ transform: rotateY(180deg); }
+  .launcher.vw-launcher-back .launcher__flipInner{ transform: rotateY(180deg); }
+  
+  /* Desktop variant (wide card) is responsive by viewport width, not device classes */
+  @media (min-width: 768px){
+    .launcher{
+      width: fit-content;
+      min-width: 240px;
+      max-width: 90vw;
+      height:auto;
+      min-height: clamp(60px, 6vw, 72px);
+      padding:
+        clamp(10px, 1.4vw, 14px)
+        clamp(10px, 1.4vw, 14px)
+        clamp(10px, 1.4vw, 14px)
+        clamp(12px, 1.8vw, 18px);
+      border-radius:18px;
+      position:fixed;
+      background:#2D251C;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: clamp(10px, 1.4vw, 14px);
+    }
+    .launcher::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      padding:1px;
+      border-radius:inherit;
+      pointer-events:none;
+      background:linear-gradient(90deg, #5C7FE2 0%, #F05A4F 33%, #EDA136 66%, #1C7755 100%);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+    /* One-off sheen on hover/focus (diagonal 45deg sweep) */
+    .launcher::after{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      pointer-events:none;
+      opacity:0;
+      transform: translateX(-120%) rotate(45deg);
+      background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.00) 47%,
+        rgba(255,255,255,0.14) 50%,
+        rgba(255,255,255,0.00) 53%,
+        rgba(255,255,255,0) 100%
+      );
+      will-change: transform, opacity;
+    }
+    .launcher:hover::after,
+    .launcher:focus-visible::after{
+      opacity:1;
+      animation: vwLauncherSheen 6850ms cubic-bezier(.2,.8,.2,1) 1 forwards;
+    }
+    .launcher__textBlock{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      flex: 1 1 auto;
+      min-width:0;
+      text-align:left;
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    }
+    .launcher__title{
+      font-size: clamp(12px, 1vw + 10px, 14px);
+      font-weight:500;
+      line-height:18px;
+      color:#ffffff;
+      white-space:nowrap;
+    }
+    .launcher__subtitle{
+      font-size: clamp(10px, 0.8vw + 8px, 12px);
+      font-weight:300;
+      line-height:16px;
+      color:rgba(255,255,255,.72);
+      white-space:nowrap;
+    }
+    .launcher__iconSlot{
+      width:56px;
+      height:56px;
+      flex:0 0 56px;
+    }
+  }
+  @keyframes vwLauncherSheen{
+    0%{ transform: translateX(-120%) rotate(45deg); opacity:0; }
+    15%{ opacity:1; }
+    100%{ transform: translateX(120%) rotate(45deg); opacity:0; }
+  }
   :host(.open) .launcher{ display:none; }
 
   /* (scroll-bottom-btn и scrim удалены как неиспользуемые) */
@@ -226,7 +329,6 @@ render() {
   .dialog-screen.hidden{ display:none; }
   .context-screen.hidden{ display:none; }
   .request-screen.hidden{ display:none; }
-  .support-screen.hidden{ display:none; }
 
   /* Chat */
   .thread{ display:flex; flex-direction:column; gap:2px; position:relative; z-index:1; min-height:0; }
@@ -619,7 +721,6 @@ render() {
                 .voice-widget-container { font-family: var(--ff); }
                 button, input, select, textarea { font-family: inherit; }
                 /* Ensure chips and property card inherit widget font */
-                .support-issue-chip { font-family: var(--ff); }
                 .property-card { font-family: var(--ff); }
                 /* semantic text classes */
                 .text-display { font: var(--fw-s) var(--fs-display)/var(--lh-tight) var(--ff); }
@@ -666,26 +767,6 @@ render() {
                     repeating-linear-gradient(to right, rgba(255,255,255,0.01) 0 1px, transparent 1px 50px),
                     repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 70px);
                 }
-                /* Decorative mobile-friendly ellipses inside widget */
-                .bg-ellipses {
-                  position: absolute;
-                  inset: 0;
-                  pointer-events: none;
-                  z-index: 0; /* под сеткой */
-                  background:
-                    radial-gradient(60% 40% at 20% 80%, rgba(120,119,198,0.30) 0%, transparent 60%),
-                    radial-gradient(50% 35% at 80% 20%, rgba(255,122,0,0.20) 0%, transparent 60%),
-                    radial-gradient(55% 45% at 40% 40%, rgba(120,119,198,0.20) 0%, transparent 60%);
-                }
-                @media (max-width: 450px) {
-                  .bg-ellipses {
-                    background:
-                      radial-gradient(70% 45% at 25% 85%, rgba(120,119,198,0.28) 0%, transparent 65%),
-                      radial-gradient(65% 40% at 85% 25%, rgba(255,122,0,0.18) 0%, transparent 65%),
-                      radial-gradient(70% 55% at 45% 45%, rgba(120,119,198,0.18) 0%, transparent 65%);
-                  }
-                }
-                
                 /* Main screen sections */
                 .main-header{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; gap:20px; padding: 15px }
                 .main-header-grid{ width:100%; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
@@ -700,12 +781,7 @@ render() {
                 /* hover меняет только саму иконку */
                 .header-action:hover{ background: transparent; }
                 .header-action:focus, .header-action:focus-visible{ outline:none; box-shadow:none; }
-                .header-action img{ width:24px; height:24px; display:block; transition: opacity .15s ease; }
-                /* TEMP: скрыть только иконки в хедере (кнопки оставить, чтобы не ломать сетку/верстку) */
-                .main-header .header-action img,
-                .screen-header .header-action img{
-                  display: none !important;
-                }
+                .header-action img{ width:28px; height:28px; display:block; transition: opacity .15s ease; }
                 .header-action:hover img{ opacity:.82; }
                 .header-left{ justify-self:start; }
                 .header-right{ justify-self:end; }
@@ -813,14 +889,12 @@ render() {
                 
                 /* Make other v2 screens scrollable within widget bounds */
                 .context-screen .voice-widget-container,
-                .request-screen .voice-widget-container,
-                .support-screen .voice-widget-container{
+                .request-screen .voice-widget-container{
                     display:flex;
                     flex-direction:column;
                 }
                 .context-screen .context-main-container,
-                .request-screen .request-main-container,
-                .support-screen .support-main-container{
+                .request-screen .request-main-container{
                     flex:1;
                     min-height:0;
                     overflow-y:auto; overflow-x:hidden;
@@ -938,40 +1012,18 @@ render() {
                 
                 /* Стили для Dialog Screen */
                 .screen-header{
-                    width:100%; max-width:360px; height:60px; margin:0 auto;
+                    width:100%; max-width:320px; height:60px; margin:0 auto;
                     display:grid; grid-template-columns:1fr auto 1fr; align-items:center; position:relative; z-index:2;
                 }
                 /* overlay в диалоге должен перекрывать всю сетку хедера */
                 .screen-header .menu-overlay{ grid-column:1 / -1; grid-row:1; z-index:4; }
-                .menu-button {
-                    position: absolute;
-                    top: 25px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    width: 40px;
-                    height: 40px;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10; /* поверх overlay */
-                }
-                /* inside header we use normal flow (no absolute), center column for menu */
-                .screen-header .menu-button{ position: static !important; top:auto; left:auto; transform:none; z-index: 3; grid-area:1/2; justify-self:center; }
                 .screen-header .header-action{ grid-row:1; }
                 .screen-header .header-left{ grid-column:1; justify-self:start; }
                 .screen-header .header-right{ grid-column:3; justify-self:end; }
+                .screen-header .header-logo{ grid-column:2; grid-row:1; justify-self:center; width:auto; height:18px; display:block; }
                 /* скрываем крайние кнопки при открытом меню */
                 .screen-header.menu-opened .header-action{ display:none; }
-                .menu-button img { transition: transform 0.15s ease, opacity 0.15s ease; }
-                .menu-button:hover img { transform: scale(1.08); opacity: 0.85; }
-                /* При открытом меню центрируем кнопку по вертикали в зоне overlay (100px, padding-top 15px => центр на 50px) */
-                .menu-button.menu-open {
-                    top: 50px;
-                    transform: translate(-50%, -50%);
-                }
-                .screen-header .menu-button.menu-open{ top:auto; transform:none; }
-                .menu-button.hidden{ display:none; }
+                .screen-header.menu-opened .header-logo{ display:none; }
                 /* Close button inside grid (center column) */
                 .menu-close-btn{ width:40px; height:40px; background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:100px; transition: background .15s ease, transform .15s ease; }
                 .menu-close-btn:hover{ background: rgba(255,255,255,.10); }
@@ -1002,25 +1054,20 @@ render() {
                 .dialogue-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
                 /* Thin scrollbar for other scrollable screens */
                 .context-main-container::-webkit-scrollbar,
-                .request-main-container::-webkit-scrollbar,
-                .support-main-container::-webkit-scrollbar{ width:2px; }
+                .request-main-container::-webkit-scrollbar{ width:2px; }
                 .context-main-container::-webkit-scrollbar-track,
-                .request-main-container::-webkit-scrollbar-track,
-                .support-main-container::-webkit-scrollbar-track{ background:transparent; }
+                .request-main-container::-webkit-scrollbar-track{ background:transparent; }
                 .context-main-container::-webkit-scrollbar-thumb,
-                .request-main-container::-webkit-scrollbar-thumb,
-                .support-main-container::-webkit-scrollbar-thumb{
+                .request-main-container::-webkit-scrollbar-thumb{
                     background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%);
                     border-radius:1px;
                 }
                 .context-main-container::-webkit-scrollbar-thumb:hover,
-                .request-main-container::-webkit-scrollbar-thumb:hover,
-                .support-main-container::-webkit-scrollbar-thumb:hover{
+                .request-main-container::-webkit-scrollbar-thumb:hover{
                     background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%);
                 }
                 .context-main-container,
-                .request-main-container,
-                .support-main-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
+                .request-main-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
                 
                 .message-bubble {
                     border-radius: 10px;
@@ -1231,151 +1278,6 @@ render() {
                 }
                 
                 /* ========================= */
-                /*        Support Screen     */
-                /* ========================= */
-                .support-main-container {
-                    position: static;
-                    width: 100%;
-                    max-width: 360px;
-                    margin: var(--space-l) auto 0;
-                    padding: 0 var(--space-l);
-                }
-                
-                .support-faq-title {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 16px;
-                    font-weight: 400;
-                    color: #EDCF23;
-                    text-align: left;
-                }
-                
-                .support-faq-list {
-                    margin-top: var(--space-m);
-                }
-                .support-faq-list.disabled{ opacity:.5; pointer-events:none; }
-                
-                .support-faq-item {
-                    margin-bottom: var(--space-m);
-                    border: 1px solid rgba(237, 207, 34, 0.38);
-                    border-radius: 10px;
-                    background: rgba(106,108,155,0.06);
-                    overflow: hidden;
-                }
-                
-                .support-faq-question {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 8px;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 12px;
-                    font-weight: 400;
-                    color: #FFFFFF;
-                    padding: 10px 12px;
-                    cursor: pointer;
-                }
-                
-                .support-faq-question::before {
-                    content: '';
-                }
-                .support-faq-question .faq-caret{
-                    width: 10px; height: 10px; border-right: 2px solid #A0A0A0; border-bottom: 2px solid #A0A0A0; transform: rotate(45deg); transition: transform .2s ease, opacity .2s ease;
-                }
-                .support-faq-item.open .support-faq-question .faq-caret{ transform: rotate(225deg); }
-                
-                .support-faq-answer {
-                    display: none;
-                    padding: 10px;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 11px;
-                    font-weight: 300;
-                    color: #C3C3C3;
-                }
-                .support-faq-item.open .support-faq-answer{ display:block; }
-                
-                .support-gradient-line {
-                    width: 100%;
-                    height: 2px;
-                    border-radius: 1px;
-                    background: linear-gradient(to right, rgba(90, 127, 227, 0.1), rgba(237, 207, 34, 1), rgba(85, 122, 219, 0.1));
-                    margin: var(--space-l) 0;
-                }
-                
-                .support-hint-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 12px;
-                    font-weight: 100;
-                    color: #FFFFFF;
-                    line-height: 1.4;
-                    text-align: center;
-                }
-                
-                .support-contact-button {
-                    text-align: center;
-                }
-                
-                .support-contact-btn {
-                    padding: var(--btn-py) var(--btn-px);
-                    min-width: var(--btn-min-w);
-                    margin-top: 25px;
-                    background: #EDCF23;
-                    border: none;
-                    border-radius: var(--btn-radius);
-                    color: #3B3B3B;
-                    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-                    cursor: pointer;
-                    transition: opacity 0.3s ease;
-                }
-                
-                .support-contact-btn:hover {
-                    opacity: 0.9;
-                }
-                
-                /* Support form */
-                .support-form{ display:none; margin-top:16px; }
-                .support-form > * + *{ margin-top:10px; }
-                .support-issues{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; margin-top: 25px; }
-                .support-issue-chip{ padding:6px 10px; border-radius:10px; border:1px solid #476AA5; background:transparent; color:#fff; font-size:10px; font-weight:400; cursor:pointer; }
-                .support-issue-chip:hover{ opacity:.9; }
-                .support-issue-chip.active{ background:#476AA5; color:#fff; border-color:#5F81BA; }
-                .support-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; box-sizing:border-box; resize:vertical; transition: border-color .15s ease; }
-                .support-textarea:focus,
-                .support-textarea:focus-visible{
-                  outline: none;
-                  border-width: 1px;
-                  border-color: #5F81BA;
-                  box-shadow: none;
-                }
-                .support-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
-                .support-textarea::-webkit-scrollbar{ width:0; height:0; }
-                
-                .support-actions{ display:flex; gap:20px; justify-content: space-between; margin-top:20px; }
-                .support-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
-                .support-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:#476AA5; border:1.25px solid #476AA5; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
-                .support-actions .support-send-btn, .support-actions .support-cancel-btn{ flex:1 1 0; min-width:0; }
-                .support-send-btn, .support-cancel-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
-                
-                /* Support thanks */
-                .support-thanks{ display:none; margin-top:16px; text-align:center; }
-                .support-thanks-title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; }
-                .support-thanks-text{ font-size:12px; font-weight:400; color:#C4C4C4; }
-                .support-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
-                .support-done-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
-                
-                .support-footer-text {
-                    position: relative;
-                    margin: 0 auto;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                    font-size: 10px;
-                    font-weight: 400;
-                    color: #A9A9A9;
-                    text-align: center;
-                    cursor: pointer;
-                    transition: transform .15s ease, opacity .15s ease;
-                }
-                .support-footer-text:hover{ transform: scale(1.1); opacity:.9; }
-                
-                /* ========================= */
                 /*        Request Screen     */
                 /* ========================= */
                 /* iOS: предотвратить zoom при фокусе на полях (минимум 16px) */
@@ -1386,7 +1288,6 @@ render() {
                   .request-select,
                   .request-textarea,
                   .ctx-textarea,
-                  .support-textarea,
                   .dial-btn {
                     font-size: 16px;
                   }
@@ -1626,6 +1527,7 @@ render() {
                     height: 60px;
                     margin: 0 auto;
                     box-sizing: border-box;
+                    overflow: visible;
                     opacity: 0;
                     visibility: hidden;
                     pointer-events: none;
@@ -1668,19 +1570,73 @@ render() {
                     height: 25px;
                     background: transparent;
                     border-radius: 20px;
-                    border: 1px solid currentColor;
-                    color: #FFFFFF;
+                    border: none;
+                    color: #DBDBDB;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
-                    font-weight: 400;
+                    font-weight: 500;
                     cursor: pointer;
                     transition: transform 0.15s ease, opacity 0.15s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: flex-start;
+                    gap: 8px;
+                    padding: 0 8px;
                 }
                 .menu-btn:hover { transform: scale(1.05); opacity: 0.85; }
-                .menu-btn--request { color: #6A6C9B; }
-                .menu-btn--support { color: #EDCF23; }
-                .menu-btn--context { color: #E85F62; }
-                .menu-btn--reset { color: #FFFFFF; }
+                .menu-btn--request { color: #DBDBDB; }
+                .menu-btn--language { color: #DBDBDB; }
+                .menu-btn--context { color: #DBDBDB; }
+                .menu-btn--reset { color: #DBDBDB; }
+                .menu-btn .menu-btn__icon{ width:18px; height:18px; flex:0 0 18px; }
+                .menu-btn--request .menu-btn__icon,
+                .menu-btn--language .menu-btn__icon{ width:16px; height:16px; flex:0 0 16px; }
+                .menu-language {
+                    position: relative;
+                    width: 110px;
+                }
+                .menu-language-trigger {
+                    width: 100%;
+                }
+                .menu-language-dropdown {
+                    position: absolute;
+                    top: calc(100% + 6px);
+                    left: 0;
+                    width: 110px;
+                    border-radius: 12px;
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    background: rgba(15, 16, 20, 0.98);
+                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+                    display: none;
+                    z-index: 20;
+                    padding: 4px;
+                }
+                .menu-language-dropdown.open {
+                    display: block;
+                }
+                .menu-language-option {
+                    width: 100%;
+                    height: 24px;
+                    border: none;
+                    border-radius: 8px;
+                    background: transparent;
+                    color: #DBDBDB;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 0 8px;
+                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-size: 12px;
+                    font-weight: 500;
+                    cursor: pointer;
+                }
+                .menu-language-option:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                }
+                .menu-language-option.is-active {
+                    color: #FFFFFF;
+                    background: rgba(255, 255, 255, 0.12);
+                }
                 .menu-link {
                     width: 110px;
                     height: 25px;
@@ -1710,17 +1666,8 @@ render() {
                     color: currentColor;
                 }
                 .menu-badge--request { color: #6A6C9B; }
-                .menu-badge--support { color: #EDCF23; }
                 .menu-badge--context { color: #E85F62; }
 
-                /* ===== Human contact popup ===== */
-                .human-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:20; }
-                .human-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:center; }
-                .human-title{ font-size:14px; font-weight:600; margin:0 0 8px 0; }
-                .human-timer{ font-size:18px; font-weight:700; color:#EDCF23; margin:6px 0 10px 0; letter-spacing:.5px; }
-                .human-note{ font-size:12px; color:#C3C3C3; margin:0 0 14px 0; }
-                .human-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:0 auto; display:inline-flex; align-items:center; justify-content:center; }
-                .human-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
   </style>
 
   <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
@@ -1784,7 +1731,35 @@ render() {
 
   <!-- Launcher -->
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
-    <img src="${ASSETS_BASE}MicBig.png" alt="Voice" />
+    <span class="launcher__textBlock" aria-hidden="true">
+      <span class="launcher__title">Спросите меня прямо здесь</span>
+      <span class="launcher__subtitle">Можно написать или продиктовать</span>
+    </span>
+    <span class="launcher__iconSlot" aria-hidden="true">
+      <!-- Desktop legacy icon (kept for safety, but hidden in vw-mobile/vw-desktop) -->
+      <img class="launcher__desktopIcon" src="${ASSETS_BASE}MicBig.png" alt="" />
+      <!-- Flip logos (attention animation) -->
+      <span class="launcher__flip">
+        <span class="launcher__flipInner">
+          <span class="launcher__face launcher__face--front"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g clip-path="url(#paint0_angular_1071_1216_clip_path)" data-figma-skip-parse="true"><g transform="matrix(0 -0.0169404 0.0169409 0 17.9995 17.999)"><foreignObject x="-1000" y="-1000" width="2000" height="2000"><div xmlns="http://www.w3.org/1999/xhtml" style="background:conic-gradient(from 90deg,rgba(141, 75, 109, 1) 0deg,rgba(239, 68, 68, 1) 91.7308deg,rgba(238, 202, 0, 1) 178.269deg,rgba(41, 84, 153, 1) 264.808deg,rgba(141, 75, 109, 1) 360deg);height:100%;width:100%;opacity:1"></div></foreignObject></g></g><path d="M18 1.05859C27.3562 1.05876 34.9404 8.64315 34.9404 17.999C34.9402 27.3547 27.3561 34.9393 18 34.9395C8.6438 34.9395 1.05877 27.3548 1.05859 17.999C1.05859 8.64304 8.64369 1.05859 18 1.05859ZM12.543 19.0156C12.1688 19.0157 11.8618 19.3205 11.9033 19.6924C12.0561 21.0607 12.6684 22.3451 13.6514 23.3281C14.5617 24.2383 15.7309 24.8291 16.9854 25.0332V28.165H19.0186V25.0205C20.2442 24.8053 21.3844 24.2199 22.2764 23.3281L22.3682 23.2354C23.2979 22.2651 23.8774 21.018 24.0254 19.6924L24.0293 19.623C24.0283 19.3059 23.7733 19.0519 23.4541 19.0195L23.3857 19.0156H22.8184C22.4676 19.0157 22.1835 19.2843 22.0996 19.6221L22.0859 19.6904C21.9543 20.4942 21.589 21.247 21.0312 21.8506L20.917 21.9688C20.1338 22.7518 19.0714 23.1924 17.9639 23.1924L17.8604 23.1904C16.7904 23.1638 15.7694 22.7273 15.0107 21.9688L14.8965 21.8506C14.3387 21.247 13.9744 20.4942 13.8428 19.6904L13.8281 19.6221C13.7442 19.2844 13.461 19.0158 13.1104 19.0156H12.543ZM17.3613 25.085C17.5607 25.1048 17.7618 25.1142 17.9639 25.1143C18.1662 25.1143 18.3678 25.1048 18.5674 25.085H18.6797V27.8574H17.3242V25.085H17.3613ZM13.1104 19.3545C13.2862 19.3547 13.4685 19.506 13.5078 19.7451C13.6596 20.6719 14.0989 21.5353 14.7715 22.208C15.6182 23.0546 16.7665 23.5312 17.9639 23.5312C19.1613 23.5313 20.3105 23.0546 21.1572 22.208C21.8297 21.5353 22.2681 20.6718 22.4199 19.7451C22.4592 19.5059 22.6424 19.3546 22.8184 19.3545H23.3857C23.584 19.3547 23.7046 19.5086 23.6885 19.6543C23.5442 20.9467 22.9656 22.1604 22.0371 23.0889C20.9569 24.1688 19.4914 24.7754 17.9639 24.7754C16.4366 24.7753 14.9717 24.1687 13.8916 23.0889C12.9631 22.1604 12.3835 20.9467 12.2393 19.6543C12.2232 19.5086 12.3446 19.3545 12.543 19.3545H13.1104ZM17.9668 9.53027C16.2828 9.53038 14.918 10.8951 14.918 12.5791V17.6611L14.9219 17.8184C15.0038 19.4292 16.3356 20.7108 17.9668 20.7109C19.6508 20.7109 21.0164 19.345 21.0166 17.6611V12.5791C21.0166 10.8951 19.6509 9.53027 17.9668 9.53027ZM17.9668 9.86914C19.4638 9.86914 20.6777 11.0822 20.6777 12.5791V17.6611C20.6775 19.1579 19.4637 20.3721 17.9668 20.3721C16.47 20.372 15.2571 19.1578 15.2568 17.6611V12.5791C15.2569 11.0823 16.4699 9.86925 17.9668 9.86914Z" data-figma-gradient-fill="{&#34;type&#34;:&#34;GRADIENT_ANGULAR&#34;,&#34;stops&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;stopsVar&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;transform&#34;:{&#34;m00&#34;:-8.1069096477103669e-14,&#34;m01&#34;:33.88183593750,&#34;m02&#34;:1.058593750,&#34;m10&#34;:-33.8808593750,&#34;m11&#34;:1.2881306264700410e-12,&#34;m12&#34;:34.9394531250},&#34;opacity&#34;:1.0,&#34;blendMode&#34;:&#34;NORMAL&#34;,&#34;visible&#34;:true}"/>
+</g>
+<path d="M34.9412 18C34.9412 8.64365 27.3564 1.05882 18 1.05882C8.64365 1.05882 1.05882 8.64365 1.05882 18C1.05882 27.3564 8.64365 34.9412 18 34.9412C27.3564 34.9412 34.9412 27.3564 34.9412 18ZM36 18C36 27.9411 27.9411 36 18 36C8.05888 36 0 27.9411 0 18C0 8.05888 8.05888 0 18 0C27.9411 0 36 8.05888 36 18Z" fill="#2D251C"/>
+<defs>
+<clipPath id="paint0_angular_1071_1216_clip_path"><path d="M18 1.05859C27.3562 1.05876 34.9404 8.64315 34.9404 17.999C34.9402 27.3547 27.3561 34.9393 18 34.9395C8.6438 34.9395 1.05877 27.3548 1.05859 17.999C1.05859 8.64304 8.64369 1.05859 18 1.05859ZM12.543 19.0156C12.1688 19.0157 11.8618 19.3205 11.9033 19.6924C12.0561 21.0607 12.6684 22.3451 13.6514 23.3281C14.5617 24.2383 15.7309 24.8291 16.9854 25.0332V28.165H19.0186V25.0205C20.2442 24.8053 21.3844 24.2199 22.2764 23.3281L22.3682 23.2354C23.2979 22.2651 23.8774 21.018 24.0254 19.6924L24.0293 19.623C24.0283 19.3059 23.7733 19.0519 23.4541 19.0195L23.3857 19.0156H22.8184C22.4676 19.0157 22.1835 19.2843 22.0996 19.6221L22.0859 19.6904C21.9543 20.4942 21.589 21.247 21.0312 21.8506L20.917 21.9688C20.1338 22.7518 19.0714 23.1924 17.9639 23.1924L17.8604 23.1904C16.7904 23.1638 15.7694 22.7273 15.0107 21.9688L14.8965 21.8506C14.3387 21.247 13.9744 20.4942 13.8428 19.6904L13.8281 19.6221C13.7442 19.2844 13.461 19.0158 13.1104 19.0156H12.543ZM17.3613 25.085C17.5607 25.1048 17.7618 25.1142 17.9639 25.1143C18.1662 25.1143 18.3678 25.1048 18.5674 25.085H18.6797V27.8574H17.3242V25.085H17.3613ZM13.1104 19.3545C13.2862 19.3547 13.4685 19.506 13.5078 19.7451C13.6596 20.6719 14.0989 21.5353 14.7715 22.208C15.6182 23.0546 16.7665 23.5312 17.9639 23.5312C19.1613 23.5313 20.3105 23.0546 21.1572 22.208C21.8297 21.5353 22.2681 20.6718 22.4199 19.7451C22.4592 19.5059 22.6424 19.3546 22.8184 19.3545H23.3857C23.584 19.3547 23.7046 19.5086 23.6885 19.6543C23.5442 20.9467 22.9656 22.1604 22.0371 23.0889C20.9569 24.1688 19.4914 24.7754 17.9639 24.7754C16.4366 24.7753 14.9717 24.1687 13.8916 23.0889C12.9631 22.1604 12.3835 20.9467 12.2393 19.6543C12.2232 19.5086 12.3446 19.3545 12.543 19.3545H13.1104ZM17.9668 9.53027C16.2828 9.53038 14.918 10.8951 14.918 12.5791V17.6611L14.9219 17.8184C15.0038 19.4292 16.3356 20.7108 17.9668 20.7109C19.6508 20.7109 21.0164 19.345 21.0166 17.6611V12.5791C21.0166 10.8951 19.6509 9.53027 17.9668 9.53027ZM17.9668 9.86914C19.4638 9.86914 20.6777 11.0822 20.6777 12.5791V17.6611C20.6775 19.1579 19.4637 20.3721 17.9668 20.3721C16.47 20.372 15.2571 19.1578 15.2568 17.6611V12.5791C15.2569 11.0823 16.4699 9.86925 17.9668 9.86914Z"/></clipPath></defs>
+</svg></span>
+          <span class="launcher__face launcher__face--back"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g>
+<g clip-path="url(#paint0_angular_1071_1198_clip_path)" data-figma-skip-parse="true"><g transform="matrix(0 -0.0169414 0.0169414 0 18 18)"><foreignObject x="-1000" y="-1000" width="2000" height="2000"><div xmlns="http://www.w3.org/1999/xhtml" style="background:conic-gradient(from 90deg,rgba(141, 75, 109, 1) 0deg,rgba(239, 68, 68, 1) 91.7308deg,rgba(238, 202, 0, 1) 178.269deg,rgba(41, 84, 153, 1) 264.808deg,rgba(141, 75, 109, 1) 360deg);height:100%;width:100%;opacity:1"></div></foreignObject></g></g><path d="M18 1.05859C27.3562 1.05872 34.9414 8.64372 34.9414 18C34.9413 27.3562 27.3562 34.9413 18 34.9414C8.64372 34.9414 1.05872 27.3562 1.05859 18C1.05859 8.64365 8.64365 1.05859 18 1.05859ZM13.6484 11.6475L13.4443 11.6582C12.4357 11.7605 11.6485 12.6118 11.6484 13.6475V24.2041L11.6611 24.4033C11.7774 25.3128 12.6759 25.9214 13.5635 25.6914L13.7539 25.6289C14.059 25.5067 14.3163 25.2899 14.4883 25.0127L14.5566 24.8906L15.3311 23.3408C15.6488 22.706 16.2772 22.2897 16.9785 22.2402L17.1201 22.2354H22.3545L22.5586 22.2256C23.4994 22.1298 24.2479 21.3812 24.3438 20.4404L24.3545 20.2354V13.6475C24.3544 12.6122 23.5668 11.7609 22.5586 11.6582L22.3545 11.6475H13.6484ZM22.3545 12.0576C23.2321 12.0581 23.9443 12.7697 23.9443 13.6475V20.2354C23.9441 21.113 23.232 21.8256 22.3545 21.8262H17.1201C16.2074 21.8262 15.3721 22.3419 14.9639 23.1582L14.1895 24.707C14.0663 24.953 13.8568 25.1457 13.6016 25.248C12.8628 25.5435 12.0592 24.9996 12.0586 24.2041V13.6475C12.0586 12.7694 12.7703 12.0576 13.6484 12.0576H22.3545ZM14.8242 15.8828C14.2397 15.883 13.7658 16.3568 13.7656 16.9414C13.7658 17.5259 14.2397 18.0008 14.8242 18.001C15.4087 18.0008 15.8836 17.5259 15.8838 16.9414C15.8836 16.3569 15.4087 15.883 14.8242 15.8828ZM18.001 15.8828C17.4163 15.8828 16.9425 16.3568 16.9424 16.9414C16.9426 17.526 17.4163 18.001 18.001 18.001C18.5854 18.0008 19.0594 17.5259 19.0596 16.9414C19.0594 16.3569 18.5855 15.883 18.001 15.8828ZM21.1777 15.8828C20.593 15.8828 20.1183 16.3568 20.1182 16.9414C20.1184 17.526 20.5931 18.001 21.1777 18.001C21.7621 18.0006 22.2361 17.5258 22.2363 16.9414C22.2362 16.357 21.7621 15.8832 21.1777 15.8828Z" data-figma-gradient-fill="{&#34;type&#34;:&#34;GRADIENT_ANGULAR&#34;,&#34;stops&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;stopsVar&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;transform&#34;:{&#34;m00&#34;:-8.1071434288038091e-14,&#34;m01&#34;:33.88281250,&#34;m02&#34;:1.058593750,&#34;m10&#34;:-33.88281250,&#34;m11&#34;:1.2882048943188562e-12,&#34;m12&#34;:34.941406250},&#34;opacity&#34;:1.0,&#34;blendMode&#34;:&#34;NORMAL&#34;,&#34;visible&#34;:true}"/>
+</g>
+<path d="M34.9412 18C34.9412 8.64365 27.3564 1.05882 18 1.05882C8.64365 1.05882 1.05882 8.64365 1.05882 18C1.05882 27.3564 8.64365 34.9412 18 34.9412C27.3564 34.9412 34.9412 27.3564 34.9412 18ZM36 18C36 27.9411 27.9411 36 18 36C8.05888 36 0 27.9411 0 18C0 8.05888 8.05888 0 18 0C27.9411 0 36 8.05888 36 18Z" fill="#2D251C"/>
+<defs>
+<clipPath id="paint0_angular_1071_1198_clip_path"><path d="M18 1.05859C27.3562 1.05872 34.9414 8.64372 34.9414 18C34.9413 27.3562 27.3562 34.9413 18 34.9414C8.64372 34.9414 1.05872 27.3562 1.05859 18C1.05859 8.64365 8.64365 1.05859 18 1.05859ZM13.6484 11.6475L13.4443 11.6582C12.4357 11.7605 11.6485 12.6118 11.6484 13.6475V24.2041L11.6611 24.4033C11.7774 25.3128 12.6759 25.9214 13.5635 25.6914L13.7539 25.6289C14.059 25.5067 14.3163 25.2899 14.4883 25.0127L14.5566 24.8906L15.3311 23.3408C15.6488 22.706 16.2772 22.2897 16.9785 22.2402L17.1201 22.2354H22.3545L22.5586 22.2256C23.4994 22.1298 24.2479 21.3812 24.3438 20.4404L24.3545 20.2354V13.6475C24.3544 12.6122 23.5668 11.7609 22.5586 11.6582L22.3545 11.6475H13.6484ZM22.3545 12.0576C23.2321 12.0581 23.9443 12.7697 23.9443 13.6475V20.2354C23.9441 21.113 23.232 21.8256 22.3545 21.8262H17.1201C16.2074 21.8262 15.3721 22.3419 14.9639 23.1582L14.1895 24.707C14.0663 24.953 13.8568 25.1457 13.6016 25.248C12.8628 25.5435 12.0592 24.9996 12.0586 24.2041V13.6475C12.0586 12.7694 12.7703 12.0576 13.6484 12.0576H22.3545ZM14.8242 15.8828C14.2397 15.883 13.7658 16.3568 13.7656 16.9414C13.7658 17.5259 14.2397 18.0008 14.8242 18.001C15.4087 18.0008 15.8836 17.5259 15.8838 16.9414C15.8836 16.3569 15.4087 15.883 14.8242 15.8828ZM18.001 15.8828C17.4163 15.8828 16.9425 16.3568 16.9424 16.9414C16.9426 17.526 17.4163 18.001 18.001 18.001C18.5854 18.0008 19.0594 17.5259 19.0596 16.9414C19.0594 16.3569 18.5855 15.883 18.001 15.8828ZM21.1777 15.8828C20.593 15.8828 20.1183 16.3568 20.1182 16.9414C20.1184 17.526 20.5931 18.001 21.1777 18.001C21.7621 18.0006 22.2361 17.5258 22.2363 16.9414C22.2362 16.357 21.7621 15.8832 21.1777 15.8828Z"/></clipPath></defs>
+</svg></span>
+        </span>
+      </span>
+    </span>
   </button>
   
   <!-- Image lightbox overlay -->
@@ -1802,19 +1777,15 @@ render() {
       <!-- Main Screen -->
       <div class="main-screen" id="mainScreen">
         <div class="voice-widget-container">
-            <div class="bg-ellipses"></div>
             <div class="bg-grid"></div>
-            <div class="main-header">
-              <div class="main-header-grid">
-                <button class="header-action header-left" type="button" title="Статистика">
-                  <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
-                </button>
-                <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="logo">
-                <button class="header-action header-right" type="button" title="Тема">
-                  <img src="${ASSETS_BASE}dark-theme.svg" alt="Theme">
-                </button>
-              </div>
-              <div class="gradient-line"></div>
+            <div class="screen-header">
+              <button class="header-action header-left" type="button" title="Статистика">
+                <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
+              </button>
+              <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="header-logo">
+              <button class="header-action header-right" type="button" title="Закрыть виджет">
+                <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+              </button>
             </div>
             <div class="main-center">
               <div class="main-hero">
@@ -1852,17 +1823,14 @@ render() {
       <!-- Dialogue Screen (v2) wired to v1 logic -->
       <div class="dialog-screen hidden" id="dialogScreen">
         <div class="voice-widget-container">
-          <div class="bg-ellipses"></div>
           <div class="bg-grid"></div>
           <div class="screen-header">
             <button class="header-action header-left" type="button" title="Статистика">
               <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
             </button>
-            <div class="menu-button">
-              <img src="${ASSETS_BASE}menu_icon.svg" alt="Menu" style="width: 32px; height: 32px;">
-            </div>
-            <button class="header-action header-right" type="button" title="Тема">
-              <img src="${ASSETS_BASE}dark-theme.svg" alt="Theme">
+            <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="header-logo">
+            <button class="header-action header-right" type="button" title="Закрыть виджет">
+              <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
             </button>
           </div>
           <div class="dialogue-container" id="messagesContainer">
@@ -1889,7 +1857,6 @@ render() {
       <!-- Context Screen (v2) -->
       <div class="context-screen hidden" id="contextScreen">
         <div class="voice-widget-container">
-          <div class="bg-ellipses"></div>
           <div class="bg-grid"></div>
           <div class="screen-header"></div>
           <div class="context-main-container">
@@ -2026,7 +1993,6 @@ render() {
       <!-- Request Screen (v2) -->
       <div class="request-screen hidden" id="requestScreen">
         <div class="voice-widget-container">
-          <div class="bg-ellipses"></div>
           <div class="bg-grid"></div>
           <div class="screen-header"></div>
           <div class="request-main-container">
@@ -2164,83 +2130,6 @@ render() {
         </div>
       </div>
 
-      <!-- Support Screen (v2) -->
-      <div class="support-screen hidden" id="supportScreen">
-        <div class="voice-widget-container">
-          <div class="bg-ellipses"></div>
-          <div class="bg-grid"></div>
-          <div class="screen-header"></div>
-          <div class="support-main-container">
-            <div class="support-faq-title">FAQ</div>
-            <div class="support-faq-list">
-              <div class="support-faq-item"><div class="support-faq-question">Where is my data stored?<span class="faq-caret"></span></div><div class="support-faq-answer">Your data is safely encrypted and stored on our secure EU servers.</div></div>
-              <div class="support-faq-item"><div class="support-faq-question">How can I delete my information?<span class="faq-caret"></span></div><div class="support-faq-answer">Just send us a short message — we’ll remove your data immediately.</div></div>
-              <div class="support-faq-item"><div class="support-faq-question">Why can’t I send my request?<span class="faq-caret"></span></div><div class="support-faq-answer">Check your internet connection or try again in a few minutes.</div></div>
-              <div class="support-faq-item"><div class="support-faq-question">How can I be sure my info is safe?<span class="faq-caret"></span></div><div class="support-faq-answer">We never share or sell your data. You can review our Privacy Policy anytime.</div></div>
-            </div>
-            <div class="support-gradient-line"></div>
-            <div class="support-hint-text">Got questions or something doesn't work as expected? We're here to help you resolve it quickly.</div>
-            <div class="support-contact-button"><button class="support-contact-btn">Contact Support</button></div>
-              <div class="support-form" id="supportForm">
-                <div class="request-select" id="supportIssueSelect"><span id="supportIssueLabel">Choose problem</span><span class="request-caret">▾</span></div>
-                <div class="request-select-list" id="supportIssueList">
-                  <div class="request-select-item" data-issue="Lead not received">Lead not received</div>
-                  <div class="request-select-item" data-issue="Database error">Database error</div>
-                  <div class="request-select-item" data-issue="Wrong answers">Wrong answers</div>
-                  <div class="request-select-item" data-issue="Access problem">Access problem</div>
-                  <div class="request-select-item" data-issue="Billing problem">Billing problem</div>
-                </div>
-                <textarea class="support-textarea" id="supportIssueInput" placeholder="Issue / describe your problem"></textarea>
-                <div class="support-actions">
-                  <button class="support-send-btn">Send</button>
-                  <button class="support-cancel-btn">Cancel</button>
-                </div>
-              </div>
-              <div class="support-thanks" id="supportThanks">
-                <div class="support-thanks-title">Thank you!</div>
-                <div class="support-thanks-text">Your message has been received. We’ll get back to you soon.</div>
-                <button class="support-done-btn" id="supportThanksDoneBtn">Close</button>
-              </div>
-              <!-- Support Thanks Popup -->
-              <div class="data-overlay" id="supportThanksOverlay" style="display:none;">
-                <div class="data-modal">
-                  <div class="data-title">Thank you!</div>
-                  <div class="data-body">Your message has been received. We'll get back to you soon.</div>
-                  <button class="data-btn" id="supportThanksOverlayClose">Close</button>
-                </div>
-              </div>
-              <!-- Support Spam Warning Popup -->
-              <div class="data-overlay" id="supportSpamWarningOverlay" style="display:none;">
-                <div class="data-modal">
-                  <div class="data-title">Повторная отправка</div>
-                  <div class="data-body">Вы уже отправили заявку, желаете сделать это повторно?</div>
-                  <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
-                    <button class="data-btn" id="supportSpamWarningCancelBtn">Отмена</button>
-                    <button class="data-btn" id="supportSpamWarningContinueBtn">Продолжить</button>
-                  </div>
-                </div>
-              </div>
-              <!-- Support Spam Block Popup -->
-              <div class="data-overlay" id="supportSpamBlockOverlay" style="display:none;">
-                <div class="data-modal">
-                  <div class="data-title">Повторная отправка</div>
-                  <div class="data-body">Вы уже отправили заявку, и сможете отправить её повторно через <span id="supportSpamBlockTimer">60</span> секунд.</div>
-                  <button class="data-btn" id="supportSpamBlockCloseBtn">Понятно</button>
-                </div>
-              </div>
-          </div>
-          <div class="support-footer-text">Want to talk with a human</div>
-            <!-- Human contact popup -->
-            <div class="human-overlay" id="humanOverlay" style="display:none;">
-              <div class="human-modal">
-                <div class="human-title">Next human will be available in</div>
-                <div class="human-timer"><span id="humanEtaTimer">15:00</span> minutes</div>
-                <div class="human-note">You will be contacted by method you put in account.<br/>Thanks for patience!</div>
-                <button class="human-btn" id="humanContinueBtn">Continue</button>
-              </div>
-            </div>
-        </div>
-      </div>
           </div>
 
         </div>
@@ -2256,12 +2145,92 @@ render() {
 
 
   const $ = s => this.shadowRoot.querySelector(s);
+  
+  // Mobile-like detection (used for launcher flip UI + to avoid auto-keyboard focus)
+  this._vwIsMobileLike = (() => {
+    try {
+      const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const touch = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
+      const ua = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      return Boolean(coarse || touch || ua);
+    } catch { return false; }
+  })();
+  try {
+    this.classList.toggle('vw-mobile', !!this._vwIsMobileLike);
+    this.classList.toggle('vw-desktop', !this._vwIsMobileLike);
+  } catch {}
+  
+  // Launcher "attention" flip animation (mobile only). Stops forever after first widget open.
+  const _launcherEl = $("#launcher");
+  if (!this._vwLauncherFlipTimers) this._vwLauncherFlipTimers = [];
+  const _clearLauncherFlipTimers = () => {
+    try { (this._vwLauncherFlipTimers || []).forEach(id => { try { clearTimeout(id); } catch {} }); } catch {}
+    this._vwLauncherFlipTimers = [];
+  };
+  this._vwStopLauncherAttention = () => {
+    this._vwLauncherAttentionStopped = true;
+    _clearLauncherFlipTimers();
+    try { _launcherEl?.classList.remove('vw-launcher-back'); } catch {}
+  };
+  const _scheduleLauncher = (ms, fn) => {
+    try {
+      if (this._vwLauncherAttentionStopped) return null;
+      const id = window.setTimeout(() => { try { fn?.(); } catch {} }, ms);
+      this._vwLauncherFlipTimers.push(id);
+      return id;
+    } catch { return null; }
+  };
+  const _flipToBack = () => {
+    try {
+      if (this._vwLauncherAttentionStopped) return;
+      if (this.classList.contains('open')) return;
+      _launcherEl?.classList.add('vw-launcher-back');
+    } catch {}
+  };
+  const _flipToFront = () => {
+    try {
+      if (this._vwLauncherAttentionStopped) return;
+      if (this.classList.contains('open')) return;
+      _launcherEl?.classList.remove('vw-launcher-back');
+    } catch {}
+  };
+  const _startLauncherAttention = () => {
+    try {
+      if (!_launcherEl) return;
+      if (this._vwLauncherAttentionStopped) return;
+      if (this._vwLauncherAttentionStarted) return;
+      this._vwLauncherAttentionStarted = true;
+      
+      const recurring = () => {
+        _scheduleLauncher(30000, () => {
+          _flipToBack();
+          _scheduleLauncher(5000, () => {
+            _flipToFront();
+            recurring();
+          });
+        });
+      };
+      
+      // Initial series: 5s -> flip -> 5s -> flip back, then every 30s repeat (flip + 5s + flip back)
+      _scheduleLauncher(5000, () => {
+        _flipToBack();
+        _scheduleLauncher(5000, () => {
+          _flipToFront();
+          recurring();
+        });
+      });
+    } catch {}
+  };
+  // Start attention animation on load (mobile only, until first open)
+  _startLauncherAttention();
 
   // Screen management (fresh query each time to avoid stale refs)
-  const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen','supportScreen'];
+  const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
   const showScreen = (screenName) => {
     screenIds.forEach(id => this.shadowRoot.getElementById(id)?.classList.add('hidden'));
-    this.shadowRoot.getElementById(screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen')?.classList.remove('hidden');
+    const targetId = screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen';
+    const targetEl = this.shadowRoot.getElementById(targetId) || this.shadowRoot.getElementById('dialogScreen');
+    targetEl?.classList.remove('hidden');
     // ensure menu overlay is attached to the active screen header
     try { this.setupMenuOverlay(); } catch {}
   };
@@ -2303,6 +2272,8 @@ render() {
   // Launcher
   let _sessionStarted = false;
   $("#launcher")?.addEventListener("click", () => {
+    // Attention flip must stop forever after the first open
+    try { this._vwStopLauncherAttention?.(); } catch {}
     this.classList.add("open");
     try { this._enableOutsideClose?.(); } catch {}
     
@@ -2327,15 +2298,7 @@ render() {
     logTelemetry(TelemetryEventTypes.WIDGET_OPEN);
     // Не фокусируем поле на мобильных, чтобы не вызывать автопоявление клавиатуры
     try {
-      const isMobileLike = (() => {
-        try {
-          const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-          const touch = typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 0;
-          const ua = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-          return Boolean(coarse || touch || ua);
-        } catch { return false; }
-      })();
-      if (!isMobileLike) {
+      if (!this._vwIsMobileLike) {
         this.shadowRoot.getElementById("textInput")?.focus();
       }
     } catch {}
@@ -3089,342 +3052,8 @@ render() {
   };
   try { this._setupMobileGestures(); } catch {}
   
-  // Support FAQ toggles
-  this.setupSupportFaq = () => {
-    const items = this.shadowRoot.querySelectorAll('.support-faq-item');
-    items.forEach((it) => {
-      const q = it.querySelector('.support-faq-question');
-      if (!q) return;
-      q.addEventListener('click', () => {
-        it.classList.toggle('open');
-      });
-    });
-  };
-  try { this.setupSupportFaq(); } catch {}
-  
-  // Support Contact Form interactions
-  this.setupSupportForm = () => {
-    const wrap = this.shadowRoot.querySelector('.support-contact-button');
-    const hint = this.shadowRoot.querySelector('.support-hint-text');
-    const btn = this.shadowRoot.querySelector('.support-contact-btn');
-    const form = this.shadowRoot.getElementById('supportForm');
-    const thanks = this.shadowRoot.getElementById('supportThanks'); // legacy inline
-    const thanksOverlay = this.shadowRoot.getElementById('supportThanksOverlay');
-    const faqList = this.shadowRoot.querySelector('.support-faq-list');
-    const ta = this.shadowRoot.getElementById('supportIssueInput');
-    const issueSelect = this.shadowRoot.getElementById('supportIssueSelect');
-    const issueList = this.shadowRoot.getElementById('supportIssueList');
-    const issueLabel = this.shadowRoot.getElementById('supportIssueLabel');
-    const toggleIssueList = (show) => { if (issueList) issueList.style.display = show ? 'block' : 'none'; };
-    if (btn && form) {
-      btn.addEventListener('click', () => {
-        if (wrap) wrap.style.display = 'none';
-        if (hint) hint.style.display = 'none';
-        form.style.display = 'block';
-        // collapse and disable FAQ while form is active
-        try {
-          this.shadowRoot.querySelectorAll('.support-faq-item.open').forEach(it => it.classList.remove('open'));
-          faqList?.classList.add('disabled');
-        } catch {}
-        try { ta?.focus(); } catch {}
-        if (issueLabel) issueLabel.textContent = 'Choose problem';
-        toggleIssueList(false);
-      });
-    }
-    // Issue select → fill textarea
-    issueSelect?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const visible = issueList && issueList.style.display === 'block';
-      toggleIssueList(!visible);
-    });
-    issueList?.querySelectorAll('.request-select-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const key = item.getAttribute('data-issue') || item.textContent || '';
-        if (issueLabel) issueLabel.textContent = key || 'Choose problem';
-        // Templates for quick fill
-        const templates = {
-          'Lead not received': 'Hello Support,\n\nWe are not receiving new leads in our CRM as expected. Please check the integration and delivery pipeline.\n\nDetails: ',
-          'Database error': 'Hello Support,\n\nWe are getting a database error while working with the service. It seems related to connectivity or query failures.\n\nDetails: ',
-          'Wrong answers': 'Hello Support,\n\nAssistant responses look inconsistent/incorrect in recent dialogues. Could you review the session and adjust logic or prompts?\n\nDetails: ',
-          'Access problem': 'Hello Support,\n\nThere is an access/permissions problem for our account. Some features/pages are unavailable.\n\nDetails: ',
-          'Billing problem': 'Hello Support,\n\nWe have an issue with billing/payments. Please check our invoices and payment status.\n\nDetails: ',
-        };
-        const txt = templates[key] || (key + ': ');
-        if (ta) {
-          ta.value = txt;
-          try { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } catch {}
-        }
-        
-        toggleIssueList(false);
-      });
-    });
-    document.addEventListener('click', (ev) => {
-      if (!issueList || !issueSelect) return;
-      const path = ev.composedPath ? ev.composedPath() : [];
-      if (![issueList, issueSelect].some(el => path.includes(el))) toggleIssueList(false);
-    }, { capture:true });
-    // Send - отправка тикета на бэкенд
-    const sendBtn = form?.querySelector('.support-send-btn');
-    if (sendBtn) {
-      sendBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        
-        // Собираем данные формы
-        const message = (ta?.value || '').trim();
-        const problemType = (issueLabel?.textContent || 'Choose problem').trim();
-        
-        // Валидация: message обязателен
-        if (!message || message.length === 0) {
-          this.ui.showNotification('⚠️ Please describe the issue');
-          if (ta) {
-            ta.style.borderColor = '#ff4444';
-            setTimeout(() => { if (ta) ta.style.borderColor = ''; }, 2000);
-          }
-          return;
-        }
-        
-        // Валидация: problemType должен быть выбран (не "Choose problem")
-        if (!problemType || problemType === 'Choose problem') {
-          this.ui.showNotification('⚠️ Please choose a problem type');
-          if (issueSelect) {
-            issueSelect.style.borderColor = '#ff4444';
-            setTimeout(() => { if (issueSelect) issueSelect.style.borderColor = ''; }, 2000);
-          }
-          return;
-        }
-        
-        // Проверка защиты от спама (отдельная для support)
-        const formType = 'support';
-        const submitCount = this.leadSpamProtection.getSubmitCount(formType);
-        const isBlocked = this.leadSpamProtection.isBlocked(formType);
-        const warningShown = this.leadSpamProtection.isWarningShown(formType);
-        
-        // Если заблокирован - показываем поп-ап блокировки
-        if (isBlocked) {
-          const blockOverlay = this.shadowRoot.getElementById('supportSpamBlockOverlay');
-          const timerEl = this.shadowRoot.getElementById('supportSpamBlockTimer');
-          if (blockOverlay && timerEl) {
-            const updateTimer = () => {
-              const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
-              if (timerEl) timerEl.textContent = left;
-              if (left > 0) {
-                setTimeout(updateTimer, 1000);
-              } else {
-                if (blockOverlay) blockOverlay.style.display = 'none';
-              }
-            };
-            updateTimer();
-            blockOverlay.style.display = 'flex';
-          }
-          return;
-        }
-        
-        // Если счетчик уже 2 (после нажатия "Продолжить" во второй раз) - устанавливаем блокировку ПЕРЕД отправкой
-        if (submitCount === 2) {
-          this.leadSpamProtection.setBlocked(formType);
-          const blockOverlay = this.shadowRoot.getElementById('supportSpamBlockOverlay');
-          const timerEl = this.shadowRoot.getElementById('supportSpamBlockTimer');
-          if (blockOverlay && timerEl) {
-            const updateTimer = () => {
-              const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
-              if (timerEl) timerEl.textContent = left;
-              if (left > 0) {
-                setTimeout(updateTimer, 1000);
-              } else {
-                if (blockOverlay) blockOverlay.style.display = 'none';
-              }
-            };
-            updateTimer();
-            blockOverlay.style.display = 'flex';
-          }
-          return;
-        }
-        
-        // Если вторая отправка и предупреждение еще не показывали - показываем поп-ап предупреждения
-        if (submitCount === 1 && !warningShown) {
-          const warningOverlay = this.shadowRoot.getElementById('supportSpamWarningOverlay');
-          if (warningOverlay) {
-            warningOverlay.style.display = 'flex';
-          }
-          return;
-        }
-        
-        // Отправляем данные на бэкенд
-        const submitSupportRequest = async () => {
-          // Блокируем кнопку на время запроса
-          const originalText = sendBtn.textContent || sendBtn.innerHTML;
-          sendBtn.disabled = true;
-          sendBtn.style.opacity = '0.6';
-          sendBtn.style.cursor = 'not-allowed';
-          if (sendBtn.textContent) {
-            sendBtn.textContent = 'Sending...';
-          } else {
-            sendBtn.innerHTML = 'Sending...';
-          }
-          
-          try {
-          // Получаем данные для отправки
-          const sessionId = this.sessionId || null;
-          const language = localStorage.getItem('vw_lang') || 'en';
-          const clientId = 'demo';
-          const extra = {
-            userAgent: navigator.userAgent,
-            widgetVersion: 'v1',
-            url: window.location.href
-          };
-          
-          // Формируем URL API (заменяем /api/audio/upload на /api/support)
-          const supportApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/support');
-          
-          // Отправляем запрос
-          const response = await fetch(supportApiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              sessionId,
-              clientId,
-              problemType,
-              message,
-              language,
-              extra
-            })
-          });
-          
-            const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
-            
-            if (result?.ok === true) {
-              // Успешно отправлено → показываем thanks popup
-              form.style.display = 'none';
-              if (thanksOverlay) thanksOverlay.style.display = 'flex';
-              // Очищаем форму
-              if (ta) ta.value = '';
-              if (issueLabel) issueLabel.textContent = 'Choose problem';
-              toggleIssueList(false);
-              
-              // Увеличиваем счетчик отправок (если еще не увеличен при нажатии "Продолжить")
-              const currentCount = this.leadSpamProtection.getSubmitCount(formType);
-              // Увеличиваем только если счетчик еще не был увеличен (не был нажат "Продолжить")
-              if (currentCount < 2) {
-                this.leadSpamProtection.incrementSubmitCount(formType);
-              }
-            } else {
-              // Ошибка валидации или сервера
-              const errorMsg = result.error || 'Failed to submit support request. Please try again later.';
-              this.ui.showNotification(`❌ ${errorMsg}`);
-              console.error('❌ Support request submission error:', result);
-            }
-          } catch (err) {
-            // Ошибка сети или другая непредвиденная ошибка
-            console.error('❌ Support request network error:', err);
-            this.ui.showNotification('❌ Network error. Please check your connection and try again.');
-          } finally {
-            // Разблокируем кнопку
-            sendBtn.disabled = false;
-            sendBtn.style.opacity = '';
-            sendBtn.style.cursor = '';
-            if (sendBtn.textContent) {
-              sendBtn.textContent = originalText;
-            } else {
-              sendBtn.innerHTML = originalText;
-            }
-          }
-        };
-        
-        // Вызываем асинхронную функцию отправки
-        submitSupportRequest();
-      });
-    }
-    // Cancel → hide form back
-    form?.querySelector('.support-cancel-btn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      form.style.display = 'none';
-      if (wrap) wrap.style.display = 'block';
-      if (hint) hint.style.display = '';
-      // enable FAQ back
-      faqList?.classList.remove('disabled');
-      if (issueLabel) issueLabel.textContent = 'Choose problem';
-      toggleIssueList(false);
-    });
-    // Thanks close (legacy inline) → back to initial state
-    this.shadowRoot.getElementById('supportThanksDoneBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (thanks) thanks.style.display = 'none';
-      if (wrap) wrap.style.display = 'block';
-      if (hint) hint.style.display = '';
-      faqList?.classList.remove('disabled');
-      if (issueLabel) issueLabel.textContent = 'Choose problem';
-      toggleIssueList(false);
-    });
-    // Thanks popup close → back to initial state
-    this.shadowRoot.getElementById('supportThanksOverlayClose')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (thanksOverlay) thanksOverlay.style.display = 'none';
-      if (wrap) wrap.style.display = 'block';
-      if (hint) hint.style.display = '';
-      faqList?.classList.remove('disabled');
-      if (issueLabel) issueLabel.textContent = 'Choose problem';
-      toggleIssueList(false);
-    });
-    // Обработчик закрытия поп-апа блокировки для support form
-    this.shadowRoot.getElementById('supportSpamBlockCloseBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const blockOverlay = this.shadowRoot.getElementById('supportSpamBlockOverlay');
-      if (blockOverlay) blockOverlay.style.display = 'none';
-    });
-    // Обработчики поп-апа предупреждения для support form
-    const supportWarningOverlay = this.shadowRoot.getElementById('supportSpamWarningOverlay');
-    const supportWarningCancelBtn = this.shadowRoot.getElementById('supportSpamWarningCancelBtn');
-    const supportWarningContinueBtn = this.shadowRoot.getElementById('supportSpamWarningContinueBtn');
-    if (supportWarningCancelBtn) {
-      supportWarningCancelBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (supportWarningOverlay) supportWarningOverlay.style.display = 'none';
-        this.leadSpamProtection.setWarningShown('support');
-      });
-    }
-    if (supportWarningContinueBtn) {
-      supportWarningContinueBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (supportWarningOverlay) supportWarningOverlay.style.display = 'none';
-        this.leadSpamProtection.setWarningShown('support');
-        // Увеличиваем счетчик ДО отправки, чтобы третья попытка сразу показывала блокировку
-        this.leadSpamProtection.incrementSubmitCount('support');
-        // Продолжаем отправку после закрытия поп-апа
-        // Вызываем обработчик кнопки отправки напрямую
-        if (sendBtn) {
-          // Эмулируем клик для повторной отправки
-          sendBtn.click();
-        }
-      });
-    }
-  };
-  try { this.setupSupportForm(); } catch {}
-  
-  // Helper: reset Support screen interactive state (acts like Cancel)
-  this.resetSupportScreen = () => {
-    try {
-      const wrap = this.shadowRoot.querySelector('.support-contact-button');
-      const hint = this.shadowRoot.querySelector('.support-hint-text');
-      const form = this.shadowRoot.getElementById('supportForm');
-      const thanks = this.shadowRoot.getElementById('supportThanks');
-      const thanksOverlay = this.shadowRoot.getElementById('supportThanksOverlay');
-      const faqList = this.shadowRoot.querySelector('.support-faq-list');
-      const issueLabel = this.shadowRoot.getElementById('supportIssueLabel');
-      const issueList = this.shadowRoot.getElementById('supportIssueList');
-      const ta = this.shadowRoot.getElementById('supportIssueInput');
-      if (form) form.style.display = 'none';
-      if (thanks) thanks.style.display = 'none';
-      if (thanksOverlay) thanksOverlay.style.display = 'none';
-      if (wrap) wrap.style.display = 'block';
-      if (hint) hint.style.display = '';
-      if (faqList) faqList.classList.remove('disabled');
-      if (issueLabel) issueLabel.textContent = 'Choose problem';
-      if (issueList) issueList.style.display = 'none';
-      if (ta) ta.value = '';
-    } catch {}
-  };
+  // Legacy reset hook kept as no-op for menu close flow compatibility.
+  this.resetLegacyMenuState = () => {};
 
   // Helper: reset Request screen state
   this.resetRequestScreen = () => {
@@ -3487,53 +3116,6 @@ render() {
     } catch {}
   };
   
-  // Human contact popup with persistent countdown
-  this.setupHumanPopup = () => {
-    const footer = this.shadowRoot.querySelector('.support-footer-text');
-    const overlay = this.shadowRoot.getElementById('humanOverlay');
-    const btnClose = this.shadowRoot.getElementById('humanContinueBtn');
-    const timerEl = this.shadowRoot.getElementById('humanEtaTimer');
-    let intervalId = null;
-    const DURATION_MS = 15 * 60 * 1000; // 15 minutes
-    const LS_KEY = 'vw_human_eta_until';
-
-    const getDeadline = () => {
-      try {
-        const raw = localStorage.getItem(LS_KEY);
-        const parsed = raw ? parseInt(raw, 10) : NaN;
-        if (Number.isFinite(parsed) && parsed > Date.now()) return parsed;
-      } catch {}
-      return null;
-    };
-    const setDeadline = (ts) => { try { localStorage.setItem(LS_KEY, String(ts)); } catch {} };
-    const fmt = (ms) => {
-      const total = Math.max(0, Math.floor(ms / 1000));
-      const m = Math.floor(total / 60).toString().padStart(2, '0');
-      const s = (total % 60).toString().padStart(2, '0');
-      return `${m}:${s}`;
-    };
-    const startTimer = () => {
-      const dl = getDeadline() || (Date.now() + DURATION_MS);
-      if (!getDeadline()) setDeadline(dl);
-      const tick = () => {
-        const left = dl - Date.now();
-        if (timerEl) timerEl.textContent = fmt(left);
-        if (left <= 0 && intervalId) { clearInterval(intervalId); intervalId = null; }
-      };
-      tick();
-      if (intervalId) clearInterval(intervalId);
-      intervalId = setInterval(tick, 1000);
-    };
-
-    footer?.addEventListener('click', () => {
-      if (overlay) overlay.style.display = 'flex';
-      startTimer(); // не сбрасываем, использует сохранённый дедлайн
-    });
-    btnClose?.addEventListener('click', () => {
-      if (overlay) overlay.style.display = 'none';
-    });
-  };
-  try { this.setupHumanPopup(); } catch {}
   
   // Context: leave request inline form toggles
   this.setupContextRequestForm = () => {
@@ -4133,12 +3715,8 @@ render() {
         if (t && t.parentElement) t.parentElement.removeChild(t);
       } catch {}
     } else if (e.target.closest('.header-action.header-right')) {
-      // Theme toggle button (dark <-> light), only swaps icon for now
-      try {
-        this._theme = (this._theme === 'light') ? 'dark' : 'light';
-        if (!this._theme) this._theme = 'dark';
-        this.updateThemeIcons();
-      } catch {}
+      // Close widget from header right action
+      try { this.closeWidget?.(); } catch {}
     } else if (e.target.matches('.card-btn[data-action="send_card"]')) {
       // Показать карточку из последнего предложения
       const container = e.target.closest('.card-screen');
@@ -4203,22 +3781,6 @@ render() {
       }
     }
   });
-
-  // Swap theme icons in headers to match current theme flag
-  this.updateThemeIcons = () => {
-    try {
-      const themeSrc = (this._theme === 'light')
-        ? `${ASSETS_BASE}light-theme.svg`
-        : `${ASSETS_BASE}dark-theme.svg`;
-      const statsSrc = (this._theme === 'light')
-        ? `${ASSETS_BASE}stats-light-theme.svg`
-        : `${ASSETS_BASE}stats-dark-theme.svg`;
-      this.shadowRoot.querySelectorAll('.header-action.header-right img')
-        .forEach(img => { if (img) img.src = themeSrc; });
-      this.shadowRoot.querySelectorAll('.header-action.header-left img')
-        .forEach(img => { if (img) img.src = statsSrc; });
-    } catch {}
-  };
 }
 
   // ---------- ПРЯМО ТУТ ЗАКАНЧИВВАЕТСЯ ФУНКЦИЯ РЕНДЕР (В НЕЙ ЛЕЖАТ СТИЛИ v2/ ----------
@@ -5284,6 +4846,7 @@ render() {
     this.events?.clear?.();
     try { document.removeEventListener('keydown', this._onGlobalKeydown, true); } catch {}
     try { this._disableOutsideClose?.(); } catch {}
+    try { this._vwStopLauncherAttention?.(); } catch {}
     // Safety: if an older build locked the page and didn't restore, try to restore only if we know we locked it.
     try {
       if (this._scrollLockedMobile) {
@@ -5300,12 +4863,12 @@ render() {
 
   // ===== v2 Menu Overlay integration (UI only) =====
   setupMenuOverlay() {
-    // Привязываем overlay ТОЛЬКО к header активных экранов v2 (main не использует overlay)
+    // Привязываем overlay к header активного экрана
     const container = this.shadowRoot.querySelector(
+      '.main-screen:not(.hidden) .screen-header, ' +
       '.dialog-screen:not(.hidden) .screen-header, ' +
       '.context-screen:not(.hidden) .screen-header, ' +
-      '.request-screen:not(.hidden) .screen-header, ' +
-      '.support-screen:not(.hidden) .screen-header'
+      '.request-screen:not(.hidden) .screen-header'
     );
     let overlay = this.shadowRoot.querySelector('.menu-overlay');
     if (!container) {
@@ -5324,42 +4887,61 @@ render() {
       container.appendChild(overlay);
     }
     this.updateMenuUI();
-    // Навешиваем обработчики на все кнопки меню на текущем экране
-    this.shadowRoot.querySelectorAll('.menu-button img').forEach(img => {
-      img.onclick = () => {
+    // Открытие/закрытие overlay через левую кнопку (stats) активного header.
+    const statsBtn = container.querySelector('.header-action.header-left');
+    if (statsBtn) {
+      statsBtn.onclick = () => {
         if (this._menuState === 'closed' || !this._menuState) this._menuState = 'open';
         else if (this._menuState === 'open') this._menuState = 'closed';
         else if (this._menuState === 'selected') this._menuState = 'open';
         this.updateMenuUI();
       };
-    });
+    }
   }
 
   updateMenuUI() {
     const overlay = this.shadowRoot.querySelector('.menu-overlay');
     if (!overlay) return;
+    const languageCodes = ['RU', 'ES', 'ENG'];
+    const languageFlags = { RU: '🇷🇺', ES: '🇪🇸', ENG: '🇬🇧' };
+    if (!this._menuLanguageCode || !languageFlags[this._menuLanguageCode]) this._menuLanguageCode = 'RU';
+    if (typeof this._menuLanguageDropdownOpen !== 'boolean') this._menuLanguageDropdownOpen = false;
+    const syncLanguageOutsideClick = () => {
+      const shouldListen = this._menuState === 'open' && this._menuLanguageDropdownOpen;
+      if (!shouldListen) {
+        if (this._menuLanguageOutsideClickBound && this._menuLanguageOutsideClickHandler) {
+          this.shadowRoot.removeEventListener('click', this._menuLanguageOutsideClickHandler, true);
+        }
+        this._menuLanguageOutsideClickBound = false;
+        return;
+      }
+      if (!this._menuLanguageOutsideClickHandler) {
+        this._menuLanguageOutsideClickHandler = (e) => {
+          if (!this._menuLanguageDropdownOpen || this._menuState !== 'open') return;
+          const picker = this.shadowRoot?.querySelector('[data-language-picker]');
+          if (!picker) return;
+          const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+          if (path.includes(picker)) return;
+          this._menuLanguageDropdownOpen = false;
+          this.updateMenuUI();
+        };
+      }
+      if (!this._menuLanguageOutsideClickBound) {
+        this.shadowRoot.addEventListener('click', this._menuLanguageOutsideClickHandler, true);
+        this._menuLanguageOutsideClickBound = true;
+      }
+    };
     if (this._menuState === 'closed' || !this._menuState) overlay.classList.remove('open'); else overlay.classList.add('open');
 
-    const menuImg = this.shadowRoot.querySelector('.menu-button img');
-    const menuBtn = this.shadowRoot.querySelector('.menu-button');
-    // Keep header icon constant; hide header button when overlay is open/selected
-    if (menuImg) menuImg.src = `${ASSETS_BASE}menu_icon.svg`;
-    if (menuBtn) {
-      if (this._menuState !== 'closed' && this._menuState) { 
-        menuBtn.classList.add('hidden'); 
-      } else { 
-        menuBtn.classList.remove('hidden'); 
-      }
-      // legacy class no longer affects positioning within dialog-header
-      menuBtn.classList.remove('menu-open');
-    }
-
-    // Toggle side header actions only on dialogue screen
+    // Toggle side header actions and logo on active screen
     try {
-      const dialogHeader = this.shadowRoot.querySelector('.dialog-screen:not(.hidden) .screen-header');
-      if (dialogHeader) {
-        dialogHeader.classList.toggle('menu-opened', !!(this._menuState && this._menuState !== 'closed'));
-      }
+      const activeHeader = this.shadowRoot.querySelector(
+        '.main-screen:not(.hidden) .screen-header, ' +
+        '.dialog-screen:not(.hidden) .screen-header, ' +
+        '.context-screen:not(.hidden) .screen-header, ' +
+        '.request-screen:not(.hidden) .screen-header'
+      );
+      if (activeHeader) activeHeader.classList.toggle('menu-opened', !!(this._menuState && this._menuState !== 'closed'));
     } catch {}
 
     let content = overlay.querySelector('.menu-overlay-content');
@@ -5373,32 +4955,58 @@ render() {
       content.innerHTML = `
         <div class="menu-grid">
           <div class="menu-col">
-            <button class="menu-btn menu-btn--request" data-action="request">Leave request</button>
-            <button class="menu-btn menu-btn--support" data-action="support">Support</button>
+            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}Contactme.svg" alt="">Contact me</button>
+            <div class="menu-language ${this._menuLanguageDropdownOpen ? 'open' : ''}" data-language-picker>
+              <button class="menu-btn menu-btn--language menu-language-trigger" type="button" data-action="language">
+                <img class="menu-btn__icon" src="${ASSETS_BASE}Language.svg" alt="">Language
+              </button>
+              <div class="menu-language-dropdown ${this._menuLanguageDropdownOpen ? 'open' : ''}">
+                ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${code}</button>`).join('')}
+              </div>
+            </div>
           </div>
           <div class="menu-col menu-col--middle" style="width:80px; align-items:center; justify-content:center;">
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
           </div>
           <div class="menu-col">
-            <button class="menu-btn menu-btn--context" data-action="context">Context</button>
-            <button class="menu-btn menu-btn--reset" data-action="reset">Reset session</button>
+            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}Insights.svg" alt="">Insights</button>
+            <button class="menu-btn menu-btn--reset"><img class="menu-btn__icon" src="${ASSETS_BASE}light-theme.svg" alt="">Light mode</button>
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetSupportScreen(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
-      content.querySelectorAll('.menu-btn').forEach(btn => {
+      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this._menuLanguageDropdownOpen = false; this.updateMenuUI(); };
+      content.querySelectorAll('[data-language-code]').forEach(btn => {
         btn.onclick = (e) => {
-          const action = e.currentTarget.getAttribute('data-action');
-          if (action === 'request') { this.showScreen('request'); this._selectedMenu = 'request'; this._menuState = 'selected'; }
-          if (action === 'support') { this.showScreen('support'); this._selectedMenu = 'support'; this._menuState = 'selected'; }
-          if (action === 'context') { this.showScreen('context'); this._selectedMenu = 'context'; this._menuState = 'selected'; }
-          if (action === 'reset') { this.clearSession(); this.showMainScreen(); this._selectedMenu = null; this._menuState = 'closed'; }
+          e.preventDefault();
+          e.stopPropagation();
+          const nextCode = e.currentTarget.getAttribute('data-language-code');
+          if (!nextCode || !languageFlags[nextCode]) return;
+          this._menuLanguageCode = nextCode;
+          this._menuLanguageDropdownOpen = false;
           this.updateMenuUI();
         };
       });
+      content.querySelectorAll('.menu-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          const action = e.currentTarget.getAttribute('data-action');
+          if (!action) return;
+          if (action === 'language') {
+            e.preventDefault();
+            e.stopPropagation();
+            this._menuLanguageDropdownOpen = !this._menuLanguageDropdownOpen;
+            this.updateMenuUI();
+            return;
+          }
+          this._menuLanguageDropdownOpen = false;
+          if (action === 'request') { this.showScreen('request'); this._selectedMenu = 'request'; this._menuState = 'selected'; }
+          if (action === 'context') { this.showScreen('context'); this._selectedMenu = 'context'; this._menuState = 'selected'; }
+          this.updateMenuUI();
+        };
+      });
+      syncLanguageOutsideClick();
     } else if (this._menuState === 'selected') {
-      const labelMap = { request: 'Leave request', support: 'Support', context: 'Context' };
-      const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : this._selectedMenu === 'support' ? 'menu-badge--support' : 'menu-badge--context';
+      const labelMap = { request: 'Leave request', context: 'Context' };
+      const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : 'menu-badge--context';
       content.innerHTML = `
         <div class="menu-grid menu-grid--selected">
           <div class="menu-col menu-col--single">
@@ -5412,11 +5020,13 @@ render() {
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetSupportScreen(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
+      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
       const backBtn = content.querySelector('[data-action="back"]');
       if (backBtn) backBtn.onclick = () => { this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
+      syncLanguageOutsideClick();
     } else {
       content.innerHTML = '';
+      syncLanguageOutsideClick();
     }
   }
 

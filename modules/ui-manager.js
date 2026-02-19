@@ -248,10 +248,28 @@ export class UIManager {
       }
     }
   }
+  isResetCommand(text) {
+    return String(text || '').trim().toLowerCase() === '//reset';
+  }
+  tryHandleResetCommand(text, screen = 'chat') {
+    if (!this.isResetCommand(text)) return false;
+    const { textInput, mainTextInput } = this.elements;
+    if (screen === 'main') {
+      if (mainTextInput) mainTextInput.value = '';
+      this.widget.updateSendButtonState('main');
+    } else {
+      if (textInput) textInput.value = '';
+      this.widget.updateSendButtonState('chat');
+    }
+    this.widget.clearSession();
+    return true;
+  }
   handleSendText() {
     const { textInput } = this.elements;
     const text = textInput?.value?.trim();
-    if (text) this.widget.api.sendTextMessage();
+    if (!text) return;
+    if (this.tryHandleResetCommand(text, 'chat')) return;
+    this.widget.api.sendTextMessage();
   }
 
   handleToggleClick(screen) {
@@ -322,6 +340,7 @@ export class UIManager {
     mainSendButton?.addEventListener('click', () => {
       const text = mainTextInput?.value?.trim();
       if (text) {
+        if (this.tryHandleResetCommand(text, 'main')) return;
         this.widget.sendTextFromMainScreen(text);
       } else {
         // Trigger shake animation for empty textfield
@@ -336,6 +355,7 @@ export class UIManager {
         e.preventDefault();
         const text = mainTextInput.value.trim();
         if (text) {
+          if (this.tryHandleResetCommand(text, 'main')) return;
           this.widget.sendTextFromMainScreen(text);
         }
       }
