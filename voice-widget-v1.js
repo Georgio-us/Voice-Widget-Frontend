@@ -26,6 +26,8 @@ class VoiceWidget extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+    this._theme = null;
+    this._pendingThemeAttr = null;
 
     // базовые состояния
     this.isRecording = false;
@@ -157,6 +159,10 @@ class VoiceWidget extends HTMLElement {
   }
 
   connectedCallback() {
+    if (this._pendingThemeAttr) {
+      try { this.setAttribute('data-theme', this._pendingThemeAttr); } catch {}
+      this._pendingThemeAttr = null;
+    }
     // Theme application uses this.setAttribute, so it must run after connect.
     if (this._themeInitializedOnce) return;
     this.initTheme();
@@ -173,6 +179,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   getTheme() {
+    if (this._theme === 'light' || this._theme === 'dark') return this._theme;
     const raw = this.getAttribute('data-theme');
     return raw === 'light' ? 'light' : 'dark';
   }
@@ -241,7 +248,9 @@ class VoiceWidget extends HTMLElement {
 
   applyTheme(theme) {
     const next = theme === 'light' ? 'light' : 'dark';
-    this.setAttribute('data-theme', next);
+    this._theme = next;
+    if (this.isConnected) this.setAttribute('data-theme', next);
+    else this._pendingThemeAttr = next;
     try { localStorage.setItem('vw_theme', next); } catch {}
     try {
       this.updateToggleButtonState('main');
