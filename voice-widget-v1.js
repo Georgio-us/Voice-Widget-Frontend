@@ -126,6 +126,7 @@ class VoiceWidget extends HTMLElement {
 
   // ---------- UI init ----------
   initializeUI() {
+    this.initTheme();
     this.ui.initializeUI();
 
     // единый ввод
@@ -154,6 +155,101 @@ class VoiceWidget extends HTMLElement {
     try { this.setupMenuOverlay(); } catch {}
 
     
+  }
+
+  initTheme() {
+    let theme = 'dark';
+    try {
+      const saved = localStorage.getItem('vw_theme');
+      if (saved === 'light' || saved === 'dark') theme = saved;
+    } catch {}
+    this.applyTheme(theme);
+  }
+
+  getTheme() {
+    const raw = this.getAttribute('data-theme');
+    return raw === 'light' ? 'light' : 'dark';
+  }
+
+  getMicIconByTheme() {
+    return this.getTheme() === 'light' ? 'mic-btn-light.svg' : 'mic-btn.svg';
+  }
+
+  getStopIconByTheme() {
+    return this.getTheme() === 'light' ? 'stop-btn-light.svg' : 'stop-btn.svg';
+  }
+
+  getSendIconByTheme() {
+    return this.getTheme() === 'light' ? 'send-btn-light.svg' : 'send-btn.svg';
+  }
+
+  getStatsIconByTheme() {
+    return this.getTheme() === 'light' ? 'stats-light-theme.svg' : 'stats-dark-theme.svg';
+  }
+
+  getContactIconByTheme() {
+    return this.getTheme() === 'light' ? 'Contactme-light.svg' : 'Contactme.svg';
+  }
+
+  getLanguageIconByTheme() {
+    return this.getTheme() === 'light' ? 'Language-light.svg' : 'Language.svg';
+  }
+
+  getInsightsIconByTheme() {
+    return this.getTheme() === 'light' ? 'Insights-light.svg' : 'Insights.svg';
+  }
+
+  getLogoByTheme() {
+    return this.getTheme() === 'light' ? 'LOGO-light.svg' : 'LOGO.svg';
+  }
+
+  getInsightsProgressTrackStrokeByTheme() {
+    return this.getTheme() === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+  }
+
+  updateSendButtonIcons() {
+    const nextSrc = `${ASSETS_BASE}${this.getSendIconByTheme()}`;
+    const mainSendImg = this.shadowRoot.querySelector('#mainSendButton img');
+    const chatSendImg = this.shadowRoot.querySelector('#sendButton img');
+    if (mainSendImg) mainSendImg.setAttribute('src', nextSrc);
+    if (chatSendImg) chatSendImg.setAttribute('src', nextSrc);
+  }
+
+  updateStatsIcons() {
+    const nextSrc = `${ASSETS_BASE}${this.getStatsIconByTheme()}`;
+    const statsIcons = this.shadowRoot.querySelectorAll('.header-action.header-left img');
+    statsIcons.forEach((img) => img.setAttribute('src', nextSrc));
+  }
+
+  updateLogoIcons() {
+    const nextSrc = `${ASSETS_BASE}${this.getLogoByTheme()}`;
+    const logos = this.shadowRoot.querySelectorAll('.header-logo');
+    logos.forEach((img) => img.setAttribute('src', nextSrc));
+  }
+
+  updateInsightsProgressTrackStroke() {
+    const trackCircle = this.shadowRoot.querySelector('#contextScreen .progress-ring svg circle:first-child');
+    if (!trackCircle) return;
+    trackCircle.setAttribute('stroke', this.getInsightsProgressTrackStrokeByTheme());
+  }
+
+  applyTheme(theme) {
+    const next = theme === 'light' ? 'light' : 'dark';
+    this.setAttribute('data-theme', next);
+    try { localStorage.setItem('vw_theme', next); } catch {}
+    try {
+      this.updateToggleButtonState('main');
+      this.updateToggleButtonState('chat');
+      this.updateSendButtonIcons();
+      this.updateStatsIcons();
+      this.updateLogoIcons();
+      this.updateInsightsProgressTrackStroke();
+    } catch {}
+  }
+
+  toggleTheme() {
+    const next = this.getTheme() === 'light' ? 'dark' : 'light';
+    this.applyTheme(next);
   }
 
   checkBrowserSupport() {
@@ -215,7 +311,7 @@ render() {
         clamp(12px, 1.8vw, 18px);
       border-radius:18px;
       position:fixed;
-      background:#2D251C;
+      background:var(--color-bg);
       overflow:hidden;
       display:flex;
       align-items:center;
@@ -344,7 +440,7 @@ render() {
   .thread > .card-screen{ margin-top:-6px; margin-bottom:-6px; }
   .thread > .card-screen:first-child{ margin-top:0; }
   .thread > .card-screen:last-child{ margin-bottom:0; }
-  .card-screen .cs{ background:#333333; color:#ffffff; border-radius:14px; margin-bottom:12px; box-shadow:0 8px 24px rgba(0,0,0,.12); overflow:hidden; width:100%; }
+  .card-screen .cs{ background:var(--bg-card); color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; }
   .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
   .card-screen .cs-image > *{ grid-area:stack; }
   .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
@@ -375,14 +471,14 @@ render() {
   .card-screen .cs-image .card-btn.like[data-action="like"] svg *{ pointer-events:none; }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg{ width:24px; height:24px; display:block; }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg path{ fill: transparent; stroke:#ffffff; stroke-width:2; }
-  .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:#476AA5; stroke:#476AA5; }
-  .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:#476AA5; stroke:#476AA5; }
+  .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
+  .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
   .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
-  .card-screen .cs-title{ font-weight:700; color:#ffffff; }
-  .card-screen .cs-sub{ font-size:12px; color:#BBBBBB; }
-  .card-screen .cs-price{ font-weight:700; color:#FF8A4C; }
+  .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
+  .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.75; }
+  .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
   
 
   /* Compact markdown styles inside assistant bubbles */
@@ -436,7 +532,7 @@ render() {
   .card-mock .cm-sub{ font-size:12px; color:#666; }
   .card-mock .cm-price{ font-weight:700; color:#FF8A4C; }
   .card-actions-panel{ display:flex; gap:16px; align-items:center; }
-  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; font-size:12px; height:36px; padding:0 18px; border-radius:10px; border:1.25px solid #476AA5; background:transparent; color:#476AA5; font-weight:600; transition:all .2s ease; }
+  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; font-size:12px; height:36px; padding:0 18px; border-radius:10px; border:1.25px solid var(--color-accent); background:transparent; color:var(--color-accent); font-weight:600; transition:all .2s ease; }
                 /* Unify in-process action buttons */
                 .card-actions-panel .card-btn{
                   padding: var(--btn-py) var(--btn-px);
@@ -446,15 +542,15 @@ render() {
                   font: var(--fw-s) var(--fs-btn)/1 var(--ff);
                 }
   /* like (filled) */
-  .card-actions-panel .card-btn.like{ background:#476AA5; color:#fff; border:1.25px solid #5F81BA; }
+  .card-actions-panel .card-btn.like{ background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); }
   .card-actions-panel .card-btn.like::before{ content:none; }
   .card-actions-panel .card-btn.like{ position:relative; }
   .card-actions-panel .card-btn.like:hover{ transform:translateY(-1px); }
   /* select (filled like primary) */
-  .card-actions-panel .card-btn.select{ background:#476AA5; color:#fff; border:1.25px solid #5F81BA; }
+  .card-actions-panel .card-btn.select{ background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); }
   .card-actions-panel .card-btn.select:hover{ transform:translateY(-1px); }
   /* next (outlined) */
-  .card-actions-panel .card-btn.next{ background:transparent; color:#476AA5; border:1.25px solid #476AA5; }
+  .card-actions-panel .card-btn.next{ background:transparent; color:var(--color-accent); border:1.25px solid var(--color-accent); }
   .card-actions-panel .card-btn.next:hover{ opacity:.9; }
 
   /* ===== Cards Slider ===== */
@@ -468,8 +564,8 @@ render() {
   .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
   /* dots row inside actions area (blue theme) */
   .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:4px 0 10px; }
-  .cards-dot{ width:12px; height:6px; border-radius:6px; background:#5F81BA; opacity:.5; border:1px solid #476AA5; transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
-  .cards-dot.active{ width:24px; background:#476AA5; opacity:1; }
+  .cards-dot{ width:12px; height:6px; border-radius:6px; background:var(--color-accent); opacity:.5; border:1px solid var(--color-accent); transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
+  .cards-dot.active{ width:24px; background:var(--color-accent); opacity:1; }
   /* actions container for clearer boundaries */
   .card-actions-wrap{ margin:8px; padding:10px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); }
   .card-slide .cs{ width:100%; }
@@ -490,10 +586,10 @@ render() {
      - без ghost-email / подсказок / валидации / ошибок */
   .dialog-screen .in-dialog-lead-block{ width:100%; margin:0; padding:0; }
   .dialog-screen .in-dialog-lead{
-    background:#1E1D20;
-    color:#FFFFFF;
+    background:var(--bg-card);
+    color:var(--color-text);
     border-radius:14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.12);
+    box-shadow:none;
     overflow:hidden;
     width:100%;
     margin-bottom: 10px;
@@ -541,7 +637,7 @@ render() {
   .dialog-screen .in-dialog-lead__input:focus-visible{
     outline:none;
     border-width:1px;
-    border-color:#5F81BA;
+    border-color:var(--color-accent);
     box-shadow:none;
   }
   /* Visual reference: ctx-consent (Context Screen) but with new class */
@@ -555,7 +651,7 @@ render() {
     color:#C4C4C4;
     line-height:1.4;
   }
-  .dialog-screen .in-dialog-lead__privacy-link{ color:#DF87F8; text-decoration:none; }
+  .dialog-screen .in-dialog-lead__privacy-link{ color:var(--color-accent); text-decoration:none; }
   .dialog-screen .in-dialog-lead__error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
   .dialog-screen .in-dialog-lead__error.visible{ display:block; }
   /* Visual reference: ctx-send-btn (Context Screen) but with new class */
@@ -564,9 +660,9 @@ render() {
     flex:1 1 0;
     min-width: var(--btn-min-w);
     padding: var(--btn-py) var(--btn-px);
-    background:#476AA5;
+    background:var(--color-accent);
     color:#fff;
-    border:1.25px solid #5F81BA;
+    border:1.25px solid var(--color-accent);
     border-radius: var(--btn-radius);
     font: var(--fw-s) var(--fs-btn)/1 var(--ff);
     cursor:pointer;
@@ -580,8 +676,8 @@ render() {
     min-width: var(--btn-min-w);
     padding: var(--btn-py) var(--btn-px);
     background:transparent;
-    color:#476AA5;
-    border:1.25px solid #476AA5;
+    color:var(--color-accent);
+    border:1.25px solid var(--color-accent);
     border-radius: var(--btn-radius);
     font: var(--fw-s) var(--fs-btn)/1 var(--ff);
     cursor:pointer;
@@ -597,9 +693,9 @@ render() {
   .dialog-screen .in-dialog-thanks__close{
     padding: var(--btn-py) var(--btn-px);
     min-width: var(--btn-min-w);
-    background:#476AA5;
+    background:var(--color-accent);
     color:#fff;
-    border:1.25px solid #5F81BA;
+    border:1.25px solid var(--color-accent);
     border-radius: var(--btn-radius);
     font: var(--fw-s) var(--fs-btn)/1 var(--ff);
     cursor:pointer;
@@ -675,6 +771,13 @@ render() {
                 :host {
                   /* family */
                   --ff: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                  /* theme colors (dark default) */
+                  --color-bg: #161515;
+                  --color-text: #FFFFFF;
+                  --color-accent: #4178CF;
+                  --bg-card: #363636;
+                  --bg-bubble: rgba(71, 106, 165, 0.5);
+                  --dialogue-border: rgba(255, 255, 255, 0.1);
                   /* weights */
                   --fw-r: 400;
                   --fw-m: 500;
@@ -716,6 +819,124 @@ render() {
                   -webkit-text-size-adjust: 100%;
                   text-size-adjust: 100%;
                 }
+                :host([data-theme="light"]),
+                :host([theme="light"]) {
+                  --color-bg: #F7F7F7;
+                  --color-text: #3D3D3D;
+                  --color-accent: #4178CF;
+                  --bg-card: #D7DBE3;
+                  --bg-bubble: rgba(190, 198, 210, 0.5);
+                  --dialogue-border: rgba(0, 0, 0, 0.1);
+                }
+                :host([data-theme="light"]) .widget-bubble,
+                :host([theme="light"]) .widget-bubble,
+                :host([data-theme="light"]) .dialog-screen .in-dialog-lead,
+                :host([theme="light"]) .dialog-screen .in-dialog-lead {
+                  background: var(--bg-card);
+                }
+                :host([data-theme="light"]) .user-bubble,
+                :host([theme="light"]) .user-bubble {
+                  background: transparent;
+                  border: 1px solid var(--color-accent);
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .card-screen .cs,
+                :host([theme="light"]) .card-screen .cs {
+                  background: var(--bg-card);
+                  color: #000000;
+                }
+                :host([data-theme="light"]) .card-screen .cs-title,
+                :host([theme="light"]) .card-screen .cs-title,
+                :host([data-theme="light"]) .card-screen .cs-sub,
+                :host([theme="light"]) .card-screen .cs-sub,
+                :host([data-theme="light"]) .card-screen .cs-price,
+                :host([theme="light"]) .card-screen .cs-price {
+                  color: #000000;
+                }
+                :host([data-theme="light"]) .menu-language-dropdown,
+                :host([theme="light"]) .menu-language-dropdown {
+                  background: var(--bg-card);
+                }
+                :host([data-theme="light"]) .input-container,
+                :host([theme="light"]) .input-container {
+                  background:
+                    linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+                    #4178CF border-box;
+                }
+                :host([data-theme="light"]) .launcher__title,
+                :host([theme="light"]) .launcher__title {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .launcher__subtitle,
+                :host([theme="light"]) .launcher__subtitle {
+                  color: var(--color-text);
+                  opacity: .72;
+                }
+                :host([data-theme="light"]) .main-text,
+                :host([theme="light"]) .main-text,
+                :host([data-theme="light"]) .sub-text,
+                :host([theme="light"]) .sub-text {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .bg-grid,
+                :host([theme="light"]) .bg-grid {
+                  background:
+                    repeating-linear-gradient(to right, rgba(65, 120, 207, 0.03) 0 1px, transparent 1px 50px),
+                    repeating-linear-gradient(to bottom, rgba(65, 120, 207, 0.03) 0 1px, transparent 1px 70px);
+                }
+                :host([data-theme="light"]) .menu-link,
+                :host([theme="light"]) .menu-link,
+                :host([data-theme="light"]) .data-storage-text,
+                :host([theme="light"]) .data-storage-text,
+                :host([data-theme="light"]) .main-message,
+                :host([theme="light"]) .main-message,
+                :host([data-theme="light"]) .footer-text,
+                :host([theme="light"]) .footer-text,
+                :host([data-theme="light"]) .ctx-consent .ctx-consent-text,
+                :host([theme="light"]) .ctx-consent .ctx-consent-text,
+                :host([data-theme="light"]) .dial-btn,
+                :host([theme="light"]) .dial-btn {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .ctx-input,
+                :host([theme="light"]) .ctx-input,
+                :host([data-theme="light"]) .ctx-textarea,
+                :host([theme="light"]) .ctx-textarea {
+                  color: var(--color-text);
+                  caret-color: var(--color-text);
+                }
+                :host([data-theme="light"]) .request-title,
+                :host([theme="light"]) .request-title,
+                :host([data-theme="light"]) .request-field-label,
+                :host([theme="light"]) .request-field-label,
+                :host([data-theme="light"]) .request-consent-text,
+                :host([theme="light"]) .request-consent-text {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .request-select-list,
+                :host([theme="light"]) .request-select-list {
+                  background: var(--bg-card);
+                }
+                :host([data-theme="light"]) .request-select,
+                :host([theme="light"]) .request-select {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .request-select-item,
+                :host([theme="light"]) .request-select-item {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .request-input,
+                :host([theme="light"]) .request-input,
+                :host([data-theme="light"]) .request-textarea,
+                :host([theme="light"]) .request-textarea {
+                  color: var(--color-text);
+                  caret-color: var(--color-text);
+                }
+                :host([data-theme="light"]) .input-field,
+                :host([theme="light"]) .input-field {
+                  color: var(--color-text);
+                  caret-color: var(--color-text);
+                }
                 /* Base font normalization to ensure consistent typography across screens */
                 :host { font-family: var(--ff); }
                 .voice-widget-container { font-family: var(--ff); }
@@ -738,15 +959,16 @@ render() {
                 .btn-text-primary   { font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 .btn-text-secondary { font: var(--fw-s) var(--fs-btn)/1 var(--ff); opacity:.95; }
                 /* color helpers */
-                .text-primary  { color:#FFFFFF; }
-                .text-secondary{ color:#C3C3C3; }
-                .text-hint     { color:#A9A9A9; }
-                .text-accent   { color:#DF87F8; }
+                .text-primary  { color: var(--color-text); }
+                .text-secondary{ color: var(--color-text); opacity:.85; }
+                .text-hint     { color: var(--color-text); opacity:.65; }
+                .text-accent   { color: var(--color-accent); }
                 
                 .voice-widget-container {
                     width: clamp(320px, 92vw, 380px);
                     height: clamp(560px, 88vh, 720px);
-                    background: #171618;
+                    background: var(--color-bg);
+                    color: var(--color-text);
                     border-radius: 20px;
                     position: relative;
                     overflow: hidden;
@@ -764,8 +986,8 @@ render() {
                   pointer-events:none;
                   z-index:1; /* выше эллипсов, ниже контента */
                   background:
-                    repeating-linear-gradient(to right, rgba(255,255,255,0.01) 0 1px, transparent 1px 50px),
-                    repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 70px);
+                    repeating-linear-gradient(to right, rgba(255,255,255,0.03) 0 1px, transparent 1px 50px),
+                    repeating-linear-gradient(to bottom, rgba(255,255,255,0.03) 0 1px, transparent 1px 70px);
                 }
                 /* Main screen sections */
                 .main-header{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; gap:20px; padding: 15px }
@@ -858,7 +1080,7 @@ render() {
                     height: 60px;
                     background:
                       linear-gradient(#2B272C, #2B272C) padding-box,
-                    #4F4F4F border-box;
+                    #4178CF border-box;
                     border: 1px solid transparent;
                     border-radius: 40px;
                     display: flex;
@@ -1038,7 +1260,7 @@ render() {
                     width: 360px;
                     height: 540px;
                     border-radius: 20px;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border: 1px solid var(--dialogue-border);
                     background: transparent;
                     overflow-y: auto;
                     padding: 20px;
@@ -1081,16 +1303,16 @@ render() {
                 }
                 
                 .widget-bubble {
-                    background: rgba(71, 106, 165, 0.5);
-                    color: #FFFFFF;
+                    background: var(--bg-bubble);
+                    color: var(--color-text);
                     margin-right: 20px;
                     margin-left: 0;
                 }
                 
                 .user-bubble {
                     background: transparent;
-                    border: 1px solid rgba(152, 152, 152, 0.5);
-                    color: #FFFFFF;
+                    border: 1px solid var(--color-accent);
+                    color: var(--color-text);
                     margin-left: 20px;
                     margin-right: 0;
                     margin-left: auto;
@@ -1144,7 +1366,7 @@ render() {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: clamp(0.857rem, 2.8vw, 1.286rem);
                     font-weight: 400;
-                    color: #FFFFFF;
+                    color: var(--color-accent) ;
                 }
                 
                 .data-storage-text {
@@ -1162,14 +1384,14 @@ render() {
                 .data-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:center; }
                 .data-title{ font-size:14px; font-weight:600; margin:0 0 8px 0; text-align:center; }
                 .data-body{ font-size:12px; font-weight:400; color:#C3C3C3; line-height:1.5; }
-                .data-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:14px auto 0; display:flex; align-items:center; justify-content:center; }
+                .data-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:14px auto 0; display:flex; align-items:center; justify-content:center; }
                 .data-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 
                 .status-text {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: var(--fs-micro);
                     font-weight: 400;
-                    color: #e85f62;
+                    color: var(--color-accent);
                     margin-bottom: var(--space-xl);
                 }
                 
@@ -1186,7 +1408,7 @@ render() {
                     width: 320px;
                     height: 2px;
                     border-radius: 1px;
-                    background: linear-gradient(to right, rgba(90, 127, 227, 0.1), rgba(232, 95, 98, 1), rgba(85, 122, 219, 0.1))
+                    background: linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%);
                     margin: 0 auto 10px auto;
                 }
                 
@@ -1194,7 +1416,7 @@ render() {
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
                     font-weight: 200;
-                    color: #a9a9a9;
+                    color: var(--color-text);
                     line-height: 1.4;
                     margin-bottom: 25px;
                 }
@@ -1207,7 +1429,7 @@ render() {
                     /* thematic color */
                     padding: var(--btn-py) var(--btn-px);
                     min-width: var(--btn-min-w);
-                    background: #e85f62;
+                    background: var(--color-accent);
                     border: none;
                     border-radius: var(--btn-radius);
                     color: #FFFFFF;
@@ -1226,26 +1448,26 @@ render() {
                 /* compact row for contact fields */
                 .ctx-row{ display:flex; gap: var(--space-s); align-items: center; }
                 .ctx-row .ctx-input{ flex:1 1 0; min-width:0; }
-                .ctx-input{ width:100%; height: var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:0 var(--space-s); line-height: var(--field-h); box-sizing:border-box; transition: border-color .15s ease; }
+                .ctx-input{ width:100%; height: var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:0 var(--space-s); line-height: var(--field-h); box-sizing:border-box; transition: border-color .15s ease; }
                 .ctx-input.error{ border-color:#E85F62; }
                 .ctx-input:focus,
-                .ctx-input:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
-                .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
+                .ctx-input:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
+                .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
                 .ctx-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
                 .ctx-textarea::-webkit-scrollbar{ width:0; height:0; }
                 .ctx-textarea:focus,
-                .ctx-textarea:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
+                .ctx-textarea:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
                 .ctx-textarea.error{ border-color:#E85F62; }
                 .ctx-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; }
                 .ctx-consent .ctx-checkbox{ width:12px; height:12px; margin-top:2px; }
                 .ctx-consent .ctx-consent-text{ font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:10px; font-weight:400; color:#C4C4C4; line-height:1.4; }
-                .ctx-consent .ctx-privacy-link{ color:#DF87F8; text-decoration:none; }
+                .ctx-consent .ctx-privacy-link{ color:var(--color-accent); text-decoration:none; }
                 .ctx-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
                 .ctx-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
                 .ctx-error.visible{ display:block; }
                 .ctx-actions{ display:flex; gap: var(--space-m); justify-content: space-between; margin-top: var(--space-m); }
-                .ctx-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
-                .ctx-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:#476AA5; border:1.25px solid #476AA5; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
+                .ctx-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
+                .ctx-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:var(--color-accent); border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
                 .ctx-actions .ctx-send-btn, .ctx-actions .ctx-cancel-btn{ flex:1 1 0; min-width:0; }
                 .ctx-send-btn, .ctx-cancel-btn, .ctx-done-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 
@@ -1253,7 +1475,7 @@ render() {
                 .ctx-thanks{ display:none; margin-top:16px; text-align:center; }
                 .ctx-thanks-title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; }
                 .ctx-thanks-text{ font-size:12px; font-weight:400; color:#C4C4C4; }
-                .ctx-thanks .ctx-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:#476AA5; color:#fff; border:1.25px solid #5F81BA; border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
+                .ctx-thanks .ctx-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
                 
                 .footer-text {
                     position: relative;
@@ -1273,7 +1495,7 @@ render() {
                     width: 320px;
                     height: 2px;
                     border-radius: 1px;
-                    background: linear-gradient(90deg, rgba(90, 127, 227, 0.1) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0.1) 100%);
+                    background: linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%);
                     margin: var(--space-l) 0;
                 }
                 
@@ -1328,6 +1550,7 @@ render() {
                     background: rgba(106, 108, 155, 0.10);
                     border: 1px solid rgba(106, 108, 155, 0.30);
                     color: #FFFFFF;
+                    caret-color: #FFFFFF;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
                     font-weight: 400;
@@ -1338,7 +1561,7 @@ render() {
                 }
                 .request-input.error{ border-color:#E85F62; }
                 .request-input:focus,
-                .request-input:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
+                .request-input:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
                 
                 
                 .request-input::placeholder {
@@ -1364,7 +1587,7 @@ render() {
                 
                 /* Email suggest chip */
                 .email-suggest{ display:none; margin-top:6px; }
-                .email-suggest .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; border:1px solid #476AA5; color:#476AA5; font-size:12px; font-weight:600; cursor:pointer; background:transparent; }
+                .email-suggest .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; border:1px solid var(--color-accent); color:var(--color-accent); font-size:12px; font-weight:600; cursor:pointer; background:transparent; }
                 .email-suggest .chip:hover{ background:rgba(71,106,165,.12); }
                 /* Inline email ghost (completion inside input) */
                 .email-wrap{ position:relative; }
@@ -1422,6 +1645,7 @@ render() {
                     background: rgba(106, 108, 155, 0.10);
                     border: 1px solid rgba(106, 108, 155, 0.30);
                     color: #FFFFFF;
+                    caret-color: #FFFFFF;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
                     font-weight: 400;
@@ -1433,7 +1657,7 @@ render() {
                 .request-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
                 .request-textarea::-webkit-scrollbar{ width:0; height:0; }
                 .request-textarea:focus,
-                .request-textarea:focus-visible{ outline:none; border-width:1px; border-color:#5F81BA; box-shadow:none; }
+                .request-textarea:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
                 .request-textarea.error{ border-color:#E85F62; }
                 
                 .request-textarea::placeholder {
@@ -1466,7 +1690,7 @@ render() {
                 }
                 
                 .request-privacy-link {
-                    color: #DF87F8;
+                    color: var(--color-accent);
                     text-decoration: none;
                 }
                 
@@ -1488,15 +1712,15 @@ render() {
                 .request-buttons .request-send-btn, .request-buttons .request-cancel-btn{ flex:1 1 0; min-width:0; }
                 
                 .request-send-btn {
-                    background: #476AA5;
+                    background: var(--color-accent);
                     color: #FFFFFF;
                     border: none;
                 }
                 
                 .request-cancel-btn {
                     background: transparent;
-                    color: #FFFFFF;
-                    border: 1px solid #476AA5;
+                    color: var(--color-text);
+                    border: 1px solid var(--color-accent);
                 }
                 
                 /* ========================= */
@@ -1584,10 +1808,10 @@ render() {
                     padding: 0 8px;
                 }
                 .menu-btn:hover { transform: scale(1.05); opacity: 0.85; }
-                .menu-btn--request { color: #DBDBDB; }
-                .menu-btn--language { color: #DBDBDB; }
-                .menu-btn--context { color: #DBDBDB; }
-                .menu-btn--reset { color: #DBDBDB; }
+                .menu-btn--request { color: var(--color-text); }
+                .menu-btn--language { color: var(--color-text); }
+                .menu-btn--context { color: var(--color-text); }
+                .menu-btn--reset { color: var(--color-text); }
                 .menu-btn .menu-btn__icon{ width:18px; height:18px; flex:0 0 18px; }
                 .menu-btn--request .menu-btn__icon,
                 .menu-btn--language .menu-btn__icon{ width:16px; height:16px; flex:0 0 16px; }
@@ -1620,7 +1844,7 @@ render() {
                     border: none;
                     border-radius: 8px;
                     background: transparent;
-                    color: #DBDBDB;
+                    color: var(--color-text);
                     display: inline-flex;
                     align-items: center;
                     gap: 6px;
@@ -1634,7 +1858,7 @@ render() {
                     background: rgba(255, 255, 255, 0.08);
                 }
                 .menu-language-option.is-active {
-                    color: #FFFFFF;
+                    color: var(--color-text);
                     background: rgba(255, 255, 255, 0.12);
                 }
                 .menu-link {
@@ -1665,8 +1889,8 @@ render() {
                     font-size: 12px;
                     color: currentColor;
                 }
-                .menu-badge--request { color: #6A6C9B; }
-                .menu-badge--context { color: #E85F62; }
+                .menu-badge--request { color: var(--color-accent); }
+                .menu-badge--context { color: var(--color-accent); }
 
   </style>
 
@@ -1780,9 +2004,9 @@ render() {
             <div class="bg-grid"></div>
             <div class="screen-header">
               <button class="header-action header-left" type="button" title="Статистика">
-                <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
+                <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
               </button>
-              <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="header-logo">
+              <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
               <button class="header-action header-right" type="button" title="Закрыть виджет">
                 <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
               </button>
@@ -1795,8 +2019,8 @@ render() {
               </div>
               <div class="main-copy">
                 <div class="text-container">
-                    <p class="main-text">Press to speak</p>
-                    <p class="sub-text">Voice Intelligent Assistance</p>
+                    <p class="main-text">Спроси меня!</p>
+                    <p class="sub-text">Помогу найти лучший вариант</p>
                 </div>
               </div>
             </div>
@@ -1810,10 +2034,10 @@ render() {
           </div>
                 <div class="input-buttons">
                     <button class="input-btn" id="mainToggleButton" type="button" title="Говорить">
-                        <img src="${ASSETS_BASE}mic_btn.svg" alt="Microphone">
+                        <img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone">
                     </button>
                     <button class="input-btn" id="mainSendButton" type="button" title="Отправить">
-                        <img src="${ASSETS_BASE}send_btn.svg" alt="Send">
+                        <img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send">
                     </button>
                 </div>
             </div>
@@ -1826,9 +2050,9 @@ render() {
           <div class="bg-grid"></div>
           <div class="screen-header">
             <button class="header-action header-left" type="button" title="Статистика">
-              <img src="${ASSETS_BASE}stats-dark-theme.svg" alt="Stats">
+              <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
             </button>
-            <img src="${ASSETS_BASE}LOGO.svg" alt="VIA.AI" class="header-logo">
+            <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
             <button class="header-action header-right" type="button" title="Закрыть виджет">
               <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
             </button>
@@ -1846,8 +2070,8 @@ render() {
             </div>
           </div>
             <div class="input-buttons">
-              <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}mic_btn.svg" alt="Microphone"></button>
-              <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}send_btn.svg" alt="Send"></button>
+              <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone"></button>
+              <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send"></button>
         </div>
       </div>
         </div>
@@ -1865,8 +2089,8 @@ render() {
               <div class="grid-column-center">
                 <div class="progress-ring">
                   <svg width="100" height="100" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="12"/>
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="#E85F62" stroke-width="12" stroke-dasharray="276.46" stroke-dashoffset="2.76" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="${this.getInsightsProgressTrackStrokeByTheme()}" stroke-width="12"/>
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="var(--color-accent)" stroke-width="12" stroke-dasharray="276.46" stroke-dashoffset="2.76" stroke-linecap="round" transform="rotate(-90 50 50)"/>
                   </svg>
                   <div class="progress-text" id="ctxProgressText">99%</div>
             </div>
@@ -4035,11 +4259,11 @@ render() {
     if (toggleButton) {
       if (isRecording) {
         // Show stop icon
-        toggleButton.innerHTML = `<img src="${ASSETS_BASE}stop_btn.svg" alt="Stop" />`;
+        toggleButton.innerHTML = `<img src="${ASSETS_BASE}${this.getStopIconByTheme()}" alt="Stop" />`;
         toggleButton.setAttribute('title', 'Сбросить');
       } else {
         // Show mic icon
-        toggleButton.innerHTML = `<img src="${ASSETS_BASE}mic_btn.svg" alt="Microphone" />`;
+        toggleButton.innerHTML = `<img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone" />`;
         toggleButton.setAttribute('title', 'Говорить');
       }
     }
@@ -4904,6 +5128,9 @@ render() {
     if (!overlay) return;
     const languageCodes = ['RU', 'ES', 'ENG'];
     const languageFlags = { RU: '🇷🇺', ES: '🇪🇸', ENG: '🇬🇧' };
+    const themeMode = this.getTheme();
+    const themeActionLabel = themeMode === 'light' ? 'Dark mode' : 'Light mode';
+    const themeActionIcon = themeMode === 'light' ? 'dark-theme.svg' : 'light-theme.svg';
     if (!this._menuLanguageCode || !languageFlags[this._menuLanguageCode]) this._menuLanguageCode = 'RU';
     if (typeof this._menuLanguageDropdownOpen !== 'boolean') this._menuLanguageDropdownOpen = false;
     const syncLanguageOutsideClick = () => {
@@ -4955,10 +5182,10 @@ render() {
       content.innerHTML = `
         <div class="menu-grid">
           <div class="menu-col">
-            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}Contactme.svg" alt="">Contact me</button>
+            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="">Contact me</button>
             <div class="menu-language ${this._menuLanguageDropdownOpen ? 'open' : ''}" data-language-picker>
               <button class="menu-btn menu-btn--language menu-language-trigger" type="button" data-action="language">
-                <img class="menu-btn__icon" src="${ASSETS_BASE}Language.svg" alt="">Language
+                <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">Language
               </button>
               <div class="menu-language-dropdown ${this._menuLanguageDropdownOpen ? 'open' : ''}">
                 ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${code}</button>`).join('')}
@@ -4969,8 +5196,8 @@ render() {
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
           </div>
           <div class="menu-col">
-            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}Insights.svg" alt="">Insights</button>
-            <button class="menu-btn menu-btn--reset"><img class="menu-btn__icon" src="${ASSETS_BASE}light-theme.svg" alt="">Light mode</button>
+            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getInsightsIconByTheme()}" alt="">Insights</button>
+            <button class="menu-btn menu-btn--reset" data-action="theme"><img class="menu-btn__icon" src="${ASSETS_BASE}${themeActionIcon}" alt="">${themeActionLabel}</button>
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
@@ -4997,6 +5224,14 @@ render() {
             this.updateMenuUI();
             return;
           }
+          if (action === 'theme') {
+            e.preventDefault();
+            e.stopPropagation();
+            this._menuLanguageDropdownOpen = false;
+            this.toggleTheme();
+            this.updateMenuUI();
+            return;
+          }
           this._menuLanguageDropdownOpen = false;
           if (action === 'request') { this.showScreen('request'); this._selectedMenu = 'request'; this._menuState = 'selected'; }
           if (action === 'context') { this.showScreen('context'); this._selectedMenu = 'context'; this._menuState = 'selected'; }
@@ -5005,7 +5240,7 @@ render() {
       });
       syncLanguageOutsideClick();
     } else if (this._menuState === 'selected') {
-      const labelMap = { request: 'Leave request', context: 'Context' };
+      const labelMap = { request: 'Leave request', context: 'Insights' };
       const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : 'menu-badge--context';
       content.innerHTML = `
         <div class="menu-grid menu-grid--selected">
