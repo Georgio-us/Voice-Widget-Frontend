@@ -163,10 +163,19 @@ class VoiceWidget extends HTMLElement {
       try { this.setAttribute('data-theme', this._pendingThemeAttr); } catch {}
       this._pendingThemeAttr = null;
     }
+    this.applyHostModeClasses();
     // Theme application uses this.setAttribute, so it must run after connect.
     if (this._themeInitializedOnce) return;
     this.initTheme();
     this._themeInitializedOnce = true;
+  }
+
+  applyHostModeClasses() {
+    if (!this.isConnected) return;
+    try {
+      this.classList.toggle('vw-mobile', !!this._vwIsMobileLike);
+      this.classList.toggle('vw-desktop', !this._vwIsMobileLike);
+    } catch {}
   }
 
   initTheme() {
@@ -2394,10 +2403,7 @@ render() {
       return Boolean(coarse || touch || ua);
     } catch { return false; }
   })();
-  try {
-    this.classList.toggle('vw-mobile', !!this._vwIsMobileLike);
-    this.classList.toggle('vw-desktop', !this._vwIsMobileLike);
-  } catch {}
+  this.applyHostModeClasses();
   
   // Launcher "attention" flip animation (mobile only). Stops forever after first widget open.
   const _launcherEl = $("#launcher");
