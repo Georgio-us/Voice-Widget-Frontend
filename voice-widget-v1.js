@@ -126,7 +126,6 @@ class VoiceWidget extends HTMLElement {
 
   // ---------- UI init ----------
   initializeUI() {
-    this.initTheme();
     this.ui.initializeUI();
 
     // единый ввод
@@ -155,6 +154,13 @@ class VoiceWidget extends HTMLElement {
     try { this.setupMenuOverlay(); } catch {}
 
     
+  }
+
+  connectedCallback() {
+    // Theme application uses this.setAttribute, so it must run after connect.
+    if (this._themeInitializedOnce) return;
+    this.initTheme();
+    this._themeInitializedOnce = true;
   }
 
   initTheme() {
