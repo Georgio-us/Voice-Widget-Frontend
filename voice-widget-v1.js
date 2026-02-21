@@ -905,7 +905,7 @@ render() {
   .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
     border:none; padding:0; cursor:pointer; z-index:10001; background:transparent; -webkit-appearance:none; appearance:none;
     box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
-    transition:transform .15s ease, box-shadow .15s ease; }
+    transition:transform .15s ease, box-shadow .15s ease; pointer-events:auto; }
   .launcher:hover{ transform:scale(1.05); box-shadow:0 14px 32px rgba(0,0,0,.22); }
   /* Legacy icon kept in markup, not used in current launcher variants */
   .launcher__desktopIcon{ width:100%; height:100%; display:none; object-fit:contain; filter:brightness(0) invert(1); }
@@ -1380,6 +1380,7 @@ render() {
                     bottom: 20px;
                     right: 20px;
                     z-index: 9999;
+                    pointer-events: auto;  /* клики только по виджету; #vw-host — pointer-events: none */
                 }
                 @media (max-width: 450px){
                   /* На мобилках :host не фиксируем — пусть следует флексу #vw-host */

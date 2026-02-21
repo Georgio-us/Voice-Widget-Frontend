@@ -72,7 +72,7 @@
     host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
     host.style.width = 'auto';
     host.style.height = 'auto';
-    host.style.pointerEvents = 'auto';
+    host.style.pointerEvents = 'none';  /* не перехватывать клики — только сам виджет внутри */
     positionHost(host, options);
     document.body.appendChild(host);
     return host;
@@ -159,6 +159,9 @@
           host.id = 'vw-host';
           host.style.position = 'fixed';
           host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
+          host.style.width = 'auto';
+          host.style.height = 'auto';
+          host.style.pointerEvents = 'none';  /* не перехватывать клики — только виджет внутри */
           document.body.appendChild(host);
         }
         positionHost(host, options);
