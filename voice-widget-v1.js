@@ -1234,7 +1234,7 @@ render() {
     font-family: var(--ff);
     font-size: 12px;
     font-weight: 600;
-    color: #FFFFFF;
+    color: var(--color-text);
     opacity: .9;
   }
   .dialog-screen .in-dialog-lead__row{ display:flex; gap: var(--space-s); align-items:center; }
@@ -1244,7 +1244,8 @@ render() {
     font-family: var(--ff);
     font-size: 10px;
     font-weight: 400;
-    color: #A9A9A9;
+    color: var(--color-text);
+    opacity: .75;
   }
   /* Phone: dial selector + input (reuse existing .dial-select/.dial-btn/.dial-list styles) */
   .dialog-screen .in-dialog-lead__phone-row{ display:flex; gap: var(--space-s); align-items:center; }
@@ -1257,7 +1258,8 @@ render() {
     border-radius:10px;
     background:rgba(106,108,155,.10);
     border:1px solid rgba(106,108,155,.30);
-    color:#FFFFFF;
+    color: var(--color-text);
+    caret-color: var(--color-text);
     font-family: var(--ff);
     font-size:12px;
     font-weight:400;
@@ -1267,7 +1269,7 @@ render() {
     transition: border-color .15s ease;
   }
   .dialog-screen .in-dialog-lead__input.error{ border-color:#E85F62; }
-  .dialog-screen .in-dialog-lead__input::placeholder{ color:#A0A0A0; }
+  .dialog-screen .in-dialog-lead__input::placeholder{ color: var(--color-text); opacity: .6; }
   .dialog-screen .in-dialog-lead__input:focus,
   .dialog-screen .in-dialog-lead__input:focus-visible{
     outline:none;
@@ -1283,7 +1285,8 @@ render() {
     font-family: var(--ff);
     font-size:10px;
     font-weight:400;
-    color:#C4C4C4;
+    color: var(--color-text);
+    opacity: .85;
     line-height:1.4;
   }
   .dialog-screen .in-dialog-lead__privacy-link{ color:var(--color-accent); text-decoration:none; }
@@ -1296,7 +1299,7 @@ render() {
     min-width: var(--btn-min-w);
     padding: var(--btn-py) var(--btn-px);
     background:var(--color-accent);
-    color:#fff;
+    color: #fff;
     border:1.25px solid var(--color-accent);
     border-radius: var(--btn-radius);
     font: var(--fw-s) var(--fs-btn)/1 var(--ff);
@@ -1322,8 +1325,8 @@ render() {
   .dialog-screen .in-dialog-lead__cancel:active{ transform: translateY(0); opacity:.85; }
 
   /* In-dialog thanks (UI-only) */
-  .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; text-align:center; }
-  .dialog-screen .in-dialog-thanks__text{ font-size:12px; font-weight:400; color:#C4C4C4; text-align:center; line-height:1.35; }
+  .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color: var(--color-text); margin-bottom:6px; text-align:center; }
+  .dialog-screen .in-dialog-thanks__text{ font-size:12px; font-weight:400; color: var(--color-text); opacity: .85; text-align:center; line-height:1.35; }
   .dialog-screen .in-dialog-thanks__actions{ display:flex; justify-content:center; margin-top:14px; }
   .dialog-screen .in-dialog-thanks__close{
     padding: var(--btn-py) var(--btn-px);
@@ -1485,6 +1488,32 @@ render() {
                 :host([theme="light"]) .dialog-screen .in-dialog-lead {
                   background: var(--bg-card);
                 }
+                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__title,
+                :host([theme="light"]) .dialog-screen .in-dialog-lead__title,
+                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__label,
+                :host([theme="light"]) .dialog-screen .in-dialog-lead__label,
+                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__consent-text,
+                :host([theme="light"]) .dialog-screen .in-dialog-lead__consent-text {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__input,
+                :host([theme="light"]) .dialog-screen .in-dialog-lead__input {
+                  color: var(--color-text);
+                  caret-color: var(--color-text);
+                  background: rgba(0, 0, 0, 0.06);
+                  border-color: rgba(0, 0, 0, 0.15);
+                }
+                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__input::placeholder,
+                :host([theme="light"]) .dialog-screen .in-dialog-lead__input::placeholder {
+                  color: var(--color-text);
+                  opacity: .5;
+                }
+                :host([data-theme="light"]) .dialog-screen .in-dialog-thanks__title,
+                :host([theme="light"]) .dialog-screen .in-dialog-thanks__title,
+                :host([data-theme="light"]) .dialog-screen .in-dialog-thanks__text,
+                :host([theme="light"]) .dialog-screen .in-dialog-thanks__text {
+                  color: var(--color-text);
+                }
                 :host([data-theme="light"]) .user-bubble,
                 :host([theme="light"]) .user-bubble {
                   background: transparent;
@@ -1567,6 +1596,18 @@ render() {
                 :host([data-theme="light"]) .request-select-list,
                 :host([theme="light"]) .request-select-list {
                   background: var(--bg-card);
+                }
+                :host([data-theme="light"]) .dial-list,
+                :host([theme="light"]) .dial-list {
+                  background: var(--bg-card);
+                }
+                :host([data-theme="light"]) .dial-item,
+                :host([theme="light"]) .dial-item {
+                  color: var(--color-text);
+                }
+                :host([data-theme="light"]) .dial-item:hover,
+                :host([theme="light"]) .dial-item:hover {
+                  background: rgba(0, 0, 0, 0.08);
                 }
                 :host([data-theme="light"]) .request-select,
                 :host([theme="light"]) .request-select {
