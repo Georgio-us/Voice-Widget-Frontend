@@ -17,6 +17,20 @@ export class UIManager {
     this.bindToInternalEvents();
   }
 
+  getInputPlaceholder() {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t('inputPlaceholder');
+    }
+    return 'Ask a question...';
+  }
+
+  t(key) {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t(key);
+    }
+    return '';
+  }
+
   // ---------- init ----------
   initializeUI() {
     this.cacheElements();
@@ -107,12 +121,12 @@ export class UIManager {
     switch (state) {
       case 'recording':
         if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
-        if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = 'Введите ваш вопрос…'; }
+        if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = this.getInputPlaceholder(); }
         sendButton?.classList.remove('active');
         toggleButton?.classList.remove('active');
         break;
       case 'main':
-        if (mainTextInput) { mainTextInput.disabled = false; mainTextInput.style.opacity = '1'; mainTextInput.placeholder = 'Введите ваш вопрос…'; }
+        if (mainTextInput) { mainTextInput.disabled = false; mainTextInput.style.opacity = '1'; mainTextInput.placeholder = this.getInputPlaceholder(); }
         if (mainToggleButton) { mainToggleButton.disabled = false; mainToggleButton.classList.remove('active'); }
         // Removed mainSendButton disabled state - always keep it enabled
         break;
@@ -133,7 +147,7 @@ export class UIManager {
   // IDLE
   applyIdleState() {
     const { textInput, sendButton, toggleButton } = this.elements;
-    if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = 'Введите ваш вопрос…'; }
+    if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = this.getInputPlaceholder(); }
     if (sendButton) {
       // Always enable send button - let updateSendButtonState handle the logic
       sendButton.disabled = false;
@@ -151,7 +165,7 @@ export class UIManager {
     if (mainTextInput) { 
       mainTextInput.disabled = false; 
       mainTextInput.style.opacity = '1'; 
-      mainTextInput.placeholder = 'Введите ваш вопрос…'; 
+      mainTextInput.placeholder = this.getInputPlaceholder(); 
     }
     if (mainToggleButton) { 
       mainToggleButton.disabled = false; 
@@ -451,9 +465,9 @@ export class UIManager {
   restoreSnapshotAndApply() {
     try {
       const raw = localStorage.getItem(this._snapshotKey());
-      if (!raw) { this.showNotification('⛔ Нет сохранённой сессии для восстановления'); return false; }
+      if (!raw) { this.showNotification(`⛔ ${this.t('noSavedSession')}`); return false; }
       const snap = JSON.parse(raw);
-      if (!snap || !Array.isArray(snap.messages)) { this.showNotification('⛔ Снапшот повреждён'); return false; }
+      if (!snap || !Array.isArray(snap.messages)) { this.showNotification(`⛔ ${this.t('snapshotCorrupted')}`); return false; }
 
       this.widget.messages = snap.messages;
       this._setSessionIdAndDisplay(snap.sessionId);
@@ -464,7 +478,7 @@ export class UIManager {
       return true;
     } catch (e) {
       console.warn('Не удалось восстановить снапшот:', e);
-      this.showNotification('⛔ Ошибка восстановления');
+      this.showNotification(`⛔ ${this.t('restoreError')}`);
       return false;
     }
   }
@@ -481,7 +495,7 @@ export class UIManager {
     } catch {}
 
     this.resetInsightsValues(true);  // 4) чистим правую панель
-    this.showNotification('🔄 Сессия сброшена'); // 5) нотификация
+    this.showNotification(`🔄 ${this.t('sessionReset')}`); // 5) нотификация
   }
 
   resetInsightsValues(resetProgress = true) {

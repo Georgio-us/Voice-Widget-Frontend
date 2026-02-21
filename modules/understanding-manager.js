@@ -28,6 +28,13 @@ export class UnderstandingManager {
     };
   }
 
+  t(key) {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t(key);
+    }
+    return '';
+  }
+
   // Универсальная проверка заполненности значения
   isFilled(v) {
     if (v === null || v === undefined) return false;
@@ -151,28 +158,17 @@ export class UnderstandingManager {
 
   // Текст по умолчанию для поля
   getDefaultText(field) {
-    const defaults = {
-      name: 'не определено',
-      operation: 'не определена',
-      budget: 'не определен',
-      type: 'не определен',
-      location: 'не определен',
-      details: 'не определены',
-      rooms: 'не определено',
-      area: 'не определена',
-      preferences: 'не определены'
-    };
-    return defaults[field] || 'не определено';
+    return this.t('insightDefault') || 'not specified';
   }
 
   // Текст стадии по проценту
   getStageText(progress) {
-    if (progress === 0) return 'Ожидание';
-    if (progress <= 20) return 'Знакомство';
-    if (progress <= 40) return 'Основные параметры';
-    if (progress <= 60) return 'Готов к первичному подбору';
-    if (progress <= 80) return 'Уточнение деталей';
-    return 'Готов к точному подбору';
+    if (progress === 0) return this.t('stageWaiting') || 'Waiting';
+    if (progress <= 20) return this.t('stageIntro') || 'Discovery';
+    if (progress <= 40) return this.t('stageCore') || 'Core parameters';
+    if (progress <= 60) return this.t('stagePrimarySelection') || 'Ready for initial selection';
+    if (progress <= 80) return this.t('stageDetails') || 'Refining details';
+    return this.t('stagePreciseSelection') || 'Ready for precise selection';
   }
 
   // Миграция старого формата insights в новый

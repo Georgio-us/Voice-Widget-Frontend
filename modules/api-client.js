@@ -15,6 +15,13 @@ export class APIClient {
     this.lastShownCardId = null;     // последняя реально показанная карточка (id)
   }
 
+  t(key, params = null) {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t(key, params);
+    }
+    return '';
+  }
+
   get disableServerUI() {
     try {
       const v = localStorage.getItem('vw_disableServerUI');
@@ -176,7 +183,7 @@ export class APIClient {
       }
     } catch (e) {
       console.warn('Hidden command error:', e);
-      this.widget.ui?.showNotification?.('Ошибка при обработке команды карточек');
+      this.widget.ui?.showNotification?.(this.t('processingCardsError'));
     }
   }
 
@@ -231,7 +238,7 @@ export class APIClient {
       fd.append('text', messageText);
       fd.append('sessionId', this.widget.sessionId || '');
 
-      const replyLang = localStorage.getItem('vw_lang') || 'ru';
+      const replyLang = this.widget.getLangCode();
       fd.append('lang', replyLang);
       const speechLang = localStorage.getItem('vw_speechLang');
       if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
@@ -261,7 +268,7 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
+      const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
@@ -291,7 +298,7 @@ export class APIClient {
       console.error('Ошибка при отправке текста:', error);
       this.widget.ui.addMessage({
         type: 'assistant',
-        content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+        content: this.t('sendTextError'),
         timestamp: new Date()
       });
     } finally {
@@ -319,7 +326,7 @@ export class APIClient {
       fd.append('text', messageText);
       fd.append('sessionId', this.widget.sessionId || '');
 
-      const replyLang = localStorage.getItem('vw_lang') || 'ru';
+      const replyLang = this.widget.getLangCode();
       fd.append('lang', replyLang);
       const speechLang = localStorage.getItem('vw_speechLang');
       if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
@@ -349,7 +356,7 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
+      const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
@@ -396,7 +403,7 @@ export class APIClient {
       console.error('Ошибка при отправке текста (main):', error);
       this.widget.ui.addMessage({
         type: 'assistant',
-        content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+        content: this.t('sendTextError'),
         timestamp: new Date()
       });
     }
@@ -412,7 +419,7 @@ export class APIClient {
     }
 
     if (this.widget.audioRecorder.recordingTime < this.widget.audioRecorder.minRecordingTime) {
-      this.widget.ui.showNotification('⚠️ Запись слишком короткая');
+      this.widget.ui.showNotification(this.t('shortRecording'));
       return;
     }
 
@@ -420,7 +427,7 @@ export class APIClient {
 
     const userMessage = {
       type: 'user',
-      content: `Голосовое сообщение (${this.widget.audioRecorder.recordingTime}с)`,
+      content: this.t('voiceMessageLabel', { seconds: this.widget.audioRecorder.recordingTime }),
       timestamp: new Date()
     };
     this.widget.ui.addMessage(userMessage);
@@ -441,7 +448,7 @@ export class APIClient {
 
       fd.append('sessionId', this.widget.sessionId || '');
 
-      const replyLang = localStorage.getItem('vw_lang') || 'ru';
+      const replyLang = this.widget.getLangCode();
       fd.append('lang', replyLang);
       const speechLang = localStorage.getItem('vw_speechLang');
       if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
@@ -491,12 +498,12 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
 
-      const assistantRaw = data[this.responseField] || 'Ответ не получен от сервера.';
+      const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
 
       const assistantMessage = {
         type: 'assistant',
-        content: parsed.cleaned || 'Ответ не получен от сервера.',
+        content: parsed.cleaned || this.t('responseMissing'),
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
@@ -546,7 +553,7 @@ export class APIClient {
       console.error('Ошибка при отправке аудио:', error);
       this.widget.ui.addMessage({
         type: 'assistant',
-        content: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+        content: this.t('sendTextError'),
         timestamp: new Date()
       });
     }

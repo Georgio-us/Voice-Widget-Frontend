@@ -22,6 +22,345 @@ import { APIClient } from './modules/api-client.js';
 import { EventManager } from './modules/event-manager.js';
 import { initTelemetry, setConsent as setTelemetryConsent, log as logTelemetry, EventTypes as TelemetryEventTypes } from './modules/telemetryClient.js';
 
+const LOCALES = {
+  RU: {
+    inputPlaceholder: 'Задайте вопрос...',
+    launcherTitle: 'Спросите меня прямо здесь',
+    launcherSubtitle: 'Можно написать или продиктовать',
+    chatGreeting: 'Спроси меня!',
+    chatSubGreeting: 'Помогу найти лучший вариант',
+    recordingLabel: 'Идет запись',
+    loadingText: 'Обрабатываю запрос',
+    menuRequest: 'Оставить заявку',
+    menuLanguage: 'Выбрать язык',
+    menuInsights: 'Дополнительно',
+    menuBackToDialog: 'Назад к диалогу',
+    menuSelectedRequest: 'Оставить заявку',
+    menuSelectedContext: 'Дополнительно',
+    menuThemeToLight: 'Светлая тема',
+    menuThemeToDark: 'Тёмная тема',
+    requestTitle: 'Оставить заявку',
+    requestNameLabel: 'Имя',
+    requestContactLabel: 'Контакт (телефон / WhatsApp / e-mail)',
+    requestPreferredMethodLabel: 'Предпочитаемый способ связи',
+    requestCommentLabel: 'Комментарий (необязательно)',
+    requestNamePlaceholder: 'Ваше имя',
+    requestPhonePlaceholder: '1234567',
+    requestEmailPlaceholder: 'yourmail@gmail.com',
+    requestCommentPlaceholder: 'Короткая заметка',
+    requestContactError: 'Укажите телефон или email',
+    requestConsentError: 'Примите Политику конфиденциальности',
+    consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
+    privacyPolicy: 'Политика конфиденциальности',
+    send: 'Отправить',
+    cancel: 'Отмена',
+    close: 'Закрыть',
+    continue: 'Продолжить',
+    understood: 'Понятно',
+    thanksTitle: 'Спасибо!',
+    thanksBody: 'Ваша заявка получена. Мы скоро с вами свяжемся.',
+    statusFulfilled: 'Статус: заполнено',
+    ctxDataStorage: 'Хранение и шифрование данных',
+    ctxStageMessage: 'Отлично! Вы заполнили систему данными, и теперь подбор будет точнее.',
+    ctxHint: 'Вы можете оставить заявку, чтобы менеджер сразу начал работу по вашему кейсу',
+    leaveRequest: 'Оставить заявку',
+    namePlaceholder: 'Имя',
+    phonePlaceholder: 'Телефон',
+    emailPlaceholder: 'E-mail',
+    contactError: 'Укажите телефон или email',
+    consentError: 'Примите Политику конфиденциальности',
+    privacyLeavingTitle: 'Переход на другой сайт',
+    privacyLeavingBody: 'Вы покидаете этот сайт и открываете Политику конфиденциальности в новой вкладке. Продолжить?',
+    spamRepeatTitle: 'Повторная отправка',
+    spamRepeatBody: 'Вы уже отправили заявку, желаете сделать это повторно?',
+    spamBlockBody: 'Вы уже отправили заявку, и сможете отправить ее повторно через <span class="timer"></span> секунд.',
+    whatDataTitle: 'Какие данные мы знаем?',
+    dataStorageTitle: 'Хранение и шифрование данных',
+    dataStorageBody: 'Мы храним данные на защищенных серверах в ЕС. Передача защищена современными TLS и HSTS; данные в хранилище зашифрованы (AES-256). Доступ строго ограничен и аудитируется. Мы не продаем ваши персональные данные. Вы можете запросить удаление в любой момент через поддержку.',
+    footerWhatData: 'Какие данные мы знаем?',
+    methodWhatsApp: 'WhatsApp',
+    methodTelegram: 'Telegram',
+    methodPhoneCall: 'Звонок',
+    methodEmail: 'Email',
+    cardShow: 'Показать',
+    cardCancel: 'Отменить',
+    handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
+    handoffDetails: 'Подробнее',
+    inDialogLeadTitle: 'Оставьте контакты',
+    inDialogLeadNameLabel: 'Имя',
+    inDialogLeadPhoneLabel: 'Телефон',
+    inDialogLeadEmailLabel: 'Email',
+    inDialogLeadContactError: 'Обязателен телефон или email',
+    inDialogLeadConsentError: 'Примите Политику конфиденциальности',
+    invalidPhone: 'Некорректный номер телефона. Используйте 9-10 цифр после кода страны.',
+    invalidEmail: 'Некорректный email. Пример: name@domain.com',
+    submitFailed: 'Не удалось отправить заявку. Попробуйте снова позже.',
+    networkError: 'Ошибка сети. Проверьте подключение и попробуйте снова.',
+    parseError: 'Не удалось разобрать ответ сервера',
+    responseMissing: 'Ответ от сервера не получен.',
+    sendTextError: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+    shortRecording: 'Запись слишком короткая',
+    voiceMessageLabel: 'Голосовое сообщение ({seconds}с)',
+    processingCardsError: 'Ошибка при обработке команды карточек',
+    noSavedSession: 'Нет сохраненной сессии для восстановления',
+    snapshotCorrupted: 'Снимок состояния поврежден',
+    restoreError: 'Ошибка восстановления',
+    sessionReset: 'Сессия сброшена'
+    ,micErrorDuringRecord: 'Произошла ошибка во время записи'
+    ,recordingCancelled: 'Запись отменена'
+    ,micAccessDenied: 'Доступ к микрофону запрещен'
+    ,micNotFound: 'Микрофон не найден'
+    ,micBusy: 'Микрофон уже используется'
+    ,micUnsupported: 'Настройки микрофона не поддерживаются'
+    ,micAccessError: 'Ошибка доступа к микрофону'
+    ,speakTitle: 'Говорить'
+    ,sendTitle: 'Отправить'
+    ,closeWidgetTitle: 'Закрыть виджет'
+    ,statsTitle: 'Статистика'
+    ,cookieTitle: 'Cookies и телеметрия'
+    ,cookieBody: 'Мы используем cookies и собираем данные использования, чтобы улучшать продукт. Никакой сторонней рекламы и ретаргетинга. Настройки можно изменить в любое время.'
+    ,cookieStrict: 'Строго необходимые (всегда включены)'
+    ,cookiePerf: 'Производительность (тайминги, ошибки)'
+    ,cookieAnalytics: 'Аналитика (анонимное использование)'
+    ,cookieMarketing: 'Маркетинг (выключено — не используется)'
+    ,cookieAcceptAll: 'Принять все'
+    ,cookieRejectAll: 'Отклонить все'
+    ,cookieManage: 'Настроить'
+    ,cookieSave: 'Сохранить'
+    ,insightDefault: 'не указано'
+    ,stageWaiting: 'Ожидание'
+    ,stageIntro: 'Знакомство'
+    ,stageCore: 'Основные параметры'
+    ,stagePrimarySelection: 'Готов к первичному подбору'
+    ,stageDetails: 'Уточнение деталей'
+    ,stagePreciseSelection: 'Готов к точному подбору'
+  },
+  EN: {
+    inputPlaceholder: 'Ask a question...',
+    launcherTitle: 'Ask me right here',
+    launcherSubtitle: 'You can type or dictate',
+    chatGreeting: 'Ask me!',
+    chatSubGreeting: 'I can help you find the best option',
+    recordingLabel: 'Recording',
+    loadingText: 'Processing request',
+    menuRequest: 'Contact me',
+    menuLanguage: 'Language',
+    menuInsights: 'Insights',
+    menuBackToDialog: 'Back to dialogue',
+    menuSelectedRequest: 'Leave request',
+    menuSelectedContext: 'Insights',
+    menuThemeToLight: 'Light mode',
+    menuThemeToDark: 'Dark mode',
+    requestTitle: 'Leave a request',
+    requestNameLabel: 'Name',
+    requestContactLabel: 'Contact (phone / WhatsApp / e-mail)',
+    requestPreferredMethodLabel: 'Preferred contact method',
+    requestCommentLabel: 'Comment (optional)',
+    requestNamePlaceholder: 'Your name',
+    requestPhonePlaceholder: '1234567',
+    requestEmailPlaceholder: 'yourmail@gmail.com',
+    requestCommentPlaceholder: 'Short note',
+    requestContactError: 'Please provide phone or email',
+    requestConsentError: 'Please accept the Privacy Policy',
+    consentText: 'I consent to the processing of my data for managing this request and contacting me about properties.',
+    privacyPolicy: 'Privacy Policy',
+    send: 'Send',
+    cancel: 'Cancel',
+    close: 'Close',
+    continue: 'Continue',
+    understood: 'Understood',
+    thanksTitle: 'Thank you!',
+    thanksBody: "Your request has been received. We'll contact you soon.",
+    statusFulfilled: 'Status: fulfilled',
+    ctxDataStorage: 'Data storage & encrypting',
+    ctxStageMessage: "Well done! You've fulfilled the system with the data that will make search much closer to your goal!",
+    ctxHint: 'You can leave the request to make manager start working by your case immediately',
+    leaveRequest: 'Leave request',
+    namePlaceholder: 'Name',
+    phonePlaceholder: 'Phone',
+    emailPlaceholder: 'E-mail',
+    contactError: 'Please provide phone or email',
+    consentError: 'Please accept the Privacy Policy',
+    privacyLeavingTitle: 'Leaving this site',
+    privacyLeavingBody: "You're about to leave this site and open our Privacy Policy in a new tab. Do you want to continue?",
+    spamRepeatTitle: 'Repeated submission',
+    spamRepeatBody: 'You already sent a request. Do you want to submit it again?',
+    spamBlockBody: 'You already sent a request and can submit again in <span class="timer"></span> seconds.',
+    whatDataTitle: 'What data do we know?',
+    dataStorageTitle: 'Data storage & encrypting',
+    dataStorageBody: 'We store your data on secure EU-based servers. Data in transit is protected with modern TLS and HSTS; data at rest is encrypted (AES-256). Access is strictly limited and audited. We never sell your personal information. You can request deletion at any time via Support.',
+    footerWhatData: 'What data do we know?',
+    methodWhatsApp: 'WhatsApp',
+    methodTelegram: 'Telegram',
+    methodPhoneCall: 'Phone Call',
+    methodEmail: 'Email',
+    cardShow: 'Show',
+    cardCancel: 'Cancel',
+    handoffMessage: 'You selected a property. You can ask for details or cancel.',
+    handoffDetails: 'More details',
+    inDialogLeadTitle: 'Leave your contact details',
+    inDialogLeadNameLabel: 'Name',
+    inDialogLeadPhoneLabel: 'Phone',
+    inDialogLeadEmailLabel: 'Email',
+    inDialogLeadContactError: 'Required: phone or email',
+    inDialogLeadConsentError: 'Please accept the Privacy Policy',
+    invalidPhone: 'Invalid phone number. Use 9-10 digits after country code.',
+    invalidEmail: 'Invalid email address. Example: name@domain.com',
+    submitFailed: 'Failed to submit request. Please try again later.',
+    networkError: 'Network error. Please check your connection and try again.',
+    parseError: 'Failed to parse server response',
+    responseMissing: 'No response was received from the server.',
+    sendTextError: 'An error occurred while sending the message. Please try again.',
+    shortRecording: 'Recording is too short',
+    voiceMessageLabel: 'Voice message ({seconds}s)',
+    processingCardsError: 'Error while processing card command',
+    noSavedSession: 'No saved session to restore',
+    snapshotCorrupted: 'Snapshot is corrupted',
+    restoreError: 'Restore failed',
+    sessionReset: 'Session has been reset'
+    ,micErrorDuringRecord: 'An error occurred while recording'
+    ,recordingCancelled: 'Recording canceled'
+    ,micAccessDenied: 'Microphone access denied'
+    ,micNotFound: 'Microphone not found'
+    ,micBusy: 'Microphone is already in use'
+    ,micUnsupported: 'Microphone settings are not supported'
+    ,micAccessError: 'Microphone access error'
+    ,speakTitle: 'Speak'
+    ,sendTitle: 'Send'
+    ,closeWidgetTitle: 'Close widget'
+    ,statsTitle: 'Statistics'
+    ,cookieTitle: 'Cookies & telemetry'
+    ,cookieBody: 'We use cookies and collect usage data to improve the product. No third-party ads or retargeting. You can change settings anytime.'
+    ,cookieStrict: 'Strictly necessary (always enabled)'
+    ,cookiePerf: 'Performance (timings, errors)'
+    ,cookieAnalytics: 'Analytics (anonymous usage)'
+    ,cookieMarketing: 'Marketing (off - not used)'
+    ,cookieAcceptAll: 'Accept all'
+    ,cookieRejectAll: 'Reject all'
+    ,cookieManage: 'Manage'
+    ,cookieSave: 'Save'
+    ,insightDefault: 'not specified'
+    ,stageWaiting: 'Waiting'
+    ,stageIntro: 'Discovery'
+    ,stageCore: 'Core parameters'
+    ,stagePrimarySelection: 'Ready for initial selection'
+    ,stageDetails: 'Refining details'
+    ,stagePreciseSelection: 'Ready for precise selection'
+  },
+  ES: {
+    inputPlaceholder: 'Haz una pregunta...',
+    launcherTitle: 'Preguntame aqui mismo',
+    launcherSubtitle: 'Puedes escribir o dictar',
+    chatGreeting: 'Preguntame!',
+    chatSubGreeting: 'Te ayudo a encontrar la mejor opcion',
+    recordingLabel: 'Grabando',
+    loadingText: 'Procesando solicitud',
+    menuRequest: 'Contactame',
+    menuLanguage: 'Idioma',
+    menuInsights: 'Insights',
+    menuBackToDialog: 'Volver al dialogo',
+    menuSelectedRequest: 'Dejar solicitud',
+    menuSelectedContext: 'Insights',
+    menuThemeToLight: 'Modo claro',
+    menuThemeToDark: 'Modo oscuro',
+    requestTitle: 'Dejar una solicitud',
+    requestNameLabel: 'Nombre',
+    requestContactLabel: 'Contacto (telefono / WhatsApp / e-mail)',
+    requestPreferredMethodLabel: 'Metodo de contacto preferido',
+    requestCommentLabel: 'Comentario (opcional)',
+    requestNamePlaceholder: 'Tu nombre',
+    requestPhonePlaceholder: '1234567',
+    requestEmailPlaceholder: 'correo@gmail.com',
+    requestCommentPlaceholder: 'Nota breve',
+    requestContactError: 'Indica telefono o email',
+    requestConsentError: 'Acepta la Politica de Privacidad',
+    consentText: 'Acepto el tratamiento de mis datos para gestionar esta solicitud y contactarme sobre propiedades.',
+    privacyPolicy: 'Politica de Privacidad',
+    send: 'Enviar',
+    cancel: 'Cancelar',
+    close: 'Cerrar',
+    continue: 'Continuar',
+    understood: 'Entendido',
+    thanksTitle: 'Gracias!',
+    thanksBody: 'Hemos recibido tu solicitud. Te contactaremos pronto.',
+    statusFulfilled: 'Estado: completado',
+    ctxDataStorage: 'Almacenamiento y cifrado de datos',
+    ctxStageMessage: 'Muy bien! Has completado el sistema con datos que haran la busqueda mas precisa.',
+    ctxHint: 'Puedes dejar una solicitud para que el gestor empiece a trabajar de inmediato',
+    leaveRequest: 'Dejar solicitud',
+    namePlaceholder: 'Nombre',
+    phonePlaceholder: 'Telefono',
+    emailPlaceholder: 'E-mail',
+    contactError: 'Indica telefono o email',
+    consentError: 'Acepta la Politica de Privacidad',
+    privacyLeavingTitle: 'Saliendo de este sitio',
+    privacyLeavingBody: 'Estas a punto de salir de este sitio y abrir nuestra Politica de Privacidad en una nueva pestana. Quieres continuar?',
+    spamRepeatTitle: 'Envio repetido',
+    spamRepeatBody: 'Ya enviaste una solicitud. Quieres enviarla de nuevo?',
+    spamBlockBody: 'Ya enviaste una solicitud y podras enviarla de nuevo en <span class="timer"></span> segundos.',
+    whatDataTitle: 'Que datos conocemos?',
+    dataStorageTitle: 'Almacenamiento y cifrado de datos',
+    dataStorageBody: 'Guardamos tus datos en servidores seguros de la UE. Los datos en transito estan protegidos con TLS y HSTS modernos; los datos en reposo estan cifrados (AES-256). El acceso es estrictamente limitado y auditado. Nunca vendemos tu informacion personal. Puedes solicitar la eliminacion en cualquier momento a traves de Soporte.',
+    footerWhatData: 'Que datos conocemos?',
+    methodWhatsApp: 'WhatsApp',
+    methodTelegram: 'Telegram',
+    methodPhoneCall: 'Llamada',
+    methodEmail: 'Email',
+    cardShow: 'Mostrar',
+    cardCancel: 'Cancelar',
+    handoffMessage: 'Has elegido una propiedad. Puedes pedir mas detalles o cancelar.',
+    handoffDetails: 'Mas detalles',
+    inDialogLeadTitle: 'Deja tus datos de contacto',
+    inDialogLeadNameLabel: 'Nombre',
+    inDialogLeadPhoneLabel: 'Telefono',
+    inDialogLeadEmailLabel: 'Email',
+    inDialogLeadContactError: 'Obligatorio: telefono o email',
+    inDialogLeadConsentError: 'Acepta la Politica de Privacidad',
+    invalidPhone: 'Numero de telefono invalido. Usa 9-10 digitos despues del codigo de pais.',
+    invalidEmail: 'Email invalido. Ejemplo: name@domain.com',
+    submitFailed: 'No se pudo enviar la solicitud. Intentalo mas tarde.',
+    networkError: 'Error de red. Revisa tu conexion e intentalo de nuevo.',
+    parseError: 'No se pudo procesar la respuesta del servidor',
+    responseMissing: 'No se recibio respuesta del servidor.',
+    sendTextError: 'Ocurrio un error al enviar el mensaje. Intentalo de nuevo.',
+    shortRecording: 'La grabacion es demasiado corta',
+    voiceMessageLabel: 'Mensaje de voz ({seconds}s)',
+    processingCardsError: 'Error al procesar el comando de tarjetas',
+    noSavedSession: 'No hay una sesion guardada para restaurar',
+    snapshotCorrupted: 'La instantanea esta danada',
+    restoreError: 'Error al restaurar',
+    sessionReset: 'La sesion fue reiniciada'
+    ,micErrorDuringRecord: 'Se produjo un error durante la grabacion'
+    ,recordingCancelled: 'Grabacion cancelada'
+    ,micAccessDenied: 'Acceso al microfono denegado'
+    ,micNotFound: 'Microfono no encontrado'
+    ,micBusy: 'El microfono ya esta en uso'
+    ,micUnsupported: 'La configuracion del microfono no es compatible'
+    ,micAccessError: 'Error de acceso al microfono'
+    ,speakTitle: 'Hablar'
+    ,sendTitle: 'Enviar'
+    ,closeWidgetTitle: 'Cerrar widget'
+    ,statsTitle: 'Estadisticas'
+    ,cookieTitle: 'Cookies y telemetria'
+    ,cookieBody: 'Usamos cookies y recopilamos datos de uso para mejorar el producto. Sin anuncios de terceros ni retargeting. Puedes cambiar la configuracion en cualquier momento.'
+    ,cookieStrict: 'Estrictamente necesarias (siempre activadas)'
+    ,cookiePerf: 'Rendimiento (tiempos, errores)'
+    ,cookieAnalytics: 'Analitica (uso anonimo)'
+    ,cookieMarketing: 'Marketing (desactivado - no se usa)'
+    ,cookieAcceptAll: 'Aceptar todo'
+    ,cookieRejectAll: 'Rechazar todo'
+    ,cookieManage: 'Configurar'
+    ,cookieSave: 'Guardar'
+    ,insightDefault: 'no especificado'
+    ,stageWaiting: 'Esperando'
+    ,stageIntro: 'Descubrimiento'
+    ,stageCore: 'Parametros principales'
+    ,stagePrimarySelection: 'Listo para una primera seleccion'
+    ,stageDetails: 'Afinando detalles'
+    ,stagePreciseSelection: 'Listo para una seleccion precisa'
+  }
+};
+
 class VoiceWidget extends HTMLElement {
   constructor() {
     super();
@@ -45,6 +384,9 @@ class VoiceWidget extends HTMLElement {
     
     // 🆕 Sprint I: server-side role (read-only, обновляется из server responses)
     this.role = null;
+    this.supportedLanguages = ['RU', 'EN', 'ES'];
+    this.defaultLanguage = 'EN';
+    this.currentLang = this.defaultLanguage;
 
     // параметры
     const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-production.up.railway.app/api/audio/upload';
@@ -103,6 +445,262 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  getInitialLanguage() {
+    const normalize = (value) => {
+      if (typeof value !== 'string') return null;
+      const code = value.trim().slice(0, 2).toUpperCase();
+      return this.supportedLanguages.includes(code) ? code : null;
+    };
+
+    try {
+      const fromStorage = normalize(localStorage.getItem('vw_lang'));
+      if (fromStorage) return fromStorage;
+    } catch {}
+
+    const fromDocument = normalize(document?.documentElement?.lang || '');
+    if (fromDocument) return fromDocument;
+
+    const fromNavigator = normalize(navigator?.language || '');
+    if (fromNavigator) return fromNavigator;
+
+    return this.defaultLanguage;
+  }
+
+  setLanguage(lang) {
+    const normalized = typeof lang === 'string' ? lang.trim().slice(0, 2).toUpperCase() : '';
+    const nextLang = this.supportedLanguages.includes(normalized) ? normalized : this.defaultLanguage;
+    this.currentLang = nextLang;
+    this._menuLanguageCode = nextLang;
+    try {
+      localStorage.setItem('vw_lang', nextLang);
+    } catch {}
+    console.log(`[VoiceWidget] Language changed to: ${nextLang}`);
+    this.updateInterface();
+  }
+
+  getCurrentLocale() {
+    return LOCALES[this.currentLang] || LOCALES[this.defaultLanguage] || LOCALES.EN;
+  }
+
+  t(key, params = null) {
+    const locale = this.getCurrentLocale();
+    let value = locale?.[key] ?? LOCALES[this.defaultLanguage]?.[key] ?? '';
+    if (params && typeof value === 'string') {
+      Object.entries(params).forEach(([paramKey, paramValue]) => {
+        value = value.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramValue));
+      });
+    }
+    return value;
+  }
+
+  updateInterface() {
+    const root = this.shadowRoot;
+    if (!root) return;
+    const locale = this.getCurrentLocale();
+    const setText = (selector, text) => {
+      const el = root.querySelector(selector);
+      if (el && typeof text === 'string') el.textContent = text;
+    };
+    const setTextAll = (selector, text) => {
+      root.querySelectorAll(selector).forEach((el) => {
+        if (typeof text === 'string') el.textContent = text;
+      });
+    };
+    const setPlaceholder = (id, text) => {
+      const el = root.getElementById(id);
+      if (el && typeof text === 'string') el.placeholder = text;
+    };
+    const setTitle = (id, text) => {
+      const el = root.getElementById(id);
+      if (el && typeof text === 'string') el.setAttribute('title', text);
+    };
+
+    setPlaceholder('mainTextInput', locale.inputPlaceholder);
+    setPlaceholder('textInput', locale.inputPlaceholder);
+    setPlaceholder('ctxName', locale.namePlaceholder);
+    setPlaceholder('ctxPhone', locale.phonePlaceholder);
+    setPlaceholder('ctxEmail', locale.emailPlaceholder);
+    setPlaceholder('reqName', locale.requestNamePlaceholder);
+    setPlaceholder('reqPhone', locale.requestPhonePlaceholder);
+    setPlaceholder('reqEmail', locale.requestEmailPlaceholder);
+    setPlaceholder('reqComment', locale.requestCommentPlaceholder);
+    setPlaceholder('inDialogLeadName', locale.namePlaceholder);
+    setPlaceholder('inDialogLeadPhone', locale.requestPhonePlaceholder);
+    setPlaceholder('inDialogLeadEmail', locale.emailPlaceholder);
+
+    setText('.launcher__title', locale.launcherTitle);
+    setText('.launcher__subtitle', locale.launcherSubtitle);
+    setText('.main-text', locale.chatGreeting);
+    setText('.sub-text', locale.chatSubGreeting);
+    setTextAll('.recording-label', locale.recordingLabel);
+    setText('.loading-text', locale.loadingText);
+    setTitle('mainToggleButton', locale.speakTitle);
+    setTitle('toggleButton', locale.speakTitle);
+    setTitle('mainSendButton', locale.sendTitle);
+    setTitle('sendButton', locale.sendTitle);
+    root.querySelectorAll('.header-action.header-right').forEach((el) => el.setAttribute('title', locale.closeWidgetTitle));
+    root.querySelectorAll('.header-action.header-left').forEach((el) => el.setAttribute('title', locale.statsTitle));
+
+    setText('#ctxStatusText', locale.statusFulfilled);
+    setText('#ctxStageMessage', locale.ctxStageMessage);
+    setText('.data-storage-text', locale.ctxDataStorage);
+    setText('.hint-text', locale.ctxHint);
+    setText('#ctxLeaveReqBtn', locale.leaveRequest);
+    setText('#ctxContactError', locale.contactError);
+    setText('#ctxConsentError', locale.consentError);
+    setText('#ctxSendBtn', locale.send);
+    setText('#ctxCancelBtn', locale.cancel);
+    setText('#ctxThanksDoneBtn', locale.close);
+    setText('#ctxThanksOverlayClose', locale.close);
+    setText('#ctxSpamWarningCancelBtn', locale.cancel);
+    setText('#ctxSpamWarningContinueBtn', locale.continue);
+    setText('#ctxSpamBlockCloseBtn', locale.understood);
+    setText('#whatDataUnderstoodBtn', locale.understood);
+    setText('#dataUnderstoodBtn', locale.understood);
+    setText('.footer-text', locale.footerWhatData);
+
+    setText('#reqContactError', locale.requestContactError);
+    setText('#reqConsentError', locale.requestConsentError);
+    setText('.request-send-btn', locale.send);
+    setText('.request-cancel-btn', locale.cancel);
+    setText('#requestThanksOverlayClose', locale.close);
+    setText('#requestSpamWarningCancelBtn', locale.cancel);
+    setText('#requestSpamWarningContinueBtn', locale.continue);
+    setText('#requestSpamBlockCloseBtn', locale.understood);
+    setText('#privacyCancelBtn', locale.cancel);
+    setText('#privacyContinueBtn', locale.continue);
+
+    const reqLabels = root.querySelectorAll('#requestScreen .request-field-label');
+    if (reqLabels[0]) reqLabels[0].textContent = locale.requestNameLabel;
+    if (reqLabels[1]) reqLabels[1].textContent = locale.requestContactLabel;
+    if (reqLabels[2]) reqLabels[2].textContent = locale.requestPreferredMethodLabel;
+    if (reqLabels[3]) reqLabels[3].textContent = locale.requestCommentLabel;
+    setText('#requestScreen .request-title', locale.requestTitle);
+
+    const consentTextNodes = root.querySelectorAll('.ctx-consent-text, .request-consent-text, .in-dialog-lead__consent-text');
+    consentTextNodes.forEach((node) => {
+      const link = node.querySelector('a');
+      if (link) link.textContent = locale.privacyPolicy;
+      const textBeforeLink = `${locale.consentText} `;
+      if (node.childNodes.length > 0) node.childNodes[0].textContent = textBeforeLink;
+    });
+
+    const reqMethodList = root.getElementById('reqMethodList');
+    if (reqMethodList) {
+      const options = reqMethodList.querySelectorAll('.request-select-item');
+      options.forEach((option) => {
+        const v = option.getAttribute('data-value');
+        if (v === 'WhatsApp') option.textContent = locale.methodWhatsApp;
+        if (v === 'Telegram') option.textContent = locale.methodTelegram;
+        if (v === 'Phone Call') option.textContent = locale.methodPhoneCall;
+        if (v === 'Email') option.textContent = locale.methodEmail;
+      });
+      const currentValue = root.getElementById('reqMethod')?.value;
+      const reqMethodLabel = root.getElementById('reqMethodLabel');
+      if (reqMethodLabel) {
+        if (currentValue === 'WhatsApp') reqMethodLabel.textContent = locale.methodWhatsApp;
+        if (currentValue === 'Telegram') reqMethodLabel.textContent = locale.methodTelegram;
+        if (currentValue === 'Phone Call') reqMethodLabel.textContent = locale.methodPhoneCall;
+        if (currentValue === 'Email') reqMethodLabel.textContent = locale.methodEmail;
+      }
+    }
+
+    const ctxPrivacy = root.getElementById('ctxPrivacyOverlay');
+    if (ctxPrivacy) {
+      const title = ctxPrivacy.querySelector('.data-title');
+      const body = ctxPrivacy.querySelector('.data-body');
+      if (title) title.textContent = locale.privacyLeavingTitle;
+      if (body) body.textContent = locale.privacyLeavingBody;
+    }
+    const privacy = root.getElementById('privacyOverlay');
+    if (privacy) {
+      const title = privacy.querySelector('.data-title');
+      const body = privacy.querySelector('.data-body');
+      if (title) title.textContent = locale.privacyLeavingTitle;
+      if (body) body.textContent = locale.privacyLeavingBody;
+    }
+    const ctxThanks = root.getElementById('ctxThanks');
+    if (ctxThanks) {
+      const title = ctxThanks.querySelector('.ctx-thanks-title');
+      const body = ctxThanks.querySelector('.ctx-thanks-text');
+      if (title) title.textContent = locale.thanksTitle;
+      if (body) body.textContent = locale.thanksBody;
+    }
+    const reqThanks = root.getElementById('requestThanksOverlay');
+    if (reqThanks) {
+      const title = reqThanks.querySelector('.data-title');
+      const body = reqThanks.querySelector('.data-body');
+      if (title) title.textContent = locale.thanksTitle;
+      if (body) body.textContent = locale.thanksBody;
+    }
+    const ctxThanksOverlay = root.getElementById('ctxThanksOverlay');
+    if (ctxThanksOverlay) {
+      const title = ctxThanksOverlay.querySelector('.data-title');
+      const body = ctxThanksOverlay.querySelector('.data-body');
+      if (title) title.textContent = locale.thanksTitle;
+      if (body) body.textContent = locale.thanksBody;
+    }
+
+    const updateSpamBlockBody = (overlayId, timerId) => {
+      const overlay = root.getElementById(overlayId);
+      const timer = root.getElementById(timerId);
+      if (!overlay) return;
+      const title = overlay.querySelector('.data-title');
+      const body = overlay.querySelector('.data-body');
+      if (title) title.textContent = locale.spamRepeatTitle;
+      if (body) {
+        const timerValue = timer ? timer.textContent : '60';
+        body.innerHTML = locale.spamBlockBody.replace('<span class="timer"></span>', `<span id="${timerId}">${timerValue}</span>`);
+      }
+    };
+    const updateSpamWarnBody = (overlayId) => {
+      const overlay = root.getElementById(overlayId);
+      if (!overlay) return;
+      const title = overlay.querySelector('.data-title');
+      const body = overlay.querySelector('.data-body');
+      if (title) title.textContent = locale.spamRepeatTitle;
+      if (body) body.textContent = locale.spamRepeatBody;
+    };
+    updateSpamWarnBody('ctxSpamWarningOverlay');
+    updateSpamWarnBody('requestSpamWarningOverlay');
+    updateSpamBlockBody('ctxSpamBlockOverlay', 'ctxSpamBlockTimer');
+    updateSpamBlockBody('requestSpamBlockOverlay', 'requestSpamBlockTimer');
+
+    const whatData = root.getElementById('whatDataOverlay');
+    if (whatData) {
+      const title = whatData.querySelector('.data-title');
+      if (title) title.textContent = locale.whatDataTitle;
+    }
+    const dataOverlay = root.getElementById('dataOverlay');
+    if (dataOverlay) {
+      const title = dataOverlay.querySelector('.data-title');
+      const body = dataOverlay.querySelector('.data-body');
+      if (title) title.textContent = locale.dataStorageTitle;
+      if (body) body.textContent = locale.dataStorageBody;
+    }
+    const cookieOverlay = root.getElementById('cookieOverlay');
+    if (cookieOverlay) {
+      const title = cookieOverlay.querySelector('.data-title');
+      const body = cookieOverlay.querySelector('.data-body');
+      const strict = root.querySelector('#ccStrict + span');
+      const perf = root.querySelector('#ccPerformance + span');
+      const analytics = root.querySelector('#ccAnalytics + span');
+      const marketing = root.querySelector('#ccMarketing + span');
+      if (title) title.textContent = locale.cookieTitle;
+      if (body && body.childNodes.length > 0) body.childNodes[0].textContent = `${locale.cookieBody} `;
+      if (strict) strict.textContent = locale.cookieStrict;
+      if (perf) perf.textContent = locale.cookiePerf;
+      if (analytics) analytics.textContent = locale.cookieAnalytics;
+      if (marketing) marketing.textContent = locale.cookieMarketing;
+      setText('#cookieAcceptAllBtn', locale.cookieAcceptAll);
+      setText('#cookieRejectAllBtn', locale.cookieRejectAll);
+      setText('#cookieManageBtn', locale.cookieManage);
+      setText('#cookieSaveBtn', locale.cookieSave);
+    }
+
+    this.updateMenuUI();
+  }
+
   getConsent() {
     try {
       const raw =
@@ -159,6 +757,9 @@ class VoiceWidget extends HTMLElement {
   }
 
   connectedCallback() {
+    this.currentLang = this.getInitialLanguage();
+    this._menuLanguageCode = this.currentLang;
+    this.updateInterface();
     if (this._pendingThemeAttr) {
       try { this.setAttribute('data-theme', this._pendingThemeAttr); } catch {}
       this._pendingThemeAttr = null;
@@ -1814,11 +2415,11 @@ render() {
                 }
                 .menu-col--middle { width: 80px; }
                 .menu-btn {
-                    width: 110px;
+                    width: 140px;
                     height: 25px;
                     background: transparent;
-                    border-radius: 20px;
-                    border: none;
+                    border-radius: 8px;
+                    border: 0.1px solid rgba(65, 120, 207, 0.4);
                     color: #DBDBDB;
                     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
                     font-size: 12px;
@@ -1829,7 +2430,7 @@ render() {
                     align-items: center;
                     justify-content: flex-start;
                     gap: 8px;
-                    padding: 0 8px;
+                    padding: 0 6px;
                 }
                 .menu-btn:hover { transform: scale(1.05); opacity: 0.85; }
                 .menu-btn--request { color: var(--color-text); }
@@ -1841,16 +2442,16 @@ render() {
                 .menu-btn--language .menu-btn__icon{ width:16px; height:16px; flex:0 0 16px; }
                 .menu-language {
                     position: relative;
-                    width: 110px;
+                    width: 140px;
                 }
                 .menu-language-trigger {
-                    width: 100%;
+                    width: 140px;
                 }
                 .menu-language-dropdown {
                     position: absolute;
                     top: calc(100% + 6px);
                     left: 0;
-                    width: 110px;
+                    width: 140px;
                     border-radius: 12px;
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     background: rgba(15, 16, 20, 0.98);
@@ -3034,8 +3635,7 @@ render() {
           // По умолчанию используем whatsapp, если метод не найден в мапе
           const preferredContactMethod = methodMap[preferredMethodRaw] || 'whatsapp';
           
-          // Получаем язык из localStorage
-          const language = localStorage.getItem('vw_lang') || 'ru';
+          const language = (this.currentLang || this.defaultLanguage).toLowerCase();
           
           // Формируем данные для отправки
           const leadData = {
@@ -3593,8 +4193,7 @@ render() {
           // Получаем базовый URL API (заменяем /api/audio/upload на /api/leads)
           const leadsApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
           
-          // Получаем язык из localStorage
-          const language = localStorage.getItem('vw_lang') || 'ru';
+          const language = (this.currentLang || this.defaultLanguage).toLowerCase();
           
           // Формируем данные для отправки (short form не имеет preferredContactMethod и comment)
           const leadData = {
@@ -3679,7 +4278,7 @@ render() {
             logTelemetry(TelemetryEventTypes.LEAD_FORM_ERROR, {
               formType: 'short',
               sessionId: this.sessionId || null,
-              language: localStorage.getItem('vw_lang') || 'ru',
+              language: (this.currentLang || this.defaultLanguage).toLowerCase(),
               error: 'Network error'
             });
           } catch (telemetryErr) {
@@ -4589,6 +5188,7 @@ render() {
     if (!thread || !messages) return;
 
     this._lastSuggestedCard = data;
+    const locale = this.getCurrentLocale();
 
     const panel = document.createElement('div');
     panel.className = 'card-screen';
@@ -4596,8 +5196,8 @@ render() {
       <div class="cs" style="background:transparent; box-shadow:none;">
         <div class="card-actions-wrap">
         <div class="card-actions-panel">
-            <button class="card-btn like" data-action="send_card">Показать</button>
-            <button class="card-btn next" data-action="continue_dialog">Отменить</button>
+            <button class="card-btn like" data-action="send_card">${locale.cardShow}</button>
+            <button class="card-btn next" data-action="continue_dialog">${locale.cardCancel}</button>
           </div>
         </div>
       </div>`;
@@ -4617,6 +5217,7 @@ render() {
   // - клики по кнопкам не делают ничего, кроме стандартного :hover/:active
   renderPostHandoffBlock({ cardId } = {}) {
     try {
+      const locale = this.getCurrentLocale();
       const thread = this.shadowRoot.getElementById('thread');
       const messages = this.shadowRoot.getElementById('messagesContainer');
       if (!thread || !messages) return;
@@ -4632,10 +5233,10 @@ render() {
       panel.innerHTML = `
         <div class="cs" style="background:transparent; box-shadow:none;">
           <div class="card-actions-wrap">
-            <div class="cs-sub handoff-message">Вы выбрали объект. Дальше можно уточнить детали или отменить.</div>
+            <div class="cs-sub handoff-message">${locale.handoffMessage}</div>
             <div class="card-actions-panel handoff-actions">
-              <button class="card-btn select handoff-btn" type="button" data-handoff-action="details">Подробнее</button>
-              <button class="card-btn next handoff-btn" type="button" data-handoff-action="cancel">Отмена</button>
+              <button class="card-btn select handoff-btn" type="button" data-handoff-action="details">${locale.handoffDetails}</button>
+              <button class="card-btn next handoff-btn" type="button" data-handoff-action="cancel">${locale.cancel}</button>
             </div>
           </div>
         </div>`;
@@ -4690,6 +5291,7 @@ render() {
   renderInDialogLeadThanksBlock() {
     // UI-only: отдельная thanks-форма для in-dialog lead form (не ctx/request overlays)
     try {
+      const locale = this.getCurrentLocale();
       const thread = this.shadowRoot.getElementById('thread');
       const messages = this.shadowRoot.getElementById('messagesContainer');
       if (!thread || !messages) return;
@@ -4702,10 +5304,10 @@ render() {
       panel.innerHTML = `
         <div class="cs" style="background:transparent; box-shadow:none;">
           <div class="card-actions-wrap">
-            <div class="in-dialog-thanks__title">Thank you!</div>
-            <div class="in-dialog-thanks__text">Your request has been received. We'll contact you soon.</div>
+            <div class="in-dialog-thanks__title">${locale.thanksTitle}</div>
+            <div class="in-dialog-thanks__text">${locale.thanksBody}</div>
             <div class="in-dialog-thanks__actions">
-              <button class="in-dialog-thanks__close" id="inDialogThanksCloseBtn" type="button">Close</button>
+              <button class="in-dialog-thanks__close" id="inDialogThanksCloseBtn" type="button">${locale.close}</button>
             </div>
           </div>
         </div>
@@ -4721,6 +5323,7 @@ render() {
   submitInDialogLeadForm() {
     // RMv3 / Sprint 2 / Task 2.5: isolated submit logic (copy of short-form patterns; name optional)
     try {
+      const locale = this.getCurrentLocale();
       const root = this.shadowRoot;
       const get = (id) => root.getElementById(id);
       const nameEl = get('inDialogLeadName');
@@ -4777,9 +5380,9 @@ render() {
         markError(phoneEl, true);
         markError(emailEl, true);
         shake(phoneEl); shake(emailEl);
-        showErr(contactErr, true, 'Required: phone or email');
+        showErr(contactErr, true, locale.inDialogLeadContactError);
         if (!consent) {
-          showErr(consentErr, true, 'Please accept the Privacy Policy');
+          showErr(consentErr, true, locale.inDialogLeadConsentError);
           if (consentEl) consentEl.classList.add('error');
         }
         return;
@@ -4789,8 +5392,8 @@ render() {
         markError(phoneEl, phoneHas && !phoneOk);
         markError(emailEl, emailHas && !emailOk);
         const msg = phoneHas && !phoneOk
-          ? 'Invalid phone number. Use 9–10 digits after country code.'
-          : 'Invalid email address. Example: name@domain.com';
+          ? locale.invalidPhone
+          : locale.invalidEmail;
         showErr(contactErr, true, msg);
         if (!phoneOk && phoneHas) shake(phoneEl);
         if (!emailOk && emailHas) shake(emailEl);
@@ -4798,7 +5401,7 @@ render() {
       }
 
       if (!consent) {
-        showErr(consentErr, true, 'Please accept the Privacy Policy');
+        showErr(consentErr, true, locale.inDialogLeadConsentError);
         if (consentEl) consentEl.classList.add('error');
         shake(consentEl);
         return;
@@ -4806,7 +5409,7 @@ render() {
 
       // Submit to backend (/api/leads), isolated from other forms
       const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
-      const language = localStorage.getItem('vw_lang') || 'ru';
+      const language = (this.currentLang || this.defaultLanguage).toLowerCase();
       const payload = {
         sessionId: this.sessionId || null,
         source: 'widget_in_dialog',
@@ -4826,25 +5429,26 @@ render() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-        .then(r => r.json().catch(() => ({ ok: false, error: 'Failed to parse server response' })))
+        .then(r => r.json().catch(() => ({ ok: false, error: locale.parseError })))
         .then((result) => {
           if (result?.ok === true) {
             // Remove lead form + handoff UI clutter and show dedicated thanks
             try { this.cancelHandoffFlowUI(); } catch {}
             try { this.renderInDialogLeadThanksBlock(); } catch {}
           } else {
-            const msg = result?.error || 'Failed to submit request. Please try again later.';
+            const msg = result?.error || locale.submitFailed;
             showErr(contactErr, true, msg);
           }
         })
         .catch(() => {
-          showErr(contactErr, true, 'Network error. Please check your connection and try again.');
+          showErr(contactErr, true, locale.networkError);
         });
     } catch {}
   }
 
   renderInDialogLeadBlock() {
     try {
+      const locale = this.getCurrentLocale();
       const thread = this.shadowRoot.getElementById('thread');
       const messages = this.shadowRoot.getElementById('messagesContainer');
       if (!thread || !messages) return;
@@ -4859,15 +5463,15 @@ render() {
       panel.innerHTML = `
         <div class="in-dialog-lead" role="group" aria-label="In-dialog lead block">
           <div class="in-dialog-lead__body">
-            <div class="in-dialog-lead__title">Leave your contact details</div>
+            <div class="in-dialog-lead__title">${locale.inDialogLeadTitle}</div>
 
             <div class="in-dialog-lead__field">
-              <label class="in-dialog-lead__label" for="inDialogLeadName">Name</label>
-              <input class="in-dialog-lead__input" id="inDialogLeadName" type="text" autocomplete="name" placeholder="Name">
+              <label class="in-dialog-lead__label" for="inDialogLeadName">${locale.inDialogLeadNameLabel}</label>
+              <input class="in-dialog-lead__input" id="inDialogLeadName" type="text" autocomplete="name" placeholder="${locale.namePlaceholder}">
             </div>
 
             <div class="in-dialog-lead__field">
-              <label class="in-dialog-lead__label" for="inDialogLeadPhone">Phone</label>
+              <label class="in-dialog-lead__label" for="inDialogLeadPhone">${locale.inDialogLeadPhoneLabel}</label>
               <div class="in-dialog-lead__phone-row">
                 <div class="dial-select">
                   <button class="dial-btn" type="button" id="inDialogLeadDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
@@ -4881,29 +5485,29 @@ render() {
                     <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
                   </div>
                 </div>
-                <input class="in-dialog-lead__input" id="inDialogLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="123456789">
+                <input class="in-dialog-lead__input" id="inDialogLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.requestPhonePlaceholder}">
                 <input id="inDialogLeadCode" type="hidden" value="+34" />
               </div>
             </div>
 
             <div class="in-dialog-lead__field">
-              <label class="in-dialog-lead__label" for="inDialogLeadEmail">Email</label>
-              <input class="in-dialog-lead__input" id="inDialogLeadEmail" type="email" autocomplete="email" placeholder="E-mail">
+              <label class="in-dialog-lead__label" for="inDialogLeadEmail">${locale.inDialogLeadEmailLabel}</label>
+              <input class="in-dialog-lead__input" id="inDialogLeadEmail" type="email" autocomplete="email" placeholder="${locale.emailPlaceholder}">
             </div>
 
             <label class="in-dialog-lead__consent">
               <input class="in-dialog-lead__checkbox" id="inDialogLeadGdpr" type="checkbox">
               <span class="in-dialog-lead__consent-text">
-                I consent to the processing of my data for managing this request and contacting me about properties.
-                <a class="in-dialog-lead__privacy-link" href="#" aria-label="Privacy Policy">Privacy Policy</a>
+                ${locale.consentText}
+                <a class="in-dialog-lead__privacy-link" href="#" aria-label="${locale.privacyPolicy}">${locale.privacyPolicy}</a>
               </span>
             </label>
-            <div class="in-dialog-lead__error" id="inDialogLeadConsentError">Please accept the Privacy Policy</div>
-            <div class="in-dialog-lead__error" id="inDialogLeadContactError">Required: phone or email</div>
+            <div class="in-dialog-lead__error" id="inDialogLeadConsentError">${locale.inDialogLeadConsentError}</div>
+            <div class="in-dialog-lead__error" id="inDialogLeadContactError">${locale.inDialogLeadContactError}</div>
 
             <div class="in-dialog-lead__actions">
-              <button class="in-dialog-lead__send" id="inDialogLeadSendBtn" type="button">Отправить</button>
-              <button class="in-dialog-lead__cancel" id="inDialogLeadCancelBtn" type="button">Отменить</button>
+              <button class="in-dialog-lead__send" id="inDialogLeadSendBtn" type="button">${locale.send}</button>
+              <button class="in-dialog-lead__cancel" id="inDialogLeadCancelBtn" type="button">${locale.cancel}</button>
             </div>
           </div>
         </div>
@@ -5022,12 +5626,8 @@ render() {
 
   // ---------- УТИЛИТЫ ----------
   getLangCode() {
-    try {
-      const lang = localStorage.getItem('vw_lang');
-      if (!lang) return 'en';
-      const code = lang.trim().toLowerCase().slice(0,2);
-      return ['en','es','ru','uk','fr','de','it'].includes(code) ? code : 'en';
-    } catch { return 'en'; }
+    const code = String(this.currentLang || this.defaultLanguage || 'EN').trim().toLowerCase().slice(0, 2);
+    return ['en', 'es', 'ru'].includes(code) ? code : 'en';
   }
 
  
@@ -5147,12 +5747,13 @@ render() {
   updateMenuUI() {
     const overlay = this.shadowRoot.querySelector('.menu-overlay');
     if (!overlay) return;
-    const languageCodes = ['RU', 'ES', 'ENG'];
-    const languageFlags = { RU: '🇷🇺', ES: '🇪🇸', ENG: '🇬🇧' };
+    const locale = this.getCurrentLocale();
+    const languageCodes = ['RU', 'EN', 'ES'];
+    const languageFlags = { RU: '🇷🇺', EN: '🇬🇧', ES: '🇪🇸' };
     const themeMode = this.getTheme();
-    const themeActionLabel = themeMode === 'light' ? 'Dark mode' : 'Light mode';
+    const themeActionLabel = themeMode === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
     const themeActionIcon = themeMode === 'light' ? 'dark-theme.svg' : 'light-theme.svg';
-    if (!this._menuLanguageCode || !languageFlags[this._menuLanguageCode]) this._menuLanguageCode = 'RU';
+    if (!this._menuLanguageCode || !languageFlags[this._menuLanguageCode]) this._menuLanguageCode = this.currentLang || this.defaultLanguage;
     if (typeof this._menuLanguageDropdownOpen !== 'boolean') this._menuLanguageDropdownOpen = false;
     const syncLanguageOutsideClick = () => {
       const shouldListen = this._menuState === 'open' && this._menuLanguageDropdownOpen;
@@ -5203,10 +5804,10 @@ render() {
       content.innerHTML = `
         <div class="menu-grid">
           <div class="menu-col">
-            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="">Contact me</button>
+            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="">${locale.menuRequest}</button>
             <div class="menu-language ${this._menuLanguageDropdownOpen ? 'open' : ''}" data-language-picker>
               <button class="menu-btn menu-btn--language menu-language-trigger" type="button" data-action="language">
-                <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">Language
+                <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">${locale.menuLanguage}
               </button>
               <div class="menu-language-dropdown ${this._menuLanguageDropdownOpen ? 'open' : ''}">
                 ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${code}</button>`).join('')}
@@ -5217,7 +5818,7 @@ render() {
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
           </div>
           <div class="menu-col">
-            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getInsightsIconByTheme()}" alt="">Insights</button>
+            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getInsightsIconByTheme()}" alt="">${locale.menuInsights}</button>
             <button class="menu-btn menu-btn--reset" data-action="theme"><img class="menu-btn__icon" src="${ASSETS_BASE}${themeActionIcon}" alt="">${themeActionLabel}</button>
           </div>
         </div>`;
@@ -5229,9 +5830,8 @@ render() {
           e.stopPropagation();
           const nextCode = e.currentTarget.getAttribute('data-language-code');
           if (!nextCode || !languageFlags[nextCode]) return;
-          this._menuLanguageCode = nextCode;
           this._menuLanguageDropdownOpen = false;
-          this.updateMenuUI();
+          this.setLanguage(nextCode);
         };
       });
       content.querySelectorAll('.menu-btn').forEach(btn => {
@@ -5261,12 +5861,12 @@ render() {
       });
       syncLanguageOutsideClick();
     } else if (this._menuState === 'selected') {
-      const labelMap = { request: 'Leave request', context: 'Insights' };
+      const labelMap = { request: locale.menuSelectedRequest, context: locale.menuSelectedContext };
       const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : 'menu-badge--context';
       content.innerHTML = `
         <div class="menu-grid menu-grid--selected">
           <div class="menu-col menu-col--single">
-            <button class="menu-link" data-action="back">Back to dialogue</button>
+            <button class="menu-link" data-action="back">${locale.menuBackToDialog}</button>
           </div>
           <div class="menu-col menu-col--single menu-col--middle" style="justify-content:center;">
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>

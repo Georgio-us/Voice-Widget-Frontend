@@ -17,6 +17,13 @@ export class AudioRecorder {
         this.recordedChunks = [];
     }
 
+    t(key) {
+        if (this.widget && typeof this.widget.t === 'function') {
+            return this.widget.t(key);
+        }
+        return '';
+    }
+
     async startRecording() {
         try {
             this.isRecording = true;
@@ -59,7 +66,7 @@ export class AudioRecorder {
 
             this.mediaRecorder.onerror = (event) => {
                 console.error('Ошибка записи:', event.error);
-                this.handleRecordingError('Произошла ошибка во время записи');
+                this.handleRecordingError(this.t('micErrorDuringRecord'));
             };
 
             this.mediaRecorder.start(100);
@@ -107,7 +114,7 @@ export class AudioRecorder {
         
         // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ОТМЕНЫ
         this.widget.events.emit('recordingCancelled');
-        this.widget.events.emit('notification', '❌ Запись отменена');
+        this.widget.events.emit('notification', `❌ ${this.t('recordingCancelled')}`);
     }
 
     async finishAndSend() {
@@ -116,7 +123,7 @@ export class AudioRecorder {
         console.log('🟢 Завершаем запись и отправляем');
 
         if (this.recordingTime < this.minRecordingTime) {
-            this.widget.events.emit('notification', '⚠️ Запись слишком короткая');
+            this.widget.events.emit('notification', `⚠️ ${this.t('shortRecording')}`);
             return;
         }
 
@@ -196,15 +203,15 @@ export class AudioRecorder {
 
     getErrorMessage(error) {
         if (error.name === 'NotAllowedError') {
-            return 'Доступ к микрофону запрещен';
+            return this.t('micAccessDenied');
         } else if (error.name === 'NotFoundError') {
-            return 'Микрофон не найден';
+            return this.t('micNotFound');
         } else if (error.name === 'NotReadableError') {
-            return 'Микрофон уже используется';
+            return this.t('micBusy');
         } else if (error.name === 'OverconstrainedError') {
-            return 'Настройки микрофона не поддерживаются';
+            return this.t('micUnsupported');
         } else {
-            return 'Ошибка доступа к микрофону';
+            return this.t('micAccessError');
         }
     }
 }
