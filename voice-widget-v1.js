@@ -1016,14 +1016,18 @@ render() {
 
   /* (scroll-bottom-btn и scrim удалены как неиспользуемые) */
 
-  /* Виджет — статичное появление без прыжков */
+  /* Виджет — в закрытом состоянии не участвует в раскладке (host = только лаунчер) */
 .widget{
-    width:auto;
-    height:auto;
+    position:absolute;
+    left:0;
+    top:0;
+    width:0;
+    height:0;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
     border-radius:20px;
-    overflow:visible;
     box-shadow:none;
-    position:relative;
     opacity:0;
     transition:opacity .2s ease;
     pointer-events:none;
@@ -1035,6 +1039,12 @@ render() {
 }
 
 :host(.open) .widget{
+    position:relative;
+    width:auto;
+    height:auto;
+    min-width:0;
+    min-height:0;
+    overflow:visible;
     opacity:1;
     pointer-events:auto;
 }
@@ -1381,6 +1391,21 @@ render() {
                     right: 20px;
                     z-index: 9999;
                     pointer-events: auto;  /* клики только по виджету; #vw-host — pointer-events: none */
+                    /* В закрытом состоянии host = только область лаунчера */
+                    width: 60px;
+                    height: 60px;
+                }
+                :host(.open) {
+                    width: auto;
+                    height: auto;
+                }
+                @media (min-width: 768px) {
+                  :host:not(.open) {
+                    width: fit-content;
+                    min-width: 240px;
+                    height: auto;
+                    min-height: clamp(60px, 6vw, 72px);
+                  }
                 }
                 @media (max-width: 450px){
                   /* На мобилках :host не фиксируем — пусть следует флексу #vw-host */
