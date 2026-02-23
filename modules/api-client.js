@@ -720,12 +720,6 @@ export class APIClient {
           try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}
         }
 
-        // RMv3 / Sprint 2 / Task 2.2: post-handoff visual block in chat (UI-only)
-        // Triggered only after successful server response to action='select'.
-        if (action === 'select') {
-          try { this.widget.renderPostHandoffBlock?.({ cardId: variantId }); } catch {}
-        }
-
         // Emit event for successful interaction
         this.widget.events.emit('cardInteractionSent', { action, variantId, data });
       } else {

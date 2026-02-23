@@ -1108,7 +1108,7 @@ render() {
   .card-screen .cs-image .card-btn.like[data-action="like"] svg path{ fill: transparent; stroke:#ffffff; stroke-width:2; }
   .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
-  .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .card-screen .cs-image img{ width:100%; height:100%; max-height:306px; object-fit:cover; display:block; }
   .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
@@ -1191,8 +1191,16 @@ render() {
   /* ===== Cards Slider ===== */
   .cards-slider{ width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; position:relative; }
   .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
-  .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; }
+  .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:0; }
   .card-slide.active{ transform: scale(1); opacity:1; }
+  /* flip: front and back in same grid cell (no absolute), size = max(front, back) */
+  .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:0; transition: opacity .25s ease; }
+  .card-slide-front{ opacity:1; pointer-events:auto; }
+
+  .card-slide-back{ height:479px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; justify-content:flex-end; }
+  .card-slide.flipped .card-slide-front{ opacity:0; pointer-events:none; }
+  .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
+  .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
   .cards-slider::-webkit-scrollbar-track{ background:transparent; }
@@ -1220,27 +1228,35 @@ render() {
      - scoped под .dialog-screen чтобы не затронуть другие экраны
      - без ghost-email / подсказок / валидации / ошибок */
   .dialog-screen .in-dialog-lead-block{ width:100%; margin:0; padding:0; }
-  .dialog-screen .in-dialog-lead{
+  .dialog-screen .in-dialog-lead,
+  .card-slide-back .in-dialog-lead{
     background:var(--bg-card);
     color:var(--color-text);
     border-radius:14px;
     box-shadow:none;
     overflow:hidden;
     width:100%;
-    margin-bottom: 10px;
   }
-  .dialog-screen .in-dialog-lead__body{ padding:12px; display:grid; gap:10px; }
-  .dialog-screen .in-dialog-lead__title{
+  .dialog-screen .in-dialog-lead{ margin-bottom: 10px; }
+  .card-slide-back .in-dialog-lead{ margin-bottom: 10px; }
+  .dialog-screen .in-dialog-lead__body,
+  .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:10px; }
+  .dialog-screen .in-dialog-lead__title,
+  .card-slide-back .in-dialog-lead__title{
     font-family: var(--ff);
     font-size: 12px;
     font-weight: 600;
     color: var(--color-text);
     opacity: .9;
   }
-  .dialog-screen .in-dialog-lead__row{ display:flex; gap: var(--space-s); align-items:center; }
-  .dialog-screen .in-dialog-lead__row > *{ flex:1 1 0; min-width:0; }
-  .dialog-screen .in-dialog-lead__field{ display:grid; gap:6px; }
-  .dialog-screen .in-dialog-lead__label{
+  .dialog-screen .in-dialog-lead__row,
+  .card-slide-back .in-dialog-lead__row{ display:flex; gap: var(--space-s); align-items:center; }
+  .dialog-screen .in-dialog-lead__row > *,
+  .card-slide-back .in-dialog-lead__row > *{ flex:1 1 0; min-width:0; }
+  .dialog-screen .in-dialog-lead__field,
+  .card-slide-back .in-dialog-lead__field{ display:grid; gap:6px; }
+  .dialog-screen .in-dialog-lead__label,
+  .card-slide-back .in-dialog-lead__label{
     font-family: var(--ff);
     font-size: 10px;
     font-weight: 400;
@@ -1248,11 +1264,15 @@ render() {
     opacity: .75;
   }
   /* Phone: dial selector + input (reuse existing .dial-select/.dial-btn/.dial-list styles) */
-  .dialog-screen .in-dialog-lead__phone-row{ display:flex; gap: var(--space-s); align-items:center; }
-  .dialog-screen .in-dialog-lead__phone-row .dial-select{ flex:0 0 auto; }
-  .dialog-screen .in-dialog-lead__phone-row .in-dialog-lead__input{ flex:1 1 auto; min-width:0; }
+  .dialog-screen .in-dialog-lead__phone-row,
+  .card-slide-back .in-dialog-lead__phone-row{ display:flex; gap: var(--space-s); align-items:center; }
+  .dialog-screen .in-dialog-lead__phone-row .dial-select,
+  .card-slide-back .in-dialog-lead__phone-row .dial-select{ flex:0 0 auto; }
+  .dialog-screen .in-dialog-lead__phone-row .in-dialog-lead__input,
+  .card-slide-back .in-dialog-lead__phone-row .in-dialog-lead__input{ flex:1 1 auto; min-width:0; }
   /* Visual reference: ctx-input (Context Screen) but with new class */
-  .dialog-screen .in-dialog-lead__input{
+  .dialog-screen .in-dialog-lead__input,
+  .card-slide-back .in-dialog-lead__input{
     width:100%;
     height: var(--field-h);
     border-radius:10px;
@@ -1268,20 +1288,28 @@ render() {
     box-sizing:border-box;
     transition: border-color .15s ease;
   }
-  .dialog-screen .in-dialog-lead__input.error{ border-color:#E85F62; }
-  .dialog-screen .in-dialog-lead__input::placeholder{ color: var(--color-text); opacity: .6; }
+  .dialog-screen .in-dialog-lead__input.error,
+  .card-slide-back .in-dialog-lead__input.error{ border-color:#E85F62; }
+  .dialog-screen .in-dialog-lead__input::placeholder,
+  .card-slide-back .in-dialog-lead__input::placeholder{ color: var(--color-text); opacity: .6; }
   .dialog-screen .in-dialog-lead__input:focus,
-  .dialog-screen .in-dialog-lead__input:focus-visible{
+  .dialog-screen .in-dialog-lead__input:focus-visible,
+  .card-slide-back .in-dialog-lead__input:focus,
+  .card-slide-back .in-dialog-lead__input:focus-visible{
     outline:none;
     border-width:1px;
     border-color:var(--color-accent);
     box-shadow:none;
   }
   /* Visual reference: ctx-consent (Context Screen) but with new class */
-  .dialog-screen .in-dialog-lead__consent{ display:flex; align-items:flex-start; gap:8px; margin-top:2px; }
-  .dialog-screen .in-dialog-lead__checkbox{ width:12px; height:12px; margin-top:2px; }
-  .dialog-screen .in-dialog-lead__checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
-  .dialog-screen .in-dialog-lead__consent-text{
+  .dialog-screen .in-dialog-lead__consent,
+  .card-slide-back .in-dialog-lead__consent{ display:flex; align-items:flex-start; gap:8px; margin-top:2px; }
+  .dialog-screen .in-dialog-lead__checkbox,
+  .card-slide-back .in-dialog-lead__checkbox{ width:12px; height:12px; margin-top:2px; }
+  .dialog-screen .in-dialog-lead__checkbox.error,
+  .card-slide-back .in-dialog-lead__checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
+  .dialog-screen .in-dialog-lead__consent-text,
+  .card-slide-back .in-dialog-lead__consent-text{
     font-family: var(--ff);
     font-size:10px;
     font-weight:400;
@@ -1289,12 +1317,17 @@ render() {
     opacity: .85;
     line-height:1.4;
   }
-  .dialog-screen .in-dialog-lead__privacy-link{ color:var(--color-accent); text-decoration:none; }
-  .dialog-screen .in-dialog-lead__error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
-  .dialog-screen .in-dialog-lead__error.visible{ display:block; }
+  .dialog-screen .in-dialog-lead__privacy-link,
+  .card-slide-back .in-dialog-lead__privacy-link{ color:var(--color-accent); text-decoration:none; }
+  .dialog-screen .in-dialog-lead__error,
+  .card-slide-back .in-dialog-lead__error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
+  .dialog-screen .in-dialog-lead__error.visible,
+  .card-slide-back .in-dialog-lead__error.visible{ display:block; }
   /* Visual reference: ctx-send-btn (Context Screen) but with new class */
-  .dialog-screen .in-dialog-lead__actions{ display:flex; gap: var(--space-m); margin-top: 6px; }
-  .dialog-screen .in-dialog-lead__send{
+  .dialog-screen .in-dialog-lead__actions,
+  .card-slide-back .in-dialog-lead__actions{ display:flex; gap: var(--space-m); margin-top: 6px; }
+  .dialog-screen .in-dialog-lead__send,
+  .card-slide-back .in-dialog-lead__send{
     flex:1 1 0;
     min-width: var(--btn-min-w);
     padding: var(--btn-py) var(--btn-px);
@@ -1306,10 +1339,13 @@ render() {
     cursor:pointer;
     transition: opacity .15s ease, transform .12s ease;
   }
-  .dialog-screen .in-dialog-lead__send:hover{ opacity:.9; transform: translateY(-1px); }
-  .dialog-screen .in-dialog-lead__send:active{ transform: translateY(0); opacity:.85; }
+  .dialog-screen .in-dialog-lead__send:hover,
+  .card-slide-back .in-dialog-lead__send:hover{ opacity:.9; transform: translateY(-1px); }
+  .dialog-screen .in-dialog-lead__send:active,
+  .card-slide-back .in-dialog-lead__send:active{ transform: translateY(0); opacity:.85; }
   /* Cancel button (visual reference: ctx-cancel-btn, but isolated) */
-  .dialog-screen .in-dialog-lead__cancel{
+  .dialog-screen .in-dialog-lead__cancel,
+  .card-slide-back .in-dialog-lead__cancel{
     flex:1 1 0;
     min-width: var(--btn-min-w);
     padding: var(--btn-py) var(--btn-px);
@@ -1321,8 +1357,10 @@ render() {
     cursor:pointer;
     transition: opacity .15s ease, transform .12s ease;
   }
-  .dialog-screen .in-dialog-lead__cancel:hover{ opacity:.9; transform: translateY(-1px); }
-  .dialog-screen .in-dialog-lead__cancel:active{ transform: translateY(0); opacity:.85; }
+  .dialog-screen .in-dialog-lead__cancel:hover,
+  .card-slide-back .in-dialog-lead__cancel:hover{ opacity:.9; transform: translateY(-1px); }
+  .dialog-screen .in-dialog-lead__cancel:active,
+  .card-slide-back .in-dialog-lead__cancel:active{ transform: translateY(0); opacity:.85; }
 
   /* In-dialog thanks (UI-only) */
   .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color: var(--color-text); margin-bottom:6px; text-align:center; }
@@ -4591,6 +4629,9 @@ render() {
       
       this.events.emit('next_option', { variantId });
     } else if (e.target.matches('.card-btn[data-action="select"]')) {
+      // Flip: визуальный тест — показываем back сторону карточки
+      const slide = e.target.closest('.card-slide');
+      if (slide) slide.classList.add('flipped');
       // RMv3 / Sprint 1 / Task 1: фиксируем факт выбора карточки на сервере (server-first)
       const variantId = e.target.getAttribute('data-variant-id');
       try {
@@ -4598,25 +4639,17 @@ render() {
           this.api.sendCardInteraction('select', variantId);
         }
       } catch {}
-    } else if (e.target.matches('[data-handoff-action="details"]')) {
-      // RMv3 demo-only: render in-dialog lead block after post-handoff block
-      // ВАЖНО: только UI, без запросов/submit/валидации
-      try {
-        this.renderInDialogLeadBlock();
-        const actions = this.shadowRoot.querySelector('.handoff-block .handoff-actions');
-        if (actions) actions.classList.add('handoff-actions--hidden');
-      } catch {}
-    } else if (e.target.matches('[data-handoff-action="cancel"]')) {
-      // RMv3 / Sprint 2 / Task 2.5: полная отмена выбора/handоff из handoff-блока
-      try { this.cancelHandoffFlowUI(); } catch {}
-      try { this.sendHandoffCancelToServer?.(); } catch {}
-    } else if (e.target.matches('#inDialogLeadSendBtn')) {
-      // RMv3 / Sprint 2 / Task 2.5: submit in-dialog lead form (isolated logic, no reuse)
-      try { this.submitInDialogLeadForm?.(); } catch {}
-    } else if (e.target.matches('#inDialogLeadCancelBtn')) {
-      // RMv3 / Sprint 2 / Task 2.5: полная отмена выбора/handоff из in-dialog lead block
-      try { this.cancelHandoffFlowUI(); } catch {}
-      try { this.sendHandoffCancelToServer?.(); } catch {}
+    } else if (e.target.matches('.in-dialog-lead__send')) {
+      const formRoot = e.target.closest('.in-dialog-lead');
+      try { this.submitInDialogLeadForm?.(formRoot); } catch {}
+    } else if (e.target.matches('.in-dialog-lead__cancel')) {
+      const slide = e.target.closest('.card-slide');
+      if (slide) {
+        slide.classList.remove('flipped');
+      } else {
+        try { this.cancelHandoffFlowUI(); } catch {}
+        try { this.sendHandoffCancelToServer?.(); } catch {}
+      }
     } else if (e.target.matches('.in-dialog-lead__privacy-link')) {
       // UI-only: keep link inert for demo stage (no navigation)
       try { e.preventDefault(); } catch {}
@@ -5041,32 +5074,41 @@ render() {
     const slide = document.createElement('div');
     slide.className = 'card-slide';
     slide.innerHTML = `
-      <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
-        <div class="cs-image">
-          <div class="cs-image-overlay">
-            <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
-              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-            </button>
+      <div class="card-slide-front">
+        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+          <div class="cs-image">
+            <div class="cs-image-overlay">
+              <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
+              <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
+                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </button>
+              -->
+            </div>
+            <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
           </div>
-          <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+          <div class="cs-body">
+            <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
+            <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
+            <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
+          </div>
+          <div class="cards-dots-row"></div>
+          <div class="card-actions-wrap">
+            <div class="card-actions-panel">
+              <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">Выбрать</button>
+              <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё одну</button>
+            </div>
+            <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
+            </div>
+          </div>
         </div>
-        <div class="cs-body">
-          <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
-          <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
-          <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
-        </div>
-        <div class="cards-dots-row"></div>
-        <div class="card-actions-wrap">
-          <div class="card-actions-panel">
-            <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">Выбрать</button>
-            <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё одну</button>
-          </div>
-          <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
-          </div>
-        </div>`;
+      </div>
+      <div class="card-slide-back">
+        ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
+      </div>`;
     track.appendChild(slide);
+    try { this.bindInDialogLeadForm(slide.querySelector('.card-slide-back .in-dialog-lead'), '_' + normalized.id); } catch {}
     
     // 🆕 Sprint I: отправляем подтверждение факта рендера карточки после визуального показа
     const cardId = normalized.id;
@@ -5387,18 +5429,19 @@ render() {
     } catch {}
   }
 
-  submitInDialogLeadForm() {
-    // RMv3 / Sprint 2 / Task 2.5: isolated submit logic (copy of short-form patterns; name optional)
+  submitInDialogLeadForm(formRoot) {
+    // formRoot = .in-dialog-lead (from slide back or legacy block); if absent, use getElementById
     try {
       const locale = this.getCurrentLocale();
       const root = this.shadowRoot;
-      const get = (id) => root.getElementById(id);
-      const nameEl = get('inDialogLeadName');
-      const phoneEl = get('inDialogLeadPhone');
-      const emailEl = get('inDialogLeadEmail');
-      const consentEl = get('inDialogLeadGdpr');
-      const contactErr = get('inDialogLeadContactError');
-      const consentErr = get('inDialogLeadConsentError');
+      const el = (baseId) => formRoot ? (formRoot.querySelector(`[id^="${baseId}"]`) || formRoot.querySelector(`#${baseId}`)) : root.getElementById(baseId);
+      const nameEl = el('inDialogLeadName') || (formRoot && formRoot.querySelector('input[type="text"]'));
+      const phoneEl = el('inDialogLeadPhone') || (formRoot && formRoot.querySelector('input[type="tel"]'));
+      const emailEl = el('inDialogLeadEmail') || (formRoot && formRoot.querySelector('input[type="email"]'));
+      const consentEl = el('inDialogLeadGdpr') || (formRoot && formRoot.querySelector('.in-dialog-lead__checkbox'));
+      const errs = formRoot ? formRoot.querySelectorAll('.in-dialog-lead__error') : [];
+      const consentErr = el('inDialogLeadConsentError') || (errs[0] || null);
+      const contactErr = el('inDialogLeadContactError') || (errs[1] || null);
 
       const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
       const showErr = (el, on, msg) => {
@@ -5427,7 +5470,8 @@ render() {
       const phone = phoneEl?.value?.trim() || '';
       const email = emailEl?.value?.trim() || '';
       const consent = !!consentEl?.checked;
-      const phoneCountryCode = get('inDialogLeadCode')?.value?.trim() || '+34';
+      const codeEl = el('inDialogLeadCode') || (formRoot && formRoot.querySelector('input[type="hidden"]'));
+      const phoneCountryCode = codeEl?.value?.trim() || '+34';
 
       // Reset previous errors
       markError(phoneEl, false);
@@ -5499,7 +5543,8 @@ render() {
         .then(r => r.json().catch(() => ({ ok: false, error: locale.parseError })))
         .then((result) => {
           if (result?.ok === true) {
-            // Remove lead form + handoff UI clutter and show dedicated thanks
+            const slide = formRoot?.closest('.card-slide');
+            if (slide) slide.classList.remove('flipped');
             try { this.cancelHandoffFlowUI(); } catch {}
             try { this.renderInDialogLeadThanksBlock(); } catch {}
           } else {
@@ -5513,36 +5558,23 @@ render() {
     } catch {}
   }
 
-  renderInDialogLeadBlock() {
-    try {
-      const locale = this.getCurrentLocale();
-      const thread = this.shadowRoot.getElementById('thread');
-      const messages = this.shadowRoot.getElementById('messagesContainer');
-      if (!thread || !messages) return;
-
-      // Deterministic: allow only one in-dialog lead block
-      const existing = this.shadowRoot.getElementById('inDialogLeadBlock');
-      if (existing) return;
-
-      const panel = document.createElement('div');
-      panel.className = 'in-dialog-lead-block';
-      panel.id = 'inDialogLeadBlock';
-      panel.innerHTML = `
+  // HTML формы in-dialog lead (для слайдера back и legacy handoff)
+  getInDialogLeadFormHTML(locale, idSuffix = '') {
+    const s = idSuffix;
+    return `
         <div class="in-dialog-lead" role="group" aria-label="In-dialog lead block">
           <div class="in-dialog-lead__body">
             <div class="in-dialog-lead__title">${locale.inDialogLeadTitle}</div>
-
             <div class="in-dialog-lead__field">
-              <label class="in-dialog-lead__label" for="inDialogLeadName">${locale.inDialogLeadNameLabel}</label>
-              <input class="in-dialog-lead__input" id="inDialogLeadName" type="text" autocomplete="name" placeholder="${locale.namePlaceholder}">
+              <label class="in-dialog-lead__label" for="inDialogLeadName${s}">${locale.inDialogLeadNameLabel}</label>
+              <input class="in-dialog-lead__input" id="inDialogLeadName${s}" type="text" autocomplete="name" placeholder="${locale.namePlaceholder}">
             </div>
-
             <div class="in-dialog-lead__field">
-              <label class="in-dialog-lead__label" for="inDialogLeadPhone">${locale.inDialogLeadPhoneLabel}</label>
+              <label class="in-dialog-lead__label" for="inDialogLeadPhone${s}">${locale.inDialogLeadPhoneLabel}</label>
               <div class="in-dialog-lead__phone-row">
                 <div class="dial-select">
-                  <button class="dial-btn" type="button" id="inDialogLeadDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
-                  <div class="dial-list" id="inDialogLeadDialList">
+                  <button class="dial-btn" type="button" id="inDialogLeadDialBtn${s}"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <div class="dial-list" id="inDialogLeadDialList${s}">
                     <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
                     <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
                     <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
@@ -5552,104 +5584,95 @@ render() {
                     <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
                   </div>
                 </div>
-                <input class="in-dialog-lead__input" id="inDialogLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.requestPhonePlaceholder}">
-                <input id="inDialogLeadCode" type="hidden" value="+34" />
+                <input class="in-dialog-lead__input" id="inDialogLeadPhone${s}" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.requestPhonePlaceholder}">
+                <input id="inDialogLeadCode${s}" type="hidden" value="+34" />
               </div>
             </div>
-
             <div class="in-dialog-lead__field">
-              <label class="in-dialog-lead__label" for="inDialogLeadEmail">${locale.inDialogLeadEmailLabel}</label>
-              <input class="in-dialog-lead__input" id="inDialogLeadEmail" type="email" autocomplete="email" placeholder="${locale.emailPlaceholder}">
+              <label class="in-dialog-lead__label" for="inDialogLeadEmail${s}">${locale.inDialogLeadEmailLabel}</label>
+              <input class="in-dialog-lead__input" id="inDialogLeadEmail${s}" type="email" autocomplete="email" placeholder="${locale.emailPlaceholder}">
             </div>
-
             <label class="in-dialog-lead__consent">
-              <input class="in-dialog-lead__checkbox" id="inDialogLeadGdpr" type="checkbox">
+              <input class="in-dialog-lead__checkbox" id="inDialogLeadGdpr${s}" type="checkbox">
               <span class="in-dialog-lead__consent-text">
                 ${locale.consentText}
                 <a class="in-dialog-lead__privacy-link" href="#" aria-label="${locale.privacyPolicy}">${locale.privacyPolicy}</a>
               </span>
             </label>
-            <div class="in-dialog-lead__error" id="inDialogLeadConsentError">${locale.inDialogLeadConsentError}</div>
-            <div class="in-dialog-lead__error" id="inDialogLeadContactError">${locale.inDialogLeadContactError}</div>
-
+            <div class="in-dialog-lead__error" id="inDialogLeadConsentError${s}">${locale.inDialogLeadConsentError}</div>
+            <div class="in-dialog-lead__error" id="inDialogLeadContactError${s}">${locale.inDialogLeadContactError}</div>
             <div class="in-dialog-lead__actions">
-              <button class="in-dialog-lead__send" id="inDialogLeadSendBtn" type="button">${locale.send}</button>
-              <button class="in-dialog-lead__cancel" id="inDialogLeadCancelBtn" type="button">${locale.cancel}</button>
+              <button class="in-dialog-lead__send" id="inDialogLeadSendBtn${s}" type="button">${locale.send}</button>
+              <button class="in-dialog-lead__cancel" id="inDialogLeadCancelBtn${s}" type="button">${locale.cancel}</button>
             </div>
           </div>
-        </div>
-      `;
+        </div>`;
+  }
 
-      // Insert strictly after post-handoff block, and only inside Dialog Screen thread
+  bindInDialogLeadForm(formRoot, idSuffix = '') {
+    if (!formRoot) return;
+    const s = idSuffix;
+    const get = (baseId) => formRoot.querySelector(`#${baseId}${s}`) || formRoot.querySelector(`#${baseId}`);
+    const dialBtn = get('inDialogLeadDialBtn');
+    const dialList = get('inDialogLeadDialList');
+    const codeInput = get('inDialogLeadCode');
+    const phoneEl = get('inDialogLeadPhone');
+    const emailEl = get('inDialogLeadEmail');
+    const consentEl = get('inDialogLeadGdpr');
+    const contactErr = get('inDialogLeadContactError');
+    const consentErr = get('inDialogLeadConsentError');
+    const toggleDial = (show) => { if (dialList) dialList.style.display = show ? 'block' : 'none'; };
+    dialBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const visible = dialList && dialList.style.display === 'block';
+      toggleDial(!visible);
+    });
+    dialList?.querySelectorAll('.dial-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const code = item.getAttribute('data-code') || '+34';
+        const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+        if (dialBtn) {
+          const codeEl = dialBtn.querySelector('.dial-code');
+          const flagEl = dialBtn.querySelector('.dial-flag');
+          if (codeEl) codeEl.textContent = code;
+          if (flagEl) flagEl.textContent = flag;
+        }
+        if (codeInput) codeInput.value = code;
+        toggleDial(false);
+      });
+    });
+    const clearContactErr = () => {
+      try { if (contactErr) contactErr.classList.remove('visible'); } catch {}
+      try { if (phoneEl) phoneEl.classList.remove('error'); } catch {}
+      try { if (emailEl) emailEl.classList.remove('error'); } catch {}
+    };
+    const clearConsentErr = () => {
+      try { if (consentErr) consentErr.classList.remove('visible'); } catch {}
+      try { if (consentEl) consentEl.classList.remove('error'); } catch {}
+    };
+    phoneEl?.addEventListener('input', () => { clearContactErr(); });
+    emailEl?.addEventListener('input', () => { clearContactErr(); });
+    consentEl?.addEventListener('change', () => { clearConsentErr(); });
+  }
+
+  renderInDialogLeadBlock() {
+    // Legacy: форма после handoff-блока — больше не используется (flow: слайдер → Выбрать → back с формой)
+    try {
+      const locale = this.getCurrentLocale();
+      const thread = this.shadowRoot.getElementById('thread');
+      const messages = this.shadowRoot.getElementById('messagesContainer');
+      if (!thread || !messages) return;
+      const existing = this.shadowRoot.getElementById('inDialogLeadBlock');
+      if (existing) return;
+      const panel = document.createElement('div');
+      panel.className = 'in-dialog-lead-block';
+      panel.id = 'inDialogLeadBlock';
+      panel.innerHTML = this.getInDialogLeadFormHTML(locale, '');
       const handoffBlock = this.shadowRoot.querySelector('.handoff-block');
-      if (handoffBlock && handoffBlock.parentElement) {
-        handoffBlock.insertAdjacentElement('afterend', panel);
-      } else {
-        // Fallback: if no handoff block, do not render (demo constraint: only after post-handoff)
-        return;
-      }
-
-      // In-dialog dial select (copy of request/context pattern; isolated IDs)
-      try {
-        const get = (id) => this.shadowRoot.getElementById(id);
-        const dialBtn = get('inDialogLeadDialBtn');
-        const dialList = get('inDialogLeadDialList');
-        const codeInput = get('inDialogLeadCode');
-        const phoneEl = get('inDialogLeadPhone');
-        const emailEl = get('inDialogLeadEmail');
-        const consentEl = get('inDialogLeadGdpr');
-        const contactErr = get('inDialogLeadContactError');
-        const consentErr = get('inDialogLeadConsentError');
-
-        const toggleDial = (show) => { if (dialList) dialList.style.display = show ? 'block' : 'none'; };
-        dialBtn?.addEventListener('click', (e) => {
-          e.preventDefault();
-          const visible = dialList && dialList.style.display === 'block';
-          toggleDial(!visible);
-        });
-        dialList?.querySelectorAll('.dial-item').forEach(item => {
-          item.addEventListener('click', () => {
-            const code = item.getAttribute('data-code') || '+34';
-            const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
-            if (dialBtn) {
-              const codeEl = dialBtn.querySelector('.dial-code');
-              const flagEl = dialBtn.querySelector('.dial-flag');
-              if (codeEl) codeEl.textContent = code;
-              if (flagEl) flagEl.textContent = flag;
-            }
-            if (codeInput) codeInput.value = code;
-            toggleDial(false);
-          });
-        });
-
-        // Close dial list on outside click (capture), cleaned up in cancelHandoffFlowUI()
-        try {
-          if (this._inDialogLeadDialOutsideHandler) {
-            try { document.removeEventListener('click', this._inDialogLeadDialOutsideHandler, true); } catch {}
-          }
-          this._inDialogLeadDialOutsideHandler = (ev) => {
-            if (!dialList || !dialBtn) return;
-            const path = ev.composedPath ? ev.composedPath() : [];
-            if (![dialList, dialBtn].some(el => path.includes(el))) toggleDial(false);
-          };
-          document.addEventListener('click', this._inDialogLeadDialOutsideHandler, { capture: true });
-        } catch {}
-
-        // Clear errors on input/change (UX parity with other forms)
-        const clearContactErr = () => {
-          try { if (contactErr) contactErr.classList.remove('visible'); } catch {}
-          try { if (phoneEl) phoneEl.classList.remove('error'); } catch {}
-          try { if (emailEl) emailEl.classList.remove('error'); } catch {}
-        };
-        const clearConsentErr = () => {
-          try { if (consentErr) consentErr.classList.remove('visible'); } catch {}
-          try { if (consentEl) consentEl.classList.remove('error'); } catch {}
-        };
-        phoneEl?.addEventListener('input', () => { clearContactErr(); });
-        emailEl?.addEventListener('input', () => { clearContactErr(); });
-        consentEl?.addEventListener('change', () => { clearConsentErr(); });
-      } catch {}
-
+      if (handoffBlock?.parentElement) handoffBlock.insertAdjacentElement('afterend', panel);
+      else return;
+      this.bindInDialogLeadForm(panel.querySelector('.in-dialog-lead'), '');
       requestAnimationFrame(() => {
         const H = messages.clientHeight;
         messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
