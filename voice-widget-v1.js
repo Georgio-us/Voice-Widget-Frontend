@@ -985,7 +985,7 @@ render() {
       flex: 1 1 auto;
       min-width:0;
       text-align:left;
-      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      font-family: var(--ff);
     }
     .launcher__title{
       font-size: clamp(12px, 1vw + 10px, 14px);
@@ -1148,15 +1148,15 @@ render() {
   .property-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:8px; width:100%; }
   .card-image{ width:100%; height:200px; background-size:cover; background-position:center; background-color:#f5f5f5; }
   .card-content{ padding:16px; }
-  .card-title{ font-weight:700; font-size:var(--fs-body); color:var(--txt); margin-bottom:4px; }
-  .card-location{ font-size:var(--fs-meta); color:var(--muted); margin-bottom:8px; }
-  .card-price{ font-weight:600; font-size:var(--fs-body); color:var(--orange); margin-bottom:16px; }
+  .card-title{ font-weight:700; font-size:var(--fs-body); color:var(--color-text); margin-bottom:4px; }
+  .card-location{ font-size:var(--fs-small); color:var(--color-text); margin-bottom:8px; }
+  .card-price{ font-weight:600; font-size:var(--fs-body); color:var(--color-accent); margin-bottom:16px; }
   .card-actions{ display:flex; gap:12px; }
   .card-actions .card-btn{ flex:1; }
-  .card-btn{ height:40px; border:none; border-radius:12px; cursor:pointer; font-weight:600; font-size:var(--fs-button); transition:transform .12s ease; }
+  .card-btn{ height:40px; border:none; border-radius:12px; cursor:pointer; font-weight:600; font-size:var(--fs-btn); transition:transform .12s ease; }
   .card-btn:hover{ transform:translateY(-1px); }
   .card-btn.like{ background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; }
-  .card-btn.next{ background:rgba(255,255,255,.9); color:var(--txt); border:1px solid rgba(0,0,0,.1); }
+  .card-btn.next{ background:rgba(255,255,255,.9); color:var(--color-text); border:1px solid rgba(0,0,0,.1); }
 
   /* Card mock inside assistant message */
   .card-mock{ background:#fff; color:#2b2b2b; border-radius:14px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); width:100%; }
@@ -1396,16 +1396,16 @@ render() {
     display:flex; align-items:center; gap:6px; background:transparent; pointer-events:none;
     height:auto; padding:0;
   }
-  .recording-label{ color:#A0A0A0; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:14px; font-weight:400; letter-spacing:0; opacity:1; }
+  .recording-label{ color:#A0A0A0; font-family: var(--ff); font-size:14px; font-weight:400; letter-spacing:0; opacity:1; }
   @keyframes shake{ 0%,100%{ transform:translateX(0); } 10%,30%,50%,70%,90%{ transform:translateX(-2px); } 20%,40%,60%,80%{ transform:translateX(2px); } }
   .shake{ animation:shake .5s ease-in-out; }
-  .record-timer{ color:#A0A0A0; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:14px; font-weight:400; letter-spacing:0; min-width:42px; text-align:left; }
+  .record-timer{ color:#A0A0A0; font-family: var(--ff); font-size:14px; font-weight:400; letter-spacing:0; min-width:42px; text-align:left; }
 
   
 
   .loading{ position:absolute; display:none; align-items:center; justify-content:center; background: rgba(53,67,96,0.10); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
   .loading.active{ display:flex; }
-  .loading-text{ color:#ffffff; font-size:16px; font-weight:400; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; display:flex; align-items:center; gap:4px; }
+  .loading-text{ color:#ffffff; font-size:16px; font-weight:400; font-family: var(--ff); display:flex; align-items:center; gap:4px; }
   .loading-text .dots{ display:inline-flex; gap:2px; margin-left:2px; }
   .loading-text .dots span{ display:inline-block; opacity:.2; animation:dotBlink 1.2s infinite ease-in-out; }
   .loading-text .dots .d1{ animation-delay:0s; }
@@ -1426,6 +1426,15 @@ render() {
   /* === V2 styles appended (cascade override) === */
                 /* Основные стили виджета */
                 :host {
+                    all: initial;
+                    font-size: 14px !important;
+                    line-height: 1.4;
+                    letter-spacing: normal;
+                    box-sizing: border-box;
+                    color: var(--color-text);
+                    font-family: var(--ff);
+                    text-align: left;
+                    direction: ltr;
                     display: block;
                     position: fixed;
                     bottom: 20px;
@@ -1475,36 +1484,36 @@ render() {
                   --fw-m: 500;
                   --fw-s: 600;
                   --fw-b: 700;
-                  /* sizes in rem (внутри виджета, без изменения html) */
-                  --fs-display: 1.428rem;   /* ~20px */
-                  --fs-h1: 1.286rem;        /* ~18px */
-                  --fs-h2: 1.143rem;        /* ~16px */
-                  --fs-h3: 1rem;            /* 14px */
-                  --fs-body: 1rem;          /* 14px */
-                  --fs-body-alt: 0.929rem;  /* ~13px */
-                  --fs-small: 0.857rem;     /* ~12px */
-                  --fs-btn: 0.857rem;       /* ~12px */
-                  --fs-micro: 0.714rem;     /* ~10px */
+                  /* sizes in em (от :host font-size: 14px — виджет автономен) */
+                  --fs-display: 1.428em;   /* ~20px */
+                  --fs-h1: 1.286em;        /* ~18px */
+                  --fs-h2: 1.143em;        /* ~16px */
+                  --fs-h3: 1em;            /* 14px */
+                  --fs-body: 1em;          /* 14px */
+                  --fs-body-alt: 0.929em;  /* ~13px */
+                  --fs-small: 0.857em;     /* ~12px */
+                  --fs-btn: 0.857em;       /* ~12px */
+                  --fs-micro: 0.714em;     /* ~10px */
                   /* line-heights */
                   --lh-tight: 1.2;
                   --lh-normal: 1.4;
                   --lh-loose: 1.6;
                   /* spacing tokens (based on 14px root) */
-                  --space-xxs: 0.286rem;   /* ~4px */
-                  --space-xs:  0.571rem;   /* ~8px */
-                  --space-s:   0.714rem;   /* ~10px */
-                  --space-m:   0.857rem;   /* ~12px */
-                  --space-l:   1.143rem;   /* ~16px */
-                  --space-xl:  1.714rem;   /* ~24px */
-                  --space-xxl: 4.286rem;   /* ~60px */
-                  /* unified action button sizes (rem) based on 14px scale */
+                  --space-xxs: 0.286em;   /* ~4px */
+                  --space-xs:  0.571em;   /* ~8px */
+                  --space-s:   0.714em;   /* ~10px */
+                  --space-m:   0.857em;   /* ~12px */
+                  --space-l:   1.143em;   /* ~16px */
+                  --space-xl:  1.714em;   /* ~24px */
+                  --space-xxl: 4.286em;   /* ~60px */
+                  /* unified action button sizes (em) based on 14px scale */
                  
-                  --btn-radius: 0.714rem;   /* ~10px */
-                  --btn-px: 1.143rem;       /* ~16px horizontal padding */
-                  --btn-py: 0.857rem;       /* ~12px vertical padding */
-                  --btn-min-w: 7.143rem;    /* ~100px min width */
+                  --btn-radius: 0.714em;   /* ~10px */
+                  --btn-px: 1.143em;       /* ~16px horizontal padding */
+                  --btn-py: 0.857em;       /* ~12px vertical padding */
+                  --btn-min-w: 7.143em;    /* ~100px min width */
                   /* form field height */
-                  --field-h: 2.5rem;        /* ~35px */
+                  --field-h: 2.5em;        /* ~35px */
                   /* context progress ring */
                   --ring: clamp(72px, 26vw, 100px);
                   /* iOS text zoom handling */
@@ -1786,7 +1795,7 @@ render() {
                 .text-container { text-align: center; margin-top: 8px; }
                 
                 .main-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-weight: 600;
                     font-size: 20px;
                     color: #FFFFFF;
@@ -1795,7 +1804,7 @@ render() {
                 }
                 
                 .sub-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-weight: 300;
                     font-size: 14px;
                     color: #A0A0A0;
@@ -1860,7 +1869,7 @@ render() {
                     border: none;
                     outline: none;
                     color: #FFFFFF;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 14px;
                     font-weight: 400;
                     padding: 0 10px;
@@ -1932,7 +1941,7 @@ render() {
                     color: #FFFFFF;
                     padding: 8px 16px;
                     border-radius: 20px;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 500;
                     z-index: 10;
@@ -1948,14 +1957,14 @@ render() {
                 }
                 
                 .placeholder-content h3 {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 24px;
                     font-weight: 600;
                     margin: 0 0 16px 0;
                 }
                 
                 .placeholder-content p {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 16px;
                     font-weight: 400;
                     color: #A0A0A0;
@@ -2025,7 +2034,7 @@ render() {
                     border-radius: 10px;
                     padding: 10px;
                     margin-bottom: 16px;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 14px;
                     line-height: 1.4;
                     word-wrap: break-word;
@@ -2093,14 +2102,14 @@ render() {
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: clamp(0.857rem, 2.8vw, 1.286rem);
                     font-weight: 400;
                     color: var(--color-accent) ;
                 }
                 
                 .data-storage-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: var(--fs-micro);
                     font-weight: 400;
                     color: #A9A9A9;
@@ -2118,7 +2127,7 @@ render() {
                 .data-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
                 
                 .status-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: var(--fs-micro);
                     font-weight: 400;
                     color: var(--color-accent);
@@ -2126,7 +2135,7 @@ render() {
                 }
                 
                 .main-message {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 400;
                     color: #FFFFFF;
@@ -2143,7 +2152,7 @@ render() {
                 }
                 
                 .hint-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 200;
                     color: var(--color-text);
@@ -2178,11 +2187,11 @@ render() {
                 /* compact row for contact fields */
                 .ctx-row{ display:flex; gap: var(--space-s); align-items: center; }
                 .ctx-row .ctx-input{ flex:1 1 0; min-width:0; }
-                .ctx-input{ width:100%; height: var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:0 var(--space-s); line-height: var(--field-h); box-sizing:border-box; transition: border-color .15s ease; }
+                .ctx-input{ width:100%; height: var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family: var(--ff); font-size:12px; font-weight:400; padding:0 var(--space-s); line-height: var(--field-h); box-sizing:border-box; transition: border-color .15s ease; }
                 .ctx-input.error{ border-color:#E85F62; }
                 .ctx-input:focus,
                 .ctx-input:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
-                .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
+                .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family: var(--ff); font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
                 .ctx-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
                 .ctx-textarea::-webkit-scrollbar{ width:0; height:0; }
                 .ctx-textarea:focus,
@@ -2190,7 +2199,7 @@ render() {
                 .ctx-textarea.error{ border-color:#E85F62; }
                 .ctx-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; }
                 .ctx-consent .ctx-checkbox{ width:12px; height:12px; margin-top:2px; }
-                .ctx-consent .ctx-consent-text{ font-family:'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; font-size:10px; font-weight:400; color:#C4C4C4; line-height:1.4; }
+                .ctx-consent .ctx-consent-text{ font-family: var(--ff); font-size:10px; font-weight:400; color:#C4C4C4; line-height:1.4; }
                 .ctx-consent .ctx-privacy-link{ color:var(--color-accent); text-decoration:none; }
                 .ctx-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
                 .ctx-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
@@ -2210,7 +2219,7 @@ render() {
                 .footer-text {
                     position: relative;
                     margin: 0 auto;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 10px;
                     font-weight: 400;
                     color: #A9A9A9;
@@ -2253,7 +2262,7 @@ render() {
                 }
                 
                 .request-title {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 16px;
                     font-weight: 400;
                     color: #FFFFFF;
@@ -2266,7 +2275,7 @@ render() {
                 }
                 
                 .request-field-label {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 600;
                     color: #FFFFFF;
@@ -2281,7 +2290,7 @@ render() {
                     border: 1px solid rgba(106, 108, 155, 0.30);
                     color: #FFFFFF;
                     caret-color: #FFFFFF;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 400;
                     padding-left: var(--space-s);
@@ -2351,7 +2360,7 @@ render() {
                     background: rgba(106, 108, 155, 0.10);
                     border: 1px solid rgba(106, 108, 155, 0.30);
                     color: #FFFFFF;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 400;
                     padding: 0 var(--space-s);
@@ -2376,7 +2385,7 @@ render() {
                     border: 1px solid rgba(106, 108, 155, 0.30);
                     color: #FFFFFF;
                     caret-color: #FFFFFF;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 400;
                     padding: 10px;
@@ -2412,7 +2421,7 @@ render() {
                 }
                 
                 .request-consent-text {
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 10px;
                     font-weight: 400;
                     color: #C4C4C4;
@@ -2526,7 +2535,7 @@ render() {
                     border-radius: 8px;
                     border: 0.1px solid rgba(65, 120, 207, 0.4);
                     color: #DBDBDB;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 500;
                     cursor: pointer;
@@ -2579,7 +2588,7 @@ render() {
                     align-items: center;
                     gap: 6px;
                     padding: 0 8px;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     font-weight: 500;
                     cursor: pointer;
@@ -2598,7 +2607,7 @@ render() {
                     background: transparent;
                     border: none;
                     color: #FFFFFF;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     cursor: pointer;
                     text-decoration: none;
@@ -2615,7 +2624,7 @@ render() {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+                    font-family: var(--ff);
                     font-size: 12px;
                     color: currentColor;
                 }
