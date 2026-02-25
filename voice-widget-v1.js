@@ -84,6 +84,8 @@ const LOCALES = {
     methodEmail: 'Email',
     cardShow: 'Показать',
     cardCancel: 'Отменить',
+    cardSelect: 'Выбрать',
+    cardNext: 'Ещё одну',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
     inDialogLeadTitle: 'Оставьте контакты',
@@ -196,6 +198,8 @@ const LOCALES = {
     methodEmail: 'Email',
     cardShow: 'Show',
     cardCancel: 'Cancel',
+    cardSelect: 'Select',
+    cardNext: 'Another one',
     handoffMessage: 'You selected a property. You can ask for details or cancel.',
     handoffDetails: 'More details',
     inDialogLeadTitle: 'Leave your contact details',
@@ -308,6 +312,8 @@ const LOCALES = {
     methodEmail: 'Email',
     cardShow: 'Mostrar',
     cardCancel: 'Cancelar',
+    cardSelect: 'Seleccionar',
+    cardNext: 'Otra más',
     handoffMessage: 'Has elegido una propiedad. Puedes pedir mas detalles o cancelar.',
     handoffDetails: 'Mas detalles',
     inDialogLeadTitle: 'Deja tus datos de contacto',
@@ -5079,7 +5085,7 @@ render() {
   addCardSlide(normalized) {
     const track = this.ensureCardsSlider();
     if (!track) return;
-    
+    const locale = this.getCurrentLocale();
     const slide = document.createElement('div');
     slide.className = 'card-slide';
     slide.innerHTML = `
@@ -5105,8 +5111,8 @@ render() {
           <div class="cards-dots-row"></div>
           <div class="card-actions-wrap">
             <div class="card-actions-panel">
-              <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">Выбрать</button>
-              <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">Ещё одну</button>
+              <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
+              <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">${locale.cardNext || 'Ещё одну'}</button>
             </div>
             <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
             </div>
