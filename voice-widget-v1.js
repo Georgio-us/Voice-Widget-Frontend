@@ -1427,7 +1427,7 @@ render() {
                 /* Основные стили виджета */
                 :host {
                     all: initial;
-                    font-size: 14px !important;
+                    font-size: 16px !important;
                     line-height: 1.4;
                     letter-spacing: normal;
                     box-sizing: border-box;
@@ -1513,7 +1513,7 @@ render() {
                   --btn-py: 0.857em;       /* ~12px vertical padding */
                   --btn-min-w: 7.143em;    /* ~100px min width */
                   /* form field height */
-                  --field-h: 2.5em;        /* ~35px */
+                  --field-h: 3.5em;        /* ~35px */
                   /* context progress ring */
                   --ring: clamp(72px, 26vw, 100px);
                   /* iOS text zoom handling */
