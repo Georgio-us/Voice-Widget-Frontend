@@ -832,6 +832,10 @@ class VoiceWidget extends HTMLElement {
     return this.getTheme() === 'light' ? 'LOGO-light.svg' : 'LOGO.svg';
   }
 
+  getReturnIconByTheme() {
+    return this.getTheme() === 'light' ? 'return_light_btn.svg' : 'return_btn.svg';
+  }
+
   getInsightsProgressTrackStrokeByTheme() {
     return this.getTheme() === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
   }
@@ -1209,16 +1213,16 @@ render() {
   .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
   .card-slide--form-open .card-slide-back{ display:none !important; }
   .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:479px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:12px; box-sizing:border-box; }
-  .card-form-header{ height:44px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0; margin-bottom:8px; }
-  .card-form-header__back{ width:32px; height:32px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
-  .card-form-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0; }
+  .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; }
+  .card-form-header__back{ width:18px; height:18px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-form-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0 auto; }
   /* Card back: info panel (description + specs + assets + CTA) */
-  .card-back-header{ height:44px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0; margin-bottom:8px; }
-  .card-back-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0; }
-  .card-back-header__close{ width:32px; height:32px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; }
+  .card-back-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0 auto; }
+  .card-back-header__close{ width:18px; height:18px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
   .card-back-description-slot{ height:200px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
-  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:12px; color:var(--color-text); justify-items:center; align-items:center; }
+  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:12px; color:var(--color-text); justify-items:center; align-items:center; margin-top: 12px; }
   .card-back-specs__item{ margin:0; text-align:center; }
   .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
   .card-back-asset{ width:60px; height:60px; border-radius:12px; background:var(--color-sub-surface); flex-shrink:0; }
@@ -1263,7 +1267,8 @@ render() {
   .dialog-screen .in-dialog-lead{ margin-bottom: 10px; }
   .card-slide-back .in-dialog-lead{ margin-bottom: 10px; }
   .dialog-screen .in-dialog-lead__body,
-  .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:10px; }
+  .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; }
+  .card-slide-form .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; max-height:100%; overflow-y:auto; }
   .dialog-screen .in-dialog-lead__title,
   .card-slide-back .in-dialog-lead__title{
     font-family: var(--ff);
@@ -1503,8 +1508,8 @@ render() {
                   --bg-bubble: rgba(71, 106, 165, 0.5);
                   --dialogue-border: rgba(255, 255, 255, 0.1);
                   /* sub-surface tokens */
-                  --color-sub-dark: #454545;
-                  --color-sub-light: #BABABA;
+                  --color-sub-dark: rgba(255, 255, 255, 0.04);
+                  --color-sub-light: rgba(0, 0, 0, 0.06);
                   --color-sub-surface: var(--color-sub-dark);
                   /* weights */
                   --fw-r: 400;
@@ -5156,12 +5161,11 @@ render() {
       <div class="card-slide-back">
         <div class="card-back-header">
           <button type="button" class="card-back-header__close" aria-label="Back">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 4L6 10l7 6"/></svg>
+            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
           </button>
           <span class="card-back-header__title">${normalized.id || ''} / ${normalized.city || ''} / ${normalized.priceLabel || ''}</span>
         </div>
-        <div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        <div class="card-back-separator"></div>
+        <div class="card-back-separator"></div><div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         <div class="card-back-specs">
           <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
           <span class="card-back-specs__item">Price/m²: ${normalized.price_per_m2 || 'null'} €</span>
@@ -5179,10 +5183,10 @@ render() {
       <div class="card-slide-form">
         <div class="card-form-header">
           <button type="button" class="card-form-header__back" aria-label="Back">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 4L6 10l7 6"/></svg>
+            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
           </button>
           <span class="card-form-header__title">Leave a request</span>
-        </div>
+        </div><div class="card-back-separator"></div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
     track.appendChild(slide);
@@ -5681,7 +5685,6 @@ render() {
             <div class="in-dialog-lead__error" id="inDialogLeadContactError${s}">${locale.inDialogLeadContactError}</div>
             <div class="in-dialog-lead__actions">
               <button class="in-dialog-lead__send" id="inDialogLeadSendBtn${s}" type="button">${locale.send}</button>
-              <button class="in-dialog-lead__cancel" id="inDialogLeadCancelBtn${s}" type="button">${locale.cancel}</button>
             </div>
           </div>
         </div>`;
