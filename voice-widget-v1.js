@@ -1216,7 +1216,7 @@ render() {
   .card-back-header{ height:44px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0; margin-bottom:8px; }
   .card-back-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0; }
   .card-back-header__close{ width:32px; height:32px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
-  .card-back-description-slot{ height:200px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:0; border-radius:6px; background:var(--color-sub-surface); }
+  .card-back-description-slot{ height:200px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
   .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:12px; color:var(--color-text); justify-items:center; align-items:center; }
   .card-back-specs__item{ margin:0; text-align:center; }
@@ -5158,15 +5158,15 @@ render() {
           <button type="button" class="card-back-header__close" aria-label="Back">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 4L6 10l7 6"/></svg>
           </button>
-          <span class="card-back-header__title">Description</span>
+          <span class="card-back-header__title">${normalized.id || ''} / ${normalized.city || ''} / ${normalized.priceLabel || ''}</span>
         </div>
-        <div class="card-back-description-slot">${(normalized.description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         <div class="card-back-separator"></div>
         <div class="card-back-specs">
-          <span class="card-back-specs__item">Label 1: Value</span>
-          <span class="card-back-specs__item">Label 2: Value</span>
-          <span class="card-back-specs__item">Label 3: Value</span>
-          <span class="card-back-specs__item">Label 4: Value</span>
+          <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
+          <span class="card-back-specs__item">Price/m²: ${normalized.price_per_m2 || 'null'} €</span>
+          <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
+          <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
         </div>
         <div class="card-back-assets">
           <span class="card-back-asset"></span>
@@ -5768,6 +5768,9 @@ render() {
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
+    const areaNum = toInt(raw.area_m2);
+    const pricePerM2Num = toInt(raw.price_per_m2);
+    const bathroomsNum = toInt(raw.bathrooms);
     const city = raw.city || raw.location || '';
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
@@ -5788,6 +5791,9 @@ render() {
       roomsLabel,
       floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
       floorLabel,
+      area_m2: areaNum != null ? areaNum : (raw.area_m2 ?? null),
+      price_per_m2: pricePerM2Num != null ? pricePerM2Num : (raw.price_per_m2 ?? null),
+      bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel
     };
