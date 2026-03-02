@@ -1203,9 +1203,26 @@ render() {
   .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:0; transition: opacity .25s ease; }
   .card-slide-front{ opacity:1; pointer-events:auto; }
 
-  .card-slide-back{ height:479px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; justify-content:flex-end; }
+  .card-slide-back{ height:479px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:12px; padding-bottom:20px; box-sizing:border-box; }
   .card-slide.flipped .card-slide-front{ opacity:0; pointer-events:none; }
   .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
+  .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
+  .card-slide--form-open .card-slide-back{ display:none !important; }
+  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:479px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:12px; box-sizing:border-box; }
+  .card-form-header{ height:44px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0; margin-bottom:8px; }
+  .card-form-header__back{ width:32px; height:32px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-form-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0; }
+  /* Card back: info panel (description + specs + assets + CTA) */
+  .card-back-header{ height:44px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0; margin-bottom:8px; }
+  .card-back-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0; }
+  .card-back-header__close{ width:32px; height:32px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-back-description-slot{ height:200px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:0; border-radius:6px; background:var(--color-sub-surface); }
+  .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
+  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:12px; color:var(--color-text); justify-items:center; align-items:center; }
+  .card-back-specs__item{ margin:0; text-align:center; }
+  .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
+  .card-back-asset{ width:60px; height:60px; border-radius:12px; background:var(--color-sub-surface); flex-shrink:0; }
+  .card-slide-back .btn-open-form{ margin-top:auto; flex-shrink:0; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
@@ -1485,6 +1502,10 @@ render() {
                   --bg-card: #363636;
                   --bg-bubble: rgba(71, 106, 165, 0.5);
                   --dialogue-border: rgba(255, 255, 255, 0.1);
+                  /* sub-surface tokens */
+                  --color-sub-dark: #454545;
+                  --color-sub-light: #BABABA;
+                  --color-sub-surface: var(--color-sub-dark);
                   /* weights */
                   --fw-r: 400;
                   --fw-m: 500;
@@ -1534,6 +1555,7 @@ render() {
                   --bg-card: #D7DBE3;
                   --bg-bubble: rgba(190, 198, 210, 0.5);
                   --dialogue-border: rgba(0, 0, 0, 0.1);
+                  --color-sub-surface: var(--color-sub-light);
                 }
                 :host([data-theme="light"]) .widget-bubble,
                 :host([theme="light"]) .widget-bubble,
@@ -4654,6 +4676,18 @@ render() {
           this.api.sendCardInteraction('select', variantId);
         }
       } catch {}
+    } else if (e.target.closest('.card-back-header__close')) {
+      // Назад с описания на фото (front)
+      const slide = e.target.closest('.card-slide');
+      if (slide) slide.classList.remove('flipped');
+    } else if (e.target.matches('.btn-open-form') || e.target.closest('.btn-open-form')) {
+      // Описание -> форма заявки
+      const slide = e.target.closest('.card-slide');
+      if (slide) slide.classList.add('card-slide--form-open');
+    } else if (e.target.closest('.card-form-header__back')) {
+      // Форма -> назад к описанию
+      const slide = e.target.closest('.card-slide');
+      if (slide) slide.classList.remove('card-slide--form-open');
     } else if (e.target.matches('.in-dialog-lead__send')) {
       const formRoot = e.target.closest('.in-dialog-lead');
       try { this.submitInDialogLeadForm?.(formRoot); } catch {}
@@ -5120,10 +5154,39 @@ render() {
         </div>
       </div>
       <div class="card-slide-back">
+        <div class="card-back-header">
+          <button type="button" class="card-back-header__close" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 4L6 10l7 6"/></svg>
+          </button>
+          <span class="card-back-header__title">Description</span>
+        </div>
+        <div class="card-back-description-slot">${(normalized.description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div class="card-back-separator"></div>
+        <div class="card-back-specs">
+          <span class="card-back-specs__item">Label 1: Value</span>
+          <span class="card-back-specs__item">Label 2: Value</span>
+          <span class="card-back-specs__item">Label 3: Value</span>
+          <span class="card-back-specs__item">Label 4: Value</span>
+        </div>
+        <div class="card-back-assets">
+          <span class="card-back-asset"></span>
+          <span class="card-back-asset"></span>
+          <span class="card-back-asset"></span>
+          <span class="card-back-asset"></span>
+        </div>
+        <button type="button" class="btn-open-form">Leave a request</button>
+      </div>
+      <div class="card-slide-form">
+        <div class="card-form-header">
+          <button type="button" class="card-form-header__back" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 4L6 10l7 6"/></svg>
+          </button>
+          <span class="card-form-header__title">Leave a request</span>
+        </div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
     track.appendChild(slide);
-    try { this.bindInDialogLeadForm(slide.querySelector('.card-slide-back .in-dialog-lead'), '_' + normalized.id); } catch {}
+    try { this.bindInDialogLeadForm(slide.querySelector('.card-slide-form .in-dialog-lead'), '_' + normalized.id); } catch {}
     
     // 🆕 Sprint I: отправляем подтверждение факта рендера карточки после визуального показа
     const cardId = normalized.id;
@@ -5720,6 +5783,7 @@ render() {
       city,
       district,
       neighborhood,
+      description: raw.description || '',
       rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || ''),
       roomsLabel,
       floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
