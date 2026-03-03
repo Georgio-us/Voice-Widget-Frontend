@@ -1109,7 +1109,7 @@ render() {
     border:none;
     background:transparent;
     border-radius:999px;
-    cursor:pointer;
+    cursor:pointer; 
   }
   .card-screen .cs-image .card-btn.like[data-action="like"]:hover{ background: rgba(255,255,255,0.18); }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg,
