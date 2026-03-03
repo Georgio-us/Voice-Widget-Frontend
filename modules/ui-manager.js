@@ -432,19 +432,38 @@ export class UIManager {
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble ' + (message.type === 'assistant' ? 'widget-bubble' : 'user-bubble');
     if (message.type === 'assistant') {
-      try {
-        const html = renderMarkdown(message.content);
-        bubble.classList.add('vw-md');
-        bubble.innerHTML = html;
-      } catch (e) {
-        console.warn('Markdown render fallback:', e);
-        bubble.textContent = message.content;
+      if (message.greeting === true) {
+        bubble.textContent = '';
+        wrapper.appendChild(bubble);
+        thread.appendChild(wrapper);
+        const content = message.content || '';
+        let i = 0;
+        const tid = setInterval(() => {
+          if (i < content.length) {
+            bubble.textContent += content[i];
+            i++;
+            this._scrollToBottom();
+          } else {
+            clearInterval(tid);
+          }
+        }, 20);
+      } else {
+        try {
+          const html = renderMarkdown(message.content);
+          bubble.classList.add('vw-md');
+          bubble.innerHTML = html;
+        } catch (e) {
+          console.warn('Markdown render fallback:', e);
+          bubble.textContent = message.content;
+        }
+        wrapper.appendChild(bubble);
+        thread.appendChild(wrapper);
       }
     } else {
       bubble.textContent = message.content;
+      wrapper.appendChild(bubble);
+      thread.appendChild(wrapper);
     }
-    wrapper.appendChild(bubble);
-    thread.appendChild(wrapper);
   }
 
   _scrollToBottom() {

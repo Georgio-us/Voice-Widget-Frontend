@@ -1063,8 +1063,8 @@ render() {
 
   /* Mobile host centering handled by loader (#vw-host); no widget overrides here */
 
-  /* Main Screen */
-  .main-screen{ display:flex; flex-direction:column; height:100%; }
+  /* Main Screen — скрыт навсегда, точка входа теперь dialogScreen */
+  .main-screen{ display:none !important; }
   .main-screen.hidden{ display:none; }
   /* v2 screens visibility */
   .dialog-screen.hidden{ display:none; }
@@ -2079,6 +2079,7 @@ render() {
                     color: var(--color-text);
                     margin-right: 20px;
                     margin-left: 0;
+                    white-space: pre-line;
                 }
                 
                 .user-bubble {
@@ -2770,8 +2771,8 @@ render() {
 
     <!-- Content -->
     <div class="content">
-      <!-- Main Screen -->
-      <div class="main-screen" id="mainScreen">
+      <!-- Main Screen (скрыт через CSS, в DOM сохранён) -->
+      <div class="main-screen hidden" id="mainScreen">
         <div class="voice-widget-container">
             <div class="bg-grid"></div>
             <div class="screen-header">
@@ -2816,8 +2817,8 @@ render() {
         </div>
       </div>
 
-      <!-- Dialogue Screen (v2) wired to v1 logic -->
-      <div class="dialog-screen hidden" id="dialogScreen">
+      <!-- Dialogue Screen (v2) — основной экран при открытии виджета -->
+      <div class="dialog-screen" id="dialogScreen">
         <div class="voice-widget-container">
           <div class="bg-grid"></div>
           <div class="screen-header">
@@ -3264,11 +3265,19 @@ render() {
 
   // Launcher
   let _sessionStarted = false;
+  const GREETING_TEXT = 'Здравствуйте! Я ваш помощник по подбору недвижимости в Estyle Properties.\n\nЯ помогу вам найти лучший вариант на нашем сайте. Опишите, пожалуйста, что бы вы хотели?';
   $("#launcher")?.addEventListener("click", () => {
     // Attention flip must stop forever after the first open
     try { this._vwStopLauncherAttention?.(); } catch {}
     this.classList.add("open");
     try { this._enableOutsideClose?.(); } catch {}
+    this.showChatScreen();
+    try {
+      if (!sessionStorage.getItem('vw_greeting_shown')) {
+        this.showGreetingMessage();
+        sessionStorage.setItem('vw_greeting_shown', '1');
+      }
+    } catch {}
     
     // Логируем session_start при первом открытии
     if (!_sessionStarted) {
@@ -3897,6 +3906,9 @@ render() {
   this.showScreen = showScreen;
   this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('dialog');
+  this.showGreetingMessage = () => {
+    try { this.ui?.addMessage?.({ type: 'assistant', content: GREETING_TEXT, timestamp: new Date(), greeting: true }); } catch {}
+  };
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
   // Image Lightbox — open/close helpers
@@ -5836,9 +5848,9 @@ render() {
       this.audioRecorder.cancelRecording();
     }
 
-    // Reset to main screen
-    this.showMainScreen();
-    
+    this.showChatScreen();
+    this.showGreetingMessage();
+
     console.log('🗑️ Сессия очищена, sessionId сброшен (ожидаем новый от сервера)');
   }
 
