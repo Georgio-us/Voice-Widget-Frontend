@@ -136,6 +136,7 @@ const LOCALES = {
     ,stagePrimarySelection: 'Готов к первичному подбору'
     ,stageDetails: 'Уточнение деталей'
     ,stagePreciseSelection: 'Готов к точному подбору'
+    ,assistantGreeting: 'Здравствуйте! Я ваш помощник по подбору недвижимости в Estyle Properties.\n\nЯ помогу вам найти лучший вариант на нашем сайте. Опишите, пожалуйста, что бы вы хотели?'
   },
   EN: {
     inputPlaceholder: 'Ask a question...',
@@ -250,6 +251,7 @@ const LOCALES = {
     ,stagePrimarySelection: 'Ready for initial selection'
     ,stageDetails: 'Refining details'
     ,stagePreciseSelection: 'Ready for precise selection'
+    ,assistantGreeting: "Hello! I'm your real estate assistant at Estyle Properties.\n\nI'll help you find the best option on our site. Please describe what you're looking for?"
   },
   ES: {
     inputPlaceholder: 'Haz una pregunta...',
@@ -364,6 +366,7 @@ const LOCALES = {
     ,stagePrimarySelection: 'Listo para una primera seleccion'
     ,stageDetails: 'Afinando detalles'
     ,stagePreciseSelection: 'Listo para una seleccion precisa'
+    ,assistantGreeting: 'Hola! Soy tu asistente de inmobiliaria en Estyle Properties.\n\nTe ayudo a encontrar la mejor opcion en nuestra web. Cuentame, por favor, que buscas?'
   }
 };
 
@@ -2729,8 +2732,8 @@ render() {
   <!-- Launcher -->
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
     <span class="launcher__textBlock" aria-hidden="true">
-      <span class="launcher__title">Спросите меня прямо здесь</span>
-      <span class="launcher__subtitle">Можно написать или продиктовать</span>
+      <span class="launcher__title">${this.getCurrentLocale().launcherTitle}</span>
+      <span class="launcher__subtitle">${this.getCurrentLocale().launcherSubtitle}</span>
     </span>
     <span class="launcher__iconSlot" aria-hidden="true">
       <!-- Desktop legacy icon (kept for safety, but hidden in vw-mobile/vw-desktop) -->
@@ -2792,8 +2795,8 @@ render() {
               </div>
               <div class="main-copy">
                 <div class="text-container">
-                    <p class="main-text">Спроси меня!</p>
-                    <p class="sub-text">Помогу найти лучший вариант</p>
+                    <p class="main-text">${this.getCurrentLocale().chatGreeting}</p>
+                    <p class="sub-text">${this.getCurrentLocale().chatSubGreeting}</p>
                 </div>
               </div>
             </div>
@@ -3265,7 +3268,6 @@ render() {
 
   // Launcher
   let _sessionStarted = false;
-  const GREETING_TEXT = 'Здравствуйте! Я ваш помощник по подбору недвижимости в Estyle Properties.\n\nЯ помогу вам найти лучший вариант на нашем сайте. Опишите, пожалуйста, что бы вы хотели?';
   $("#launcher")?.addEventListener("click", () => {
     // Attention flip must stop forever after the first open
     try { this._vwStopLauncherAttention?.(); } catch {}
@@ -3907,7 +3909,7 @@ render() {
   this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('dialog');
   this.showGreetingMessage = () => {
-    try { this.ui?.addMessage?.({ type: 'assistant', content: GREETING_TEXT, timestamp: new Date(), greeting: true }); } catch {}
+    try { this.ui?.addMessage?.({ type: 'assistant', content: this.t('assistantGreeting') || '', timestamp: new Date(), greeting: true }); } catch {}
   };
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
@@ -5190,14 +5192,14 @@ render() {
           <span class="card-back-asset"></span>
           <span class="card-back-asset"></span>
         </div>
-        <button type="button" class="btn-open-form">Leave a request</button>
+        <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
       </div>
       <div class="card-slide-form">
         <div class="card-form-header">
           <button type="button" class="card-form-header__back" aria-label="Back">
             <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
           </button>
-          <span class="card-form-header__title">Leave a request</span>
+          <span class="card-form-header__title">${locale.leaveRequest}</span>
         </div><div class="card-back-separator"></div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
