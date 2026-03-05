@@ -1216,13 +1216,15 @@ render() {
   .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
   .card-slide--form-open .card-slide-back{ display:none !important; }
   .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:479px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:12px; box-sizing:border-box; }
-  .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; }
-  .card-form-header__back{ width:18px; height:18px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
-  .card-form-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0 auto; }
+  .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
+  .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
+  .card-form-header__spacer{ width:18px; flex-shrink:0; }
   /* Card back: info panel (description + specs + assets + CTA) */
-  .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; }
-  .card-back-header__title{ font-size:14px; font-weight:600; color:var(--color-text); margin:0 auto; }
-  .card-back-header__close{ width:18px; height:18px; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
+  .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-back-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
+  .card-back-header__spacer{ width:24px; flex-shrink:0; }
   .card-back-description-slot{ height:200px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
   .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:12px; color:var(--color-text); justify-items:center; align-items:center; margin-top: 12px; }
@@ -1347,6 +1349,7 @@ render() {
     color: var(--color-text);
     opacity: .85;
     line-height:1.4;
+    margin-bottom: 25px;
   }
   .dialog-screen .in-dialog-lead__privacy-link,
   .card-slide-back .in-dialog-lead__privacy-link{ color:var(--color-accent); text-decoration:none; }
@@ -5178,6 +5181,7 @@ render() {
             <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
           </button>
           <span class="card-back-header__title">${normalized.id || ''} / ${normalized.city || ''} / ${normalized.priceLabel || ''}</span>
+          <span class="card-back-header__spacer" aria-hidden="true"></span>
         </div>
         <div class="card-back-separator"></div><div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         <div class="card-back-specs">
@@ -5200,6 +5204,7 @@ render() {
             <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
           </button>
           <span class="card-form-header__title">${locale.leaveRequest}</span>
+          <span class="card-form-header__spacer" aria-hidden="true"></span>
         </div><div class="card-back-separator"></div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
