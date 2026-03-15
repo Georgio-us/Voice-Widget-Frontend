@@ -743,9 +743,21 @@ class VoiceWidget extends HTMLElement {
     this.ui.bindAccordionEvents();
     // (scrim удалён как неиспользуемый)
 
-    // грузим данные сессии только если id есть
+    // 1) проверяем session на сервере 2) только потом грузим локальную историю (без "мигания")
     if (this.sessionId) {
-      this.api.loadSessionInfo();
+      this.api.loadSessionInfo()
+        .then((state) => {
+          if (state?.expired) {
+            try { this.ui.clearMessages(); } catch {}
+            return;
+          }
+          try { this.ui.loadHistory(); } catch {}
+        })
+        .catch(() => {
+          try { this.ui.loadHistory(); } catch {}
+        });
+    } else {
+      this.ui.loadHistory();
     }
 
     // Initialize understanding bar with 0%
@@ -1210,27 +1222,63 @@ render() {
   .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:0; transition: opacity .25s ease; }
   .card-slide-front{ opacity:1; pointer-events:auto; }
 
-  .card-slide-back{ height:479px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:12px; padding-bottom:20px; box-sizing:border-box; }
+  .card-slide-back{ position:relative; height:479px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:20px; box-sizing:border-box; }
+  .card-slide-back__bg{ position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.1; background-position:center; background-repeat:no-repeat; background-size:cover; }
+  .card-slide-back__bg--fallback{ background-image:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); }
+  .card-slide-back > :not(.card-slide-back__bg){ position:relative; z-index:1; }
   .card-slide.flipped .card-slide-front{ opacity:0; pointer-events:none; }
   .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
   .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
   .card-slide--form-open .card-slide-back{ display:none !important; }
-  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:479px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:12px; box-sizing:border-box; }
+  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:479px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:20px; box-sizing:border-box; }
   .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
+  .card-form-header__back img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
+  .card-form-header__back:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
+  .card-form-header__back:active{ transform:translateY(0); opacity:.88; }
+  .card-form-header__back:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
   .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
   .card-form-header__spacer{ width:18px; flex-shrink:0; }
   /* Card back: info panel (description + specs + assets + CTA) */
   .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-text); opacity:.8; }
+  .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
+  .card-back-header__close img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
+  .card-back-header__close:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
+  .card-back-header__close:active{ transform:translateY(0); opacity:.88; }
+  .card-back-header__close:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
   .card-back-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
   .card-back-header__spacer{ width:24px; flex-shrink:0; }
-  .card-back-description-slot{ height:200px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
+  .card-back-description-slot{ height:180px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
-  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:12px; color:var(--color-text); justify-items:center; align-items:center; margin-top: 12px; }
-  .card-back-specs__item{ margin:0; text-align:center; }
+  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:13px; font-weight: 500; color:var(--color-text); align-items:center; margin-top: 12px; }
+  .card-back-specs__item{ margin:0; }
+  .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
+  .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
   .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
-  .card-back-asset{ width:60px; height:60px; border-radius:12px; background:var(--color-sub-surface); flex-shrink:0; }
+  .card-back-asset{
+    width:60px; height:60px; border-radius:12px; flex-shrink:0;
+    border:1px solid rgba(65,120,207,.2);
+    background-color:var(--color-sub-surface);
+    background-position:center;
+    background-repeat:no-repeat;
+    background-size:cover;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:700;
+    color:#a2a2a2;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, opacity .2s ease, background-color .2s ease;
+  }
+  .card-back-asset:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(0,0,0,.18); border-color:var(--color-accent); }
+  .card-back-asset:active{ transform:translateY(0); opacity:.92; }
+  .card-back-asset:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+  .card-back-asset.is-fallback{
+    background-image:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px);
+  }
+  .card-back-asset__label{ text-transform:uppercase; letter-spacing:.35px; font-size:11px; }
+  .card-back-asset.is-thumb .card-back-asset__label{ display:none; }
   .card-slide-back .btn-open-form{ margin-top:auto; flex-shrink:0; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
@@ -1273,7 +1321,7 @@ render() {
   .card-slide-back .in-dialog-lead{ margin-bottom: 10px; }
   .dialog-screen .in-dialog-lead__body,
   .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; }
-  .card-slide-form .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; max-height:100%; overflow-y:auto; }
+  .card-slide-form .in-dialog-lead__body{ padding:2px; display:grid; gap:12px; max-height:100%; overflow-y:auto; }
   .dialog-screen .in-dialog-lead__title,
   .card-slide-back .in-dialog-lead__title{
     font-family: var(--ff);
@@ -3998,7 +4046,13 @@ render() {
     } catch { return ''; }
   };
   this._onImageClick = (e) => {
-    // ignore clicks on buttons/icons
+    // 0) back-side asset thumbnails (delegate)
+    const assetEl = e.target.closest('.card-back-asset');
+    if (assetEl) {
+      const assetUrl = assetEl.getAttribute('data-full-image') || this._extractBgUrl(assetEl);
+      if (assetUrl) { this.openImageOverlay(assetUrl); return; }
+    }
+    // ignore clicks on other buttons/icons
     if (e.target.closest('button')) return;
     // 1) direct <img> inside card screen
     const imgEl = e.target.closest('.card-screen .cs-image img');
@@ -5144,6 +5198,17 @@ render() {
     const locale = this.getCurrentLocale();
     const slide = document.createElement('div');
     slide.className = 'card-slide';
+    const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
+    const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
+    while (assetSlots.length < 4) assetSlots.push('');
+    const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
+      const safeUrl = String(assetUrl || '').trim();
+      const isThumb = !!safeUrl;
+      const openUrl = safeUrl || fallbackAssetOpenUrl;
+      const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
+      const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
+      return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}><span class="card-back-asset__label">img</span></button>`;
+    }).join('');
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
@@ -5176,6 +5241,7 @@ render() {
         </div>
       </div>
       <div class="card-slide-back">
+        <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
           <button type="button" class="card-back-header__close" aria-label="Back">
             <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
@@ -5190,12 +5256,7 @@ render() {
           <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
           <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
         </div>
-        <div class="card-back-assets">
-          <span class="card-back-asset"></span>
-          <span class="card-back-asset"></span>
-          <span class="card-back-asset"></span>
-          <span class="card-back-asset"></span>
-        </div>
+        <div class="card-back-assets">${assetTilesHtml}</div>
         <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
       </div>
       <div class="card-slide-form">
@@ -5209,6 +5270,18 @@ render() {
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
     track.appendChild(slide);
+    try {
+      slide.querySelectorAll('.card-back-asset.is-thumb').forEach((assetBtn) => {
+        const thumbUrl = assetBtn.getAttribute('data-thumb-image');
+        if (thumbUrl) assetBtn.style.backgroundImage = `url("${thumbUrl}")`;
+      });
+    } catch {}
+    try {
+      const backBg = slide.querySelector('.card-slide-back__bg');
+      if (backBg && normalized.image) {
+        backBg.style.backgroundImage = `url("${normalized.image}")`;
+      }
+    } catch {}
     try { this.bindInDialogLeadForm(slide.querySelector('.card-slide-form .in-dialog-lead'), '_' + normalized.id); } catch {}
     
     // 🆕 Sprint I: отправляем подтверждение факта рендера карточки после визуального показа
@@ -5665,7 +5738,6 @@ render() {
     return `
         <div class="in-dialog-lead" role="group" aria-label="In-dialog lead block">
           <div class="in-dialog-lead__body">
-            <div class="in-dialog-lead__title">${locale.inDialogLeadTitle}</div>
             <div class="in-dialog-lead__field">
               <label class="in-dialog-lead__label" for="inDialogLeadName${s}">${locale.inDialogLeadNameLabel}</label>
               <input class="in-dialog-lead__input" id="inDialogLeadName${s}" type="text" autocomplete="name" placeholder="${locale.namePlaceholder}">
@@ -5797,6 +5869,31 @@ render() {
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const image = raw.image || raw.imageUrl || '';
+    const readList = (src) => {
+      if (Array.isArray(src)) return src;
+      if (typeof src === 'string') {
+        const trimmed = src.trim();
+        if (!trimmed) return [];
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {}
+        }
+        return trimmed.split(',').map(v => v.trim()).filter(Boolean);
+      }
+      return [];
+    };
+    const assetPool = [
+      ...readList(raw.images),
+      ...readList(raw.assets),
+      ...readList(raw.gallery),
+      ...readList(raw.photos)
+    ]
+      .map(v => String(v || '').trim())
+      .filter(Boolean);
+    if (image && !assetPool.includes(image)) assetPool.unshift(image);
+    const assetImages = assetPool.slice(0, 4);
 
     const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
@@ -5805,6 +5902,7 @@ render() {
     return {
       id: raw.id || '',
       image,
+      assetImages,
       city,
       district,
       neighborhood,
@@ -5819,6 +5917,11 @@ render() {
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel
     };
+  }
+
+  getCardAssetFallbackDataUrl() {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><defs><pattern id="p" width="48" height="48" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="24" height="48" fill="#e9e9e9"/><rect x="24" width="24" height="48" fill="#f5f5f5"/></pattern></defs><rect width="1200" height="900" fill="url(#p)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="72" font-weight="700">IMG NOT FOUND</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 
   // ---------- УТИЛИТЫ ----------

@@ -42,7 +42,6 @@ export class UIManager {
 
     this.widget.dialogStarted = false;
     this.widget.understanding?.updateUnderstandingDisplay?.();
-    this.loadHistory();
   }
 
   cacheElements() {

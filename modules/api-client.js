@@ -189,8 +189,9 @@ export class APIClient {
 
   // Загрузка информации о сессии (только если sessionId есть)
   async loadSessionInfo() {
-    if (!this.widget.sessionId) return;
+    if (!this.widget.sessionId) return { exists: null, expired: false };
     try {
+      const sid = this.widget.sessionId;
       const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`);
       const response = await fetch(sessionUrl);
       if (response.ok) {
@@ -206,10 +207,18 @@ export class APIClient {
         } else {
           console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
         }
+        return { exists: true, expired: false };
+      }
+      // Сессия удалена на сервере (TTL/manual clear): очищаем локальный thread и sid
+      if (response.status === 404) {
+        try { localStorage.removeItem(`vw_thread_${sid}`); } catch {}
+        try { this.widget.ui?._setSessionIdAndDisplay?.(null); } catch {}
+        return { exists: false, expired: true };
       }
     } catch {
       console.log('ℹ️ Сессии на сервере нет или CORS — игнорируем');
     }
+    return { exists: null, expired: false };
   }
 
   // ---------- Текст ----------
