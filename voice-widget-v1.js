@@ -831,6 +831,10 @@ class VoiceWidget extends HTMLElement {
     return this.getTheme() === 'light' ? 'menu_light_theme.svg' : 'menu_dark_theme.svg';
   }
 
+  getCloseIconByTheme() {
+    return this.getTheme() === 'light' ? 'main_close_btn-light.svg' : 'main_close_btn.svg';
+  }
+
   getContactIconByTheme() {
     return this.getTheme() === 'light' ? 'Contactme-light.svg' : 'Contactme.svg';
   }
@@ -875,6 +879,12 @@ class VoiceWidget extends HTMLElement {
     logos.forEach((img) => img.setAttribute('src', nextSrc));
   }
 
+  updateCloseIcons() {
+    const nextSrc = `${ASSETS_BASE}${this.getCloseIconByTheme()}`;
+    const closeIcons = this.shadowRoot.querySelectorAll('.header-action.header-right img');
+    closeIcons.forEach((img) => img.setAttribute('src', nextSrc));
+  }
+
   updateInsightsProgressTrackStroke() {
     const trackCircle = this.shadowRoot.querySelector('#contextScreen .progress-ring svg circle:first-child');
     if (!trackCircle) return;
@@ -893,6 +903,7 @@ class VoiceWidget extends HTMLElement {
       this.updateSendButtonIcons();
       this.updateStatsIcons();
       this.updateLogoIcons();
+      this.updateCloseIcons();
       this.updateInsightsProgressTrackStroke();
     } catch {}
   }
@@ -2835,7 +2846,7 @@ render() {
               </button>
               <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
               <button class="header-action header-right" type="button" title="Закрыть виджет">
-                <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+                <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
               </button>
             </div>
             <div class="main-center">
@@ -2881,7 +2892,7 @@ render() {
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
             <button class="header-action header-right" type="button" title="Закрыть виджет">
-              <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+              <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
             </button>
           </div>
           <div class="dialogue-container" id="messagesContainer">
