@@ -118,7 +118,7 @@ const LOCALES = {
     ,speakTitle: 'Говорить'
     ,sendTitle: 'Отправить'
     ,closeWidgetTitle: 'Закрыть виджет'
-    ,statsTitle: 'Статистика'
+    ,statsTitle: 'Открыть меню'
     ,cookieTitle: 'Cookies и телеметрия'
     ,cookieBody: 'Мы используем cookies и собираем данные использования, чтобы улучшать продукт. Никакой сторонней рекламы и ретаргетинга. Настройки можно изменить в любое время.'
     ,cookieStrict: 'Строго необходимые (всегда включены)'
@@ -233,7 +233,7 @@ const LOCALES = {
     ,speakTitle: 'Speak'
     ,sendTitle: 'Send'
     ,closeWidgetTitle: 'Close widget'
-    ,statsTitle: 'Statistics'
+    ,statsTitle: 'Open menu'
     ,cookieTitle: 'Cookies & telemetry'
     ,cookieBody: 'We use cookies and collect usage data to improve the product. No third-party ads or retargeting. You can change settings anytime.'
     ,cookieStrict: 'Strictly necessary (always enabled)'
@@ -348,7 +348,7 @@ const LOCALES = {
     ,speakTitle: 'Hablar'
     ,sendTitle: 'Enviar'
     ,closeWidgetTitle: 'Cerrar widget'
-    ,statsTitle: 'Estadisticas'
+    ,statsTitle: 'Abrir menu'
     ,cookieTitle: 'Cookies y telemetria'
     ,cookieBody: 'Usamos cookies y recopilamos datos de uso para mejorar el producto. Sin anuncios de terceros ni retargeting. Puedes cambiar la configuracion en cualquier momento.'
     ,cookieStrict: 'Estrictamente necesarias (siempre activadas)'
@@ -1829,7 +1829,7 @@ render() {
                 /* hover меняет только саму иконку */
                 .header-action:hover{ background: transparent; }
                 .header-action:focus, .header-action:focus-visible{ outline:none; box-shadow:none; }
-                .header-action img{ width:28px; height:28px; display:block; transition: opacity .15s ease; }
+                .header-action img{ width:36px; height:36px; display:block; transition: opacity .15s ease; }
                 .header-action:hover img{ opacity:.82; }
                 .header-left{ justify-self:start; }
                 .header-right{ justify-self:end; }
@@ -2830,7 +2830,7 @@ render() {
         <div class="voice-widget-container">
             <div class="bg-grid"></div>
             <div class="screen-header">
-              <button class="header-action header-left" type="button" title="Статистика">
+              <button class="header-action header-left" type="button" title="Открыть меню">
                 <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
               </button>
               <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
@@ -2876,7 +2876,7 @@ render() {
         <div class="voice-widget-container">
           <div class="bg-grid"></div>
           <div class="screen-header">
-            <button class="header-action header-left" type="button" title="Статистика">
+            <button class="header-action header-left" type="button" title="Открыть меню">
               <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
