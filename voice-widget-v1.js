@@ -393,7 +393,7 @@ class VoiceWidget extends HTMLElement {
     
     // 🆕 Sprint I: server-side role (read-only, обновляется из server responses)
     this.role = null;
-    this.supportedLanguages = ['RU', 'EN', 'ES'];
+    this.supportedLanguages = ['RU', 'EN', 'AR'];
     this.defaultLanguage = 'EN';
     this.currentLang = this.defaultLanguage;
 
@@ -2948,9 +2948,9 @@ render() {
               </div>
               <div class="ctx-field ctx-row">
                 <div class="dial-select">
-                  <button class="dial-btn" type="button" id="ctxDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <button class="dial-btn" type="button" id="ctxDialBtn"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971</span></button>
                   <div class="dial-list" id="ctxDialList">
-                    <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
+                    <div class="dial-item" data-cc="AE" data-code="+971"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971 AE</span></div>
                     <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
                     <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
                     <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
@@ -2967,7 +2967,7 @@ render() {
                   <span class="email-ghost" id="ctxEmailGhost"></span>
                 </div>
               </div>
-              <input type="hidden" id="ctxCode" value="+34" />
+              <input type="hidden" id="ctxCode" value="+971" />
               <div class="ctx-error" id="ctxContactError">Please provide phone or email</div>
               <div class="ctx-field">
                 <label class="ctx-consent">
@@ -3067,9 +3067,9 @@ render() {
               <div class="request-field-label">Contact (phone/ WhatsApp/ e-mail)</div>
               <div class="request-row">
                 <div class="dial-select">
-                  <button class="dial-btn" type="button" id="reqDialBtn"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <button class="dial-btn" type="button" id="reqDialBtn"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971</span></button>
                   <div class="dial-list" id="reqDialList">
-                    <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
+                    <div class="dial-item" data-cc="AE" data-code="+971"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971 AE</span></div>
                     <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
                     <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
                     <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
@@ -3078,7 +3078,7 @@ render() {
                     <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
     </div>
                 </div>
-                <input class="request-input request-code-input" id="reqCode" type="hidden" value="+34" />
+                <input class="request-input request-code-input" id="reqCode" type="hidden" value="+971" />
                 <input class="request-input request-phone-input" id="reqPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="1234567" />
     </div>
               <div class="email-wrap">
@@ -3665,8 +3665,8 @@ render() {
     });
     reqDialList?.querySelectorAll('.dial-item').forEach(item => {
       item.addEventListener('click', () => {
-        const code = item.getAttribute('data-code') || '+34';
-        const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+        const code = item.getAttribute('data-code') || '+971';
+        const flag = item.querySelector('.dial-flag')?.textContent || '🇦🇪';
         if (reqDialBtn) {
           const codeEl = reqDialBtn.querySelector('.dial-code'); const flagEl = reqDialBtn.querySelector('.dial-flag');
           if (codeEl) codeEl.textContent = code;
@@ -4151,11 +4151,11 @@ render() {
       const dialBtn = get('reqDialBtn'); 
       if (dialBtn) {
         const codeEl = dialBtn.querySelector('.dial-code'); const flagEl = dialBtn.querySelector('.dial-flag');
-        if (codeEl) codeEl.textContent = '+34';
-        if (flagEl) flagEl.textContent = '🇪🇸';
+        if (codeEl) codeEl.textContent = '+971';
+        if (flagEl) flagEl.textContent = '🇦🇪';
       }
       const dialList = get('reqDialList'); if (dialList) dialList.style.display = 'none';
-      const codeHidden = get('reqCode'); if (codeHidden) codeHidden.value = '+34';
+      const codeHidden = get('reqCode'); if (codeHidden) codeHidden.value = '+971';
     } catch {}
   };
 
@@ -4182,11 +4182,11 @@ render() {
       const dialBtn = get('ctxDialBtn');
       if (dialBtn) {
         const codeEl = dialBtn.querySelector('.dial-code'); const flagEl = dialBtn.querySelector('.dial-flag');
-        if (codeEl) codeEl.textContent = '+34';
-        if (flagEl) flagEl.textContent = '🇪🇸';
+        if (codeEl) codeEl.textContent = '+971';
+        if (flagEl) flagEl.textContent = '🇦🇪';
       }
       const dialList = get('ctxDialList'); if (dialList) dialList.style.display = 'none';
-      const codeHidden = get('ctxCode'); if (codeHidden) codeHidden.value = '+34';
+      const codeHidden = get('ctxCode'); if (codeHidden) codeHidden.value = '+971';
     } catch {}
   };
   
@@ -4258,8 +4258,8 @@ render() {
     });
     ctxDialList?.querySelectorAll('.dial-item').forEach(item => {
       item.addEventListener('click', () => {
-        const code = item.getAttribute('data-code') || '+34';
-        const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+        const code = item.getAttribute('data-code') || '+971';
+        const flag = item.querySelector('.dial-flag')?.textContent || '🇦🇪';
         if (ctxDialBtn) {
           const codeEl = ctxDialBtn.querySelector('.dial-code'); const flagEl = ctxDialBtn.querySelector('.dial-flag');
           if (codeEl) codeEl.textContent = code;
@@ -5656,7 +5656,7 @@ render() {
       const email = emailEl?.value?.trim() || '';
       const consent = !!consentEl?.checked;
       const codeEl = el('inDialogLeadCode') || (formRoot && formRoot.querySelector('input[type="hidden"]'));
-      const phoneCountryCode = codeEl?.value?.trim() || '+34';
+      const phoneCountryCode = codeEl?.value?.trim() || '+971';
 
       // Reset previous errors
       markError(phoneEl, false);
@@ -5757,9 +5757,9 @@ render() {
               <label class="in-dialog-lead__label" for="inDialogLeadPhone${s}">${locale.inDialogLeadPhoneLabel}</label>
               <div class="in-dialog-lead__phone-row">
                 <div class="dial-select">
-                  <button class="dial-btn" type="button" id="inDialogLeadDialBtn${s}"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34</span></button>
+                  <button class="dial-btn" type="button" id="inDialogLeadDialBtn${s}"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971</span></button>
                   <div class="dial-list" id="inDialogLeadDialList${s}">
-                    <div class="dial-item" data-cc="ES" data-code="+34"><span class="dial-flag">🇪🇸</span><span class="dial-code">+34 ES</span></div>
+                    <div class="dial-item" data-cc="AE" data-code="+971"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971 AE</span></div>
                     <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
                     <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
                     <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
@@ -5769,7 +5769,7 @@ render() {
                   </div>
                 </div>
                 <input class="in-dialog-lead__input" id="inDialogLeadPhone${s}" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.requestPhonePlaceholder}">
-                <input id="inDialogLeadCode${s}" type="hidden" value="+34" />
+                <input id="inDialogLeadCode${s}" type="hidden" value="+971" />
               </div>
             </div>
             <div class="in-dialog-lead__field">
@@ -5813,8 +5813,8 @@ render() {
     });
     dialList?.querySelectorAll('.dial-item').forEach(item => {
       item.addEventListener('click', () => {
-        const code = item.getAttribute('data-code') || '+34';
-        const flag = item.querySelector('.dial-flag')?.textContent || '🇪🇸';
+        const code = item.getAttribute('data-code') || '+971';
+        const flag = item.querySelector('.dial-flag')?.textContent || '🇦🇪';
         if (dialBtn) {
           const codeEl = dialBtn.querySelector('.dial-code');
           const flagEl = dialBtn.querySelector('.dial-flag');
@@ -6059,8 +6059,9 @@ render() {
     const overlay = this.shadowRoot.querySelector('.menu-overlay');
     if (!overlay) return;
     const locale = this.getCurrentLocale();
-    const languageCodes = ['RU', 'EN', 'ES'];
-    const languageFlags = { RU: '🇷🇺', EN: '🇬🇧', ES: '🇪🇸' };
+    const languageCodes = ['RU', 'EN', 'AR'];
+    const languageFlags = { RU: '🇷🇺', EN: '🇬🇧', AR: '🇦🇪' };
+    const languageLabels = { RU: 'Русский', EN: 'English', AR: 'العربية' };
     const themeMode = this.getTheme();
     const themeActionLabel = themeMode === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
     const themeActionIcon = themeMode === 'light' ? 'dark-theme.svg' : 'light-theme.svg';
@@ -6121,7 +6122,7 @@ render() {
                 <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">${locale.menuLanguage}
               </button>
               <div class="menu-language-dropdown ${this._menuLanguageDropdownOpen ? 'open' : ''}">
-                ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${code}</button>`).join('')}
+                ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${languageLabels[code] || code}</button>`).join('')}
               </div>
             </div>
           </div>
