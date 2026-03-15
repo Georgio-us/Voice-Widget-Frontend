@@ -74,7 +74,7 @@ async function loadVoiceWidget() {
     
     container.innerHTML = `
       <voice-widget
-        api-url="https://voice-widget-backend-split.up.railway.app/api/audio/upload"
+        api-url="https://voice-widget-backend-dubai.up.railway.app/api/audio/upload"
         field-name="audio"
         response-field="response">
       </voice-widget>
