@@ -828,7 +828,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   getStatsIconByTheme() {
-    return this.getTheme() === 'light' ? 'stats-light-theme.svg' : 'stats-dark-theme.svg';
+    return this.getTheme() === 'light' ? 'menu_light_theme.svg' : 'menu_dark_theme.svg';
   }
 
   getContactIconByTheme() {
