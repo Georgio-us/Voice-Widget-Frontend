@@ -5263,7 +5263,7 @@ render() {
         <div class="card-back-separator"></div><div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
         <div class="card-back-specs">
           <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
-          <span class="card-back-specs__item">Price/m²: ${normalized.price_per_m2 || 'null'} €</span>
+          <span class="card-back-specs__item">Price/m²: ${normalized.pricePerM2Label || 'null'} AED</span>
           <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
           <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
         </div>
@@ -5870,6 +5870,10 @@ render() {
       const n = String(v).replace(/[^0-9]/g, '');
       return n ? parseInt(n, 10) : null;
     };
+    const formatNumberUS = (v) => {
+      const n = toInt(v);
+      return n != null ? n.toLocaleString('en-US') : null;
+    };
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
@@ -5906,9 +5910,10 @@ render() {
     if (image && !assetPool.includes(image)) assetPool.unshift(image);
     const assetImages = assetPool.slice(0, 4);
 
-    const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
+    const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} AED` : (raw.price || raw.priceLabel || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
     const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
+    const pricePerM2Label = formatNumberUS(pricePerM2Num != null ? pricePerM2Num : raw.price_per_m2);
 
     return {
       id: raw.id || '',
@@ -5924,6 +5929,7 @@ render() {
       floorLabel,
       area_m2: areaNum != null ? areaNum : (raw.area_m2 ?? null),
       price_per_m2: pricePerM2Num != null ? pricePerM2Num : (raw.price_per_m2 ?? null),
+      pricePerM2Label,
       bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel
