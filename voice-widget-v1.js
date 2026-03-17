@@ -1403,7 +1403,7 @@ render() {
   let _sessionStarted = false;
   this.isLauncherVisible = false;
   this.classList.add("open");
-  this.showChatScreen();
+  showScreen('dialog');
   try {
     if (!sessionStorage.getItem('vw_greeting_shown')) {
       this.showGreetingMessage();
