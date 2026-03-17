@@ -472,7 +472,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   $byId(id) {
-    return this.getRoot().querySelector(`#${id}`);
+    return this.getRoot().querySelector('#' + id);
   }
 
   // берем id из localStorage (если ранее выдал сервер); иначе null
@@ -798,8 +798,8 @@ class VoiceWidget extends HTMLElement {
     this.updateHeaderUnderstanding(0);
 
     // Initialize send buttons with disabled state
-    const mainSendButton = this.getRoot().getElementById('mainSendButton');
-    const sendButton = this.getRoot().getElementById('sendButton');
+    const mainSendButton = this.$byId('mainSendButton');
+    const sendButton = this.$byId('sendButton');
     if (mainSendButton) mainSendButton.setAttribute('aria-disabled', 'true');
     if (sendButton) sendButton.setAttribute('aria-disabled', 'true');
 
@@ -949,9 +949,9 @@ class VoiceWidget extends HTMLElement {
 
   checkBrowserSupport() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const statusIndicator = this.getRoot().getElementById('statusIndicator');
+      const statusIndicator = this.$byId('statusIndicator');
       if (statusIndicator) statusIndicator.innerHTML = '<div class="status-text">❌ Браузер не поддерживает запись аудио</div>';
-      const mainButton = this.getRoot().getElementById('mainButton');
+      const mainButton = this.$byId('mainButton');
       if (mainButton) {
         mainButton.disabled = true;
         mainButton.style.opacity = '0.5';
@@ -1358,9 +1358,9 @@ render() {
   // Screen management (fresh query each time to avoid stale refs)
   const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
   const showScreen = (screenName) => {
-    screenIds.forEach(id => this.getRoot().getElementById(id)?.classList.add('hidden'));
+    screenIds.forEach(id => this.$byId(id)?.classList.add('hidden'));
     const targetId = screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen';
-    const targetEl = this.getRoot().getElementById(targetId) || this.getRoot().getElementById('dialogScreen');
+    const targetEl = this.$byId(targetId) || this.$byId('dialogScreen');
     targetEl?.classList.remove('hidden');
     // ensure menu overlay is attached to the active screen header
     try { this.setupMenuOverlay(); } catch {}
@@ -1428,7 +1428,7 @@ render() {
   logTelemetry(TelemetryEventTypes.WIDGET_OPEN);
   try {
     if (!this._vwIsMobileLike) {
-      this.getRoot().getElementById("textInput")?.focus();
+      this.$byId("textInput")?.focus();
     }
   } catch {}
 
@@ -1464,20 +1464,20 @@ render() {
   };
   this.maybeShowCookieBanner = () => {
     const consent = this.getConsent();
-    const overlay = this.getRoot().getElementById('cookieOverlay');
+    const overlay = this.$byId('cookieOverlay');
     if (!consent && overlay) overlay.style.display = 'flex';
   };
   // Initialize consent UI handlers
   this.setupCookieBanner = () => {
-    const overlay = this.getRoot().getElementById('cookieOverlay');
-    const manage = this.getRoot().getElementById('cookieManagePanel');
-    const btnAccept = this.getRoot().getElementById('cookieAcceptAllBtn');
-    const btnReject = this.getRoot().getElementById('cookieRejectAllBtn');
-    const btnManage = this.getRoot().getElementById('cookieManageBtn');
-    const btnSave = this.getRoot().getElementById('cookieSaveBtn');
-    const ccPerf = this.getRoot().getElementById('ccPerformance');
-    const ccAnal = this.getRoot().getElementById('ccAnalytics');
-    const ccMkt = this.getRoot().getElementById('ccMarketing');
+    const overlay = this.$byId('cookieOverlay');
+    const manage = this.$byId('cookieManagePanel');
+    const btnAccept = this.$byId('cookieAcceptAllBtn');
+    const btnReject = this.$byId('cookieRejectAllBtn');
+    const btnManage = this.$byId('cookieManageBtn');
+    const btnSave = this.$byId('cookieSaveBtn');
+    const ccPerf = this.$byId('ccPerformance');
+    const ccAnal = this.$byId('ccAnalytics');
+    const ccMkt = this.$byId('ccMarketing');
     btnAccept?.addEventListener('click', () => {
       this.setConsent({ performance: true, analytics: true, marketing: false });
       if (overlay) overlay.style.display = 'none';
@@ -2010,8 +2010,8 @@ render() {
   this.openImageOverlay = (url) => {
     try {
       if (!url) return;
-      const box = this.getRoot().getElementById('imgLightbox');
-      const img = this.getRoot().getElementById('imgLightboxImg');
+      const box = this.$byId('imgLightbox');
+      const img = this.$byId('imgLightboxImg');
       if (!box || !img) return;
       img.src = url;
       box.classList.add('open');
@@ -2020,8 +2020,8 @@ render() {
   };
   this.closeImageOverlay = () => {
     try {
-      const box = this.getRoot().getElementById('imgLightbox');
-      const img = this.getRoot().getElementById('imgLightboxImg');
+      const box = this.$byId('imgLightbox');
+      const img = this.$byId('imgLightboxImg');
       if (img) img.src = '';
       if (box) box.classList.remove('open');
       this._imageOverlayOpen = false;
@@ -2029,8 +2029,8 @@ render() {
   };
   // Lightbox interactions: click on backdrop closes; click on image — no action
   try {
-    const box = this.getRoot().getElementById('imgLightbox');
-    const img = this.getRoot().getElementById('imgLightboxImg');
+    const box = this.$byId('imgLightbox');
+    const img = this.$byId('imgLightboxImg');
     if (box) {
       box.addEventListener('click', (e) => {
         if (e.target === box) { // only backdrop, not image
@@ -2163,9 +2163,9 @@ render() {
   // Helper: reset Request screen state
   this.resetRequestScreen = () => {
     try {
-      const thanksOverlay = this.getRoot().getElementById('requestThanksOverlay');
+      const thanksOverlay = this.$byId('requestThanksOverlay');
       if (thanksOverlay) thanksOverlay.style.display = 'none';
-      const get = (id) => this.getRoot().getElementById(id);
+      const get = (id) => this.$byId(id);
       // Clear fields
       ['reqName','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value = ''; });
       const consent = get('reqConsent');
@@ -2193,7 +2193,7 @@ render() {
   // Helper: reset Context screen state (Leave request form)
   this.resetContextScreen = () => {
     try {
-      const get = (id) => this.getRoot().getElementById(id);
+      const get = (id) => this.$byId(id);
       const form = get('ctxRequestForm');
       const btnWrap = this.getRoot().querySelector('.context-leave-request-button');
       const thanks = get('ctxThanks');
@@ -2224,13 +2224,13 @@ render() {
   
   // Context: leave request inline form toggles
   this.setupContextRequestForm = () => {
-    const btn = this.getRoot().getElementById('ctxLeaveReqBtn');
-    const form = this.getRoot().getElementById('ctxRequestForm');
+    const btn = this.$byId('ctxLeaveReqBtn');
+    const form = this.$byId('ctxRequestForm');
     const ctxHint = this.getRoot().querySelector('#contextScreen .hint-text');
-    const thanks = this.getRoot().getElementById('ctxThanks'); // legacy inline
-    const thanksOverlay = this.getRoot().getElementById('ctxThanksOverlay');
+    const thanks = this.$byId('ctxThanks'); // legacy inline
+    const thanksOverlay = this.$byId('ctxThanksOverlay');
     if (!btn || !form) return;
-    const get = (id) => this.getRoot().getElementById(id);
+    const get = (id) => this.$byId(id);
     const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toDigits = (v) => String(v || '').replace(/\D+/g, '');
@@ -2320,9 +2320,9 @@ render() {
       btn.parentElement.style.display = 'none';
       form.style.display = 'block';
       if (ctxHint) ctxHint.style.display = 'none';
-      try { this.getRoot().getElementById('ctxName')?.focus(); } catch {}
+      try { this.$byId('ctxName')?.focus(); } catch {}
     });
-    this.getRoot().getElementById('ctxCancelBtn')?.addEventListener('click', (e) => {
+    this.$byId('ctxCancelBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       form.style.display = 'none';
       btn.parentElement.style.display = 'block';
@@ -2341,7 +2341,7 @@ render() {
       const checkbox = get('ctxConsent');
       if (checkbox) checkbox.classList.remove('error');
     });
-    this.getRoot().getElementById('ctxSendBtn')?.addEventListener('click', (e) => {
+    this.$byId('ctxSendBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       // validation
       const name = get('ctxName')?.value?.trim() || '';
@@ -2486,8 +2486,8 @@ render() {
             form.style.display = 'none';
             if (thanksOverlay) thanksOverlay.style.display = 'flex';
             // Очищаем поля
-            ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.getRoot().getElementById(id); if (el) el.value=''; });
-            const c = this.getRoot().getElementById('ctxConsent'); if (c) c.checked = false;
+            ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.$byId(id); if (el) el.value=''; });
+            const c = this.$byId('ctxConsent'); if (c) c.checked = false;
             showContactError(false); showConsentError(false);
             
             // Увеличиваем счетчик отправок (если еще не увеличен при нажатии "Продолжить")
@@ -2553,33 +2553,33 @@ render() {
       }
     });
     // Обработчик закрытия поп-апа блокировки для short form
-    this.getRoot().getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+    this.$byId('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const blockOverlay = this.getRoot().getElementById('ctxSpamBlockOverlay');
+      const blockOverlay = this.$byId('ctxSpamBlockOverlay');
       if (blockOverlay) blockOverlay.style.display = 'none';
     });
-    this.getRoot().getElementById('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
+    this.$byId('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       if (thanks) thanks.style.display = 'none';
       btn.parentElement.style.display = 'block';
       if (ctxHint) ctxHint.style.display = '';
     });
-    this.getRoot().getElementById('ctxThanksOverlayClose')?.addEventListener('click', (e) => {
+    this.$byId('ctxThanksOverlayClose')?.addEventListener('click', (e) => {
       e.preventDefault();
       if (thanksOverlay) thanksOverlay.style.display = 'none';
       btn.parentElement.style.display = 'block';
       if (ctxHint) ctxHint.style.display = '';
     });
     // Обработчик закрытия поп-апа блокировки для short form
-    this.getRoot().getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+    this.$byId('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const blockOverlay = this.getRoot().getElementById('ctxSpamBlockOverlay');
+      const blockOverlay = this.$byId('ctxSpamBlockOverlay');
       if (blockOverlay) blockOverlay.style.display = 'none';
     });
     // Обработчики поп-апа предупреждения для short form
-    const ctxWarningOverlay = this.getRoot().getElementById('ctxSpamWarningOverlay');
-    const ctxWarningCancelBtn = this.getRoot().getElementById('ctxSpamWarningCancelBtn');
-    const ctxWarningContinueBtn = this.getRoot().getElementById('ctxSpamWarningContinueBtn');
+    const ctxWarningOverlay = this.$byId('ctxSpamWarningOverlay');
+    const ctxWarningCancelBtn = this.$byId('ctxSpamWarningCancelBtn');
+    const ctxWarningContinueBtn = this.$byId('ctxSpamWarningContinueBtn');
     if (ctxWarningCancelBtn) {
       ctxWarningCancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -2596,7 +2596,7 @@ render() {
         this.leadSpamProtection.incrementSubmitCount('lead');
         // Продолжаем отправку после закрытия поп-апа
         // Вызываем обработчик кнопки отправки напрямую
-        const sendBtn = this.getRoot().getElementById('ctxSendBtn');
+        const sendBtn = this.$byId('ctxSendBtn');
         if (sendBtn) {
           // Эмулируем клик для повторной отправки
           sendBtn.click();
@@ -2609,8 +2609,8 @@ render() {
   // Context: Data storage info popup
   this.setupDataStoragePopup = () => {
     const trigger = this.getRoot().querySelector('.data-storage-text');
-    const overlay = this.getRoot().getElementById('dataOverlay');
-    const btn = this.getRoot().getElementById('dataUnderstoodBtn');
+    const overlay = this.$byId('dataOverlay');
+    const btn = this.$byId('dataUnderstoodBtn');
     trigger?.addEventListener('click', () => { if (overlay) overlay.style.display = 'flex'; });
     btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
   };
@@ -2619,9 +2619,9 @@ render() {
   // Context: "What data do we know?" popup (insights)
   this.setupWhatDataPopup = () => {
     const trigger = this.getRoot().querySelector('#contextScreen .footer-text');
-    const overlay = this.getRoot().getElementById('whatDataOverlay');
-    const body = this.getRoot().getElementById('whatDataBody');
-    const btn = this.getRoot().getElementById('whatDataUnderstoodBtn');
+    const overlay = this.$byId('whatDataOverlay');
+    const body = this.$byId('whatDataBody');
+    const btn = this.$byId('whatDataUnderstoodBtn');
     const labelMap = {
       name: 'Name',
       operation: 'Operation',
@@ -2654,9 +2654,9 @@ render() {
   // Request: Privacy Policy confirm
   this.setupPrivacyConfirm = () => {
     const link = this.getRoot().querySelector('.request-privacy-link');
-    const overlay = this.getRoot().getElementById('privacyOverlay');
-    const btnCancel = this.getRoot().getElementById('privacyCancelBtn');
-    const btnContinue = this.getRoot().getElementById('privacyContinueBtn');
+    const overlay = this.$byId('privacyOverlay');
+    const btnCancel = this.$byId('privacyCancelBtn');
+    const btnContinue = this.$byId('privacyContinueBtn');
     const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
     if (link) {
       link.addEventListener('click', (e) => {
@@ -2674,9 +2674,9 @@ render() {
   // Context: Privacy Policy confirm
   this.setupContextPrivacyConfirm = () => {
     const link = this.getRoot().querySelector('.ctx-privacy-link');
-    const overlay = this.getRoot().getElementById('ctxPrivacyOverlay');
-    const btnCancel = this.getRoot().getElementById('ctxPrivacyCancelBtn');
-    const btnContinue = this.getRoot().getElementById('ctxPrivacyContinueBtn');
+    const overlay = this.$byId('ctxPrivacyOverlay');
+    const btnCancel = this.$byId('ctxPrivacyCancelBtn');
+    const btnContinue = this.$byId('ctxPrivacyContinueBtn');
     const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
     if (link) {
       link.addEventListener('click', (e) => {
@@ -2694,7 +2694,7 @@ render() {
   // Thread auto-scroll helper
   this._isThreadNearBottom = true;
   this.scrollThreadToBottom = (force = false) => {
-    const thread = this.getRoot().getElementById('thread');
+    const thread = this.$byId('thread');
     if (!thread) return;
     const doScroll = () => { thread.scrollTop = thread.scrollHeight; };
     if (force || this._isThreadNearBottom) {
@@ -2822,7 +2822,7 @@ render() {
       try { e.preventDefault(); } catch {}
     } else if (e.target.matches('#inDialogThanksCloseBtn')) {
       try {
-        const t = this.getRoot().getElementById('inDialogLeadThanksBlock');
+        const t = this.$byId('inDialogLeadThanksBlock');
         if (t && t.parentElement) t.parentElement.removeChild(t);
       } catch {}
     } else if (e.target.closest('.header-action.header-right')) {
@@ -2909,7 +2909,7 @@ render() {
     this.events.on('recordingStarted', () => {
       this.showChatScreen();
       // Show recording indicator on current screen
-      const isMainScreen = this.getRoot().getElementById('mainScreen')?.classList.contains('hidden') === false;
+      const isMainScreen = this.$byId('mainScreen')?.classList.contains('hidden') === false;
       this.showRecordingIndicator(isMainScreen ? 'main' : 'chat');
       // Update toggle button state for both screens
       this.updateToggleButtonState('main');
@@ -2936,7 +2936,7 @@ render() {
     this.events.on('textMessageSent', (d) => { 
       console.log('📤 Text message sent:', d?.text?.slice(0,50));
       // Switch to chat screen if we're on main screen
-      if (this.getRoot().getElementById('mainScreen')?.classList.contains('hidden') === false) {
+      if (this.$byId('mainScreen')?.classList.contains('hidden') === false) {
         this.showChatScreen();
       }
     });
@@ -2995,8 +2995,8 @@ render() {
   // Recording indicator management
   showRecordingIndicator(screen = 'chat') {
     const indicator = screen === 'main' 
-      ? this.getRoot().getElementById('mainRecordingIndicator')
-      : this.getRoot().getElementById('recordingIndicator');
+      ? this.$byId('mainRecordingIndicator')
+      : this.$byId('recordingIndicator');
     
     const wrapper = screen === 'main'
       ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
@@ -3010,8 +3010,8 @@ render() {
 
   hideRecordingIndicator(screen = 'chat') {
     const indicator = screen === 'main' 
-      ? this.getRoot().getElementById('mainRecordingIndicator')
-      : this.getRoot().getElementById('recordingIndicator');
+      ? this.$byId('mainRecordingIndicator')
+      : this.$byId('recordingIndicator');
     
     const wrapper = screen === 'main'
       ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
@@ -3050,11 +3050,11 @@ render() {
     const params = understanding.params || understanding;
     
     // Update progress
-    const progressFill = this.getRoot().getElementById('progressFill');
-    const progressText = this.getRoot().getElementById('progressText');
-    const ctxProgressText = this.getRoot().getElementById('ctxProgressText');
-    const ctxStatusText = this.getRoot().getElementById('ctxStatusText');
-    const ctxStageMessage = this.getRoot().getElementById('ctxStageMessage');
+    const progressFill = this.$byId('progressFill');
+    const progressText = this.$byId('progressText');
+    const ctxProgressText = this.$byId('ctxProgressText');
+    const ctxStatusText = this.$byId('ctxStatusText');
+    const ctxStageMessage = this.$byId('ctxStageMessage');
       const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
     if (progressFill && progressText) {
       progressFill.style.width = `${progress}%`;
@@ -3085,8 +3085,8 @@ render() {
 
     // Update parameter values and dots
     const updateParam = (id, value, dotId) => {
-      const valueEl = this.getRoot().getElementById(id);
-      const dotEl = this.getRoot().getElementById(dotId);
+      const valueEl = this.$byId(id);
+      const dotEl = this.$byId(dotId);
       if (valueEl) {
         const text = value || 'не определено';
         valueEl.textContent = text;
@@ -3110,11 +3110,11 @@ render() {
   // Send text from main screen
   sendTextFromMainScreen(text) {
     // Clear input
-    const mainTextInput = this.getRoot().getElementById('mainTextInput');
+    const mainTextInput = this.$byId('mainTextInput');
     if (mainTextInput) {
       mainTextInput.value = '';
           // Update send button state
-    const mainSendButton = this.getRoot().getElementById('mainSendButton');
+    const mainSendButton = this.$byId('mainSendButton');
     if (mainSendButton) {
       mainSendButton.disabled = true;
       mainSendButton.setAttribute('aria-disabled', 'true');
@@ -3138,9 +3138,9 @@ render() {
     let toggleButton = null;
 
     if (screen === 'main') {
-      toggleButton = this.getRoot().getElementById('mainToggleButton');
+      toggleButton = this.$byId('mainToggleButton');
     } else if (screen === 'chat') {
-      toggleButton = this.getRoot().getElementById('toggleButton');
+      toggleButton = this.$byId('toggleButton');
     }
 
     if (toggleButton) {
@@ -3162,11 +3162,11 @@ render() {
     let sendButton = null;
 
     if (screen === 'main') {
-      textInput = this.getRoot().getElementById('mainTextInput');
-      sendButton = this.getRoot().getElementById('mainSendButton');
+      textInput = this.$byId('mainTextInput');
+      sendButton = this.$byId('mainSendButton');
     } else if (screen === 'chat') {
-      textInput = this.getRoot().getElementById('textInput');
-      sendButton = this.getRoot().getElementById('sendButton');
+      textInput = this.$byId('textInput');
+      sendButton = this.$byId('sendButton');
     }
 
     if (textInput && sendButton) {
@@ -3195,8 +3195,8 @@ render() {
 
   // Ensure slider container exists in thread
   ensureCardsSlider() {
-    const thread = this.getRoot().getElementById('thread');
-    const messages = this.getRoot().getElementById('messagesContainer');
+    const thread = this.$byId('thread');
+    const messages = this.$byId('messagesContainer');
     if (!thread || !messages) return null;
     let host = this.getRoot().querySelector('.card-screen.cards-slider-host');
     if (!host) {
@@ -3402,7 +3402,7 @@ render() {
   // Рендер “пузыря” ассистента, синхронизированного с карточкой (не сохраняем в историю)
   renderCardCommentBubble(text = '') {
     try {
-      const thread = this.getRoot().getElementById('thread');
+      const thread = this.$byId('thread');
       const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
       if (!thread || !host) return;
       // Удалим предыдущий пузырь
@@ -3430,7 +3430,7 @@ render() {
   // Прокрутка контейнера сообщений так, чтобы карточка была полностью видна
   scrollCardHostIntoView() {
     try {
-      const messages = this.getRoot().getElementById('messagesContainer');
+      const messages = this.$byId('messagesContainer');
       const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
       if (!messages || !host) return;
       const bottom = host.offsetTop + host.offsetHeight;
@@ -3508,8 +3508,8 @@ render() {
 
   // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------
   suggestCardOption(data = {}) {
-    const thread = this.getRoot().getElementById('thread');
-    const messages = this.getRoot().getElementById('messagesContainer');
+    const thread = this.$byId('thread');
+    const messages = this.$byId('messagesContainer');
     if (!thread || !messages) return;
 
     this._lastSuggestedCard = data;
@@ -3543,8 +3543,8 @@ render() {
   renderPostHandoffBlock({ cardId } = {}) {
     try {
       const locale = this.getCurrentLocale();
-      const thread = this.getRoot().getElementById('thread');
-      const messages = this.getRoot().getElementById('messagesContainer');
+      const thread = this.$byId('thread');
+      const messages = this.$byId('messagesContainer');
       if (!thread || !messages) return;
 
       // Ensure single block (replace previous if any)
@@ -3590,7 +3590,7 @@ render() {
         try { document.removeEventListener('click', this._inDialogLeadDialOutsideHandler, true); } catch {}
         this._inDialogLeadDialOutsideHandler = null;
       }
-      const lead = this.getRoot().getElementById('inDialogLeadBlock');
+      const lead = this.$byId('inDialogLeadBlock');
       if (lead && lead.parentElement) lead.parentElement.removeChild(lead);
     } catch {}
     try {
@@ -3617,11 +3617,11 @@ render() {
     // UI-only: отдельная thanks-форма для in-dialog lead form (не ctx/request overlays)
     try {
       const locale = this.getCurrentLocale();
-      const thread = this.getRoot().getElementById('thread');
-      const messages = this.getRoot().getElementById('messagesContainer');
+      const thread = this.$byId('thread');
+      const messages = this.$byId('messagesContainer');
       if (!thread || !messages) return;
       // deterministic: single
-      const existing = this.getRoot().getElementById('inDialogLeadThanksBlock');
+      const existing = this.$byId('inDialogLeadThanksBlock');
       if (existing) return;
       const panel = document.createElement('div');
       panel.className = 'card-screen';
@@ -3874,10 +3874,10 @@ render() {
     // Legacy: форма после handoff-блока — больше не используется (flow: слайдер → Выбрать → back с формой)
     try {
       const locale = this.getCurrentLocale();
-      const thread = this.getRoot().getElementById('thread');
-      const messages = this.getRoot().getElementById('messagesContainer');
+      const thread = this.$byId('thread');
+      const messages = this.$byId('messagesContainer');
       if (!thread || !messages) return;
-      const existing = this.getRoot().getElementById('inDialogLeadBlock');
+      const existing = this.$byId('inDialogLeadBlock');
       if (existing) return;
       const panel = document.createElement('div');
       panel.className = 'in-dialog-lead-block';
