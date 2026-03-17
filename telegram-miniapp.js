@@ -1,5 +1,5 @@
 const DEFAULT_API_UPLOAD_URL =
-  'https://voice-widget-backend-dubai.up.railway.app/api/audio/upload';
+  'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload';
 
 const resolveApiUploadUrl = () => {
   try {

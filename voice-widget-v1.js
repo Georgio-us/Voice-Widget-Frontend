@@ -408,7 +408,7 @@ class VoiceWidget extends HTMLElement {
     this.currentLang = this.defaultLanguage;
 
     // параметры
-    const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-dubai.up.railway.app/api/audio/upload';
+    const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload';
     const resolveApiUrl = (fallback) => {
       try {
         const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('vwApi') : null;
@@ -4257,7 +4257,7 @@ const autoMount = () => {
   let el = target.querySelector('voice-widget');
   if (!el) {
     el = document.createElement('voice-widget');
-    el.setAttribute('api-url', 'https://voice-widget-backend-dubai.up.railway.app/api/audio/upload');
+    el.setAttribute('api-url', 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload');
     el.setAttribute('field-name', 'audio');
     el.setAttribute('response-field', 'response');
     target.appendChild(el);
