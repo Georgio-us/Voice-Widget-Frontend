@@ -376,6 +376,15 @@ class VoiceWidget extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this._theme = null;
     this._pendingThemeAttr = null;
+    this.isTelegramWebApp = this.detectTelegramWebApp();
+    this.isLauncherVisible = !this.isTelegramWebApp;
+
+    if (this.isTelegramWebApp) {
+      this.setAttribute('data-telegram', '1');
+      this.classList.add('open');
+    } else {
+      this.removeAttribute('data-telegram');
+    }
 
     // базовые состояния
     this.isRecording = false;
@@ -439,6 +448,14 @@ class VoiceWidget extends HTMLElement {
     this.bindEvents();
     this.checkBrowserSupport();
     this.initializeUI();
+  }
+
+  detectTelegramWebApp() {
+    try {
+      return !!(window?.Telegram && window.Telegram.WebApp);
+    } catch {
+      return false;
+    }
   }
 
   // берем id из localStorage (если ранее выдал сервер); иначе null
@@ -928,6 +945,13 @@ class VoiceWidget extends HTMLElement {
 
  // ---------- RENDER ----------
 render() {
+  const headerCloseButtonMarkup = this.isTelegramWebApp
+    ? ''
+    : `
+              <button class="header-action header-right" type="button" title="Закрыть виджет">
+                <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
+              </button>`;
+
   this.shadowRoot.innerHTML = `
   <style>
   *, *::before, *::after { box-sizing: border-box; }
@@ -1757,6 +1781,42 @@ render() {
                 :host([data-theme="light"]) .request-select,
                 :host([theme="light"]) .request-select {
                   color: var(--color-text);
+                }
+                :host([data-telegram="1"]) {
+                    position: fixed;
+                    inset: 0;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    bottom: auto !important;
+                    right: auto !important;
+                }
+                :host([data-telegram="1"]) .launcher {
+                    display: none !important;
+                }
+                :host([data-telegram="1"]) .widget {
+                    position: fixed;
+                    inset: 0;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    min-width: 100vw !important;
+                    min-height: 100vh !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+                    overflow: hidden;
+                    opacity: 1;
+                    pointer-events: auto;
+                }
+                :host([data-telegram="1"]) .voice-widget-container {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    min-height: 100vh !important;
+                    max-height: none !important;
+                    max-width: none !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
+                }
+                :host([data-telegram="1"]) .dialog-screen .dialogue-container {
+                    max-width: none;
                 }
                 :host([data-theme="light"]) .request-select-item,
                 :host([theme="light"]) .request-select-item {
@@ -2845,9 +2905,7 @@ render() {
                 <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
               </button>
               <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
-              <button class="header-action header-right" type="button" title="Закрыть виджет">
-                <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
-              </button>
+              ${headerCloseButtonMarkup}
             </div>
             <div class="main-center">
               <div class="main-hero">
@@ -2891,9 +2949,7 @@ render() {
               <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
-            <button class="header-action header-right" type="button" title="Закрыть виджет">
-              <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
-            </button>
+            ${headerCloseButtonMarkup}
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
@@ -3333,6 +3389,7 @@ render() {
   $("#launcher")?.addEventListener("click", () => {
     // Attention flip must stop forever after the first open
     try { this._vwStopLauncherAttention?.(); } catch {}
+    this.isLauncherVisible = false;
     this.classList.add("open");
     try { this._enableOutsideClose?.(); } catch {}
     this.showChatScreen();
@@ -3445,6 +3502,13 @@ render() {
 
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
+    if (this.isTelegramWebApp) {
+      this.isLauncherVisible = false;
+      this.classList.add("open");
+      return;
+    }
+
+    this.isLauncherVisible = true;
     this.classList.remove("open");
     try { this._disableOutsideClose?.(); } catch {}
     
