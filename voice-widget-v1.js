@@ -378,7 +378,7 @@ class VoiceWidget extends HTMLElement {
     this._theme = null;
     this._pendingThemeAttr = null;
     this.isTelegramWebApp = this.detectTelegramWebApp();
-    this.isLauncherVisible = !this.isTelegramWebApp;
+    this.isLauncherVisible = false;
 
     if (this.isTelegramWebApp) {
       this.setAttribute('data-telegram', '1');
@@ -962,48 +962,8 @@ class VoiceWidget extends HTMLElement {
 
  // ---------- RENDER ----------
 render() {
-  const headerCloseButtonMarkup = this.isTelegramWebApp
-    ? ''
-    : `
-              <button class="header-action header-right" type="button" title="Закрыть виджет">
-                <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
-              </button>`;
-
   this.getRoot().innerHTML = `
 <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
-<!-- Launcher -->
-  <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
-    <span class="launcher__textBlock" aria-hidden="true">
-      <span class="launcher__title">${this.getCurrentLocale().launcherTitle}</span>
-      <span class="launcher__subtitle">${this.getCurrentLocale().launcherSubtitle}</span>
-    </span>
-    <span class="launcher__iconSlot" aria-hidden="true">
-      <!-- Desktop legacy icon (kept for safety, but hidden in vw-mobile/vw-desktop) -->
-      <img class="launcher__desktopIcon" src="${ASSETS_BASE}MicBig.png" alt="" />
-      <!-- Flip logos (attention animation) -->
-      <span class="launcher__flip">
-        <span class="launcher__flipInner">
-          <span class="launcher__face launcher__face--front"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g>
-<g clip-path="url(#paint0_angular_1071_1216_clip_path)" data-figma-skip-parse="true"><g transform="matrix(0 -0.0169404 0.0169409 0 17.9995 17.999)"><foreignObject x="-1000" y="-1000" width="2000" height="2000"><div xmlns="http://www.w3.org/1999/xhtml" style="background:conic-gradient(from 90deg,rgba(141, 75, 109, 1) 0deg,rgba(239, 68, 68, 1) 91.7308deg,rgba(238, 202, 0, 1) 178.269deg,rgba(41, 84, 153, 1) 264.808deg,rgba(141, 75, 109, 1) 360deg);height:100%;width:100%;opacity:1"></div></foreignObject></g></g><path d="M18 1.05859C27.3562 1.05876 34.9404 8.64315 34.9404 17.999C34.9402 27.3547 27.3561 34.9393 18 34.9395C8.6438 34.9395 1.05877 27.3548 1.05859 17.999C1.05859 8.64304 8.64369 1.05859 18 1.05859ZM12.543 19.0156C12.1688 19.0157 11.8618 19.3205 11.9033 19.6924C12.0561 21.0607 12.6684 22.3451 13.6514 23.3281C14.5617 24.2383 15.7309 24.8291 16.9854 25.0332V28.165H19.0186V25.0205C20.2442 24.8053 21.3844 24.2199 22.2764 23.3281L22.3682 23.2354C23.2979 22.2651 23.8774 21.018 24.0254 19.6924L24.0293 19.623C24.0283 19.3059 23.7733 19.0519 23.4541 19.0195L23.3857 19.0156H22.8184C22.4676 19.0157 22.1835 19.2843 22.0996 19.6221L22.0859 19.6904C21.9543 20.4942 21.589 21.247 21.0312 21.8506L20.917 21.9688C20.1338 22.7518 19.0714 23.1924 17.9639 23.1924L17.8604 23.1904C16.7904 23.1638 15.7694 22.7273 15.0107 21.9688L14.8965 21.8506C14.3387 21.247 13.9744 20.4942 13.8428 19.6904L13.8281 19.6221C13.7442 19.2844 13.461 19.0158 13.1104 19.0156H12.543ZM17.3613 25.085C17.5607 25.1048 17.7618 25.1142 17.9639 25.1143C18.1662 25.1143 18.3678 25.1048 18.5674 25.085H18.6797V27.8574H17.3242V25.085H17.3613ZM13.1104 19.3545C13.2862 19.3547 13.4685 19.506 13.5078 19.7451C13.6596 20.6719 14.0989 21.5353 14.7715 22.208C15.6182 23.0546 16.7665 23.5312 17.9639 23.5312C19.1613 23.5313 20.3105 23.0546 21.1572 22.208C21.8297 21.5353 22.2681 20.6718 22.4199 19.7451C22.4592 19.5059 22.6424 19.3546 22.8184 19.3545H23.3857C23.584 19.3547 23.7046 19.5086 23.6885 19.6543C23.5442 20.9467 22.9656 22.1604 22.0371 23.0889C20.9569 24.1688 19.4914 24.7754 17.9639 24.7754C16.4366 24.7753 14.9717 24.1687 13.8916 23.0889C12.9631 22.1604 12.3835 20.9467 12.2393 19.6543C12.2232 19.5086 12.3446 19.3545 12.543 19.3545H13.1104ZM17.9668 9.53027C16.2828 9.53038 14.918 10.8951 14.918 12.5791V17.6611L14.9219 17.8184C15.0038 19.4292 16.3356 20.7108 17.9668 20.7109C19.6508 20.7109 21.0164 19.345 21.0166 17.6611V12.5791C21.0166 10.8951 19.6509 9.53027 17.9668 9.53027ZM17.9668 9.86914C19.4638 9.86914 20.6777 11.0822 20.6777 12.5791V17.6611C20.6775 19.1579 19.4637 20.3721 17.9668 20.3721C16.47 20.372 15.2571 19.1578 15.2568 17.6611V12.5791C15.2569 11.0823 16.4699 9.86925 17.9668 9.86914Z" data-figma-gradient-fill="{&#34;type&#34;:&#34;GRADIENT_ANGULAR&#34;,&#34;stops&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;stopsVar&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;transform&#34;:{&#34;m00&#34;:-8.1069096477103669e-14,&#34;m01&#34;:33.88183593750,&#34;m02&#34;:1.058593750,&#34;m10&#34;:-33.8808593750,&#34;m11&#34;:1.2881306264700410e-12,&#34;m12&#34;:34.9394531250},&#34;opacity&#34;:1.0,&#34;blendMode&#34;:&#34;NORMAL&#34;,&#34;visible&#34;:true}"/>
-</g>
-<path d="M34.9412 18C34.9412 8.64365 27.3564 1.05882 18 1.05882C8.64365 1.05882 1.05882 8.64365 1.05882 18C1.05882 27.3564 8.64365 34.9412 18 34.9412C27.3564 34.9412 34.9412 27.3564 34.9412 18ZM36 18C36 27.9411 27.9411 36 18 36C8.05888 36 0 27.9411 0 18C0 8.05888 8.05888 0 18 0C27.9411 0 36 8.05888 36 18Z" fill="#2D251C"/>
-<defs>
-<clipPath id="paint0_angular_1071_1216_clip_path"><path d="M18 1.05859C27.3562 1.05876 34.9404 8.64315 34.9404 17.999C34.9402 27.3547 27.3561 34.9393 18 34.9395C8.6438 34.9395 1.05877 27.3548 1.05859 17.999C1.05859 8.64304 8.64369 1.05859 18 1.05859ZM12.543 19.0156C12.1688 19.0157 11.8618 19.3205 11.9033 19.6924C12.0561 21.0607 12.6684 22.3451 13.6514 23.3281C14.5617 24.2383 15.7309 24.8291 16.9854 25.0332V28.165H19.0186V25.0205C20.2442 24.8053 21.3844 24.2199 22.2764 23.3281L22.3682 23.2354C23.2979 22.2651 23.8774 21.018 24.0254 19.6924L24.0293 19.623C24.0283 19.3059 23.7733 19.0519 23.4541 19.0195L23.3857 19.0156H22.8184C22.4676 19.0157 22.1835 19.2843 22.0996 19.6221L22.0859 19.6904C21.9543 20.4942 21.589 21.247 21.0312 21.8506L20.917 21.9688C20.1338 22.7518 19.0714 23.1924 17.9639 23.1924L17.8604 23.1904C16.7904 23.1638 15.7694 22.7273 15.0107 21.9688L14.8965 21.8506C14.3387 21.247 13.9744 20.4942 13.8428 19.6904L13.8281 19.6221C13.7442 19.2844 13.461 19.0158 13.1104 19.0156H12.543ZM17.3613 25.085C17.5607 25.1048 17.7618 25.1142 17.9639 25.1143C18.1662 25.1143 18.3678 25.1048 18.5674 25.085H18.6797V27.8574H17.3242V25.085H17.3613ZM13.1104 19.3545C13.2862 19.3547 13.4685 19.506 13.5078 19.7451C13.6596 20.6719 14.0989 21.5353 14.7715 22.208C15.6182 23.0546 16.7665 23.5312 17.9639 23.5312C19.1613 23.5313 20.3105 23.0546 21.1572 22.208C21.8297 21.5353 22.2681 20.6718 22.4199 19.7451C22.4592 19.5059 22.6424 19.3546 22.8184 19.3545H23.3857C23.584 19.3547 23.7046 19.5086 23.6885 19.6543C23.5442 20.9467 22.9656 22.1604 22.0371 23.0889C20.9569 24.1688 19.4914 24.7754 17.9639 24.7754C16.4366 24.7753 14.9717 24.1687 13.8916 23.0889C12.9631 22.1604 12.3835 20.9467 12.2393 19.6543C12.2232 19.5086 12.3446 19.3545 12.543 19.3545H13.1104ZM17.9668 9.53027C16.2828 9.53038 14.918 10.8951 14.918 12.5791V17.6611L14.9219 17.8184C15.0038 19.4292 16.3356 20.7108 17.9668 20.7109C19.6508 20.7109 21.0164 19.345 21.0166 17.6611V12.5791C21.0166 10.8951 19.6509 9.53027 17.9668 9.53027ZM17.9668 9.86914C19.4638 9.86914 20.6777 11.0822 20.6777 12.5791V17.6611C20.6775 19.1579 19.4637 20.3721 17.9668 20.3721C16.47 20.372 15.2571 19.1578 15.2568 17.6611V12.5791C15.2569 11.0823 16.4699 9.86925 17.9668 9.86914Z"/></clipPath></defs>
-</svg></span>
-          <span class="launcher__face launcher__face--back"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g>
-<g clip-path="url(#paint0_angular_1071_1198_clip_path)" data-figma-skip-parse="true"><g transform="matrix(0 -0.0169414 0.0169414 0 18 18)"><foreignObject x="-1000" y="-1000" width="2000" height="2000"><div xmlns="http://www.w3.org/1999/xhtml" style="background:conic-gradient(from 90deg,rgba(141, 75, 109, 1) 0deg,rgba(239, 68, 68, 1) 91.7308deg,rgba(238, 202, 0, 1) 178.269deg,rgba(41, 84, 153, 1) 264.808deg,rgba(141, 75, 109, 1) 360deg);height:100%;width:100%;opacity:1"></div></foreignObject></g></g><path d="M18 1.05859C27.3562 1.05872 34.9414 8.64372 34.9414 18C34.9413 27.3562 27.3562 34.9413 18 34.9414C8.64372 34.9414 1.05872 27.3562 1.05859 18C1.05859 8.64365 8.64365 1.05859 18 1.05859ZM13.6484 11.6475L13.4443 11.6582C12.4357 11.7605 11.6485 12.6118 11.6484 13.6475V24.2041L11.6611 24.4033C11.7774 25.3128 12.6759 25.9214 13.5635 25.6914L13.7539 25.6289C14.059 25.5067 14.3163 25.2899 14.4883 25.0127L14.5566 24.8906L15.3311 23.3408C15.6488 22.706 16.2772 22.2897 16.9785 22.2402L17.1201 22.2354H22.3545L22.5586 22.2256C23.4994 22.1298 24.2479 21.3812 24.3438 20.4404L24.3545 20.2354V13.6475C24.3544 12.6122 23.5668 11.7609 22.5586 11.6582L22.3545 11.6475H13.6484ZM22.3545 12.0576C23.2321 12.0581 23.9443 12.7697 23.9443 13.6475V20.2354C23.9441 21.113 23.232 21.8256 22.3545 21.8262H17.1201C16.2074 21.8262 15.3721 22.3419 14.9639 23.1582L14.1895 24.707C14.0663 24.953 13.8568 25.1457 13.6016 25.248C12.8628 25.5435 12.0592 24.9996 12.0586 24.2041V13.6475C12.0586 12.7694 12.7703 12.0576 13.6484 12.0576H22.3545ZM14.8242 15.8828C14.2397 15.883 13.7658 16.3568 13.7656 16.9414C13.7658 17.5259 14.2397 18.0008 14.8242 18.001C15.4087 18.0008 15.8836 17.5259 15.8838 16.9414C15.8836 16.3569 15.4087 15.883 14.8242 15.8828ZM18.001 15.8828C17.4163 15.8828 16.9425 16.3568 16.9424 16.9414C16.9426 17.526 17.4163 18.001 18.001 18.001C18.5854 18.0008 19.0594 17.5259 19.0596 16.9414C19.0594 16.3569 18.5855 15.883 18.001 15.8828ZM21.1777 15.8828C20.593 15.8828 20.1183 16.3568 20.1182 16.9414C20.1184 17.526 20.5931 18.001 21.1777 18.001C21.7621 18.0006 22.2361 17.5258 22.2363 16.9414C22.2362 16.357 21.7621 15.8832 21.1777 15.8828Z" data-figma-gradient-fill="{&#34;type&#34;:&#34;GRADIENT_ANGULAR&#34;,&#34;stops&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;stopsVar&#34;:[{&#34;color&#34;:{&#34;r&#34;:0.93725490570068359,&#34;g&#34;:0.26666668057441711,&#34;b&#34;:0.26666668057441711,&#34;a&#34;:1.0},&#34;position&#34;:0.25480768084526062},{&#34;color&#34;:{&#34;r&#34;:0.93494594097137451,&#34;g&#34;:0.79470425844192505,&#34;b&#34;:0.0,&#34;a&#34;:1.0},&#34;position&#34;:0.49519231915473938},{&#34;color&#34;:{&#34;r&#34;:0.16078431904315948,&#34;g&#34;:0.32941177487373352,&#34;b&#34;:0.60000002384185791,&#34;a&#34;:1.0},&#34;position&#34;:0.73557692766189575}],&#34;transform&#34;:{&#34;m00&#34;:-8.1071434288038091e-14,&#34;m01&#34;:33.88281250,&#34;m02&#34;:1.058593750,&#34;m10&#34;:-33.88281250,&#34;m11&#34;:1.2882048943188562e-12,&#34;m12&#34;:34.941406250},&#34;opacity&#34;:1.0,&#34;blendMode&#34;:&#34;NORMAL&#34;,&#34;visible&#34;:true}"/>
-</g>
-<path d="M34.9412 18C34.9412 8.64365 27.3564 1.05882 18 1.05882C8.64365 1.05882 1.05882 8.64365 1.05882 18C1.05882 27.3564 8.64365 34.9412 18 34.9412C27.3564 34.9412 34.9412 27.3564 34.9412 18ZM36 18C36 27.9411 27.9411 36 18 36C8.05888 36 0 27.9411 0 18C0 8.05888 8.05888 0 18 0C27.9411 0 36 8.05888 36 18Z" fill="#2D251C"/>
-<defs>
-<clipPath id="paint0_angular_1071_1198_clip_path"><path d="M18 1.05859C27.3562 1.05872 34.9414 8.64372 34.9414 18C34.9413 27.3562 27.3562 34.9413 18 34.9414C8.64372 34.9414 1.05872 27.3562 1.05859 18C1.05859 8.64365 8.64365 1.05859 18 1.05859ZM13.6484 11.6475L13.4443 11.6582C12.4357 11.7605 11.6485 12.6118 11.6484 13.6475V24.2041L11.6611 24.4033C11.7774 25.3128 12.6759 25.9214 13.5635 25.6914L13.7539 25.6289C14.059 25.5067 14.3163 25.2899 14.4883 25.0127L14.5566 24.8906L15.3311 23.3408C15.6488 22.706 16.2772 22.2897 16.9785 22.2402L17.1201 22.2354H22.3545L22.5586 22.2256C23.4994 22.1298 24.2479 21.3812 24.3438 20.4404L24.3545 20.2354V13.6475C24.3544 12.6122 23.5668 11.7609 22.5586 11.6582L22.3545 11.6475H13.6484ZM22.3545 12.0576C23.2321 12.0581 23.9443 12.7697 23.9443 13.6475V20.2354C23.9441 21.113 23.232 21.8256 22.3545 21.8262H17.1201C16.2074 21.8262 15.3721 22.3419 14.9639 23.1582L14.1895 24.707C14.0663 24.953 13.8568 25.1457 13.6016 25.248C12.8628 25.5435 12.0592 24.9996 12.0586 24.2041V13.6475C12.0586 12.7694 12.7703 12.0576 13.6484 12.0576H22.3545ZM14.8242 15.8828C14.2397 15.883 13.7658 16.3568 13.7656 16.9414C13.7658 17.5259 14.2397 18.0008 14.8242 18.001C15.4087 18.0008 15.8836 17.5259 15.8838 16.9414C15.8836 16.3569 15.4087 15.883 14.8242 15.8828ZM18.001 15.8828C17.4163 15.8828 16.9425 16.3568 16.9424 16.9414C16.9426 17.526 17.4163 18.001 18.001 18.001C18.5854 18.0008 19.0594 17.5259 19.0596 16.9414C19.0594 16.3569 18.5855 15.883 18.001 15.8828ZM21.1777 15.8828C20.593 15.8828 20.1183 16.3568 20.1182 16.9414C20.1184 17.526 20.5931 18.001 21.1777 18.001C21.7621 18.0006 22.2361 17.5258 22.2363 16.9414C22.2362 16.357 21.7621 15.8832 21.1777 15.8828Z"/></clipPath></defs>
-</svg></span>
-        </span>
-      </span>
-    </span>
-  </button>
-  
   <!-- Image lightbox overlay -->
   <div class="img-lightbox" id="imgLightbox" aria-hidden="true">
     <img id="imgLightboxImg" alt="">
@@ -1025,7 +985,6 @@ render() {
                 <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
               </button>
               <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
-              ${headerCloseButtonMarkup}
             </div>
             <div class="main-center">
               <div class="main-hero">
@@ -1069,7 +1028,6 @@ render() {
               <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
-            ${headerCloseButtonMarkup}
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
@@ -1395,69 +1353,7 @@ render() {
   })();
   this.applyHostModeClasses();
   
-  // Launcher "attention" flip animation (mobile only). Stops forever after first widget open.
-  const _launcherEl = $("#launcher");
-  if (!this._vwLauncherFlipTimers) this._vwLauncherFlipTimers = [];
-  const _clearLauncherFlipTimers = () => {
-    try { (this._vwLauncherFlipTimers || []).forEach(id => { try { clearTimeout(id); } catch {} }); } catch {}
-    this._vwLauncherFlipTimers = [];
-  };
-  this._vwStopLauncherAttention = () => {
-    this._vwLauncherAttentionStopped = true;
-    _clearLauncherFlipTimers();
-    try { _launcherEl?.classList.remove('vw-launcher-back'); } catch {}
-  };
-  const _scheduleLauncher = (ms, fn) => {
-    try {
-      if (this._vwLauncherAttentionStopped) return null;
-      const id = window.setTimeout(() => { try { fn?.(); } catch {} }, ms);
-      this._vwLauncherFlipTimers.push(id);
-      return id;
-    } catch { return null; }
-  };
-  const _flipToBack = () => {
-    try {
-      if (this._vwLauncherAttentionStopped) return;
-      if (this.classList.contains('open')) return;
-      _launcherEl?.classList.add('vw-launcher-back');
-    } catch {}
-  };
-  const _flipToFront = () => {
-    try {
-      if (this._vwLauncherAttentionStopped) return;
-      if (this.classList.contains('open')) return;
-      _launcherEl?.classList.remove('vw-launcher-back');
-    } catch {}
-  };
-  const _startLauncherAttention = () => {
-    try {
-      if (!_launcherEl) return;
-      if (this._vwLauncherAttentionStopped) return;
-      if (this._vwLauncherAttentionStarted) return;
-      this._vwLauncherAttentionStarted = true;
-      
-      const recurring = () => {
-        _scheduleLauncher(30000, () => {
-          _flipToBack();
-          _scheduleLauncher(5000, () => {
-            _flipToFront();
-            recurring();
-          });
-        });
-      };
-      
-      // Initial series: 5s -> flip -> 5s -> flip back, then every 30s repeat (flip + 5s + flip back)
-      _scheduleLauncher(5000, () => {
-        _flipToBack();
-        _scheduleLauncher(5000, () => {
-          _flipToFront();
-          recurring();
-        });
-      });
-    } catch {}
-  };
-  // Start attention animation on load (mobile only, until first open)
-  _startLauncherAttention();
+  this._vwStopLauncherAttention = () => {};
 
   // Screen management (fresh query each time to avoid stale refs)
   const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
@@ -1504,49 +1400,37 @@ render() {
     } catch {}
   };
 
-  // Launcher
   let _sessionStarted = false;
-  $("#launcher")?.addEventListener("click", () => {
-    // Attention flip must stop forever after the first open
-    try { this._vwStopLauncherAttention?.(); } catch {}
-    this.isLauncherVisible = false;
-    this.classList.add("open");
-    try { this._enableOutsideClose?.(); } catch {}
-    this.showChatScreen();
-    try {
-      if (!sessionStorage.getItem('vw_greeting_shown')) {
-        this.showGreetingMessage();
-        sessionStorage.setItem('vw_greeting_shown', '1');
-      }
-    } catch {}
-    
-    // Логируем session_start при первом открытии
-    if (!_sessionStarted) {
-      _sessionStarted = true;
-      const consent = this.getConsent();
-      logTelemetry(TelemetryEventTypes.SESSION_START, {
-        url: window.location.href,
-        referrer: document.referrer || null,
-        lang: navigator.language || null,
-        widgetVersion: '1.0',
-        consent: consent ? {
-          analytics: consent.selections?.analytics === true,
-          performance: consent.selections?.performance === true,
-          marketing: consent.selections?.marketing === true
-        } : null
-      });
+  this.isLauncherVisible = false;
+  this.classList.add("open");
+  this.showChatScreen();
+  try {
+    if (!sessionStorage.getItem('vw_greeting_shown')) {
+      this.showGreetingMessage();
+      sessionStorage.setItem('vw_greeting_shown', '1');
     }
-    
-    // Логируем widget_open
-    logTelemetry(TelemetryEventTypes.WIDGET_OPEN);
-    // Не фокусируем поле на мобильных, чтобы не вызывать автопоявление клавиатуры
-    try {
-      if (!this._vwIsMobileLike) {
-        this.getRoot().getElementById("textInput")?.focus();
-      }
-    } catch {}
-    // Не блокируем прокрутку страницы при открытом виджете
-  });
+  } catch {}
+  if (!_sessionStarted) {
+    _sessionStarted = true;
+    const consent = this.getConsent();
+    logTelemetry(TelemetryEventTypes.SESSION_START, {
+      url: window.location.href,
+      referrer: document.referrer || null,
+      lang: navigator.language || null,
+      widgetVersion: '1.0',
+      consent: consent ? {
+        analytics: consent.selections?.analytics === true,
+        performance: consent.selections?.performance === true,
+        marketing: consent.selections?.marketing === true
+      } : null
+    });
+  }
+  logTelemetry(TelemetryEventTypes.WIDGET_OPEN);
+  try {
+    if (!this._vwIsMobileLike) {
+      this.getRoot().getElementById("textInput")?.focus();
+    }
+  } catch {}
 
   // --------- Cookie consent logic ---------
   this._CONSENT_VERSION = 1;
@@ -1616,49 +1500,12 @@ render() {
     });
   };
   try { this.setupCookieBanner(); } catch {}
-  // show on first open of widget
-  const _origLauncher = $("#launcher");
-  _origLauncher?.addEventListener("click", () => { try { this.maybeShowCookieBanner(); } catch {} }, { once: true });
+  try { this.maybeShowCookieBanner(); } catch {}
 
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
-    if (this.isTelegramWebApp) {
-      this.isLauncherVisible = false;
-      this.classList.add("open");
-      return;
-    }
-
-    this.isLauncherVisible = true;
-    this.classList.remove("open");
-    try { this._disableOutsideClose?.(); } catch {}
-    
-    // Логируем widget_close и session_end
-    logTelemetry(TelemetryEventTypes.WIDGET_CLOSE);
-    
-    // Логируем session_end при закрытии виджета
-    const messagesCount = this.messages ? this.messages.length : 0;
-    const cardsShown = this.getRoot().querySelectorAll('.card-slide').length;
-    logTelemetry(TelemetryEventTypes.SESSION_END, {
-      reason: 'user_close',
-      messagesCount,
-      cardsShown
-    });
-    // Ничего не меняем у страницы — скролл всегда доступен
-    // Явно снимаем фокус, чтобы на повторном открытии клавиатура не всплывала
-    try {
-      this.getRoot().getElementById("textInput")?.blur();
-      this.getRoot().getElementById("mainTextInput")?.blur();
-      this.getRoot().activeElement && typeof this.getRoot().activeElement.blur === 'function' && this.getRoot().activeElement.blur();
-      // Если скролл был залочен (мобилки) — вернём как было
-      if (this._scrollLockedMobile) {
-        const de = document.documentElement;
-        const b = document.body;
-        de.style.overflow = this._prevPageOverflowDoc || '';
-        b.style.overflow = this._prevPageOverflowBody || '';
-        b.style.touchAction = this._prevPageTouchAction || '';
-        this._scrollLockedMobile = false;
-      }
-    } catch {}
+    this.isLauncherVisible = false;
+    this.classList.add("open");
   };
 
   // (legacy header/details and overlay lead panel handlers removed)

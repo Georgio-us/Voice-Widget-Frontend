@@ -1889,3 +1889,86 @@
     background: #111;
   }
 }
+
+/* Step 2 SPA fullscreen overrides (must stay outside nested blocks) */
+html,
+body,
+#root {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+voice-widget,
+.vw-app {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.vw-app .launcher {
+  display: none !important;
+}
+
+.vw-app .widget {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.vw-app .voice-widget-container,
+.vw-app .dialog-screen,
+.vw-app .context-screen,
+.vw-app .request-screen,
+.vw-app .content,
+.vw-app .dialogue-container,
+.vw-app #messagesContainer {
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.vw-app .voice-widget-container {
+  padding: 12px 10px !important;
+}
+
+.vw-app .main-header,
+.vw-app .main-copy,
+.vw-app #thread,
+.vw-app .thread,
+.vw-app .card-screen,
+.vw-app .cards-slider-host,
+.vw-app .cards-slider,
+.vw-app .cards-track,
+.vw-app .card-slide {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.vw-app .header-action.header-right {
+  display: none !important;
+}
