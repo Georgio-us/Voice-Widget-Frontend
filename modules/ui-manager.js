@@ -21,6 +21,14 @@ export class UIManager {
     return this.widget?.getRoot?.() || this.root || document;
   }
 
+  $(selector) {
+    return this.getRoot()?.querySelector?.(selector) || null;
+  }
+
+  $byId(id) {
+    return this.widget?.$byId?.(id) || this.$(`#${id}`);
+  }
+
   getInputPlaceholder() {
     if (this.widget && typeof this.widget.t === 'function') {
       return this.widget.t('inputPlaceholder');
@@ -50,24 +58,24 @@ export class UIManager {
 
   cacheElements() {
     this.elements = {
-      textInput:         this.getRoot().getElementById('textInput'),
-      sendButton:        this.getRoot().getElementById('sendButton'),
-      mainButton:        this.getRoot().getElementById('mainButton'),
+      textInput:         this.$byId('textInput'),
+      sendButton:        this.$byId('sendButton'),
+      mainButton:        this.$byId('mainButton'),
 
       // Main screen elements
-      mainTextInput:     this.getRoot().getElementById('mainTextInput'),
-      mainToggleButton:  this.getRoot().getElementById('mainToggleButton'),
-      mainSendButton:    this.getRoot().getElementById('mainSendButton'),
+      mainTextInput:     this.$byId('mainTextInput'),
+      mainToggleButton:  this.$byId('mainToggleButton'),
+      mainSendButton:    this.$byId('mainSendButton'),
 
       // Chat screen elements
-      toggleButton:      this.getRoot().getElementById('toggleButton'),
+      toggleButton:      this.$byId('toggleButton'),
 
-      messagesContainer: this.getRoot().getElementById('messagesContainer'),
-      thread:            this.getRoot().getElementById('thread'),
+      messagesContainer: this.$byId('messagesContainer'),
+      thread:            this.$byId('thread'),
 
       // Details screen elements
-      progressFill:      this.getRoot().getElementById('progressFill'),
-      progressText:      this.getRoot().getElementById('progressText'),
+      progressFill:      this.$byId('progressFill'),
+      progressText:      this.$byId('progressText'),
     };
   }
 
@@ -314,14 +322,12 @@ export class UIManager {
 
   // ---------- запись/таймер ----------
   updateRecordingTimer(time) {
-    const { textInput, mainTextInput } = this.elements;
     if (this.inputState !== 'recording') return;
     const m = Math.floor(time / 60).toString().padStart(2, '0');
     const s = (time % 60).toString().padStart(2, '0');
     // Обновляем таймеры в обоих экранах
-    const sr = this.widget.getRoot();
-    const chatTimer = sr.getElementById('chatRecordTimer');
-    const mainTimer = sr.getElementById('mainRecordTimer');
+    const chatTimer = this.$byId('chatRecordTimer');
+    const mainTimer = this.$byId('mainRecordTimer');
     if (chatTimer) chatTimer.textContent = `${m}:${s}`;
     if (mainTimer) mainTimer.textContent = `${m}:${s}`;
     // На плейсхолдер больше не полагаемся
@@ -399,7 +405,7 @@ export class UIManager {
   _renderThreadFromMessages(list) {
     const { messagesContainer, thread } = this.elements;
     if (!messagesContainer || !thread) return;
-    this.getRoot().getElementById('emptyState')?.remove();
+    this.$byId('emptyState')?.remove();
     messagesContainer.style.overflowY = 'auto';
     thread.innerHTML = '';
     list.forEach(msg => this._appendBubble(msg));
@@ -521,7 +527,7 @@ export class UIManager {
   }
 
   resetInsightsValues(resetProgress = true) {
-    const setTxt = (id, txt) => { const el = this.getRoot().getElementById(id); if (el) el.textContent = txt; };
+    const setTxt = (id, txt) => { const el = this.$byId(id); if (el) el.textContent = txt; };
     setTxt('nameValue', 'не определено');
     setTxt('operationValue', 'не определена');
     setTxt('budgetValue', 'не определен');
@@ -559,8 +565,8 @@ export class UIManager {
   updateMessageCount() {
     // Message count display removed in new layout
   }
-  showLoading() { this.getRoot().getElementById('loadingIndicator')?.classList.add('active'); }
-  hideLoading() { this.getRoot().getElementById('loadingIndicator')?.classList.remove('active'); }
+  showLoading() { this.$byId('loadingIndicator')?.classList.add('active'); }
+  hideLoading() { this.$byId('loadingIndicator')?.classList.remove('active'); }
   showNotification(m) { console.log('📢', m); }
   showWarning(m) { console.log('⚠️', m); }
 

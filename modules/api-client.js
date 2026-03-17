@@ -223,8 +223,8 @@ export class APIClient {
 
   // ---------- Текст ----------
   async sendTextMessage() {
-    const textInput = this.widget.getRoot().getElementById('textInput');
-    const sendButton = this.widget.getRoot().getElementById('sendButton');
+    const textInput = this.widget.$byId('textInput');
+    const sendButton = this.widget.$byId('sendButton');
     const messageText = textInput?.value?.trim();
     if (!messageText) return;
 

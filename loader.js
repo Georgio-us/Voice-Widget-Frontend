@@ -14,12 +14,7 @@
 
   const DEFAULTS = {
     apiUrl: undefined,
-    corner: 'right-bottom',         // 'right-bottom' | 'right-top' | 'left-bottom' | 'left-top'
-    offsetX: 20,                    // px
-    offsetY: 20,                    // px
-    safeArea: false,                // учитывать env(safe-area-inset-*) — по умолчанию выкл, чтобы не было лишнего отступа
-    zIndex: 9999,                   // поверх контента сайта
-    autoOpen: false,                // сразу открыть виджет
+    zIndex: 9999,
     widgetUrl: undefined,           // явный URL на voice-widget-v1.js (если не указан — берём из SCRIPT_BASE)
     assetsBase: undefined           // опционально: база для ассетов (передадим в window.__VW_ASSETS_BASE__)
   };
@@ -64,46 +59,27 @@
   }
 
   function createHostIfNeeded(options) {
-    let host = document.getElementById('vw-host');
-    if (host) return host;
-    host = document.createElement('div');
-    host.id = 'vw-host';
-    host.style.position = 'fixed';
-    host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
-    host.style.width = 'auto';
-    host.style.height = 'auto';
-    host.style.pointerEvents = 'none';  /* не перехватывать клики — только сам виджет внутри */
+    let host = document.getElementById('root');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'root';
+      document.body.appendChild(host);
+    }
     positionHost(host, options);
-    document.body.appendChild(host);
     return host;
   }
 
   function positionHost(host, options) {
     const cfg = Object.assign({}, DEFAULTS, options || {});
-    // Единый источник правды: используем только offsetX/offsetY, safe-area игнорируем
-    cfg.safeArea = false;
-    const addSafe = (axis) => (cfg.safeArea ? ` + env(safe-area-inset-${axis})` : ``);
-    const px = (v) => (typeof v === 'number' ? `${v}px` : String(v || 0));
     host.style.position = 'fixed';
+    host.style.inset = '0';
+    host.style.width = '100vw';
+    host.style.height = '100vh';
+    host.style.margin = '0';
+    host.style.padding = '0';
+    host.style.overflow = 'hidden';
+    host.style.pointerEvents = 'auto';
     host.style.zIndex = String(cfg.zIndex || DEFAULTS.zIndex);
-    host.style.top = host.style.right = host.style.bottom = host.style.left = 'auto';
-    host.style.display = '';
-    host.style.justifyContent = '';
-    host.style.alignItems = '';
-    host.style.padding = '';
-    if (cfg.corner === 'right-bottom') {
-      host.style.right = `calc(${px(cfg.offsetX)}${addSafe('right')})`;
-      host.style.bottom = `calc(${px(cfg.offsetY)}${addSafe('bottom')})`;
-    } else if (cfg.corner === 'right-top') {
-      host.style.right = `calc(${px(cfg.offsetX)}${addSafe('right')})`;
-      host.style.top = `calc(${px(cfg.offsetY)}${addSafe('top')})`;
-    } else if (cfg.corner === 'left-bottom') {
-      host.style.left = `calc(${px(cfg.offsetX)}${addSafe('left')})`;
-      host.style.bottom = `calc(${px(cfg.offsetY)}${addSafe('bottom')})`;
-    } else { // left-top
-      host.style.left = `calc(${px(cfg.offsetX)}${addSafe('left')})`;
-      host.style.top = `calc(${px(cfg.offsetY)}${addSafe('top')})`;
-    }
   }
 
   // стабилизируем позицию при изменении визуального вьюпорта (iOS клавиатура/toolbar)
@@ -131,10 +107,7 @@
       // как fallback — через атрибут (если компонент научится его читать)
       el.setAttribute('data-api-url', options.apiUrl);
     }
-    // автооткрытие
-    if (options && options.autoOpen) {
-      try { el.classList.add('open'); } catch {}
-    }
+    try { el.classList.add('open'); } catch {}
     return el;
   }
 
@@ -153,17 +126,7 @@
     upgrade(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
       return ensureWidgetLoaded(options).then(() => {
-        let host = document.getElementById('vw-host');
-        if (!host) {
-          host = document.createElement('div');
-          host.id = 'vw-host';
-          host.style.position = 'fixed';
-          host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
-          host.style.width = 'auto';
-          host.style.height = 'auto';
-          host.style.pointerEvents = 'none';  /* не перехватывать клики — только виджет внутри */
-          document.body.appendChild(host);
-        }
+        const host = createHostIfNeeded(options);
         positionHost(host, options);
         bindViewportStabilizer(host, options);
         // переместим существующий тег внутрь host
@@ -175,5 +138,4 @@
     }
   };
 })(window, document);
-
 

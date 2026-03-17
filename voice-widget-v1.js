@@ -25,8 +25,6 @@ import { initTelemetry, setConsent as setTelemetryConsent, log as logTelemetry, 
 const LOCALES = {
   RU: {
     inputPlaceholder: 'Задайте вопрос...',
-    launcherTitle: 'Спросите меня прямо здесь',
-    launcherSubtitle: 'Можно написать или продиктовать',
     chatGreeting: 'Спроси меня!',
     chatSubGreeting: 'Помогу найти лучший вариант',
     recordingLabel: 'Идет запись',
@@ -140,8 +138,6 @@ const LOCALES = {
   },
   EN: {
     inputPlaceholder: 'Ask a question...',
-    launcherTitle: 'Ask me right here',
-    launcherSubtitle: 'You can type or dictate',
     chatGreeting: 'Ask me!',
     chatSubGreeting: 'I can help you find the best option',
     recordingLabel: 'Recording',
@@ -255,8 +251,6 @@ const LOCALES = {
   },
   ES: {
     inputPlaceholder: 'Haz una pregunta...',
-    launcherTitle: 'Preguntame aqui mismo',
-    launcherSubtitle: 'Puedes escribir o dictar',
     chatGreeting: 'Preguntame!',
     chatSubGreeting: 'Te ayudo a encontrar la mejor opcion',
     recordingLabel: 'Grabando',
@@ -378,14 +372,13 @@ class VoiceWidget extends HTMLElement {
     this._theme = null;
     this._pendingThemeAttr = null;
     this.isTelegramWebApp = this.detectTelegramWebApp();
-    this.isLauncherVisible = false;
 
     if (this.isTelegramWebApp) {
       this.setAttribute('data-telegram', '1');
-      this.classList.add('open');
     } else {
       this.removeAttribute('data-telegram');
     }
+    this.classList.add('open');
 
     // базовые состояния
     this.isRecording = false;
@@ -448,7 +441,7 @@ class VoiceWidget extends HTMLElement {
     this.render();
     this.bindEvents();
     this.checkBrowserSupport();
-    this.initializeUI();
+    this._uiInitializedOnce = false;
   }
 
   detectTelegramWebApp() {
@@ -473,6 +466,10 @@ class VoiceWidget extends HTMLElement {
 
   $byId(id) {
     return this.getRoot().querySelector('#' + id);
+  }
+
+  $byIdFrom(root, id) {
+    return root?.querySelector?.('#' + id) || null;
   }
 
   // берем id из localStorage (если ранее выдал сервер); иначе null
@@ -550,11 +547,11 @@ class VoiceWidget extends HTMLElement {
       });
     };
     const setPlaceholder = (id, text) => {
-      const el = root.getElementById(id);
+      const el = this.$byIdFrom(root, id);
       if (el && typeof text === 'string') el.placeholder = text;
     };
     const setTitle = (id, text) => {
-      const el = root.getElementById(id);
+      const el = this.$byIdFrom(root, id);
       if (el && typeof text === 'string') el.setAttribute('title', text);
     };
 
@@ -571,8 +568,6 @@ class VoiceWidget extends HTMLElement {
     setPlaceholder('inDialogLeadPhone', locale.requestPhonePlaceholder);
     setPlaceholder('inDialogLeadEmail', locale.emailPlaceholder);
 
-    setText('.launcher__title', locale.launcherTitle);
-    setText('.launcher__subtitle', locale.launcherSubtitle);
     setText('.main-text', locale.chatGreeting);
     setText('.sub-text', locale.chatSubGreeting);
     setTextAll('.recording-label', locale.recordingLabel);
@@ -628,7 +623,7 @@ class VoiceWidget extends HTMLElement {
       if (node.childNodes.length > 0) node.childNodes[0].textContent = textBeforeLink;
     });
 
-    const reqMethodList = root.getElementById('reqMethodList');
+    const reqMethodList = this.$byIdFrom(root, 'reqMethodList');
     if (reqMethodList) {
       const options = reqMethodList.querySelectorAll('.request-select-item');
       options.forEach((option) => {
@@ -638,8 +633,8 @@ class VoiceWidget extends HTMLElement {
         if (v === 'Phone Call') option.textContent = locale.methodPhoneCall;
         if (v === 'Email') option.textContent = locale.methodEmail;
       });
-      const currentValue = root.getElementById('reqMethod')?.value;
-      const reqMethodLabel = root.getElementById('reqMethodLabel');
+      const currentValue = this.$byIdFrom(root, 'reqMethod')?.value;
+      const reqMethodLabel = this.$byIdFrom(root, 'reqMethodLabel');
       if (reqMethodLabel) {
         if (currentValue === 'WhatsApp') reqMethodLabel.textContent = locale.methodWhatsApp;
         if (currentValue === 'Telegram') reqMethodLabel.textContent = locale.methodTelegram;
@@ -648,35 +643,35 @@ class VoiceWidget extends HTMLElement {
       }
     }
 
-    const ctxPrivacy = root.getElementById('ctxPrivacyOverlay');
+    const ctxPrivacy = this.$byIdFrom(root, 'ctxPrivacyOverlay');
     if (ctxPrivacy) {
       const title = ctxPrivacy.querySelector('.data-title');
       const body = ctxPrivacy.querySelector('.data-body');
       if (title) title.textContent = locale.privacyLeavingTitle;
       if (body) body.textContent = locale.privacyLeavingBody;
     }
-    const privacy = root.getElementById('privacyOverlay');
+    const privacy = this.$byIdFrom(root, 'privacyOverlay');
     if (privacy) {
       const title = privacy.querySelector('.data-title');
       const body = privacy.querySelector('.data-body');
       if (title) title.textContent = locale.privacyLeavingTitle;
       if (body) body.textContent = locale.privacyLeavingBody;
     }
-    const ctxThanks = root.getElementById('ctxThanks');
+    const ctxThanks = this.$byIdFrom(root, 'ctxThanks');
     if (ctxThanks) {
       const title = ctxThanks.querySelector('.ctx-thanks-title');
       const body = ctxThanks.querySelector('.ctx-thanks-text');
       if (title) title.textContent = locale.thanksTitle;
       if (body) body.textContent = locale.thanksBody;
     }
-    const reqThanks = root.getElementById('requestThanksOverlay');
+    const reqThanks = this.$byIdFrom(root, 'requestThanksOverlay');
     if (reqThanks) {
       const title = reqThanks.querySelector('.data-title');
       const body = reqThanks.querySelector('.data-body');
       if (title) title.textContent = locale.thanksTitle;
       if (body) body.textContent = locale.thanksBody;
     }
-    const ctxThanksOverlay = root.getElementById('ctxThanksOverlay');
+    const ctxThanksOverlay = this.$byIdFrom(root, 'ctxThanksOverlay');
     if (ctxThanksOverlay) {
       const title = ctxThanksOverlay.querySelector('.data-title');
       const body = ctxThanksOverlay.querySelector('.data-body');
@@ -685,8 +680,8 @@ class VoiceWidget extends HTMLElement {
     }
 
     const updateSpamBlockBody = (overlayId, timerId) => {
-      const overlay = root.getElementById(overlayId);
-      const timer = root.getElementById(timerId);
+      const overlay = this.$byIdFrom(root, overlayId);
+      const timer = this.$byIdFrom(root, timerId);
       if (!overlay) return;
       const title = overlay.querySelector('.data-title');
       const body = overlay.querySelector('.data-body');
@@ -697,7 +692,7 @@ class VoiceWidget extends HTMLElement {
       }
     };
     const updateSpamWarnBody = (overlayId) => {
-      const overlay = root.getElementById(overlayId);
+      const overlay = this.$byIdFrom(root, overlayId);
       if (!overlay) return;
       const title = overlay.querySelector('.data-title');
       const body = overlay.querySelector('.data-body');
@@ -709,19 +704,19 @@ class VoiceWidget extends HTMLElement {
     updateSpamBlockBody('ctxSpamBlockOverlay', 'ctxSpamBlockTimer');
     updateSpamBlockBody('requestSpamBlockOverlay', 'requestSpamBlockTimer');
 
-    const whatData = root.getElementById('whatDataOverlay');
+    const whatData = this.$byIdFrom(root, 'whatDataOverlay');
     if (whatData) {
       const title = whatData.querySelector('.data-title');
       if (title) title.textContent = locale.whatDataTitle;
     }
-    const dataOverlay = root.getElementById('dataOverlay');
+    const dataOverlay = this.$byIdFrom(root, 'dataOverlay');
     if (dataOverlay) {
       const title = dataOverlay.querySelector('.data-title');
       const body = dataOverlay.querySelector('.data-body');
       if (title) title.textContent = locale.dataStorageTitle;
       if (body) body.textContent = locale.dataStorageBody;
     }
-    const cookieOverlay = root.getElementById('cookieOverlay');
+    const cookieOverlay = this.$byIdFrom(root, 'cookieOverlay');
     if (cookieOverlay) {
       const title = cookieOverlay.querySelector('.data-title');
       const body = cookieOverlay.querySelector('.data-body');
@@ -815,6 +810,10 @@ class VoiceWidget extends HTMLElement {
     this.currentLang = this.getInitialLanguage();
     this._menuLanguageCode = this.currentLang;
     this.updateInterface();
+    if (!this._uiInitializedOnce) {
+      this.initializeUI();
+      this._uiInitializedOnce = true;
+    }
     if (this._pendingThemeAttr) {
       try { this.setAttribute('data-theme', this._pendingThemeAttr); } catch {}
       this._pendingThemeAttr = null;
@@ -1342,7 +1341,7 @@ render() {
 
   const $ = s => this.getRoot().querySelector(s);
   
-  // Mobile-like detection (used for launcher flip UI + to avoid auto-keyboard focus)
+  // Mobile-like detection (used to avoid auto-keyboard focus on touch devices)
   this._vwIsMobileLike = (() => {
     try {
       const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -1353,8 +1352,6 @@ render() {
   })();
   this.applyHostModeClasses();
   
-  this._vwStopLauncherAttention = () => {};
-
   // Screen management (fresh query each time to avoid stale refs)
   const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
   const showScreen = (screenName) => {
@@ -1401,7 +1398,6 @@ render() {
   };
 
   let _sessionStarted = false;
-  this.isLauncherVisible = false;
   this.classList.add("open");
   showScreen('dialog');
   try {
@@ -1504,7 +1500,6 @@ render() {
 
   // Helper: close widget and restore page scroll
   this.closeWidget = () => {
-    this.isLauncherVisible = false;
     this.classList.add("open");
   };
 
@@ -1625,8 +1620,8 @@ render() {
     const sendBtn = root.querySelector('.request-send-btn');
     const cancelBtn = root.querySelector('.request-cancel-btn');
     if (!sendBtn) return;
-    const thanksOverlay = root.getElementById('requestThanksOverlay');
-    const get = (id) => root.getElementById(id);
+    const thanksOverlay = this.$byIdFrom(root, 'requestThanksOverlay');
+    const get = (id) => this.$byIdFrom(root, id);
     const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toDigits = (v) => String(v || '').replace(/\D+/g, '');
@@ -1956,20 +1951,20 @@ render() {
       showContactError(false); showConsentError(false);
       if (reqEmailGhost) reqEmailGhost.textContent='';
     });
-    root.getElementById('requestThanksOverlayClose')?.addEventListener('click', (e) => {
+    this.$byIdFrom(root, 'requestThanksOverlayClose')?.addEventListener('click', (e) => {
       e.preventDefault();
       if (thanksOverlay) thanksOverlay.style.display = 'none';
     });
     // Обработчик закрытия поп-апа блокировки
-    root.getElementById('requestSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+    this.$byIdFrom(root, 'requestSpamBlockCloseBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const blockOverlay = root.getElementById('requestSpamBlockOverlay');
+      const blockOverlay = this.$byIdFrom(root, 'requestSpamBlockOverlay');
       if (blockOverlay) blockOverlay.style.display = 'none';
     });
     // Обработчики поп-апа предупреждения для full form
-    const requestWarningOverlay = root.getElementById('requestSpamWarningOverlay');
-    const requestWarningCancelBtn = root.getElementById('requestSpamWarningCancelBtn');
-    const requestWarningContinueBtn = root.getElementById('requestSpamWarningContinueBtn');
+    const requestWarningOverlay = this.$byIdFrom(root, 'requestSpamWarningOverlay');
+    const requestWarningCancelBtn = this.$byIdFrom(root, 'requestSpamWarningCancelBtn');
+    const requestWarningContinueBtn = this.$byIdFrom(root, 'requestSpamWarningContinueBtn');
     if (requestWarningCancelBtn) {
       requestWarningCancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -3650,7 +3645,7 @@ render() {
     try {
       const locale = this.getCurrentLocale();
       const root = this.getRoot();
-      const el = (baseId) => formRoot ? (formRoot.querySelector(`[id^="${baseId}"]`) || formRoot.querySelector(`#${baseId}`)) : root.getElementById(baseId);
+      const el = (baseId) => formRoot ? (formRoot.querySelector(`[id^="${baseId}"]`) || formRoot.querySelector(`#${baseId}`)) : this.$byIdFrom(root, baseId);
       const nameEl = el('inDialogLeadName') || (formRoot && formRoot.querySelector('input[type="text"]'));
       const phoneEl = el('inDialogLeadPhone') || (formRoot && formRoot.querySelector('input[type="tel"]'));
       const emailEl = el('inDialogLeadEmail') || (formRoot && formRoot.querySelector('input[type="email"]'));
@@ -4039,7 +4034,6 @@ render() {
     this.events?.clear?.();
     try { document.removeEventListener('keydown', this._onGlobalKeydown, true); } catch {}
     try { this._disableOutsideClose?.(); } catch {}
-    try { this._vwStopLauncherAttention?.(); } catch {}
     // Safety: if an older build locked the page and didn't restore, try to restore only if we know we locked it.
     try {
       if (this._scrollLockedMobile) {
