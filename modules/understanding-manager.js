@@ -91,8 +91,8 @@ export class UnderstandingManager {
 
   // Обновление отображения понимания
   updateUnderstandingDisplay() {
-    const progressFill = this.widget.shadowRoot.getElementById('progressFill');
-    const progressText = this.widget.shadowRoot.getElementById('progressText');
+    const progressFill = this.widget.getRoot().getElementById('progressFill');
+    const progressText = this.widget.getRoot().getElementById('progressText');
 
     const progress = this.understanding.progress;
 
@@ -105,7 +105,7 @@ export class UnderstandingManager {
 
     // v2 Context screen sync: update circular progress and text if present
     try {
-      const ctx = this.widget.shadowRoot.getElementById('contextScreen');
+      const ctx = this.widget.getRoot().getElementById('contextScreen');
       if (ctx) {
         const ctxText = ctx.querySelector('.progress-text');
         if (ctxText) ctxText.textContent = `${progress}%`;
@@ -138,8 +138,8 @@ export class UnderstandingManager {
 
   // Обновление отдельного поля insights (индикатор опционален)
   updateInsightItem(field, value) {
-    const indicator = this.widget.shadowRoot.getElementById(`${field}Indicator`); // может отсутствовать
-    const valueElement = this.widget.shadowRoot.getElementById(`${field}Value`);
+    const indicator = this.widget.getRoot().getElementById(`${field}Indicator`); // может отсутствовать
+    const valueElement = this.widget.getRoot().getElementById(`${field}Value`);
 
     if (!indicator && !valueElement) {
       // В текущей разметке индикаторов нет — просто выходим тихо

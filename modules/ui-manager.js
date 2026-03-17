@@ -6,7 +6,7 @@ import { renderMarkdown, isInlineMessage } from './markdown.js';
 export class UIManager {
   constructor(widget) {
     this.widget = widget;
-    this.shadowRoot = widget.shadowRoot;
+    this.root = widget.getRoot();
 
     this.inputState = 'idle';
     this.recordingTime = 0;
@@ -15,6 +15,10 @@ export class UIManager {
     this.isInsightsExpanded = false;
     this.elements = {};
     this.bindToInternalEvents();
+  }
+
+  getRoot() {
+    return this.widget?.getRoot?.() || this.root || document;
   }
 
   getInputPlaceholder() {
@@ -46,24 +50,24 @@ export class UIManager {
 
   cacheElements() {
     this.elements = {
-      textInput:         this.shadowRoot.getElementById('textInput'),
-      sendButton:        this.shadowRoot.getElementById('sendButton'),
-      mainButton:        this.shadowRoot.getElementById('mainButton'),
+      textInput:         this.getRoot().getElementById('textInput'),
+      sendButton:        this.getRoot().getElementById('sendButton'),
+      mainButton:        this.getRoot().getElementById('mainButton'),
 
       // Main screen elements
-      mainTextInput:     this.shadowRoot.getElementById('mainTextInput'),
-      mainToggleButton:  this.shadowRoot.getElementById('mainToggleButton'),
-      mainSendButton:    this.shadowRoot.getElementById('mainSendButton'),
+      mainTextInput:     this.getRoot().getElementById('mainTextInput'),
+      mainToggleButton:  this.getRoot().getElementById('mainToggleButton'),
+      mainSendButton:    this.getRoot().getElementById('mainSendButton'),
 
       // Chat screen elements
-      toggleButton:      this.shadowRoot.getElementById('toggleButton'),
+      toggleButton:      this.getRoot().getElementById('toggleButton'),
 
-      messagesContainer: this.shadowRoot.getElementById('messagesContainer'),
-      thread:            this.shadowRoot.getElementById('thread'),
+      messagesContainer: this.getRoot().getElementById('messagesContainer'),
+      thread:            this.getRoot().getElementById('thread'),
 
       // Details screen elements
-      progressFill:      this.shadowRoot.getElementById('progressFill'),
-      progressText:      this.shadowRoot.getElementById('progressText'),
+      progressFill:      this.getRoot().getElementById('progressFill'),
+      progressText:      this.getRoot().getElementById('progressText'),
     };
   }
 
@@ -315,7 +319,7 @@ export class UIManager {
     const m = Math.floor(time / 60).toString().padStart(2, '0');
     const s = (time % 60).toString().padStart(2, '0');
     // Обновляем таймеры в обоих экранах
-    const sr = this.widget.shadowRoot;
+    const sr = this.widget.getRoot();
     const chatTimer = sr.getElementById('chatRecordTimer');
     const mainTimer = sr.getElementById('mainRecordTimer');
     if (chatTimer) chatTimer.textContent = `${m}:${s}`;
@@ -395,7 +399,7 @@ export class UIManager {
   _renderThreadFromMessages(list) {
     const { messagesContainer, thread } = this.elements;
     if (!messagesContainer || !thread) return;
-    this.shadowRoot.getElementById('emptyState')?.remove();
+    this.getRoot().getElementById('emptyState')?.remove();
     messagesContainer.style.overflowY = 'auto';
     thread.innerHTML = '';
     list.forEach(msg => this._appendBubble(msg));
@@ -517,7 +521,7 @@ export class UIManager {
   }
 
   resetInsightsValues(resetProgress = true) {
-    const setTxt = (id, txt) => { const el = this.shadowRoot.getElementById(id); if (el) el.textContent = txt; };
+    const setTxt = (id, txt) => { const el = this.getRoot().getElementById(id); if (el) el.textContent = txt; };
     setTxt('nameValue', 'не определено');
     setTxt('operationValue', 'не определена');
     setTxt('budgetValue', 'не определен');
@@ -555,8 +559,8 @@ export class UIManager {
   updateMessageCount() {
     // Message count display removed in new layout
   }
-  showLoading() { this.shadowRoot.getElementById('loadingIndicator')?.classList.add('active'); }
-  hideLoading() { this.shadowRoot.getElementById('loadingIndicator')?.classList.remove('active'); }
+  showLoading() { this.getRoot().getElementById('loadingIndicator')?.classList.add('active'); }
+  hideLoading() { this.getRoot().getElementById('loadingIndicator')?.classList.remove('active'); }
   showNotification(m) { console.log('📢', m); }
   showWarning(m) { console.log('⚠️', m); }
 

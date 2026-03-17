@@ -373,7 +373,8 @@ const LOCALES = {
 class VoiceWidget extends HTMLElement {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    this.rootEl = this;
+    this.classList.add('vw-app');
     this._theme = null;
     this._pendingThemeAttr = null;
     this.isTelegramWebApp = this.detectTelegramWebApp();
@@ -458,6 +459,22 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  getRoot() {
+    return this.rootEl || this;
+  }
+
+  $(selector) {
+    return this.getRoot().querySelector(selector);
+  }
+
+  $all(selector) {
+    return this.getRoot().querySelectorAll(selector);
+  }
+
+  $byId(id) {
+    return this.getRoot().querySelector(`#${id}`);
+  }
+
   // берем id из localStorage (если ранее выдал сервер); иначе null
   getInitialSessionId() {
     try {
@@ -520,7 +537,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   updateInterface() {
-    const root = this.shadowRoot;
+    const root = this.getRoot();
     if (!root) return;
     const locale = this.getCurrentLocale();
     const setText = (selector, text) => {
@@ -781,8 +798,8 @@ class VoiceWidget extends HTMLElement {
     this.updateHeaderUnderstanding(0);
 
     // Initialize send buttons with disabled state
-    const mainSendButton = this.shadowRoot.getElementById('mainSendButton');
-    const sendButton = this.shadowRoot.getElementById('sendButton');
+    const mainSendButton = this.getRoot().getElementById('mainSendButton');
+    const sendButton = this.getRoot().getElementById('sendButton');
     if (mainSendButton) mainSendButton.setAttribute('aria-disabled', 'true');
     if (sendButton) sendButton.setAttribute('aria-disabled', 'true');
 
@@ -878,32 +895,32 @@ class VoiceWidget extends HTMLElement {
 
   updateSendButtonIcons() {
     const nextSrc = `${ASSETS_BASE}${this.getSendIconByTheme()}`;
-    const mainSendImg = this.shadowRoot.querySelector('#mainSendButton img');
-    const chatSendImg = this.shadowRoot.querySelector('#sendButton img');
+    const mainSendImg = this.getRoot().querySelector('#mainSendButton img');
+    const chatSendImg = this.getRoot().querySelector('#sendButton img');
     if (mainSendImg) mainSendImg.setAttribute('src', nextSrc);
     if (chatSendImg) chatSendImg.setAttribute('src', nextSrc);
   }
 
   updateStatsIcons() {
     const nextSrc = `${ASSETS_BASE}${this.getStatsIconByTheme()}`;
-    const statsIcons = this.shadowRoot.querySelectorAll('.header-action.header-left img');
+    const statsIcons = this.getRoot().querySelectorAll('.header-action.header-left img');
     statsIcons.forEach((img) => img.setAttribute('src', nextSrc));
   }
 
   updateLogoIcons() {
     const nextSrc = `${ASSETS_BASE}${this.getLogoByTheme()}`;
-    const logos = this.shadowRoot.querySelectorAll('.header-logo');
+    const logos = this.getRoot().querySelectorAll('.header-logo');
     logos.forEach((img) => img.setAttribute('src', nextSrc));
   }
 
   updateCloseIcons() {
     const nextSrc = `${ASSETS_BASE}${this.getCloseIconByTheme()}`;
-    const closeIcons = this.shadowRoot.querySelectorAll('.header-action.header-right img');
+    const closeIcons = this.getRoot().querySelectorAll('.header-action.header-right img');
     closeIcons.forEach((img) => img.setAttribute('src', nextSrc));
   }
 
   updateInsightsProgressTrackStroke() {
-    const trackCircle = this.shadowRoot.querySelector('#contextScreen .progress-ring svg circle:first-child');
+    const trackCircle = this.getRoot().querySelector('#contextScreen .progress-ring svg circle:first-child');
     if (!trackCircle) return;
     trackCircle.setAttribute('stroke', this.getInsightsProgressTrackStrokeByTheme());
   }
@@ -932,9 +949,9 @@ class VoiceWidget extends HTMLElement {
 
   checkBrowserSupport() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const statusIndicator = this.shadowRoot.getElementById('statusIndicator');
+      const statusIndicator = this.getRoot().getElementById('statusIndicator');
       if (statusIndicator) statusIndicator.innerHTML = '<div class="status-text">❌ Браузер не поддерживает запись аудио</div>';
-      const mainButton = this.shadowRoot.getElementById('mainButton');
+      const mainButton = this.getRoot().getElementById('mainButton');
       if (mainButton) {
         mainButton.disabled = true;
         mainButton.style.opacity = '0.5';
@@ -952,1906 +969,9 @@ render() {
                 <img src="${ASSETS_BASE}${this.getCloseIconByTheme()}" alt="Close">
               </button>`;
 
-  this.shadowRoot.innerHTML = `
-  <style>
-  *, *::before, *::after { box-sizing: border-box; }
-
-  /* Global button image sizing rule */
-  .btn img, .btn svg, button img, button svg { 
-    width:100%; height:100%; display:block; object-fit:contain;
-  }
-
-  /* launcher/scrim */
-  .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
-    border:none; padding:0; cursor:pointer; z-index:10001; background:transparent; -webkit-appearance:none; appearance:none;
-    box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
-    transition:transform .15s ease, box-shadow .15s ease; pointer-events:auto; }
-  .launcher:hover{ transform:scale(1.05); box-shadow:0 14px 32px rgba(0,0,0,.22); }
-  /* Legacy icon kept in markup, not used in current launcher variants */
-  .launcher__desktopIcon{ width:100%; height:100%; display:none; object-fit:contain; filter:brightness(0) invert(1); }
-  .launcher__textBlock{ display:none; }
-  .launcher__iconSlot{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex:0 0 auto; padding:0; margin:0; }
-  
-  /* Flip logos (coin-like): used on both mobile and desktop */
-  .launcher__flip{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; perspective: 800px; pointer-events:none; }
-  .launcher__flipInner{ width:100%; height:100%; display:block; position:relative; transform-style: preserve-3d; transition: transform 650ms cubic-bezier(.2,.8,.2,1); will-change: transform; }
-  .launcher__face{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
-  .launcher__face img{ width:100%; height:100%; display:block; object-fit:contain; filter:none !important; }
-  .launcher__face svg{ width:100%; height:100%; display:block; }
-  .launcher__face--back{ transform: rotateY(180deg); }
-  .launcher.vw-launcher-back .launcher__flipInner{ transform: rotateY(180deg); }
-  
-  /* Desktop variant (wide card) is responsive by viewport width, not device classes */
-  @media (min-width: 768px){
-    .launcher{
-      width: fit-content;
-      min-width: 240px;
-      max-width: 90vw;
-      height:auto;
-      min-height: clamp(60px, 6vw, 72px);
-      padding:
-        clamp(10px, 1.4vw, 14px)
-        clamp(10px, 1.4vw, 14px)
-        clamp(10px, 1.4vw, 14px)
-        clamp(12px, 1.8vw, 18px);
-      border-radius:18px;
-      position:fixed;
-      background:var(--color-bg);
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: clamp(10px, 1.4vw, 14px);
-    }
-    .launcher::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      padding:1px;
-      border-radius:inherit;
-      pointer-events:none;
-      background:linear-gradient(90deg, #5C7FE2 0%, #F05A4F 33%, #EDA136 66%, #1C7755 100%);
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-    }
-    /* One-off sheen on hover/focus (diagonal 45deg sweep) */
-    .launcher::after{
-      content:"";
-      position:absolute;
-      inset:-40%;
-      pointer-events:none;
-      opacity:0;
-      transform: translateX(-120%) rotate(45deg);
-      background: linear-gradient(
-        90deg,
-        rgba(255,255,255,0) 0%,
-        rgba(255,255,255,0.00) 47%,
-        rgba(255,255,255,0.14) 50%,
-        rgba(255,255,255,0.00) 53%,
-        rgba(255,255,255,0) 100%
-      );
-      will-change: transform, opacity;
-    }
-    .launcher:hover::after,
-    .launcher:focus-visible::after{
-      opacity:1;
-      animation: vwLauncherSheen 6850ms cubic-bezier(.2,.8,.2,1) 1 forwards;
-    }
-    .launcher__textBlock{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      flex: 1 1 auto;
-      min-width:0;
-      text-align:left;
-      font-family: var(--ff);
-    }
-    .launcher__title{
-      font-size: clamp(12px, 1vw + 10px, 14px);
-      font-weight:500;
-      line-height:18px;
-      color:#ffffff;
-      white-space:nowrap;
-    }
-    .launcher__subtitle{
-      font-size: clamp(10px, 0.8vw + 8px, 12px);
-      font-weight:300;
-      line-height:16px;
-      color:rgba(255,255,255,.72);
-      white-space:nowrap;
-    }
-    .launcher__iconSlot{
-      width:56px;
-      height:56px;
-      flex:0 0 56px;
-    }
-  }
-  @keyframes vwLauncherSheen{
-    0%{ transform: translateX(-120%) rotate(45deg); opacity:0; }
-    15%{ opacity:1; }
-    100%{ transform: translateX(120%) rotate(45deg); opacity:0; }
-  }
-  :host(.open) .launcher{ display:none; }
-
-  /* (scroll-bottom-btn и scrim удалены как неиспользуемые) */
-
-  /* Виджет — в закрытом состоянии не участвует в раскладке (host = только лаунчер) */
-.widget{
-    position:absolute;
-    left:0;
-    top:0;
-    width:0;
-    height:0;
-    min-width:0;
-    min-height:0;
-    overflow:hidden;
-    border-radius:20px;
-    box-shadow:none;
-    opacity:0;
-    transition:opacity .2s ease;
-    pointer-events:none;
-}
-
-.widget::before,
-.widget::after{
-    content:none;
-}
-
-:host(.open) .widget{
-    position:relative;
-    width:auto;
-    height:auto;
-    min-width:0;
-    min-height:0;
-    overflow:visible;
-    opacity:1;
-    pointer-events:auto;
-}
-  /* Content */
-  .content{ display:flex; flex-direction:column; height:100%; padding:0; gap:0; position:relative; z-index:3; }
-
-  /* Mobile host centering handled by loader (#vw-host); no widget overrides here */
-
-  /* Main Screen — скрыт навсегда, точка входа теперь dialogScreen */
-  .main-screen{ display:none !important; }
-  .main-screen.hidden{ display:none; }
-  /* v2 screens visibility */
-  .dialog-screen.hidden{ display:none; }
-  .context-screen.hidden{ display:none; }
-  .request-screen.hidden{ display:none; }
-
-  /* Chat */
-  .thread{ display:flex; flex-direction:column; gap:2px; position:relative; z-index:1; min-height:0; }
-  .message{ display:flex; }
-  .message.user{ justify-content:flex-end; }
-  .message.assistant{ justify-content:flex-start; }
-  .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
-  .message.assistant .bubble--full{ border-bottom-left-radius:16px; }
-  .message.user .bubble--full{ border-bottom-right-radius:16px; }
-
-  /* Card screen message (full-bleed inside thread) */
-  .card-screen{ width:100%; margin:0; padding:0; }
-  .thread > .card-screen{ margin-top:-6px; margin-bottom:-6px; }
-  .thread > .card-screen:first-child{ margin-top:0; }
-  .thread > .card-screen:last-child{ margin-bottom:0; }
-  .card-screen .cs{ background:var(--bg-card); color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; }
-  .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
-  .card-screen .cs-image > *{ grid-area:stack; }
-  .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
-  /* overlay: растягиваем на всю плоскость изображения и прижимаем контент вправо-вверх (без absolute) */
-  .card-screen .cs-image .cs-image-overlay{
-    z-index:1;
-    position:relative;
-    width:100%;
-    height:100%;
-    display:flex;
-    justify-content:flex-end;
-    align-items:flex-start;
-    padding:10px;
-    box-sizing:border-box;
-  }
-  .card-screen .cs-image .card-btn.like[data-action="like"]{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    padding:8px;
-    border:none;
-    background:transparent;
-    border-radius:999px;
-    cursor:pointer; 
-  }
-  .card-screen .cs-image .card-btn.like[data-action="like"]:hover{ background: rgba(255,255,255,0.18); }
-  .card-screen .cs-image .card-btn.like[data-action="like"] svg,
-  .card-screen .cs-image .card-btn.like[data-action="like"] svg *{ pointer-events:none; }
-  .card-screen .cs-image .card-btn.like[data-action="like"] svg{ width:24px; height:24px; display:block; }
-  .card-screen .cs-image .card-btn.like[data-action="like"] svg path{ fill: transparent; stroke:#ffffff; stroke-width:2; }
-  .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
-  .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
-  .card-screen .cs-image img{ width:100%; height:100%; max-height:306px; object-fit:cover; display:block; }
-  .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
-  .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
-  .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
-  .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.75; }
-  .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
-  
-
-  /* Compact markdown styles inside assistant bubbles */
-  .vw-md { line-height:1.5; }
-  .vw-md > :first-child { margin-top: 0 !important; }
-  .vw-md > :last-child { margin-bottom: 0 !important; }
-  .vw-md p { margin: 0 0 8px; }
-  .vw-md h1, .vw-md h2, .vw-md h3, .vw-md h4, .vw-md h5, .vw-md h6 { margin: 8px 0 6px; line-height:1.2; }
-  .vw-md ul, .vw-md ol { margin: 2px 0 6px 0; padding-left: 16px; }
-  .vw-md p + ul, .vw-md p + ol,
-  .vw-md h1 + ul, .vw-md h2 + ul, .vw-md h3 + ul, .vw-md h4 + ul, .vw-md h5 + ul, .vw-md h6 + ul,
-  .vw-md h1 + ol, .vw-md h2 + ol, .vw-md h3 + ol, .vw-md h4 + ol, .vw-md h5 + ol, .vw-md h6 + ol { margin-top: 4px; }
-  .vw-md li { margin: 2px 0; }
-  .vw-md blockquote { margin: 6px 0 8px; padding: 6px 10px; border-left: 2px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); border-radius: 8px; }
-  .vw-md code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: rgba(0,0,0,.25); padding: 1px 4px; border-radius: 4px; }
-  .vw-md pre { background: rgba(0,0,0,.25); padding: 10px 12px; border-radius: 10px; overflow:auto; }
-  .vw-md pre code { background: transparent; padding: 0; }
-
-  /* Links — мягкий цвет и подчёркивание */
-  .vw-md a { color: #C4B5FD; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(196,181,253,.6); }
-  .vw-md a:hover { color: #DDD6FE; text-decoration-color: rgba(221,214,254,.9); }
-  .vw-md a:visited { color: #BFA8FD; }
-
-  /* Highlight (не ссылка) */
-  .vw-md mark, .vw-md .highlight { background: rgba(167, 139, 250, 0.28); color: inherit; padding: 0 2px; border-radius: 3px; }
-  /* Ссылки, используемые как подсветка (например href="#...") — делаем как highlight и отключаем клики */
-  .vw-md a[href^="#"] { background: rgba(167, 139, 250, 0.28); color: inherit; text-decoration: none; pointer-events: none; cursor: default; border-radius: 3px; padding: 0 2px; }
-
-  /* ===== СТАРЫЕ СТИЛИ УДАЛЕНЫ, ОСТАЛСЯ ЛИШЬ СКЕЛЕТ ===== */
-
-  /* Property Card */
-  .property-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); margin-top:8px; width:100%; }
-  .card-image{ width:100%; height:200px; background-size:cover; background-position:center; background-color:#f5f5f5; }
-  .card-content{ padding:16px; }
-  .card-title{ font-weight:700; font-size:var(--fs-body); color:var(--color-text); margin-bottom:4px; }
-  .card-location{ font-size:var(--fs-small); color:var(--color-text); margin-bottom:8px; }
-  .card-price{ font-weight:600; font-size:var(--fs-body); color:var(--color-accent); margin-bottom:16px; }
-  .card-actions{ display:flex; gap:12px; }
-  .card-actions .card-btn{ flex:1; }
-  .card-btn{ height:40px; border:none; border-radius:12px; cursor:pointer; font-weight:600; font-size:var(--fs-btn); transition:transform .12s ease; }
-  .card-btn:hover{ transform:translateY(-1px); }
-  .card-btn.like{ background:linear-gradient(135deg,#FF8A4C,#FFA66E); color:#fff; }
-  .card-btn.next{ background:rgba(255,255,255,.9); color:var(--color-text); border:1px solid rgba(0,0,0,.1); }
-
-  /* Card mock inside assistant message */
-  .card-mock{ background:#fff; color:#2b2b2b; border-radius:14px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12); width:100%; }
-  .card-mock .cm-image{ height: 220px; display:flex; align-items:center; justify-content:center; background:repeating-linear-gradient(45deg, #e9e9e9, #e9e9e9 12px, #f5f5f5 12px, #f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
-  .card-mock .cm-body{ padding:5px; display:grid; gap:8px; }
-  .card-mock .cm-row{ display:flex; justify-content:space-between; gap:12px; }
-  .card-mock .cm-title{ font-weight:700; color:#2b2b2b; }
-  .card-mock .cm-sub{ font-size:12px; color:#666; }
-  .card-mock .cm-price{ font-weight:700; color:#FF8A4C; }
-  .card-actions-panel{ display:flex; gap:16px; align-items:center; }
-  .card-actions-panel .card-btn{ flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; font-size:12px; height:36px; padding:0 18px; border-radius:10px; border:1.25px solid var(--color-accent); background:transparent; color:var(--color-accent); font-weight:600; transition:all .2s ease; }
-                /* Unify in-process action buttons */
-                .card-actions-panel .card-btn{
-                  padding: var(--btn-py) var(--btn-px);
-                  height: auto;
-                  min-width: var(--btn-min-w);
-                  border-radius:var(--btn-radius);
-                  font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-                }
-  /* like (filled) */
-  .card-actions-panel .card-btn.like{ background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); }
-  .card-actions-panel .card-btn.like::before{ content:none; }
-  .card-actions-panel .card-btn.like{ position:relative; }
-  .card-actions-panel .card-btn.like:hover{ transform:translateY(-1px); }
-  /* select (filled like primary) */
-  .card-actions-panel .card-btn.select{ background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); }
-  .card-actions-panel .card-btn.select:hover{ transform:translateY(-1px); }
-  /* next (outlined) */
-  .card-actions-panel .card-btn.next{ background:transparent; color:var(--color-accent); border:1.25px solid var(--color-accent); }
-  .card-actions-panel .card-btn.next:hover{ opacity:.9; }
-
-  /* ===== Cards Slider ===== */
-  .cards-slider{ width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; position:relative; }
-  .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
-  .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:0; }
-  .card-slide.active{ transform: scale(1); opacity:1; }
-  /* flip: front and back in same grid cell (no absolute), size = max(front, back) */
-  .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:0; transition: opacity .25s ease; }
-  .card-slide-front{ opacity:1; pointer-events:auto; }
-
-  .card-slide-back{ position:relative; height:479px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:20px; box-sizing:border-box; }
-  .card-slide-back__bg{ position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.1; background-position:center; background-repeat:no-repeat; background-size:cover; }
-  .card-slide-back__bg--fallback{ background-image:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); }
-  .card-slide-back > :not(.card-slide-back__bg){ position:relative; z-index:1; }
-  .card-slide.flipped .card-slide-front{ opacity:0; pointer-events:none; }
-  .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
-  .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
-  .card-slide--form-open .card-slide-back{ display:none !important; }
-  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:479px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:20px; box-sizing:border-box; }
-  .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
-  .card-form-header__back img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
-  .card-form-header__back:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
-  .card-form-header__back:active{ transform:translateY(0); opacity:.88; }
-  .card-form-header__back:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
-  .card-form-header__spacer{ width:18px; flex-shrink:0; }
-  /* Card back: info panel (description + specs + assets + CTA) */
-  .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
-  .card-back-header__close img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
-  .card-back-header__close:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
-  .card-back-header__close:active{ transform:translateY(0); opacity:.88; }
-  .card-back-header__close:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-back-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
-  .card-back-header__spacer{ width:24px; flex-shrink:0; }
-  .card-back-description-slot{ height:180px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
-  .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
-  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:13px; font-weight: 500; color:var(--color-text); align-items:center; margin-top: 12px; }
-  .card-back-specs__item{ margin:0; }
-  .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
-  .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
-  .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
-  .card-back-asset{
-    width:60px; height:60px; border-radius:12px; flex-shrink:0;
-    border:1px solid rgba(65,120,207,.2);
-    background-color:var(--color-sub-surface);
-    background-position:center;
-    background-repeat:no-repeat;
-    background-size:cover;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:12px;
-    font-weight:700;
-    color:#a2a2a2;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, opacity .2s ease, background-color .2s ease;
-  }
-  .card-back-asset:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(0,0,0,.18); border-color:var(--color-accent); }
-  .card-back-asset:active{ transform:translateY(0); opacity:.92; }
-  .card-back-asset:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-back-asset.is-fallback{
-    background-image:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px);
-  }
-  .card-back-asset__label{ text-transform:uppercase; letter-spacing:.35px; font-size:11px; }
-  .card-back-asset.is-thumb .card-back-asset__label{ display:none; }
-  .card-slide-back .btn-open-form{ margin-top:auto; flex-shrink:0; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; }
-  .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
-  .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
-  .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
-  .cards-slider::-webkit-scrollbar-track{ background:transparent; }
-  .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
-  /* dots row inside actions area (blue theme) */
-  .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:4px 0 10px; }
-  .cards-dot{ width:12px; height:6px; border-radius:6px; background:var(--color-accent); opacity:.5; border:1px solid var(--color-accent); transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
-  .cards-dot.active{ width:24px; background:var(--color-accent); opacity:1; }
-  /* actions container for clearer boundaries */
-  .card-actions-wrap{ margin:8px; padding:10px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); }
-  .card-slide .cs{ width:100%; }
-
-  /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
-  /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */
-  .handoff-actions{ margin-top:8px; }
-  .handoff-btn{ }
-  .handoff-block{ }
-  /* RMv3 / Sprint 2 / Task 2.4: hide handoff actions when in-dialog lead block is open */
-  .handoff-actions.handoff-actions--hidden{ display:none; }
-
-  /* ===== RMv3: In-dialog lead block (UI-only, demo trigger: “Подробнее”) ===== */
-  /* ВАЖНО:
-     - новая сущность (не requestScreen/contextScreen)
-     - новые классы/ID (префикс inDialogLead*)
-     - scoped под .dialog-screen чтобы не затронуть другие экраны
-     - без ghost-email / подсказок / валидации / ошибок */
-  .dialog-screen .in-dialog-lead-block{ width:100%; margin:0; padding:0; }
-  .dialog-screen .in-dialog-lead,
-  .card-slide-back .in-dialog-lead{
-    background:var(--bg-card);
-    color:var(--color-text);
-    border-radius:14px;
-    box-shadow:none;
-    overflow:hidden;
-    width:100%;
-  }
-  .dialog-screen .in-dialog-lead{ margin-bottom: 10px; }
-  .card-slide-back .in-dialog-lead{ margin-bottom: 10px; }
-  .dialog-screen .in-dialog-lead__body,
-  .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; }
-  .card-slide-form .in-dialog-lead__body{ padding:2px; display:grid; gap:12px; max-height:100%; overflow-y:auto; }
-  .dialog-screen .in-dialog-lead__title,
-  .card-slide-back .in-dialog-lead__title{
-    font-family: var(--ff);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-text);
-    opacity: .9;
-  }
-  .dialog-screen .in-dialog-lead__row,
-  .card-slide-back .in-dialog-lead__row{ display:flex; gap: var(--space-s); align-items:center; }
-  .dialog-screen .in-dialog-lead__row > *,
-  .card-slide-back .in-dialog-lead__row > *{ flex:1 1 0; min-width:0; }
-  .dialog-screen .in-dialog-lead__field,
-  .card-slide-back .in-dialog-lead__field{ display:grid; gap:6px; }
-  .dialog-screen .in-dialog-lead__label,
-  .card-slide-back .in-dialog-lead__label{
-    font-family: var(--ff);
-    font-size: 10px;
-    font-weight: 400;
-    color: var(--color-text);
-    opacity: .75;
-  }
-  /* Phone: dial selector + input (reuse existing .dial-select/.dial-btn/.dial-list styles) */
-  .dialog-screen .in-dialog-lead__phone-row,
-  .card-slide-back .in-dialog-lead__phone-row{ display:flex; gap: var(--space-s); align-items:center; }
-  .dialog-screen .in-dialog-lead__phone-row .dial-select,
-  .card-slide-back .in-dialog-lead__phone-row .dial-select{ flex:0 0 auto; }
-  .dialog-screen .in-dialog-lead__phone-row .in-dialog-lead__input,
-  .card-slide-back .in-dialog-lead__phone-row .in-dialog-lead__input{ flex:1 1 auto; min-width:0; }
-  /* Visual reference: ctx-input (Context Screen) but with new class */
-  .dialog-screen .in-dialog-lead__input,
-  .card-slide-back .in-dialog-lead__input{
-    width:100%;
-    height: var(--field-h);
-    border-radius:10px;
-    background:rgba(106,108,155,.10);
-    border:1px solid rgba(106,108,155,.30);
-    color: var(--color-text);
-    caret-color: var(--color-text);
-    font-family: var(--ff);
-    font-size:12px;
-    font-weight:400;
-    padding:0 var(--space-s);
-    line-height: var(--field-h);
-    box-sizing:border-box;
-    transition: border-color .15s ease;
-  }
-  .dialog-screen .in-dialog-lead__input.error,
-  .card-slide-back .in-dialog-lead__input.error{ border-color:#E85F62; }
-  .dialog-screen .in-dialog-lead__input::placeholder,
-  .card-slide-back .in-dialog-lead__input::placeholder{ color: var(--color-text); opacity: .6; }
-  .dialog-screen .in-dialog-lead__input:focus,
-  .dialog-screen .in-dialog-lead__input:focus-visible,
-  .card-slide-back .in-dialog-lead__input:focus,
-  .card-slide-back .in-dialog-lead__input:focus-visible{
-    outline:none;
-    border-width:1px;
-    border-color:var(--color-accent);
-    box-shadow:none;
-  }
-  /* Visual reference: ctx-consent (Context Screen) but with new class */
-  .dialog-screen .in-dialog-lead__consent,
-  .card-slide-back .in-dialog-lead__consent{ display:flex; align-items:flex-start; gap:8px; margin-top:2px; }
-  .dialog-screen .in-dialog-lead__checkbox,
-  .card-slide-back .in-dialog-lead__checkbox{ width:12px; height:12px; margin-top:2px; }
-  .dialog-screen .in-dialog-lead__checkbox.error,
-  .card-slide-back .in-dialog-lead__checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
-  .dialog-screen .in-dialog-lead__consent-text,
-  .card-slide-back .in-dialog-lead__consent-text{
-    font-family: var(--ff);
-    font-size:10px;
-    font-weight:400;
-    color: var(--color-text);
-    opacity: .85;
-    line-height:1.4;
-    margin-bottom: 25px;
-  }
-  .dialog-screen .in-dialog-lead__privacy-link,
-  .card-slide-back .in-dialog-lead__privacy-link{ color:var(--color-accent); text-decoration:none; }
-  .dialog-screen .in-dialog-lead__error,
-  .card-slide-back .in-dialog-lead__error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
-  .dialog-screen .in-dialog-lead__error.visible,
-  .card-slide-back .in-dialog-lead__error.visible{ display:block; }
-  /* Visual reference: ctx-send-btn (Context Screen) but with new class */
-  .dialog-screen .in-dialog-lead__actions,
-  .card-slide-back .in-dialog-lead__actions{ display:flex; gap: var(--space-m); margin-top: 6px; }
-  .dialog-screen .in-dialog-lead__send,
-  .card-slide-back .in-dialog-lead__send{
-    flex:1 1 0;
-    min-width: var(--btn-min-w);
-    padding: var(--btn-py) var(--btn-px);
-    background:var(--color-accent);
-    color: #fff;
-    border:1.25px solid var(--color-accent);
-    border-radius: var(--btn-radius);
-    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-    cursor:pointer;
-    transition: opacity .15s ease, transform .12s ease;
-  }
-  .dialog-screen .in-dialog-lead__send:hover,
-  .card-slide-back .in-dialog-lead__send:hover{ opacity:.9; transform: translateY(-1px); }
-  .dialog-screen .in-dialog-lead__send:active,
-  .card-slide-back .in-dialog-lead__send:active{ transform: translateY(0); opacity:.85; }
-  /* Cancel button (visual reference: ctx-cancel-btn, but isolated) */
-  .dialog-screen .in-dialog-lead__cancel,
-  .card-slide-back .in-dialog-lead__cancel{
-    flex:1 1 0;
-    min-width: var(--btn-min-w);
-    padding: var(--btn-py) var(--btn-px);
-    background:transparent;
-    color:var(--color-accent);
-    border:1.25px solid var(--color-accent);
-    border-radius: var(--btn-radius);
-    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-    cursor:pointer;
-    transition: opacity .15s ease, transform .12s ease;
-  }
-  .dialog-screen .in-dialog-lead__cancel:hover,
-  .card-slide-back .in-dialog-lead__cancel:hover{ opacity:.9; transform: translateY(-1px); }
-  .dialog-screen .in-dialog-lead__cancel:active,
-  .card-slide-back .in-dialog-lead__cancel:active{ transform: translateY(0); opacity:.85; }
-
-  /* In-dialog thanks (UI-only) */
-  .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color: var(--color-text); margin-bottom:6px; text-align:center; }
-  .dialog-screen .in-dialog-thanks__text{ font-size:12px; font-weight:400; color: var(--color-text); opacity: .85; text-align:center; line-height:1.35; }
-  .dialog-screen .in-dialog-thanks__actions{ display:flex; justify-content:center; margin-top:14px; }
-  .dialog-screen .in-dialog-thanks__close{
-    padding: var(--btn-py) var(--btn-px);
-    min-width: var(--btn-min-w);
-    background:var(--color-accent);
-    color:#fff;
-    border:1.25px solid var(--color-accent);
-    border-radius: var(--btn-radius);
-    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-    cursor:pointer;
-    transition: opacity .15s ease, transform .12s ease;
-  }
-  .dialog-screen .in-dialog-thanks__close:hover{ opacity:.9; transform: translateY(-1px); }
-  .dialog-screen .in-dialog-thanks__close:active{ transform: translateY(0); opacity:.85; }
-
-  /* ===== Inline Lead Bubbles ===== */
-
-  /* Input (moved to unified block below) */
- 
-  
-  /* v2 input: скрываем плейсхолдер во время записи */
-  .text-input-wrapper.recording .input-field::placeholder { opacity:0; color:transparent; }
-  .text-input-wrapper{ flex:1; position:relative; display:flex; align-items:center; }
-
-  /* Индикатор записи рендерим там же, где плейсхолдер */
-  .recording-indicator{
-    position:absolute; left:10px; right:auto; top:50%; bottom:auto;
-    transform:translateY(-50%);
-    display:flex; align-items:center; gap:6px; background:transparent; pointer-events:none;
-    height:auto; padding:0;
-  }
-  .recording-label{ color:#A0A0A0; font-family: var(--ff); font-size:14px; font-weight:400; letter-spacing:0; opacity:1; }
-  @keyframes shake{ 0%,100%{ transform:translateX(0); } 10%,30%,50%,70%,90%{ transform:translateX(-2px); } 20%,40%,60%,80%{ transform:translateX(2px); } }
-  .shake{ animation:shake .5s ease-in-out; }
-  .record-timer{ color:#A0A0A0; font-family: var(--ff); font-size:14px; font-weight:400; letter-spacing:0; min-width:42px; text-align:left; }
-
-  
-
-  .loading{ position:absolute; display:none; align-items:center; justify-content:center; background: rgba(53,67,96,0.10); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
-  .loading.active{ display:flex; }
-  .loading-text{ color:#ffffff; font-size:16px; font-weight:400; font-family: var(--ff); display:flex; align-items:center; gap:4px; }
-  .loading-text .dots{ display:inline-flex; gap:2px; margin-left:2px; }
-  .loading-text .dots span{ display:inline-block; opacity:.2; animation:dotBlink 1.2s infinite ease-in-out; }
-  .loading-text .dots .d1{ animation-delay:0s; }
-  .loading-text .dots .d2{ animation-delay:.15s; }
-  .loading-text .dots .d3{ animation-delay:.3s; }
-  @keyframes dotBlink{ 0%,100%{ opacity:.2; transform:translateY(0); } 50%{ opacity:1; transform:translateY(-2px); } }
-
-  /* ===== УДАЛЕНО: старая overlay lead‑форма v1 (.lead-panel/.lead-box и т.д.).
-     Важно: inline lead поток (renderInlineLeadStep) ранее использовал классы .lead-box/.lead-input/.lead-select/.lead-textarea.
-     В v2 нужна новая реализация под requestScreen (экраны и логика уже есть). Эти стили будут переосмыслены при необходимости. ===== */
-
-  /* ===== Responsive & Mobile polish (deleted) ===== */
-
-
-
- 
-
-  /* === V2 styles appended (cascade override) === */
-                /* Основные стили виджета */
-                :host {
-                    all: initial;
-                    font-size: 16px !important;
-                    line-height: 1.4;
-                    letter-spacing: normal;
-                    box-sizing: border-box;
-                    color: var(--color-text);
-                    font-family: var(--ff);
-                    text-align: left;
-                    direction: ltr;
-                    display: block;
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
-                    z-index: 9999;
-                    pointer-events: auto;  /* клики только по виджету; #vw-host — pointer-events: none */
-                    /* В закрытом состоянии host = только область лаунчера */
-                    width: 60px;
-                    height: 60px;
-                }
-                :host(.open) {
-                    width: auto;
-                    height: auto;
-                }
-                @media (min-width: 768px) {
-                  :host:not(.open) {
-                    width: fit-content;
-                    min-width: 240px;
-                    height: auto;
-                    min-height: clamp(60px, 6vw, 72px);
-                  }
-                }
-                @media (max-width: 450px){
-                  /* На мобилках :host не фиксируем — пусть следует флексу #vw-host */
-                  :host{
-                    position: static;
-                    bottom: auto;
-                    right: auto;
-                  }
-                }
-                
-                /* ========================= */
-                /*      Typography tokens    */
-                /* ========================= */
-                :host {
-                  /* family */
-                  --ff: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-                  /* theme colors (dark default) */
-                  --color-bg: #161515;
-                  --color-text: #FFFFFF;
-                  --color-accent: #4178CF;
-                  --bg-card: #363636;
-                  --bg-bubble: rgba(71, 106, 165, 0.5);
-                  --dialogue-border: rgba(255, 255, 255, 0.1);
-                  /* sub-surface tokens */
-                  --color-sub-dark: rgba(255, 255, 255, 0.04);
-                  --color-sub-light: rgba(0, 0, 0, 0.06);
-                  --color-sub-surface: var(--color-sub-dark);
-                  /* weights */
-                  --fw-r: 400;
-                  --fw-m: 500;
-                  --fw-s: 600;
-                  --fw-b: 700;
-                  /* sizes in em (от :host font-size: 14px — виджет автономен) */
-                  --fs-display: 1.428em;   /* ~20px */
-                  --fs-h1: 1.286em;        /* ~18px */
-                  --fs-h2: 1.143em;        /* ~16px */
-                  --fs-h3: 1em;            /* 14px */
-                  --fs-body: 1em;          /* 14px */
-                  --fs-body-alt: 0.929em;  /* ~13px */
-                  --fs-small: 0.857em;     /* ~12px */
-                  --fs-btn: 0.857em;       /* ~12px */
-                  --fs-micro: 0.714em;     /* ~10px */
-                  /* line-heights */
-                  --lh-tight: 1.2;
-                  --lh-normal: 1.4;
-                  --lh-loose: 1.6;
-                  /* spacing tokens (based on 14px root) */
-                  --space-xxs: 0.286em;   /* ~4px */
-                  --space-xs:  0.571em;   /* ~8px */
-                  --space-s:   0.714em;   /* ~10px */
-                  --space-m:   0.857em;   /* ~12px */
-                  --space-l:   1.143em;   /* ~16px */
-                  --space-xl:  1.714em;   /* ~24px */
-                  --space-xxl: 4.286em;   /* ~60px */
-                  /* unified action button sizes (em) based on 14px scale */
-                 
-                  --btn-radius: 0.714em;   /* ~10px */
-                  --btn-px: 1.143em;       /* ~16px horizontal padding */
-                  --btn-py: 0.857em;       /* ~12px vertical padding */
-                  --btn-min-w: 7.143em;    /* ~100px min width */
-                  /* form field height */
-                  --field-h: 3.5em;        /* ~35px */
-                  /* context progress ring */
-                  --ring: clamp(72px, 26vw, 100px);
-                  /* iOS text zoom handling */
-                  -webkit-text-size-adjust: 100%;
-                  text-size-adjust: 100%;
-                }
-                :host([data-theme="light"]),
-                :host([theme="light"]) {
-                  --color-bg: #F7F7F7;
-                  --color-text: #3D3D3D;
-                  --color-accent: #4178CF;
-                  --bg-card: #D7DBE3;
-                  --bg-bubble: rgba(190, 198, 210, 0.5);
-                  --dialogue-border: rgba(0, 0, 0, 0.1);
-                  --color-sub-surface: var(--color-sub-light);
-                }
-                :host([data-theme="light"]) .widget-bubble,
-                :host([theme="light"]) .widget-bubble,
-                :host([data-theme="light"]) .dialog-screen .in-dialog-lead,
-                :host([theme="light"]) .dialog-screen .in-dialog-lead {
-                  background: var(--bg-card);
-                }
-                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__title,
-                :host([theme="light"]) .dialog-screen .in-dialog-lead__title,
-                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__label,
-                :host([theme="light"]) .dialog-screen .in-dialog-lead__label,
-                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__consent-text,
-                :host([theme="light"]) .dialog-screen .in-dialog-lead__consent-text {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__input,
-                :host([theme="light"]) .dialog-screen .in-dialog-lead__input {
-                  color: var(--color-text);
-                  caret-color: var(--color-text);
-                  background: rgba(0, 0, 0, 0.06);
-                  border-color: rgba(0, 0, 0, 0.15);
-                }
-                :host([data-theme="light"]) .dialog-screen .in-dialog-lead__input::placeholder,
-                :host([theme="light"]) .dialog-screen .in-dialog-lead__input::placeholder {
-                  color: var(--color-text);
-                  opacity: .5;
-                }
-                :host([data-theme="light"]) .dialog-screen .in-dialog-thanks__title,
-                :host([theme="light"]) .dialog-screen .in-dialog-thanks__title,
-                :host([data-theme="light"]) .dialog-screen .in-dialog-thanks__text,
-                :host([theme="light"]) .dialog-screen .in-dialog-thanks__text {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .user-bubble,
-                :host([theme="light"]) .user-bubble {
-                  background: transparent;
-                  border: 1px solid var(--color-accent);
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .card-screen .cs,
-                :host([theme="light"]) .card-screen .cs {
-                  background: var(--bg-card);
-                  color: #000000;
-                }
-                :host([data-theme="light"]) .card-screen .cs-title,
-                :host([theme="light"]) .card-screen .cs-title,
-                :host([data-theme="light"]) .card-screen .cs-sub,
-                :host([theme="light"]) .card-screen .cs-sub,
-                :host([data-theme="light"]) .card-screen .cs-price,
-                :host([theme="light"]) .card-screen .cs-price {
-                  color: #000000;
-                }
-                :host([data-theme="light"]) .menu-language-dropdown,
-                :host([theme="light"]) .menu-language-dropdown {
-                  background: var(--bg-card);
-                }
-                :host([data-theme="light"]) .input-container,
-                :host([theme="light"]) .input-container {
-                  background:
-                    linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-                    #4178CF border-box;
-                }
-                :host([data-theme="light"]) .launcher__title,
-                :host([theme="light"]) .launcher__title {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .launcher__subtitle,
-                :host([theme="light"]) .launcher__subtitle {
-                  color: var(--color-text);
-                  opacity: .72;
-                }
-                :host([data-theme="light"]) .main-text,
-                :host([theme="light"]) .main-text,
-                :host([data-theme="light"]) .sub-text,
-                :host([theme="light"]) .sub-text {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .bg-grid,
-                :host([theme="light"]) .bg-grid {
-                  background:
-                    repeating-linear-gradient(to right, rgba(65, 120, 207, 0.03) 0 1px, transparent 1px 50px),
-                    repeating-linear-gradient(to bottom, rgba(65, 120, 207, 0.03) 0 1px, transparent 1px 70px);
-                }
-                :host([data-theme="light"]) .menu-link,
-                :host([theme="light"]) .menu-link,
-                :host([data-theme="light"]) .data-storage-text,
-                :host([theme="light"]) .data-storage-text,
-                :host([data-theme="light"]) .main-message,
-                :host([theme="light"]) .main-message,
-                :host([data-theme="light"]) .footer-text,
-                :host([theme="light"]) .footer-text,
-                :host([data-theme="light"]) .ctx-consent .ctx-consent-text,
-                :host([theme="light"]) .ctx-consent .ctx-consent-text,
-                :host([data-theme="light"]) .dial-btn,
-                :host([theme="light"]) .dial-btn {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .ctx-input,
-                :host([theme="light"]) .ctx-input,
-                :host([data-theme="light"]) .ctx-textarea,
-                :host([theme="light"]) .ctx-textarea {
-                  color: var(--color-text);
-                  caret-color: var(--color-text);
-                }
-                :host([data-theme="light"]) .request-title,
-                :host([theme="light"]) .request-title,
-                :host([data-theme="light"]) .request-field-label,
-                :host([theme="light"]) .request-field-label,
-                :host([data-theme="light"]) .request-consent-text,
-                :host([theme="light"]) .request-consent-text {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .request-select-list,
-                :host([theme="light"]) .request-select-list {
-                  background: var(--bg-card);
-                }
-                :host([data-theme="light"]) .dial-list,
-                :host([theme="light"]) .dial-list {
-                  background: var(--bg-card);
-                }
-                :host([data-theme="light"]) .dial-item,
-                :host([theme="light"]) .dial-item {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .dial-item:hover,
-                :host([theme="light"]) .dial-item:hover {
-                  background: rgba(0, 0, 0, 0.08);
-                }
-                :host([data-theme="light"]) .request-select,
-                :host([theme="light"]) .request-select {
-                  color: var(--color-text);
-                }
-                :host([data-telegram="1"]) {
-                    position: fixed;
-                    inset: 0;
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    bottom: auto !important;
-                    right: auto !important;
-                }
-                :host([data-telegram="1"]) .launcher {
-                    display: none !important;
-                }
-                :host([data-telegram="1"]) .widget {
-                    position: fixed;
-                    inset: 0;
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    min-width: 100vw !important;
-                    min-height: 100vh !important;
-                    border-radius: 0 !important;
-                    box-shadow: none !important;
-                    overflow: hidden;
-                    opacity: 1;
-                    pointer-events: auto;
-                }
-                :host([data-telegram="1"]) .voice-widget-container {
-                    width: 100vw !important;
-                    height: 100vh !important;
-                    min-height: 100vh !important;
-                    max-height: none !important;
-                    max-width: none !important;
-                    border-radius: 0 !important;
-                    box-shadow: none !important;
-                }
-                :host([data-telegram="1"]) .dialog-screen .dialogue-container {
-                    max-width: none;
-                }
-                :host([data-theme="light"]) .request-select-item,
-                :host([theme="light"]) .request-select-item {
-                  color: var(--color-text);
-                }
-                :host([data-theme="light"]) .request-input,
-                :host([theme="light"]) .request-input,
-                :host([data-theme="light"]) .request-textarea,
-                :host([theme="light"]) .request-textarea {
-                  color: var(--color-text);
-                  caret-color: var(--color-text);
-                }
-                :host([data-theme="light"]) .input-field,
-                :host([theme="light"]) .input-field {
-                  color: var(--color-text);
-                  caret-color: var(--color-text);
-                }
-                /* Base font normalization to ensure consistent typography across screens */
-                :host { font-family: var(--ff); }
-                .voice-widget-container { font-family: var(--ff); }
-                button, input, select, textarea { font-family: inherit; }
-                /* Ensure chips and property card inherit widget font */
-                .property-card { font-family: var(--ff); }
-                /* semantic text classes */
-                .text-display { font: var(--fw-s) var(--fs-display)/var(--lh-tight) var(--ff); }
-                .text-h1      { font: var(--fw-s) var(--fs-h1)/var(--lh-tight) var(--ff); }
-                .text-h2      { font: var(--fw-s) var(--fs-h2)/var(--lh-tight) var(--ff); }
-                .text-h3      { font: var(--fw-s) var(--fs-h3)/var(--lh-normal) var(--ff); }
-                .text-body    { font: var(--fw-r) var(--fs-body)/var(--lh-normal) var(--ff); }
-                .text-body-alt{ font: var(--fw-r) var(--fs-body-alt)/var(--lh-normal) var(--ff); }
-                .text-small   { font: var(--fw-r) var(--fs-small)/var(--lh-normal) var(--ff); }
-                .text-micro   { font: var(--fw-r) var(--fs-micro)/var(--lh-loose) var(--ff); opacity:.85; }
-                /* placeholder helpers (назначаются на input/textarea) */
-                .placeholder-main::placeholder  { font: var(--fw-r) var(--fs-h3)/1 var(--ff); opacity:.65; }
-                .placeholder-field::placeholder { font: var(--fw-r) var(--fs-small)/1 var(--ff); opacity:.65; }
-                /* buttons text */
-                .btn-text-primary   { font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
-                .btn-text-secondary { font: var(--fw-s) var(--fs-btn)/1 var(--ff); opacity:.95; }
-                /* color helpers */
-                .text-primary  { color: var(--color-text); }
-                .text-secondary{ color: var(--color-text); opacity:.85; }
-                .text-hint     { color: var(--color-text); opacity:.65; }
-                .text-accent   { color: var(--color-accent); }
-                
-                .voice-widget-container {
-                    width: clamp(320px, 92vw, 380px);
-                    height: clamp(560px, 88vh, 720px);
-                    background: var(--color-bg);
-                    color: var(--color-text);
-                    border-radius: 20px;
-                    position: relative;
-                    overflow: hidden;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    padding: 16px;
-                    box-sizing: border-box;
-                    gap: 12px;
-                }
-                /* Decorative grid overlay inside widget (1px lines) */
-                .bg-grid{
-                  position:absolute;
-                  inset:0;
-                  pointer-events:none;
-                  z-index:1; /* выше эллипсов, ниже контента */
-                  background:
-                    repeating-linear-gradient(to right, rgba(255,255,255,0.03) 0 1px, transparent 1px 50px),
-                    repeating-linear-gradient(to bottom, rgba(255,255,255,0.03) 0 1px, transparent 1px 70px);
-                }
-                /* Main screen sections */
-                .main-header{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; gap:20px; padding: 15px }
-                .main-header-grid{ width:100%; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
-                .header-action{
-                  width:36px; height:36px;
-                  display:inline-flex; align-items:center; justify-content:center;
-                  border-radius:10px; background:transparent;
-                  border:none; outline:none; appearance:none; -webkit-appearance:none;
-                  cursor:pointer; -webkit-tap-highlight-color:transparent;
-                  transition: opacity .15s ease;
-                }
-                /* hover меняет только саму иконку */
-                .header-action:hover{ background: transparent; }
-                .header-action:focus, .header-action:focus-visible{ outline:none; box-shadow:none; }
-                .header-action img{ width:36px; height:36px; display:block; transition: opacity .15s ease; }
-                .header-action:hover img{ opacity:.82; }
-                .header-left{ justify-self:start; }
-                .header-right{ justify-self:end; }
-                .logo{ width:auto; height:24px; display:block; }
-                .main-center{ flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
-                .main-hero{ width:100%; display:flex; justify-content:center; }
-                .main-copy{ width:100%; max-width:360px; text-align:center; }
-                
-                /* Логотип */
-                .logo {
-                    width: auto;
-                    height: auto;
-                    align-self: center;
-                }
-                
-                /* Декоративная градиентная линия */
-                .gradient-line {
-                    width: 100%;
-                    max-width: 320px;
-                    height: 2px;
-                    border-radius: 1px;
-                    background: linear-gradient(90deg, rgba(90, 127, 227, 0) 0%, rgba(148, 51, 50, 1) 50%, rgba(85, 122, 219, 0) 100%);
-                    margin: 4px auto 0;
-                }
-                
-                /* Кнопка микрофона */
-                .mic-button {
-                    width: clamp(80px, 28vw, 100px);
-                    height: clamp(80px, 28vw, 100px);
-                    background: transparent; /* remove default button bg */
-                    border: none;            /* remove default button border */
-                    padding: 0;              /* collapse inner spacing */
-                    outline: none;           /* remove default focus ring */
-                    -webkit-tap-highlight-color: transparent; /* remove iOS highlight */
-                    cursor: pointer;
-                    transition: transform 0.3s ease;
-                }
-                
-                .mic-button img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: contain;
-                }
-                
-                .mic-button:hover { transform: scale(1.05); }
-                .mic-button:focus, .mic-button:focus-visible { outline: none; box-shadow: none; }
-                .mic-button::-moz-focus-inner { border: 0; }
-                
-                /* Тексты под кнопкой */
-                .text-container { text-align: center; margin-top: 8px; }
-                
-                .main-text {
-                    font-family: var(--ff);
-                    font-weight: 600;
-                    font-size: 20px;
-                    color: #FFFFFF;
-                    margin: 0;
-                    line-height: 1.2;
-                }
-                
-                .sub-text {
-                    font-family: var(--ff);
-                    font-weight: 300;
-                    font-size: 14px;
-                    color: #A0A0A0;
-                    margin: 20px 0 0 0;
-                    line-height: 1.2;
-                }
-                
-                /* Поле ввода */
-                .input-container {
-                    width: 100%;
-                    max-width: 360px;
-                    height: 60px;
-                    background:
-                      linear-gradient(#2B272C, #2B272C) padding-box,
-                    #4178CF border-box;
-                    border: 1px solid transparent;
-                    border-radius: 40px;
-                    display: flex;
-                    gap: 12px;
-                    align-items: center;
-                    padding: 0 10px;
-                    box-sizing: border-box;
-                    position: relative;
-                    box-shadow: 0 8px 24px rgba(0,0,0,.10);
-                    margin: var(--space-xxl) 0 var(--space-s) 0;
-                }
-                
-                /* Dialogue screen layout: keep history scrollable and input at the bottom */
-                .dialog-screen .voice-widget-container{ display:flex; flex-direction:column; }
-                .dialog-screen .dialogue-container{
-                    /* override legacy absolute layout */
-                    position: static; top: auto; left: auto; right: auto; bottom: auto;
-                    width: 100%; max-width: 360px; margin: 0 auto;
-                    flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;
-                    /* Anchor thread to bottom when content is short (messenger-like) */
-                    display: flex; 
-                    flex-direction: column; 
-                    justify-content: flex-end;
-                }
-                .dialog-screen .input-container{
-                    margin: auto 0 var(--space-s) 0; /* top:auto pushes input to bottom */
-                }
-                
-                /* Make other v2 screens scrollable within widget bounds */
-                .context-screen .voice-widget-container,
-                .request-screen .voice-widget-container{
-                    display:flex;
-                    flex-direction:column;
-                }
-                .context-screen .context-main-container,
-                .request-screen .request-main-container{
-                    flex:1;
-                    min-height:0;
-                    overflow-y:auto; overflow-x:hidden;
-                }
-                
-                
-                
-                .input-field {
-                    flex: 1;
-                    background: transparent;
-                    border: none;
-                    outline: none;
-                    color: #FFFFFF;
-                    font-family: var(--ff);
-                    font-size: 14px;
-                    font-weight: 400;
-                    padding: 0 10px;
-                }
-                
-                .input-field::placeholder {
-                    color: #A0A0A0;
-                }
-                /* Multiline support for textarea inputs */
-                textarea.input-field{
-                    width:100%;
-                    height:auto;
-                    min-height:18px;
-                    max-height:100px;
-                    line-height:1.3;
-                    resize:none;
-                    overflow-y:auto; /* скроллим, но прячем полосу */
-                    padding-top:8px;
-                    padding-bottom:8px;
-                    /* скрыть полосы прокрутки во всех движках */
-                    scrollbar-width: none;          /* Firefox */
-                    -ms-overflow-style: none;       /* IE/Edge */
-                }
-                textarea.input-field::-webkit-scrollbar{
-                    width:0; height:0;             /* WebKit */
-                }
-                
-                .input-buttons {
-                    display: flex;
-                    gap: 10px;
-                    align-items: center;
-                }
-                
-                .input-btn {
-                    width: 38px;
-                    height: 38px;
-                    background: transparent;
-                    border: none;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: opacity 0.3s ease;
-                    position: relative;
-                    z-index: 1;
-                }
-                
-                .input-btn:hover {
-                    opacity: 0.7;
-                }
-                
-                .input-btn svg {
-                    width: 38px;
-                    height: 38px;
-                    fill: #FFFFFF;
-                }
-                .input-btn img {
-                    width: 38px;
-                    height: 38px;
-                    display: block;
-                }
-                
-                /* Стили для заглушек экранов */
-                .screen-label {
-                    position: absolute;
-                    top: 20px;
-                    left: 20px;
-                    background: rgba(255, 255, 255, 0.1);
-                    color: #FFFFFF;
-                    padding: 8px 16px;
-                    border-radius: 20px;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 500;
-                    z-index: 10;
-                }
-                
-                .placeholder-content {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    text-align: center;
-                    color: #FFFFFF;
-                }
-                
-                .placeholder-content h3 {
-                    font-family: var(--ff);
-                    font-size: 24px;
-                    font-weight: 600;
-                    margin: 0 0 16px 0;
-                }
-                
-                .placeholder-content p {
-                    font-family: var(--ff);
-                    font-size: 16px;
-                    font-weight: 400;
-                    color: #A0A0A0;
-                    margin: 0;
-                }
-                
-                /* Стили для Dialog Screen */
-                .screen-header{
-                    width:100%; max-width:320px; height:60px; margin:0 auto;
-                    display:grid; grid-template-columns:1fr auto 1fr; align-items:center; position:relative; z-index:2;
-                }
-                /* overlay в диалоге должен перекрывать всю сетку хедера */
-                .screen-header .menu-overlay{ grid-column:1 / -1; grid-row:1; z-index:4; }
-                .screen-header .header-action{ grid-row:1; }
-                .screen-header .header-left{ grid-column:1; justify-self:start; }
-                .screen-header .header-right{ grid-column:3; justify-self:end; }
-                .screen-header .header-logo{ grid-column:2; grid-row:1; justify-self:center; width:auto; height:18px; display:block; }
-                /* скрываем крайние кнопки при открытом меню */
-                .screen-header.menu-opened .header-action{ display:none; }
-                .screen-header.menu-opened .header-logo{ display:none; }
-                /* Close button inside grid (center column) */
-                .menu-close-btn{ width:40px; height:40px; background:transparent; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:100px; transition: background .15s ease, transform .15s ease; }
-                .menu-close-btn:hover{ background: rgba(255,255,255,.10); }
-                .menu-close-btn:active{ transform: scale(.96); }
-                .menu-close-btn img{ width:40px; height:40px; display:block; border-radius:100px; }
-                
-                .dialogue-container {
-                    position: absolute;
-                    top: 85px;
-                    left: 10px;
-                    right: 10px;
-                    width: 360px;
-                    height: 540px;
-                    border-radius: 20px;
-                    border: 1px solid var(--dialogue-border);
-                    background: transparent;
-                    overflow-y: auto;
-                    padding: 20px;
-                    box-sizing: border-box;
-                }
-                /* overlay sized to dialogue viewport */
-                .dialog-overlay{ top:85px; left:10px; right:10px; height:540px; }
-                /* v1-like thin scrollbar for dialogue container */
-                .dialogue-container::-webkit-scrollbar{ width:2px; }
-                .dialogue-container::-webkit-scrollbar-track{ background:transparent; }
-                .dialogue-container::-webkit-scrollbar-thumb{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%); border-radius:1px; }
-                .dialogue-container::-webkit-scrollbar-thumb:hover{ background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%); }
-                .dialogue-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
-                /* Thin scrollbar for other scrollable screens */
-                .context-main-container::-webkit-scrollbar,
-                .request-main-container::-webkit-scrollbar{ width:2px; }
-                .context-main-container::-webkit-scrollbar-track,
-                .request-main-container::-webkit-scrollbar-track{ background:transparent; }
-                .context-main-container::-webkit-scrollbar-thumb,
-                .request-main-container::-webkit-scrollbar-thumb{
-                    background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.5) 20%,rgba(100,100,100,.5) 80%,transparent 100%);
-                    border-radius:1px;
-                }
-                .context-main-container::-webkit-scrollbar-thumb:hover,
-                .request-main-container::-webkit-scrollbar-thumb:hover{
-                    background:linear-gradient(to bottom,transparent 0%,rgba(100,100,100,.7) 20%,rgba(100,100,100,.7) 80%,transparent 100%);
-                }
-                .context-main-container,
-                .request-main-container{ scrollbar-width:thin; scrollbar-color:rgba(100,100,100,.5) transparent; }
-                
-                .message-bubble {
-                    border-radius: 10px;
-                    padding: 10px;
-                    margin-bottom: 16px;
-                    font-family: var(--ff);
-                    font-size: 14px;
-                    line-height: 1.4;
-                    word-wrap: break-word;
-                    max-width: 97%;
-                }
-                
-                .widget-bubble {
-                    background: var(--bg-bubble);
-                    color: var(--color-text);
-                    margin-right: 20px;
-                    margin-left: 0;
-                    white-space: pre-line;
-                }
-                
-                .user-bubble {
-                    background: transparent;
-                    border: 1px solid var(--color-accent);
-                    color: var(--color-text);
-                    margin-left: 20px;
-                    margin-right: 0;
-                    margin-left: auto;
-                }
-                
-                /* Стили для Context Screen */
-                .context-main-container {
-                    position: static;
-                    width: 100%;
-                    max-width: 360px;
-                    margin: var(--space-l) auto 0;
-                    padding: 0 var(--space-l);
-                    text-align: center;
-                }
-                
-                .progress-grid-container {
-                    display: grid;
-                    grid-template-columns: minmax(0,1fr) var(--ring) minmax(0,1fr);
-                    align-items: center;
-                    gap: var(--space-s);
-                    margin-bottom: 10px;
-                }
-                
-                .grid-column-left {
-                    /* Пустая левая колонка */
-                }
-                
-                .grid-column-center {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                }
-                
-                .grid-column-right {
-                    display: flex;
-                    align-items: center;
-                    padding-left: 20px;
-                }
-                
-                .progress-ring {
-                    position: relative;
-                    width: var(--ring);
-                    height: var(--ring);
-                }
-                
-                .progress-text {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    font-family: var(--ff);
-                    font-size: clamp(0.857rem, 2.8vw, 1.286rem);
-                    font-weight: 400;
-                    color: var(--color-accent) ;
-                }
-                
-                .data-storage-text {
-                    font-family: var(--ff);
-                    font-size: var(--fs-micro);
-                    font-weight: 400;
-                    color: #A9A9A9;
-                    cursor: pointer;
-                    transition: transform .15s ease, opacity .15s ease;
-                }
-                .data-storage-text:hover{ transform: scale(1.1); opacity:.9; }
-                
-                /* Data storage popup */
-                .data-overlay{ position:absolute; inset:0; background:rgba(0,0,0,.45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; z-index:20; }
-                .data-modal{ width: calc(100% - 40px); max-width:320px; border-radius:16px; background:rgba(23,22,24,.95); border:1px solid rgba(106,108,155,.30); padding:16px; color:#FFFFFF; text-align:center; }
-                .data-title{ font-size:14px; font-weight:600; margin:0 0 8px 0; text-align:center; }
-                .data-body{ font-size:12px; font-weight:400; color:#C3C3C3; line-height:1.5; }
-                .data-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin:14px auto 0; display:flex; align-items:center; justify-content:center; }
-                .data-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
-                
-                .status-text {
-                    font-family: var(--ff);
-                    font-size: var(--fs-micro);
-                    font-weight: 400;
-                    color: var(--color-accent);
-                    margin-bottom: var(--space-xl);
-                }
-                
-                .main-message {
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 400;
-                    color: #FFFFFF;
-                    line-height: 1.4;
-                    margin-bottom: var(--space-m);
-                }
-                
-                .context-gradient-line {
-                    width: 320px;
-                    height: 2px;
-                    border-radius: 1px;
-                    background: linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%);
-                    margin: 0 auto 10px auto;
-                }
-                
-                .hint-text {
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 200;
-                    color: var(--color-text);
-                    line-height: 1.4;
-                    margin-bottom: 25px;
-                }
-                
-                .context-leave-request-button {
-                    text-align: center;
-                }
-                
-                .context-leave-request-btn {
-                    /* thematic color */
-                    padding: var(--btn-py) var(--btn-px);
-                    min-width: var(--btn-min-w);
-                    background: var(--color-accent);
-                    border: none;
-                    border-radius: var(--btn-radius);
-                    color: #FFFFFF;
-                    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-                    cursor: pointer;
-                    transition: opacity 0.3s ease;
-                }
-                
-                .context-leave-request-btn:hover {
-                    opacity: 0.8;
-                }
-                
-                /* ===== Context: inline request form ===== */
-                .ctx-request-form{ display:none; margin-top:16px; }
-                .ctx-field{ margin-bottom: var(--space-m); text-align:left; }
-                /* compact row for contact fields */
-                .ctx-row{ display:flex; gap: var(--space-s); align-items: center; }
-                .ctx-row .ctx-input{ flex:1 1 0; min-width:0; }
-                .ctx-input{ width:100%; height: var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family: var(--ff); font-size:12px; font-weight:400; padding:0 var(--space-s); line-height: var(--field-h); box-sizing:border-box; transition: border-color .15s ease; }
-                .ctx-input.error{ border-color:#E85F62; }
-                .ctx-input:focus,
-                .ctx-input:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
-                .ctx-textarea{ width:100%; min-height:80px; border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; caret-color:#FFFFFF; font-family: var(--ff); font-size:12px; font-weight:400; padding:10px; resize:vertical; box-sizing:border-box; }
-                .ctx-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
-                .ctx-textarea::-webkit-scrollbar{ width:0; height:0; }
-                .ctx-textarea:focus,
-                .ctx-textarea:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
-                .ctx-textarea.error{ border-color:#E85F62; }
-                .ctx-consent{ display:flex; align-items:flex-start; gap:8px; margin-top:6px; }
-                .ctx-consent .ctx-checkbox{ width:12px; height:12px; margin-top:2px; }
-                .ctx-consent .ctx-consent-text{ font-family: var(--ff); font-size:10px; font-weight:400; color:#C4C4C4; line-height:1.4; }
-                .ctx-consent .ctx-privacy-link{ color:var(--color-accent); text-decoration:none; }
-                .ctx-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
-                .ctx-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
-                .ctx-error.visible{ display:block; }
-                .ctx-actions{ display:flex; gap: var(--space-m); justify-content: space-between; margin-top: var(--space-m); }
-                .ctx-send-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
-                .ctx-cancel-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:transparent; color:var(--color-accent); border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; }
-                .ctx-actions .ctx-send-btn, .ctx-actions .ctx-cancel-btn{ flex:1 1 0; min-width:0; }
-                .ctx-send-btn, .ctx-cancel-btn, .ctx-done-btn{ font: var(--fw-s) var(--fs-btn)/1 var(--ff); }
-                
-                /* thanks block after send */
-                .ctx-thanks{ display:none; margin-top:16px; text-align:center; }
-                .ctx-thanks-title{ font-size:14px; font-weight:600; color:#FFFFFF; margin-bottom:6px; }
-                .ctx-thanks-text{ font-size:12px; font-weight:400; color:#C4C4C4; }
-                .ctx-thanks .ctx-done-btn{ padding:var(--btn-py) var(--btn-px); min-width:var(--btn-min-w); background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); border-radius:var(--btn-radius); font-size:12px; font-weight:600; cursor:pointer; margin-top:14px; }
-                
-                .footer-text {
-                    position: relative;
-                    margin: 0 auto;
-                    font-family: var(--ff);
-                    font-size: 10px;
-                    font-weight: 400;
-                    color: #A9A9A9;
-                    text-align: center;
-                    cursor: pointer;
-                    transition: transform .15s ease, opacity .15s ease;
-                }
-                .footer-text:hover{ transform: scale(1.1); opacity:.9; }
-                
-                /* Декоративная линия для ContextScreen */
-                .context-gradient-line {
-                    width: 320px;
-                    height: 2px;
-                    border-radius: 1px;
-                    background: linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%);
-                    margin: var(--space-l) 0;
-                }
-                
-                /* ========================= */
-                /*        Request Screen     */
-                /* ========================= */
-                /* iOS: предотвратить zoom при фокусе на полях (минимум 16px) */
-                @supports (-webkit-touch-callout: none) {
-                  .input-field,
-                  .request-input,
-                  .ctx-input,
-                  .request-select,
-                  .request-textarea,
-                  .ctx-textarea,
-                  .dial-btn {
-                    font-size: 16px;
-                  }
-                }
-                .request-main-container {
-                    position: static;
-                    width: 100%;
-                    max-width: 360px;
-                    margin: var(--space-l) auto 0 auto;
-                    padding: 0 var(--space-l);
-                }
-                
-                .request-title {
-                    font-family: var(--ff);
-                    font-size: 16px;
-                    font-weight: 400;
-                    color: #FFFFFF;
-                    margin-bottom: 15px;
-                    text-align: left;
-                }
-                
-                .request-field {
-                    margin-bottom: 20px;
-                }
-                
-                .request-field-label {
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: #FFFFFF;
-                    margin-bottom: 5px;
-                }
-                
-                .request-input {
-                    width: 100%;
-                    height: var(--field-h);
-                    border-radius: 10px;
-                    background: rgba(106, 108, 155, 0.10);
-                    border: 1px solid rgba(106, 108, 155, 0.30);
-                    color: #FFFFFF;
-                    caret-color: #FFFFFF;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 400;
-                    padding-left: var(--space-s);
-                    line-height: var(--field-h);
-                    box-sizing: border-box;
-                    transition: border-color .15s ease;
-                }
-                .request-input.error{ border-color:#E85F62; }
-                .request-input:focus,
-                .request-input:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
-                
-                
-                .request-input::placeholder {
-                    color: #A0A0A0;
-                }
-                
-                .request-row {
-                    display: flex;
-                    gap: var(--space-s);
-                    margin-bottom: 10px;
-                }
-                /* Dial code select */
-                .dial-select{ position:relative; }
-                .dial-btn{ display:flex; align-items:center; justify-content:center; gap:6px; padding: 0 .75rem; height:var(--field-h); line-height:var(--field-h); border-radius:10px; background:rgba(106,108,155,.10); border:1px solid rgba(106,108,155,.30); color:#FFFFFF; cursor:pointer; }
-                .dial-flag{ font-size:14px; line-height:1; }
-                .dial-code{ font-size:12px; }
-                .dial-list{ position:absolute; top: calc(var(--field-h) + var(--space-xxs)); left:0; right:auto; min-width:120px; background:#1e1d20; border:1px solid rgba(106,108,155,.30); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:6px; display:none; z-index:30; }
-                .dial-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; color:#FFFFFF; font-size:12px; }
-                .dial-item:hover{ background:rgba(106,108,155,.15); }
-                .request-error{ display:none; color:#E85F62; font-size:12px; margin-top:6px; }
-                .request-error.visible{ display:block; }
-                .request-checkbox.error{ outline:2px solid #E85F62; border-radius:3px; }
-                
-                /* Email suggest chip */
-                .email-suggest{ display:none; margin-top:6px; }
-                .email-suggest .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; border:1px solid var(--color-accent); color:var(--color-accent); font-size:12px; font-weight:600; cursor:pointer; background:transparent; }
-                .email-suggest .chip:hover{ background:rgba(71,106,165,.12); }
-                /* Inline email ghost (completion inside input) */
-                .email-wrap{ position:relative; }
-                .email-wrap .email-ghost{
-                  position:absolute; top:0; left:0;
-                  padding-left: var(--space-s); height: var(--field-h); line-height: var(--field-h);
-                  color: rgba(255,255,255,.35);
-                  pointer-events:none; cursor:default; 
-                  white-space:nowrap; overflow:hidden;
-                  z-index:2;
-                  font: inherit;
-                  display:none;
-                }
-                
-                .request-code-input {
-                    width: 100px;
-                    flex: 0 0 100px;
-                }
-                
-                .request-phone-input {
-                    flex: 1;
-                }
-                
-                .request-select {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    width: 100%;
-                    height: var(--field-h);
-                    border-radius: 10px;
-                    background: rgba(106, 108, 155, 0.10);
-                    border: 1px solid rgba(106, 108, 155, 0.30);
-                    color: #FFFFFF;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 400;
-                    padding: 0 var(--space-s);
-                    box-sizing: border-box;
-                    cursor: pointer;
-                }
-                .request-select:hover{ background: rgba(106,108,155,0.14); }
-                .request-select-list{ display:none; margin-top:6px; background:#1e1d20; border:1px solid rgba(106,108,155,.30); border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.25); padding:6px; }
-                .request-select-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; color:#FFFFFF; font-size:12px; }
-                .request-select-item:hover{ background:rgba(106,108,155,.15); }
-                
-                .request-caret {
-                    color: #C4C4C4;
-                    margin-left: 8px;
-                }
-                
-                .request-textarea {
-                    width: 100%;
-                    min-height: 80px;
-                    border-radius: 10px;
-                    background: rgba(106, 108, 155, 0.10);
-                    border: 1px solid rgba(106, 108, 155, 0.30);
-                    color: #FFFFFF;
-                    caret-color: #FFFFFF;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 400;
-                    padding: 10px;
-                    transition: border-color .15s ease;
-                    resize: vertical;
-                    box-sizing: border-box;
-                }
-                .request-textarea{ overflow-y:auto; scrollbar-width: none; -ms-overflow-style: none; }
-                .request-textarea::-webkit-scrollbar{ width:0; height:0; }
-                .request-textarea:focus,
-                .request-textarea:focus-visible{ outline:none; border-width:1px; border-color:var(--color-accent); box-shadow:none; }
-                .request-textarea.error{ border-color:#E85F62; }
-                
-                .request-textarea::placeholder {
-                    color: #A0A0A0;
-                }
-                
-                .request-actions-container {
-                    width: 100%;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                
-                .request-consent {
-                    display: flex;
-                    align-items: flex-start;
-                }
-                
-                .request-checkbox {
-                    width: 12px;
-                    height: 12px;
-                    margin-right: 10px;
-                }
-                
-                .request-consent-text {
-                    font-family: var(--ff);
-                    font-size: 10px;
-                    font-weight: 400;
-                    color: #C4C4C4;
-                    line-height: 1.4;
-                }
-                
-                .request-privacy-link {
-                    color: var(--color-accent);
-                    text-decoration: none;
-                }
-                
-                .request-buttons {
-                    display: flex;
-                    justify-content: space-between;
-                    gap: 20px;
-                    margin-top: 20px;
-                }
-                
-                .request-send-btn,
-                .request-cancel-btn {
-                    padding: var(--btn-py) var(--btn-px);
-                    min-width: var(--btn-min-w);
-                    border-radius: var(--btn-radius);
-                    font: var(--fw-s) var(--fs-btn)/1 var(--ff);
-                    cursor: pointer;
-                }
-                .request-buttons .request-send-btn, .request-buttons .request-cancel-btn{ flex:1 1 0; min-width:0; }
-                
-                .request-send-btn {
-                    background: var(--color-accent);
-                    color: #FFFFFF;
-                    border: none;
-                }
-                
-                .request-cancel-btn {
-                    background: transparent;
-                    color: var(--color-text);
-                    border: 1px solid var(--color-accent);
-                }
-                
-                /* ========================= */
-                /*         Menu Overlay      */
-                /* ========================= */
-                .menu-overlay {
-                    position: static;              /* внутри header, без абсолютов */
-                    width: 100%;
-                    height: 60px;                  /* высота шапки */
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    pointer-events: none;          /* активируем в .open */
-                    z-index: 1;
-                    grid-area:1/1;                 /* накладываемся на ту же ячейку, что и кнопка */
-                }
-                .menu-overlay::before {
-                    content: none;
-                }
-                .menu-overlay.open {
-                    pointer-events: auto;
-                }
-                .menu-overlay.open::before {
-                    opacity: 0;
-                }
-                .menu-overlay-content {
-                    width: 300px;
-                    height: 60px;
-                    margin: 0 auto;
-                    box-sizing: border-box;
-                    overflow: visible;
-                    opacity: 0;
-                    visibility: hidden;
-                    pointer-events: none;
-                    transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
-                    position: relative;
-                    z-index: 1;
-                }
-                .menu-overlay.open .menu-overlay-content {
-                    opacity: 1;
-                    visibility: visible;
-                    pointer-events: auto;
-                }
-                .menu-grid {
-                    display: grid;
-                    grid-template-columns: 110px 80px 110px;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .menu-grid--selected {
-                    display: grid;
-                    grid-template-columns: 110px 80px 110px;
-                    align-items: center;
-                    justify-content: center;
-                    height: 60px;
-                }
-                .menu-col {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 10px;
-                }
-                .menu-col--single {
-                    flex-direction: row;
-                    gap: 0;
-                }
-                .menu-col--middle { width: 80px; }
-                .menu-btn {
-                    width: 140px;
-                    height: 25px;
-                    background: transparent;
-                    border-radius: 8px;
-                    border: 0.1px solid rgba(65, 120, 207, 0.4);
-                    color: #DBDBDB;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    transition: transform 0.15s ease, opacity 0.15s ease;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: flex-start;
-                    gap: 8px;
-                    padding: 0 6px;
-                }
-                .menu-btn:hover { transform: scale(1.05); opacity: 0.85; }
-                .menu-btn--request { color: var(--color-text); }
-                .menu-btn--language { color: var(--color-text); }
-                .menu-btn--context { color: var(--color-text); }
-                .menu-btn--reset { color: var(--color-text); }
-                .menu-btn .menu-btn__icon{ width:18px; height:18px; flex:0 0 18px; }
-                .menu-btn--request .menu-btn__icon,
-                .menu-btn--language .menu-btn__icon{ width:16px; height:16px; flex:0 0 16px; }
-                .menu-language {
-                    position: relative;
-                    width: 140px;
-                }
-                .menu-language-trigger {
-                    width: 140px;
-                }
-                .menu-language-dropdown {
-                    position: absolute;
-                    top: calc(100% + 6px);
-                    left: 0;
-                    width: 140px;
-                    border-radius: 12px;
-                    border: 1px solid rgba(255, 255, 255, 0.16);
-                    background: rgba(15, 16, 20, 0.98);
-                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-                    display: none;
-                    z-index: 20;
-                    padding: 4px;
-                }
-                .menu-language-dropdown.open {
-                    display: block;
-                }
-                .menu-language-option {
-                    width: 100%;
-                    height: 24px;
-                    border: none;
-                    border-radius: 8px;
-                    background: transparent;
-                    color: var(--color-text);
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 0 8px;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 500;
-                    cursor: pointer;
-                }
-                .menu-language-option:hover {
-                    background: rgba(255, 255, 255, 0.08);
-                }
-                .menu-language-option.is-active {
-                    color: var(--color-text);
-                    background: rgba(255, 255, 255, 0.12);
-                }
-                .menu-link {
-                    width: 110px;
-                    height: 25px;
-                    border-radius: 20px;
-                    background: transparent;
-                    border: none;
-                    color: #FFFFFF;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    cursor: pointer;
-                    text-decoration: none;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .menu-link:hover { opacity: 0.85; }
-                .menu-badge {
-                    width: 110px;
-                    height: 25px;
-                    border-radius: 20px;
-                    border: 1px solid currentColor;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    color: currentColor;
-                }
-                .menu-badge--request { color: var(--color-accent); }
-                .menu-badge--context { color: var(--color-accent); }
-
-  </style>
-
-  <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
-  <style>
-  /* COMPAT-V1: Чат — прокрутка контейнеров (v2: переносим на dialogue-container) */
-  .dialogue-container{ overflow-y:auto; overflow-x:hidden; }
-  .thread{ display:flex; flex-direction:column; }
-
-  /* COMPAT-V1: Лоадер поверх чата */
-  #loadingIndicator{ position:absolute; display:none; }
-  #loadingIndicator.active{ display:flex; }
-
-    /* === Mobile height fix v3: стабильная карточка + адекватный скролл === */
-
-  /* 1) На мобилках задаём минимальную и максимальную высоту.
-        Это возвращает “карточный” вид: не схлопывается по контенту. */
-  @media (max-width: 450px) {
-    .voice-widget-container {
-      min-height: 560px;   /* как в твоём clamp, нижняя граница */
-      max-height: 720px;   /* верхняя граница, чтобы не раздувалось бесконечно */
-    }
-
-   
-  }
-
-  /* 2) Если браузер умеет 100svh (iOS 16+/18, новые Chrome/Android),
-        то подменяем высоту карточки на “экран минус отступы”. */
-  @supports (height: 100svh) {
-    @media (max-width: 450px) {
-      .voice-widget-container {
-        /* Карточка занимает экран по высоте, но не больше 720
-           и не меньше 560, чтобы не была крошечной. */
-        height: min(720px, max(560px, calc(100svh - 40px)));
-      }
-    }
-  }
-
-  /* Image lightbox (fullscreen image viewer) */
-  .img-lightbox{
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,.9);
-    z-index: 10002; /* above widget and launcher */
-  }
-  .img-lightbox.open{ display:flex; }
-  .img-lightbox img{
-    max-width: 96vw;
-    max-height: 96vh;
-    object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.5);
-    background: #111;
-  }
-
-
-
-  </style>
-
-  <!-- Launcher -->
+  this.getRoot().innerHTML = `
+<!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
+<!-- Launcher -->
   <button class="launcher" id="launcher" title="Спросить голосом" aria-label="Спросить голосом">
     <span class="launcher__textBlock" aria-hidden="true">
       <span class="launcher__title">${this.getCurrentLocale().launcherTitle}</span>
@@ -3262,7 +1382,7 @@ render() {
 
 
 
-  const $ = s => this.shadowRoot.querySelector(s);
+  const $ = s => this.getRoot().querySelector(s);
   
   // Mobile-like detection (used for launcher flip UI + to avoid auto-keyboard focus)
   this._vwIsMobileLike = (() => {
@@ -3342,9 +1462,9 @@ render() {
   // Screen management (fresh query each time to avoid stale refs)
   const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
   const showScreen = (screenName) => {
-    screenIds.forEach(id => this.shadowRoot.getElementById(id)?.classList.add('hidden'));
+    screenIds.forEach(id => this.getRoot().getElementById(id)?.classList.add('hidden'));
     const targetId = screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen';
-    const targetEl = this.shadowRoot.getElementById(targetId) || this.shadowRoot.getElementById('dialogScreen');
+    const targetEl = this.getRoot().getElementById(targetId) || this.getRoot().getElementById('dialogScreen');
     targetEl?.classList.remove('hidden');
     // ensure menu overlay is attached to the active screen header
     try { this.setupMenuOverlay(); } catch {}
@@ -3422,7 +1542,7 @@ render() {
     // Не фокусируем поле на мобильных, чтобы не вызывать автопоявление клавиатуры
     try {
       if (!this._vwIsMobileLike) {
-        this.shadowRoot.getElementById("textInput")?.focus();
+        this.getRoot().getElementById("textInput")?.focus();
       }
     } catch {}
     // Не блокируем прокрутку страницы при открытом виджете
@@ -3460,20 +1580,20 @@ render() {
   };
   this.maybeShowCookieBanner = () => {
     const consent = this.getConsent();
-    const overlay = this.shadowRoot.getElementById('cookieOverlay');
+    const overlay = this.getRoot().getElementById('cookieOverlay');
     if (!consent && overlay) overlay.style.display = 'flex';
   };
   // Initialize consent UI handlers
   this.setupCookieBanner = () => {
-    const overlay = this.shadowRoot.getElementById('cookieOverlay');
-    const manage = this.shadowRoot.getElementById('cookieManagePanel');
-    const btnAccept = this.shadowRoot.getElementById('cookieAcceptAllBtn');
-    const btnReject = this.shadowRoot.getElementById('cookieRejectAllBtn');
-    const btnManage = this.shadowRoot.getElementById('cookieManageBtn');
-    const btnSave = this.shadowRoot.getElementById('cookieSaveBtn');
-    const ccPerf = this.shadowRoot.getElementById('ccPerformance');
-    const ccAnal = this.shadowRoot.getElementById('ccAnalytics');
-    const ccMkt = this.shadowRoot.getElementById('ccMarketing');
+    const overlay = this.getRoot().getElementById('cookieOverlay');
+    const manage = this.getRoot().getElementById('cookieManagePanel');
+    const btnAccept = this.getRoot().getElementById('cookieAcceptAllBtn');
+    const btnReject = this.getRoot().getElementById('cookieRejectAllBtn');
+    const btnManage = this.getRoot().getElementById('cookieManageBtn');
+    const btnSave = this.getRoot().getElementById('cookieSaveBtn');
+    const ccPerf = this.getRoot().getElementById('ccPerformance');
+    const ccAnal = this.getRoot().getElementById('ccAnalytics');
+    const ccMkt = this.getRoot().getElementById('ccMarketing');
     btnAccept?.addEventListener('click', () => {
       this.setConsent({ performance: true, analytics: true, marketing: false });
       if (overlay) overlay.style.display = 'none';
@@ -3517,7 +1637,7 @@ render() {
     
     // Логируем session_end при закрытии виджета
     const messagesCount = this.messages ? this.messages.length : 0;
-    const cardsShown = this.shadowRoot.querySelectorAll('.card-slide').length;
+    const cardsShown = this.getRoot().querySelectorAll('.card-slide').length;
     logTelemetry(TelemetryEventTypes.SESSION_END, {
       reason: 'user_close',
       messagesCount,
@@ -3526,9 +1646,9 @@ render() {
     // Ничего не меняем у страницы — скролл всегда доступен
     // Явно снимаем фокус, чтобы на повторном открытии клавиатура не всплывала
     try {
-      this.shadowRoot.getElementById("textInput")?.blur();
-      this.shadowRoot.getElementById("mainTextInput")?.blur();
-      this.shadowRoot.activeElement && typeof this.shadowRoot.activeElement.blur === 'function' && this.shadowRoot.activeElement.blur();
+      this.getRoot().getElementById("textInput")?.blur();
+      this.getRoot().getElementById("mainTextInput")?.blur();
+      this.getRoot().activeElement && typeof this.getRoot().activeElement.blur === 'function' && this.getRoot().activeElement.blur();
       // Если скролл был залочен (мобилки) — вернём как было
       if (this._scrollLockedMobile) {
         const de = document.documentElement;
@@ -3654,7 +1774,7 @@ render() {
   // Request Screen (v2) — без логики на данном этапе
   // Add basic validation and submit behavior
   this.setupRequestForm = () => {
-    const root = this.shadowRoot;
+    const root = this.getRoot();
     const sendBtn = root.querySelector('.request-send-btn');
     const cancelBtn = root.querySelector('.request-cancel-btn');
     if (!sendBtn) return;
@@ -4043,8 +2163,8 @@ render() {
   this.openImageOverlay = (url) => {
     try {
       if (!url) return;
-      const box = this.shadowRoot.getElementById('imgLightbox');
-      const img = this.shadowRoot.getElementById('imgLightboxImg');
+      const box = this.getRoot().getElementById('imgLightbox');
+      const img = this.getRoot().getElementById('imgLightboxImg');
       if (!box || !img) return;
       img.src = url;
       box.classList.add('open');
@@ -4053,8 +2173,8 @@ render() {
   };
   this.closeImageOverlay = () => {
     try {
-      const box = this.shadowRoot.getElementById('imgLightbox');
-      const img = this.shadowRoot.getElementById('imgLightboxImg');
+      const box = this.getRoot().getElementById('imgLightbox');
+      const img = this.getRoot().getElementById('imgLightboxImg');
       if (img) img.src = '';
       if (box) box.classList.remove('open');
       this._imageOverlayOpen = false;
@@ -4062,8 +2182,8 @@ render() {
   };
   // Lightbox interactions: click on backdrop closes; click on image — no action
   try {
-    const box = this.shadowRoot.getElementById('imgLightbox');
-    const img = this.shadowRoot.getElementById('imgLightboxImg');
+    const box = this.getRoot().getElementById('imgLightbox');
+    const img = this.getRoot().getElementById('imgLightboxImg');
     if (box) {
       box.addEventListener('click', (e) => {
         if (e.target === box) { // only backdrop, not image
@@ -4142,11 +2262,11 @@ render() {
       if (innerImg && innerImg.src) { this.openImageOverlay(innerImg.src); return; }
     }
   };
-  try { this.shadowRoot.addEventListener('click', this._onImageClick); } catch {}
+  try { this.getRoot().addEventListener('click', this._onImageClick); } catch {}
   // Mobile swipe-to-close from widget corners
   this._setupMobileGestures = () => {
     try {
-      const containers = this.shadowRoot.querySelectorAll('.voice-widget-container');
+      const containers = this.getRoot().querySelectorAll('.voice-widget-container');
       containers.forEach((container) => {
         if (!container || container._swipeBound) return;
         let startX = 0, startY = 0, startT = 0, eligible = false;
@@ -4196,9 +2316,9 @@ render() {
   // Helper: reset Request screen state
   this.resetRequestScreen = () => {
     try {
-      const thanksOverlay = this.shadowRoot.getElementById('requestThanksOverlay');
+      const thanksOverlay = this.getRoot().getElementById('requestThanksOverlay');
       if (thanksOverlay) thanksOverlay.style.display = 'none';
-      const get = (id) => this.shadowRoot.getElementById(id);
+      const get = (id) => this.getRoot().getElementById(id);
       // Clear fields
       ['reqName','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value = ''; });
       const consent = get('reqConsent');
@@ -4226,9 +2346,9 @@ render() {
   // Helper: reset Context screen state (Leave request form)
   this.resetContextScreen = () => {
     try {
-      const get = (id) => this.shadowRoot.getElementById(id);
+      const get = (id) => this.getRoot().getElementById(id);
       const form = get('ctxRequestForm');
-      const btnWrap = this.shadowRoot.querySelector('.context-leave-request-button');
+      const btnWrap = this.getRoot().querySelector('.context-leave-request-button');
       const thanks = get('ctxThanks');
       const thanksOverlay = get('ctxThanksOverlay');
       if (thanks) thanks.style.display = 'none';
@@ -4257,13 +2377,13 @@ render() {
   
   // Context: leave request inline form toggles
   this.setupContextRequestForm = () => {
-    const btn = this.shadowRoot.getElementById('ctxLeaveReqBtn');
-    const form = this.shadowRoot.getElementById('ctxRequestForm');
-    const ctxHint = this.shadowRoot.querySelector('#contextScreen .hint-text');
-    const thanks = this.shadowRoot.getElementById('ctxThanks'); // legacy inline
-    const thanksOverlay = this.shadowRoot.getElementById('ctxThanksOverlay');
+    const btn = this.getRoot().getElementById('ctxLeaveReqBtn');
+    const form = this.getRoot().getElementById('ctxRequestForm');
+    const ctxHint = this.getRoot().querySelector('#contextScreen .hint-text');
+    const thanks = this.getRoot().getElementById('ctxThanks'); // legacy inline
+    const thanksOverlay = this.getRoot().getElementById('ctxThanksOverlay');
     if (!btn || !form) return;
-    const get = (id) => this.shadowRoot.getElementById(id);
+    const get = (id) => this.getRoot().getElementById(id);
     const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const toDigits = (v) => String(v || '').replace(/\D+/g, '');
@@ -4353,9 +2473,9 @@ render() {
       btn.parentElement.style.display = 'none';
       form.style.display = 'block';
       if (ctxHint) ctxHint.style.display = 'none';
-      try { this.shadowRoot.getElementById('ctxName')?.focus(); } catch {}
+      try { this.getRoot().getElementById('ctxName')?.focus(); } catch {}
     });
-    this.shadowRoot.getElementById('ctxCancelBtn')?.addEventListener('click', (e) => {
+    this.getRoot().getElementById('ctxCancelBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       form.style.display = 'none';
       btn.parentElement.style.display = 'block';
@@ -4374,7 +2494,7 @@ render() {
       const checkbox = get('ctxConsent');
       if (checkbox) checkbox.classList.remove('error');
     });
-    this.shadowRoot.getElementById('ctxSendBtn')?.addEventListener('click', (e) => {
+    this.getRoot().getElementById('ctxSendBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       // validation
       const name = get('ctxName')?.value?.trim() || '';
@@ -4519,8 +2639,8 @@ render() {
             form.style.display = 'none';
             if (thanksOverlay) thanksOverlay.style.display = 'flex';
             // Очищаем поля
-            ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.shadowRoot.getElementById(id); if (el) el.value=''; });
-            const c = this.shadowRoot.getElementById('ctxConsent'); if (c) c.checked = false;
+            ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.getRoot().getElementById(id); if (el) el.value=''; });
+            const c = this.getRoot().getElementById('ctxConsent'); if (c) c.checked = false;
             showContactError(false); showConsentError(false);
             
             // Увеличиваем счетчик отправок (если еще не увеличен при нажатии "Продолжить")
@@ -4586,33 +2706,33 @@ render() {
       }
     });
     // Обработчик закрытия поп-апа блокировки для short form
-    this.shadowRoot.getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+    this.getRoot().getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const blockOverlay = this.shadowRoot.getElementById('ctxSpamBlockOverlay');
+      const blockOverlay = this.getRoot().getElementById('ctxSpamBlockOverlay');
       if (blockOverlay) blockOverlay.style.display = 'none';
     });
-    this.shadowRoot.getElementById('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
+    this.getRoot().getElementById('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
       if (thanks) thanks.style.display = 'none';
       btn.parentElement.style.display = 'block';
       if (ctxHint) ctxHint.style.display = '';
     });
-    this.shadowRoot.getElementById('ctxThanksOverlayClose')?.addEventListener('click', (e) => {
+    this.getRoot().getElementById('ctxThanksOverlayClose')?.addEventListener('click', (e) => {
       e.preventDefault();
       if (thanksOverlay) thanksOverlay.style.display = 'none';
       btn.parentElement.style.display = 'block';
       if (ctxHint) ctxHint.style.display = '';
     });
     // Обработчик закрытия поп-апа блокировки для short form
-    this.shadowRoot.getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
+    this.getRoot().getElementById('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      const blockOverlay = this.shadowRoot.getElementById('ctxSpamBlockOverlay');
+      const blockOverlay = this.getRoot().getElementById('ctxSpamBlockOverlay');
       if (blockOverlay) blockOverlay.style.display = 'none';
     });
     // Обработчики поп-апа предупреждения для short form
-    const ctxWarningOverlay = this.shadowRoot.getElementById('ctxSpamWarningOverlay');
-    const ctxWarningCancelBtn = this.shadowRoot.getElementById('ctxSpamWarningCancelBtn');
-    const ctxWarningContinueBtn = this.shadowRoot.getElementById('ctxSpamWarningContinueBtn');
+    const ctxWarningOverlay = this.getRoot().getElementById('ctxSpamWarningOverlay');
+    const ctxWarningCancelBtn = this.getRoot().getElementById('ctxSpamWarningCancelBtn');
+    const ctxWarningContinueBtn = this.getRoot().getElementById('ctxSpamWarningContinueBtn');
     if (ctxWarningCancelBtn) {
       ctxWarningCancelBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -4629,7 +2749,7 @@ render() {
         this.leadSpamProtection.incrementSubmitCount('lead');
         // Продолжаем отправку после закрытия поп-апа
         // Вызываем обработчик кнопки отправки напрямую
-        const sendBtn = this.shadowRoot.getElementById('ctxSendBtn');
+        const sendBtn = this.getRoot().getElementById('ctxSendBtn');
         if (sendBtn) {
           // Эмулируем клик для повторной отправки
           sendBtn.click();
@@ -4641,9 +2761,9 @@ render() {
   
   // Context: Data storage info popup
   this.setupDataStoragePopup = () => {
-    const trigger = this.shadowRoot.querySelector('.data-storage-text');
-    const overlay = this.shadowRoot.getElementById('dataOverlay');
-    const btn = this.shadowRoot.getElementById('dataUnderstoodBtn');
+    const trigger = this.getRoot().querySelector('.data-storage-text');
+    const overlay = this.getRoot().getElementById('dataOverlay');
+    const btn = this.getRoot().getElementById('dataUnderstoodBtn');
     trigger?.addEventListener('click', () => { if (overlay) overlay.style.display = 'flex'; });
     btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
   };
@@ -4651,10 +2771,10 @@ render() {
   
   // Context: "What data do we know?" popup (insights)
   this.setupWhatDataPopup = () => {
-    const trigger = this.shadowRoot.querySelector('#contextScreen .footer-text');
-    const overlay = this.shadowRoot.getElementById('whatDataOverlay');
-    const body = this.shadowRoot.getElementById('whatDataBody');
-    const btn = this.shadowRoot.getElementById('whatDataUnderstoodBtn');
+    const trigger = this.getRoot().querySelector('#contextScreen .footer-text');
+    const overlay = this.getRoot().getElementById('whatDataOverlay');
+    const body = this.getRoot().getElementById('whatDataBody');
+    const btn = this.getRoot().getElementById('whatDataUnderstoodBtn');
     const labelMap = {
       name: 'Name',
       operation: 'Operation',
@@ -4686,10 +2806,10 @@ render() {
 
   // Request: Privacy Policy confirm
   this.setupPrivacyConfirm = () => {
-    const link = this.shadowRoot.querySelector('.request-privacy-link');
-    const overlay = this.shadowRoot.getElementById('privacyOverlay');
-    const btnCancel = this.shadowRoot.getElementById('privacyCancelBtn');
-    const btnContinue = this.shadowRoot.getElementById('privacyContinueBtn');
+    const link = this.getRoot().querySelector('.request-privacy-link');
+    const overlay = this.getRoot().getElementById('privacyOverlay');
+    const btnCancel = this.getRoot().getElementById('privacyCancelBtn');
+    const btnContinue = this.getRoot().getElementById('privacyContinueBtn');
     const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
     if (link) {
       link.addEventListener('click', (e) => {
@@ -4706,10 +2826,10 @@ render() {
   try { this.setupPrivacyConfirm(); } catch {}
   // Context: Privacy Policy confirm
   this.setupContextPrivacyConfirm = () => {
-    const link = this.shadowRoot.querySelector('.ctx-privacy-link');
-    const overlay = this.shadowRoot.getElementById('ctxPrivacyOverlay');
-    const btnCancel = this.shadowRoot.getElementById('ctxPrivacyCancelBtn');
-    const btnContinue = this.shadowRoot.getElementById('ctxPrivacyContinueBtn');
+    const link = this.getRoot().querySelector('.ctx-privacy-link');
+    const overlay = this.getRoot().getElementById('ctxPrivacyOverlay');
+    const btnCancel = this.getRoot().getElementById('ctxPrivacyCancelBtn');
+    const btnContinue = this.getRoot().getElementById('ctxPrivacyContinueBtn');
     const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
     if (link) {
       link.addEventListener('click', (e) => {
@@ -4727,7 +2847,7 @@ render() {
   // Thread auto-scroll helper
   this._isThreadNearBottom = true;
   this.scrollThreadToBottom = (force = false) => {
-    const thread = this.shadowRoot.getElementById('thread');
+    const thread = this.getRoot().getElementById('thread');
     if (!thread) return;
     const doScroll = () => { thread.scrollTop = thread.scrollHeight; };
     if (force || this._isThreadNearBottom) {
@@ -4756,7 +2876,7 @@ render() {
 
 
   // Card events
-  this.shadowRoot.addEventListener('click', async (e) => {
+  this.getRoot().addEventListener('click', async (e) => {
     if (e.target.matches('.card-btn[data-action="like"]')) {
       // UI toggle (фиксируем состояние сердечка). При отключении — без side-effects.
       try {
@@ -4766,7 +2886,7 @@ render() {
       const variantId = e.target.getAttribute('data-variant-id');
       
       // Логируем card_like
-      const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+      const track = this.getRoot().querySelector('.cards-slider .cards-track');
       const slides = track ? track.querySelectorAll('.card-slide') : [];
       const currentIndex = Array.from(slides).findIndex(slide => 
         slide.querySelector(`[data-variant-id="${variantId}"]`)
@@ -4782,7 +2902,7 @@ render() {
     } else if (e.target.matches('.card-btn[data-action="next"]')) {
       // Лимит карточек в одном слайдере: максимум 12
       try {
-        const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+        const track = this.getRoot().querySelector('.cards-slider .cards-track');
         const count = track ? track.children.length : 0;
         if (count >= 12) {
           // shake-эффект на кнопке
@@ -4802,7 +2922,7 @@ render() {
       const variantId = e.target.getAttribute('data-variant-id');
       
       // Логируем card_next
-      const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+      const track = this.getRoot().querySelector('.cards-slider .cards-track');
       const slides = track ? track.querySelectorAll('.card-slide') : [];
       const currentIndex = Array.from(slides).findIndex(slide => 
         slide.querySelector(`[data-variant-id="${variantId}"]`)
@@ -4855,7 +2975,7 @@ render() {
       try { e.preventDefault(); } catch {}
     } else if (e.target.matches('#inDialogThanksCloseBtn')) {
       try {
-        const t = this.shadowRoot.getElementById('inDialogLeadThanksBlock');
+        const t = this.getRoot().getElementById('inDialogLeadThanksBlock');
         if (t && t.parentElement) t.parentElement.removeChild(t);
       } catch {}
     } else if (e.target.closest('.header-action.header-right')) {
@@ -4867,7 +2987,7 @@ render() {
       if (container) container.remove();
       // ❗ Начинаем новый показ: удалим старый слайдер (если был)
       try {
-        const oldHost = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+        const oldHost = this.getRoot().querySelector('.card-screen.cards-slider-host');
         if (oldHost && oldHost.parentElement) {
           // 🆕 Sprint IV: отправляем ui_slider_ended перед удалением slider host (выход из slider-режима)
           if (this.api) {
@@ -4887,7 +3007,7 @@ render() {
           this.scrollCardHostIntoView();
           
           // Логируем card_show
-          const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
+          const track = this.getRoot().querySelector('.cards-slider .cards-track');
           const slides = track ? track.querySelectorAll('.card-slide') : [];
           
           logTelemetry(TelemetryEventTypes.CARD_SHOW, {
@@ -4913,7 +3033,7 @@ render() {
       // Навигация по слайдеру через точки
       const dot = e.target;
       const row = dot.closest('.cards-dots-row');
-      const slider = this.shadowRoot.querySelector('.cards-slider');
+      const slider = this.getRoot().querySelector('.cards-slider');
       if (!row || !slider) return;
       const dots = Array.from(row.querySelectorAll('.cards-dot'));
       const idx = dots.indexOf(dot);
@@ -4942,7 +3062,7 @@ render() {
     this.events.on('recordingStarted', () => {
       this.showChatScreen();
       // Show recording indicator on current screen
-      const isMainScreen = this.shadowRoot.getElementById('mainScreen')?.classList.contains('hidden') === false;
+      const isMainScreen = this.getRoot().getElementById('mainScreen')?.classList.contains('hidden') === false;
       this.showRecordingIndicator(isMainScreen ? 'main' : 'chat');
       // Update toggle button state for both screens
       this.updateToggleButtonState('main');
@@ -4969,7 +3089,7 @@ render() {
     this.events.on('textMessageSent', (d) => { 
       console.log('📤 Text message sent:', d?.text?.slice(0,50));
       // Switch to chat screen if we're on main screen
-      if (this.shadowRoot.getElementById('mainScreen')?.classList.contains('hidden') === false) {
+      if (this.getRoot().getElementById('mainScreen')?.classList.contains('hidden') === false) {
         this.showChatScreen();
       }
     });
@@ -5028,12 +3148,12 @@ render() {
   // Recording indicator management
   showRecordingIndicator(screen = 'chat') {
     const indicator = screen === 'main' 
-      ? this.shadowRoot.getElementById('mainRecordingIndicator')
-      : this.shadowRoot.getElementById('recordingIndicator');
+      ? this.getRoot().getElementById('mainRecordingIndicator')
+      : this.getRoot().getElementById('recordingIndicator');
     
     const wrapper = screen === 'main'
-      ? this.shadowRoot.querySelector('#mainTextInput').closest('.text-input-wrapper')
-      : this.shadowRoot.querySelector('#textInput').closest('.text-input-wrapper');
+      ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
+      : this.getRoot().querySelector('#textInput').closest('.text-input-wrapper');
     
     if (indicator) {
       indicator.style.display = 'flex';
@@ -5043,12 +3163,12 @@ render() {
 
   hideRecordingIndicator(screen = 'chat') {
     const indicator = screen === 'main' 
-      ? this.shadowRoot.getElementById('mainRecordingIndicator')
-      : this.shadowRoot.getElementById('recordingIndicator');
+      ? this.getRoot().getElementById('mainRecordingIndicator')
+      : this.getRoot().getElementById('recordingIndicator');
     
     const wrapper = screen === 'main'
-      ? this.shadowRoot.querySelector('#mainTextInput').closest('.text-input-wrapper')
-      : this.shadowRoot.querySelector('#textInput').closest('.text-input-wrapper');
+      ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
+      : this.getRoot().querySelector('#textInput').closest('.text-input-wrapper');
     
     if (indicator) {
       indicator.style.display = 'none';
@@ -5083,11 +3203,11 @@ render() {
     const params = understanding.params || understanding;
     
     // Update progress
-    const progressFill = this.shadowRoot.getElementById('progressFill');
-    const progressText = this.shadowRoot.getElementById('progressText');
-    const ctxProgressText = this.shadowRoot.getElementById('ctxProgressText');
-    const ctxStatusText = this.shadowRoot.getElementById('ctxStatusText');
-    const ctxStageMessage = this.shadowRoot.getElementById('ctxStageMessage');
+    const progressFill = this.getRoot().getElementById('progressFill');
+    const progressText = this.getRoot().getElementById('progressText');
+    const ctxProgressText = this.getRoot().getElementById('ctxProgressText');
+    const ctxStatusText = this.getRoot().getElementById('ctxStatusText');
+    const ctxStageMessage = this.getRoot().getElementById('ctxStageMessage');
       const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
     if (progressFill && progressText) {
       progressFill.style.width = `${progress}%`;
@@ -5118,8 +3238,8 @@ render() {
 
     // Update parameter values and dots
     const updateParam = (id, value, dotId) => {
-      const valueEl = this.shadowRoot.getElementById(id);
-      const dotEl = this.shadowRoot.getElementById(dotId);
+      const valueEl = this.getRoot().getElementById(id);
+      const dotEl = this.getRoot().getElementById(dotId);
       if (valueEl) {
         const text = value || 'не определено';
         valueEl.textContent = text;
@@ -5143,11 +3263,11 @@ render() {
   // Send text from main screen
   sendTextFromMainScreen(text) {
     // Clear input
-    const mainTextInput = this.shadowRoot.getElementById('mainTextInput');
+    const mainTextInput = this.getRoot().getElementById('mainTextInput');
     if (mainTextInput) {
       mainTextInput.value = '';
           // Update send button state
-    const mainSendButton = this.shadowRoot.getElementById('mainSendButton');
+    const mainSendButton = this.getRoot().getElementById('mainSendButton');
     if (mainSendButton) {
       mainSendButton.disabled = true;
       mainSendButton.setAttribute('aria-disabled', 'true');
@@ -5171,9 +3291,9 @@ render() {
     let toggleButton = null;
 
     if (screen === 'main') {
-      toggleButton = this.shadowRoot.getElementById('mainToggleButton');
+      toggleButton = this.getRoot().getElementById('mainToggleButton');
     } else if (screen === 'chat') {
-      toggleButton = this.shadowRoot.getElementById('toggleButton');
+      toggleButton = this.getRoot().getElementById('toggleButton');
     }
 
     if (toggleButton) {
@@ -5195,11 +3315,11 @@ render() {
     let sendButton = null;
 
     if (screen === 'main') {
-      textInput = this.shadowRoot.getElementById('mainTextInput');
-      sendButton = this.shadowRoot.getElementById('mainSendButton');
+      textInput = this.getRoot().getElementById('mainTextInput');
+      sendButton = this.getRoot().getElementById('mainSendButton');
     } else if (screen === 'chat') {
-      textInput = this.shadowRoot.getElementById('textInput');
-      sendButton = this.shadowRoot.getElementById('sendButton');
+      textInput = this.getRoot().getElementById('textInput');
+      sendButton = this.getRoot().getElementById('sendButton');
     }
 
     if (textInput && sendButton) {
@@ -5228,10 +3348,10 @@ render() {
 
   // Ensure slider container exists in thread
   ensureCardsSlider() {
-    const thread = this.shadowRoot.getElementById('thread');
-    const messages = this.shadowRoot.getElementById('messagesContainer');
+    const thread = this.getRoot().getElementById('thread');
+    const messages = this.getRoot().getElementById('messagesContainer');
     if (!thread || !messages) return null;
-    let host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+    let host = this.getRoot().querySelector('.card-screen.cards-slider-host');
     if (!host) {
       host = document.createElement('div');
       host.className = 'card-screen cards-slider-host';
@@ -5377,13 +3497,13 @@ render() {
       // вычисляем целевую позицию именно нового слайда
       const targetLeft = slide.offsetLeft;
       try {
-        const slider = this.shadowRoot.querySelector('.cards-slider');
+        const slider = this.getRoot().querySelector('.cards-slider');
         if (slider) slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
         else track.scrollTo({ left: targetLeft, behavior: 'smooth' });
       } catch { track.scrollTo({ left: targetLeft, behavior: 'smooth' }); }
       // пометим новый слайд активным сразу
       try {
-        const slider = this.shadowRoot.querySelector('.cards-slider');
+        const slider = this.getRoot().querySelector('.cards-slider');
         const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
         allSlides.forEach(s => s.classList.remove('active'));
         slide.classList.add('active');
@@ -5416,7 +3536,7 @@ render() {
   // Обновить/установить динамический комментарий под активной карточкой
   setCardComment(text = '') {
     try {
-      const slider = this.shadowRoot.querySelector('.cards-slider');
+      const slider = this.getRoot().querySelector('.cards-slider');
       if (!slider) return;
       const apply = () => {
         const active = slider.querySelector('.card-slide.active');
@@ -5435,15 +3555,15 @@ render() {
   // Рендер “пузыря” ассистента, синхронизированного с карточкой (не сохраняем в историю)
   renderCardCommentBubble(text = '') {
     try {
-      const thread = this.shadowRoot.getElementById('thread');
-      const host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+      const thread = this.getRoot().getElementById('thread');
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
       if (!thread || !host) return;
       // Удалим предыдущий пузырь
-      const prev = this.shadowRoot.querySelector('.message.assistant.dynamic-card-comment');
+      const prev = this.getRoot().querySelector('.message.assistant.dynamic-card-comment');
       if (prev && prev.parentElement) prev.parentElement.removeChild(prev);
       if (!text) return;
       // Определим связанный variantId активной карточки
-      const active = this.shadowRoot.querySelector('.cards-slider .card-slide.active .cs');
+      const active = this.getRoot().querySelector('.cards-slider .card-slide.active .cs');
       const variantId = active ? active.getAttribute('data-variant-id') : '';
       // Построим пузырь с той же разметкой, что и обычный assistant
       const wrapper = document.createElement('div');
@@ -5463,8 +3583,8 @@ render() {
   // Прокрутка контейнера сообщений так, чтобы карточка была полностью видна
   scrollCardHostIntoView() {
     try {
-      const messages = this.shadowRoot.getElementById('messagesContainer');
-      const host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+      const messages = this.getRoot().getElementById('messagesContainer');
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
       if (!messages || !host) return;
       const bottom = host.offsetTop + host.offsetHeight;
       const viewBottom = messages.scrollTop + messages.clientHeight;
@@ -5481,7 +3601,7 @@ render() {
 
   // Highlight active slide (nearest to center)
   updateActiveCardSlide() {
-    const slider = this.shadowRoot.querySelector('.cards-slider');
+    const slider = this.getRoot().querySelector('.cards-slider');
     if (!slider) return;
     const slides = slider.querySelectorAll('.card-slide');
     if (!slides.length) return;
@@ -5525,7 +3645,7 @@ render() {
 
   // Build dots per slide count
   renderSliderDots() {
-    const slider = this.shadowRoot.querySelector('.cards-slider');
+    const slider = this.getRoot().querySelector('.cards-slider');
     if (!slider) return;
     const slides = slider.querySelectorAll('.card-slide');
     const count = slides.length;
@@ -5541,8 +3661,8 @@ render() {
 
   // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------
   suggestCardOption(data = {}) {
-    const thread = this.shadowRoot.getElementById('thread');
-    const messages = this.shadowRoot.getElementById('messagesContainer');
+    const thread = this.getRoot().getElementById('thread');
+    const messages = this.getRoot().getElementById('messagesContainer');
     if (!thread || !messages) return;
 
     this._lastSuggestedCard = data;
@@ -5576,13 +3696,13 @@ render() {
   renderPostHandoffBlock({ cardId } = {}) {
     try {
       const locale = this.getCurrentLocale();
-      const thread = this.shadowRoot.getElementById('thread');
-      const messages = this.shadowRoot.getElementById('messagesContainer');
+      const thread = this.getRoot().getElementById('thread');
+      const messages = this.getRoot().getElementById('messagesContainer');
       if (!thread || !messages) return;
 
       // Ensure single block (replace previous if any)
       try {
-        const existing = this.shadowRoot.querySelector('.handoff-block');
+        const existing = this.getRoot().querySelector('.handoff-block');
         if (existing && existing.parentElement) existing.parentElement.removeChild(existing);
       } catch {}
 
@@ -5623,11 +3743,11 @@ render() {
         try { document.removeEventListener('click', this._inDialogLeadDialOutsideHandler, true); } catch {}
         this._inDialogLeadDialOutsideHandler = null;
       }
-      const lead = this.shadowRoot.getElementById('inDialogLeadBlock');
+      const lead = this.getRoot().getElementById('inDialogLeadBlock');
       if (lead && lead.parentElement) lead.parentElement.removeChild(lead);
     } catch {}
     try {
-      const handoff = this.shadowRoot.querySelector('.handoff-block');
+      const handoff = this.getRoot().querySelector('.handoff-block');
       if (handoff && handoff.parentElement) handoff.parentElement.removeChild(handoff);
     } catch {}
   }
@@ -5650,11 +3770,11 @@ render() {
     // UI-only: отдельная thanks-форма для in-dialog lead form (не ctx/request overlays)
     try {
       const locale = this.getCurrentLocale();
-      const thread = this.shadowRoot.getElementById('thread');
-      const messages = this.shadowRoot.getElementById('messagesContainer');
+      const thread = this.getRoot().getElementById('thread');
+      const messages = this.getRoot().getElementById('messagesContainer');
       if (!thread || !messages) return;
       // deterministic: single
-      const existing = this.shadowRoot.getElementById('inDialogLeadThanksBlock');
+      const existing = this.getRoot().getElementById('inDialogLeadThanksBlock');
       if (existing) return;
       const panel = document.createElement('div');
       panel.className = 'card-screen';
@@ -5682,7 +3802,7 @@ render() {
     // formRoot = .in-dialog-lead (from slide back or legacy block); if absent, use getElementById
     try {
       const locale = this.getCurrentLocale();
-      const root = this.shadowRoot;
+      const root = this.getRoot();
       const el = (baseId) => formRoot ? (formRoot.querySelector(`[id^="${baseId}"]`) || formRoot.querySelector(`#${baseId}`)) : root.getElementById(baseId);
       const nameEl = el('inDialogLeadName') || (formRoot && formRoot.querySelector('input[type="text"]'));
       const phoneEl = el('inDialogLeadPhone') || (formRoot && formRoot.querySelector('input[type="tel"]'));
@@ -5907,16 +4027,16 @@ render() {
     // Legacy: форма после handoff-блока — больше не используется (flow: слайдер → Выбрать → back с формой)
     try {
       const locale = this.getCurrentLocale();
-      const thread = this.shadowRoot.getElementById('thread');
-      const messages = this.shadowRoot.getElementById('messagesContainer');
+      const thread = this.getRoot().getElementById('thread');
+      const messages = this.getRoot().getElementById('messagesContainer');
       if (!thread || !messages) return;
-      const existing = this.shadowRoot.getElementById('inDialogLeadBlock');
+      const existing = this.getRoot().getElementById('inDialogLeadBlock');
       if (existing) return;
       const panel = document.createElement('div');
       panel.className = 'in-dialog-lead-block';
       panel.id = 'inDialogLeadBlock';
       panel.innerHTML = this.getInDialogLeadFormHTML(locale, '');
-      const handoffBlock = this.shadowRoot.querySelector('.handoff-block');
+      const handoffBlock = this.getRoot().querySelector('.handoff-block');
       if (handoffBlock?.parentElement) handoffBlock.insertAdjacentElement('afterend', panel);
       else return;
       this.bindInDialogLeadForm(panel.querySelector('.in-dialog-lead'), '');
@@ -6090,13 +4210,13 @@ render() {
   // ===== v2 Menu Overlay integration (UI only) =====
   setupMenuOverlay() {
     // Привязываем overlay к header активного экрана
-    const container = this.shadowRoot.querySelector(
+    const container = this.getRoot().querySelector(
       '.main-screen:not(.hidden) .screen-header, ' +
       '.dialog-screen:not(.hidden) .screen-header, ' +
       '.context-screen:not(.hidden) .screen-header, ' +
       '.request-screen:not(.hidden) .screen-header'
     );
-    let overlay = this.shadowRoot.querySelector('.menu-overlay');
+    let overlay = this.getRoot().querySelector('.menu-overlay');
     if (!container) {
       // Нет подходящего header — удаляем overlay, чтобы не мешал низу виджета
       if (overlay && overlay.parentElement) overlay.parentElement.removeChild(overlay);
@@ -6126,7 +4246,7 @@ render() {
   }
 
   updateMenuUI() {
-    const overlay = this.shadowRoot.querySelector('.menu-overlay');
+    const overlay = this.getRoot().querySelector('.menu-overlay');
     if (!overlay) return;
     const locale = this.getCurrentLocale();
     const languageCodes = ['RU', 'EN', 'AR'];
@@ -6141,7 +4261,7 @@ render() {
       const shouldListen = this._menuState === 'open' && this._menuLanguageDropdownOpen;
       if (!shouldListen) {
         if (this._menuLanguageOutsideClickBound && this._menuLanguageOutsideClickHandler) {
-          this.shadowRoot.removeEventListener('click', this._menuLanguageOutsideClickHandler, true);
+          this.getRoot().removeEventListener('click', this._menuLanguageOutsideClickHandler, true);
         }
         this._menuLanguageOutsideClickBound = false;
         return;
@@ -6149,7 +4269,7 @@ render() {
       if (!this._menuLanguageOutsideClickHandler) {
         this._menuLanguageOutsideClickHandler = (e) => {
           if (!this._menuLanguageDropdownOpen || this._menuState !== 'open') return;
-          const picker = this.shadowRoot?.querySelector('[data-language-picker]');
+          const picker = this.getRoot()?.querySelector('[data-language-picker]');
           if (!picker) return;
           const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
           if (path.includes(picker)) return;
@@ -6158,7 +4278,7 @@ render() {
         };
       }
       if (!this._menuLanguageOutsideClickBound) {
-        this.shadowRoot.addEventListener('click', this._menuLanguageOutsideClickHandler, true);
+        this.getRoot().addEventListener('click', this._menuLanguageOutsideClickHandler, true);
         this._menuLanguageOutsideClickBound = true;
       }
     };
@@ -6166,7 +4286,7 @@ render() {
 
     // Toggle side header actions and logo on active screen
     try {
-      const activeHeader = this.shadowRoot.querySelector(
+      const activeHeader = this.getRoot().querySelector(
         '.main-screen:not(.hidden) .screen-header, ' +
         '.dialog-screen:not(.hidden) .screen-header, ' +
         '.context-screen:not(.hidden) .screen-header, ' +
@@ -6279,4 +4399,32 @@ render() {
   setUnderstanding(insights) { this.understanding.update(insights); }
 }
 
-customElements.define('voice-widget', VoiceWidget);
+if (!customElements.get('voice-widget')) {
+  customElements.define('voice-widget', VoiceWidget);
+}
+
+const autoMount = () => {
+  let target = document.getElementById('root') || document.body;
+  if (!target) return;
+
+  let el = target.querySelector('voice-widget');
+  if (!el) {
+    el = document.createElement('voice-widget');
+    el.setAttribute('api-url', 'https://voice-widget-backend-dubai.up.railway.app/api/audio/upload');
+    el.setAttribute('field-name', 'audio');
+    el.setAttribute('response-field', 'response');
+    target.appendChild(el);
+  }
+
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    try { tg.ready(); } catch {}
+    try { tg.expand(); } catch {}
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', autoMount, { once: true });
+} else {
+  autoMount();
+}

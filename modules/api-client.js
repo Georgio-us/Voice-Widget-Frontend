@@ -223,8 +223,8 @@ export class APIClient {
 
   // ---------- Текст ----------
   async sendTextMessage() {
-    const textInput = this.widget.shadowRoot.getElementById('textInput');
-    const sendButton = this.widget.shadowRoot.getElementById('sendButton');
+    const textInput = this.widget.getRoot().getElementById('textInput');
+    const sendButton = this.widget.getRoot().getElementById('sendButton');
     const messageText = textInput?.value?.trim();
     if (!messageText) return;
 
@@ -496,7 +496,7 @@ export class APIClient {
         const lastUserMessage = this.widget.messages[this.widget.messages.length - 1];
         if (lastUserMessage && lastUserMessage.type === 'user') {
           lastUserMessage.content = data.transcription;
-          const userMsgs = this.widget.shadowRoot.querySelectorAll('.message.user');
+          const userMsgs = this.widget.getRoot().querySelectorAll('.message.user');
           const el = userMsgs[userMsgs.length - 1];
           if (el) {
             const bubble = el.querySelector('.message-bubble');
