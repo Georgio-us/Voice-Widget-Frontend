@@ -2393,6 +2393,11 @@ const LOCALES = {
 class VoiceWidget extends HTMLElement {
   constructor() {
     super();
+  }
+
+  _initializeInstance() {
+    if (this._initializedOnce) return;
+
     this.rootEl = this;
     this.classList.add('vw-app');
     this._theme = null;
@@ -2462,6 +2467,7 @@ class VoiceWidget extends HTMLElement {
     this.bindEvents();
     this.checkBrowserSupport();
     this._uiInitializedOnce = false;
+    this._initializedOnce = true;
   }
 
   detectTelegramWebApp() {
@@ -2827,6 +2833,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   connectedCallback() {
+    this._initializeInstance();
     if (this.isTelegramWebApp) {
       this.setAttribute('data-telegram', '1');
     } else {
@@ -2848,6 +2855,19 @@ class VoiceWidget extends HTMLElement {
     if (this._themeInitializedOnce) return;
     this.initTheme();
     this._themeInitializedOnce = true;
+  }
+
+  init(config = {}) {
+    const { apiUrl, fieldName, responseField } = config || {};
+    if (typeof apiUrl === 'string' && apiUrl.trim()) {
+      this.setApiUrl(apiUrl.trim());
+    }
+    if (typeof fieldName === 'string' && fieldName.trim()) {
+      this.fieldName = fieldName.trim();
+    }
+    if (typeof responseField === 'string' && responseField.trim()) {
+      this.responseField = responseField.trim();
+    }
   }
 
   applyHostModeClasses() {
@@ -6280,9 +6300,19 @@ const autoMount = () => {
     target.appendChild(el);
   }
   // Configure only after the element is connected.
-  try { el.setApiUrl?.(backendUrl); } catch {}
-  try { el.fieldName = 'audio'; } catch {}
-  try { el.responseField = 'response'; } catch {}
+  try {
+    if (typeof el.init === 'function') {
+      el.init({
+        apiUrl: backendUrl,
+        fieldName: 'audio',
+        responseField: 'response'
+      });
+    } else {
+      el.apiUrl = backendUrl;
+      el.fieldName = 'audio';
+      el.responseField = 'response';
+    }
+  } catch {}
 
   const tg = window.Telegram?.WebApp;
   if (tg) {
