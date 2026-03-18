@@ -2398,12 +2398,6 @@ class VoiceWidget extends HTMLElement {
     this._theme = null;
     this._pendingThemeAttr = null;
     this.isTelegramWebApp = this.detectTelegramWebApp();
-
-    if (this.isTelegramWebApp) {
-      this.setAttribute('data-telegram', '1');
-    } else {
-      this.removeAttribute('data-telegram');
-    }
     this.classList.add('open');
 
     // базовые состояния
@@ -2833,6 +2827,11 @@ class VoiceWidget extends HTMLElement {
   }
 
   connectedCallback() {
+    if (this.isTelegramWebApp) {
+      this.setAttribute('data-telegram', '1');
+    } else {
+      this.removeAttribute('data-telegram');
+    }
     this.currentLang = this.getInitialLanguage();
     this._menuLanguageCode = this.currentLang;
     this.updateInterface();
@@ -6274,14 +6273,16 @@ const autoMount = () => {
   let target = document.getElementById('root') || document.body;
   if (!target) return;
 
+  const backendUrl = 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload';
   let el = target.querySelector('voice-widget');
   if (!el) {
     el = document.createElement('voice-widget');
-    el.setAttribute('api-url', 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload');
-    el.setAttribute('field-name', 'audio');
-    el.setAttribute('response-field', 'response');
     target.appendChild(el);
   }
+  // Configure only after the element is connected.
+  try { el.setApiUrl?.(backendUrl); } catch {}
+  try { el.fieldName = 'audio'; } catch {}
+  try { el.responseField = 'response'; } catch {}
 
   const tg = window.Telegram?.WebApp;
   if (tg) {
