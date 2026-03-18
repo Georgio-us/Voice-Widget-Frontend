@@ -1,4 +1,2038 @@
 // ========================================
+/* 📁 voice-widget-v1.js (standalone self-contained build) */
+// ========================================
+
+// Minimal markdown renderer (no external deps)
+function __vwEscapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function isInlineMessage(text) {
+  if (!text) return true;
+  const src = String(text).trim();
+  if (!src) return true;
+  if (src.includes('\n\n')) return false;
+  const blockMarkers = [/^#{1,6}\s/m, /^>\s/m, /^\s*[-*+]\s/m, /^\s*\d+\.\s/m, /```/m];
+  return !blockMarkers.some((re) => re.test(src));
+}
+
+function renderMarkdownInline(text) {
+  const raw = __vwEscapeHtml(String(text ?? '').trim());
+  return raw.replace(/\n/g, '<br>');
+}
+
+function renderMarkdownBlock(text) {
+  const raw = __vwEscapeHtml(String(text ?? '').trim());
+  return raw.replace(/\n/g, '<br>');
+}
+
+function renderMarkdown(text) {
+  return isInlineMessage(text) ? renderMarkdownInline(text) : renderMarkdownBlock(text);
+}
+
+// modules/telemetryClient.js
+/**
+ * Клиент для отправки телеметрии на бэкенд
+ * Отправляет события только если пользователь дал согласие на analytics
+ */
+
+// Типы событий (синхронизированы с бэкендом)
+const EventTypes = {
+  SESSION_START: 'session_start',
+  SESSION_END: 'session_end',
+  WIDGET_OPEN: 'widget_open',
+  WIDGET_CLOSE: 'widget_close',
+  WIDGET_MINIMIZE: 'widget_minimize',
+  WIDGET_RESTORE: 'widget_restore',
+  USER_MESSAGE: 'user_message',
+  ASSISTANT_REPLY: 'assistant_reply',
+  CARD_SHOW: 'card_show',
+  CARD_NEXT: 'card_next',
+  CARD_LIKE: 'card_like',
+  CARD_DISLIKE: 'card_dislike',
+  LEAD_FORM_OPEN: 'lead_form_open',
+  LEAD_FORM_SUBMIT: 'lead_form_submit',
+  LEAD_FORM_ERROR: 'lead_form_error',
+  CONSENT_UPDATE: 'consent_update',
+  ERROR: 'error'
+};
+
+// Состояние телеметрии
+let config = {
+  baseUrl: null,
+  sessionId: null,
+  userId: null,
+  analytics: false // по умолчанию отключено, пока пользователь не даст согласие
+};
+
+/**
+ * Инициализация телеметрии
+ * @param {Object} options - { baseUrl, sessionId, userId }
+ */
+function initTelemetry({ baseUrl, sessionId, userId = null }) {
+  config.baseUrl = baseUrl;
+  config.sessionId = sessionId;
+  config.userId = userId;
+}
+
+/**
+ * Установка согласия на аналитику
+ * @param {Object} consent - { analytics: boolean }
+ */
+function setConsent({ analytics }) {
+  config.analytics = analytics === true;
+}
+
+/**
+ * Получить текущее состояние согласия
+ * @returns {boolean}
+ */
+function getConsent() {
+  return config.analytics;
+}
+
+/**
+ * Утилита для построения payload: фильтрует undefined/null, но сохраняет 0 и false
+ * @param {Object} base - базовый объект
+ * @param {Object} extra - дополнительные поля
+ * @returns {Object} - очищенный объект без undefined/null
+ */
+function buildPayload(base = {}, extra = {}) {
+  const merged = { ...base, ...extra };
+  const cleaned = {};
+  for (const [key, value] of Object.entries(merged)) {
+    // Пропускаем только undefined и null, но сохраняем 0, false, '', []
+    if (value !== undefined && value !== null) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
+/**
+ * Отправка события телеметрии
+ * @param {string} eventType - тип события (из EventTypes)
+ * @param {Object} payload - данные события
+ * @returns {Promise<void>}
+ */
+async function log(eventType, payload = {}) {
+  // Если аналитика отключена, не отправляем события (кроме consent_update)
+  if (!config.analytics && eventType !== EventTypes.CONSENT_UPDATE) {
+    return;
+  }
+
+  // Если не инициализирован baseUrl, не отправляем
+  if (!config.baseUrl) {
+    console.warn('⚠️ Telemetry not initialized: baseUrl missing');
+    return;
+  }
+
+  try {
+    const url = `${config.baseUrl}/api/telemetry/log`;
+    const body = buildPayload(
+      {
+        eventType,
+        sessionId: config.sessionId,
+        userId: config.userId,
+        source: 'widget',
+        url: typeof window !== 'undefined' ? window.location.href : null
+      },
+      payload
+    );
+
+    // Отправляем асинхронно, не блокируем основной поток
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }).catch(err => {
+      // Ошибки сети не логируем в консоль, чтобы не засорять
+      // В production можно добавить очередь для повторной отправки
+      console.debug('Telemetry send failed (silent):', err);
+    });
+  } catch (err) {
+    // Ошибки при формировании запроса тоже не логируем
+    console.debug('Telemetry log error (silent):', err);
+  }
+}
+
+const setTelemetryConsent = setConsent;
+const logTelemetry = log;
+const TelemetryEventTypes = EventTypes;
+
+// ========================================
+// 📁 modules/event-manager.js
+// ========================================
+// Система событий для коммуникации между модулями
+
+class EventManager {
+    constructor() {
+        this.listeners = new Map();
+    }
+
+    // Подписаться на событие
+    on(event, callback) {
+        if (!this.listeners.has(event)) {
+            this.listeners.set(event, []);
+        }
+        this.listeners.get(event).push(callback);
+        console.log(`📡 Подписался на событие: ${event}`);
+    }
+
+    // Отправить событие
+    emit(event, data) {
+        if (this.listeners.has(event)) {
+            const callbacks = this.listeners.get(event);
+            console.log(`📢 Отправляю событие: ${event}, слушателей: ${callbacks.length}`);
+            
+            callbacks.forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error(`❌ Ошибка в обработчике события ${event}:`, error);
+                }
+            });
+        } else {
+            console.log(`📡 Событие ${event} отправлено, но нет слушателей`);
+        }
+    }
+
+    // Отписаться от события
+    off(event, callback) {
+        if (this.listeners.has(event)) {
+            const callbacks = this.listeners.get(event);
+            const index = callbacks.indexOf(callback);
+            if (index > -1) {
+                callbacks.splice(index, 1);
+                console.log(`📡 Отписался от события: ${event}`);
+            }
+        }
+    }
+
+    // Получить список всех событий (для отладки)
+    getEvents() {
+        return Array.from(this.listeners.keys());
+    }
+
+    // Очистить все события
+    clear() {
+        this.listeners.clear();
+        console.log('📡 Все события очищены');
+    }
+}
+// ========================================
+// 📁 modules/audio-recorder.js (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+// ========================================
+// Запись и обработка аудио
+
+class AudioRecorder {
+    constructor(widget) {
+        this.widget = widget;
+        this.isRecording = false;
+        this.recordingTime = 0;
+        this.recordingTimer = null;
+        this.maxRecordingTime = 30;
+        this.minRecordingTime = 1;
+        this.mediaRecorder = null; 
+        this.stream = null;
+        this.audioBlob = null;
+        this.recordedChunks = [];
+    }
+
+    t(key) {
+        if (this.widget && typeof this.widget.t === 'function') {
+            return this.widget.t(key);
+        }
+        return '';
+    }
+
+    async startRecording() {
+        try {
+            this.isRecording = true;
+            this.recordingTime = 0;
+            this.recordedChunks = [];
+            this.audioBlob = null;
+
+            // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ДЛЯ UI MANAGER
+            this.widget.events.emit('recordingStarted');
+
+            this.stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
+
+            let mimeType = '';
+            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                mimeType = 'audio/webm;codecs=opus';
+            } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                mimeType = 'audio/webm';
+            }
+
+            this.mediaRecorder = new MediaRecorder(this.stream, mimeType ? { mimeType } : {});
+
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.recordedChunks.push(event.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = () => {
+                if (this.recordedChunks.length > 0) {
+                    this.audioBlob = new Blob(this.recordedChunks, mimeType ? { type: mimeType } : {});
+                    console.log('✅ Аудио готово к отправке');
+                }
+            };
+
+            this.mediaRecorder.onerror = (event) => {
+                console.error('Ошибка записи:', event.error);
+                this.handleRecordingError(this.t('micErrorDuringRecord'));
+            };
+
+            this.mediaRecorder.start(100);
+
+            // 🔥 ИСПОЛЬЗУЕМ ТОЛЬКО СИСТЕМУ СОБЫТИЙ (убираем прямую манипуляцию DOM)
+            this.recordingTimer = setInterval(() => {
+                this.recordingTime++;
+                this.widget.events.emit('timerUpdated', this.recordingTime);
+
+                if (this.recordingTime >= this.maxRecordingTime) {
+                    this.finishAndSend();
+                }
+            }, 1000);
+
+            console.log('🎤 Запись началась');
+
+        } catch (err) {
+            console.error('Ошибка доступа к микрофону:', err);
+            this.handleRecordingError(this.getErrorMessage(err));
+        }
+    }
+
+    cancelRecording() {
+        if (!this.isRecording) return;
+
+        console.log('🔴 Отменяем запись');
+
+        this.isRecording = false;
+        
+        if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+        }
+
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+            this.mediaRecorder.stop();
+        }
+
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+
+        this.cleanupRecording();
+        
+        // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ОТМЕНЫ
+        this.widget.events.emit('recordingCancelled');
+        this.widget.events.emit('notification', `❌ ${this.t('recordingCancelled')}`);
+    }
+
+    async finishAndSend() {
+        if (!this.isRecording) return;
+
+        console.log('🟢 Завершаем запись и отправляем');
+
+        if (this.recordingTime < this.minRecordingTime) {
+            this.widget.events.emit('notification', `⚠️ ${this.t('shortRecording')}`);
+            return;
+        }
+
+        this.isRecording = false;
+        
+        if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+        }
+
+        await new Promise((resolve) => {
+            this.mediaRecorder.onstop = () => {
+                if (this.recordedChunks.length > 0) {
+                    this.audioBlob = new Blob(this.recordedChunks, { 
+                        type: this.mediaRecorder.mimeType || 'audio/webm' 
+                    });
+                    console.log('✅ Blob создан, отправляем...');
+                    resolve();
+                }
+            };
+
+            this.mediaRecorder.stop();
+        });
+
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+
+        // 🔥 ГЕНЕРИРУЕМ СОБЫТИЕ ОСТАНОВКИ ЗАПИСИ
+        this.widget.events.emit('recordingStopped');
+
+        // Отправляем через API
+        this.widget.api.sendMessage();
+    }
+
+    handleRecordingError(message) {
+        this.isRecording = false;
+        
+        if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+        }
+
+        this.cleanupRecording();
+        
+        // 🔥 ГЕНЕРИРУЕМ СОБЫТИЯ ОШИБКИ
+        this.widget.events.emit('recordingCancelled');
+        this.widget.events.emit('notification', `❌ ${message}`);
+        this.widget.events.emit('error', new Error(message));
+    }
+
+    cleanupRecording() {
+        this.isRecording = false;
+        
+        if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+            this.recordingTimer = null;
+        }
+        
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+        
+        this.mediaRecorder = null;
+        this.audioBlob = null;
+        this.recordedChunks = [];
+        this.recordingTime = 0;
+    }
+
+    cleanupAfterSend() {
+        this.audioBlob = null;
+        this.recordedChunks = [];
+        this.recordingTime = 0;
+    }
+
+    getErrorMessage(error) {
+        if (error.name === 'NotAllowedError') {
+            return this.t('micAccessDenied');
+        } else if (error.name === 'NotFoundError') {
+            return this.t('micNotFound');
+        } else if (error.name === 'NotReadableError') {
+            return this.t('micBusy');
+        } else if (error.name === 'OverconstrainedError') {
+            return this.t('micUnsupported');
+        } else {
+            return this.t('micAccessError');
+        }
+    }
+}
+// ========================================
+// 📁 modules/understanding-manager.js
+// ========================================
+// Управление пониманием запроса и анализом insights
+
+class UnderstandingManager {
+  constructor(widget) {
+    this.widget = widget;
+
+    // Расширенная структура понимания запроса (9 параметров)
+    this.understanding = {
+      // Блок 1: Основная информация (33.3%)
+      name: null,        // 11%
+      operation: null,   // 11%
+      budget: null,      // 11%
+
+      // Блок 2: Параметры недвижимости (33.3%)
+      type: null,        // 11%
+      location: null,    // 11%
+      rooms: null,       // 11%
+
+      // Блок 3: Детали и предпочтения (33.3%)
+      area: null,        // 11%
+      details: null,     // 11% (детали локации)
+      preferences: null, // 11%
+
+      progress: 0
+    };
+  }
+
+  t(key) {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t(key);
+    }
+    return '';
+  }
+
+  // Универсальная проверка заполненности значения
+  isFilled(v) {
+    if (v === null || v === undefined) return false;
+    if (typeof v === 'string') return v.trim().length > 0;
+    // числа/булевы/объекты/массивы считаем заполненными, если не null/undefined
+    return true;
+  }
+
+  // Обновление понимания запроса
+  update(insights) {
+    if (!insights) return;
+
+    console.log('🧠 Обновляю понимание:', insights);
+
+    // Нормализуем входящие данные (поддержка старых/альтернативных ключей и вложенного params)
+    const migrated = this.migrateInsights(insights);
+    // Обновляем локальное состояние только каноническими ключами
+    this.understanding = { ...this.understanding, ...migrated };
+
+    // Пересчитываем прогресс
+    this.understanding.progress = this.calculateProgress();
+
+    // Обновляем UI
+    this.updateUnderstandingDisplay();
+
+    // Уведомляем другие модули
+    this.widget.events.emit('understandingUpdated', this.understanding);
+  }
+
+  // Гибкая система расчёта прогресса
+  calculateProgress() {
+    const weights = {
+      // Блок 1
+      name: 11,
+      operation: 11,
+      budget: 11,
+      // Блок 2
+      type: 11,
+      location: 11,
+      rooms: 11,
+      // Блок 3
+      area: 11,
+      details: 11,
+      preferences: 11
+    };
+
+    let total = 0;
+    for (const [field, w] of Object.entries(weights)) {
+      if (this.isFilled(this.understanding[field])) total += w;
+    }
+    // максимум 99%, чтобы было место для финишного шага
+    return Math.min(total, 99);
+  }
+
+  // Обновление отображения понимания
+  updateUnderstandingDisplay() {
+    const progressFill = this.widget.$byId('progressFill');
+    const progressText = this.widget.$byId('progressText');
+
+    const progress = this.understanding.progress;
+
+    if (progressFill) {
+      progressFill.style.width = `${progress}%`;
+    }
+    if (progressText) {
+      progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
+    }
+
+    // v2 Context screen sync: update circular progress and text if present
+    try {
+      const ctx = this.widget.$byId('contextScreen');
+      if (ctx) {
+        const ctxText = ctx.querySelector('.progress-text');
+        if (ctxText) ctxText.textContent = `${progress}%`;
+        const activeArc = ctx.querySelector('.progress-ring svg circle:nth-of-type(2)');
+        if (activeArc) {
+          const CIRCUMFERENCE = 276.46; // as in v2
+          const clamped = Math.max(0, Math.min(100, Number(progress) || 0));
+          const offset = Math.max(0, (1 - clamped / 100) * CIRCUMFERENCE);
+          activeArc.setAttribute('stroke-dashoffset', String(offset));
+        }
+      }
+    } catch {}
+
+    // Синхронизируем шкалу в хедере
+    if (typeof this.widget.updateHeaderUnderstanding === 'function') {
+      this.widget.updateHeaderUnderstanding(progress);
+    }
+
+    // Обновляем все поля insights
+    this.updateInsightItem('name', this.understanding.name);
+    this.updateInsightItem('operation', this.understanding.operation);
+    this.updateInsightItem('budget', this.understanding.budget);
+    this.updateInsightItem('type', this.understanding.type);
+    this.updateInsightItem('location', this.understanding.location);
+    this.updateInsightItem('rooms', this.understanding.rooms);
+    this.updateInsightItem('area', this.understanding.area);
+    this.updateInsightItem('details', this.understanding.details);
+    this.updateInsightItem('preferences', this.understanding.preferences);
+  }
+
+  // Обновление отдельного поля insights (индикатор опционален)
+  updateInsightItem(field, value) {
+    const indicator = this.widget.$byId(`${field}Indicator`); // может отсутствовать
+    const valueElement = this.widget.$byId(`${field}Value`);
+
+    if (!indicator && !valueElement) {
+      // В текущей разметке индикаторов нет — просто выходим тихо
+      return;
+    }
+
+    const filled = this.isFilled(value);
+
+    if (valueElement) {
+      valueElement.textContent = filled ? String(value) : this.getDefaultText(field);
+    }
+    if (indicator) {
+      indicator.classList.toggle('filled', filled);
+    }
+  }
+
+  // Текст по умолчанию для поля
+  getDefaultText(field) {
+    return this.t('insightDefault') || 'not specified';
+  }
+
+  // Текст стадии по проценту
+  getStageText(progress) {
+    if (progress === 0) return this.t('stageWaiting') || 'Waiting';
+    if (progress <= 20) return this.t('stageIntro') || 'Discovery';
+    if (progress <= 40) return this.t('stageCore') || 'Core parameters';
+    if (progress <= 60) return this.t('stagePrimarySelection') || 'Ready for initial selection';
+    if (progress <= 80) return this.t('stageDetails') || 'Refining details';
+    return this.t('stagePreciseSelection') || 'Ready for precise selection';
+  }
+
+  // Миграция старого формата insights в новый
+  migrateInsights(oldInsights = {}) {
+    const src = oldInsights?.params ? oldInsights.params : oldInsights;
+    const pick = (...keys) => {
+      for (const k of keys) {
+        if (src && src[k] !== undefined && src[k] !== null && String(src[k]).length) return src[k];
+      }
+      return null;
+    };
+
+    const normalized = {
+      // Основная информация
+      name: pick('name'),
+      operation: pick('operation', 'operationType'),
+      budget: pick('budget'),
+
+      // Параметры недвижимости
+      type: pick('type', 'propertyType'),
+      location: pick('location', 'district'),
+      rooms: pick('rooms'),
+
+      // Детали и предпочтения
+      area: pick('area'),
+      details: pick('details', 'locationDetails'),
+      preferences: pick('preferences', 'additional'),
+
+      // Прогресс
+      progress: oldInsights.progress ?? src?.progress ?? 0
+    };
+
+    return normalized;
+  }
+
+  // Сброс понимания запроса
+  reset() {
+    for (const key in this.understanding) {
+      if (key !== 'progress') this.understanding[key] = null;
+    }
+    this.understanding.progress = 0;
+    this.updateUnderstandingDisplay();
+
+    console.log('🧠 Понимание запроса сброшено');
+  }
+
+  // Экспорт текущего состояния
+  export() {
+    return { ...this.understanding };
+  }
+
+  // Импорт состояния
+  import(insights) {
+    this.understanding = { ...this.understanding, ...insights };
+    this.understanding.progress = this.calculateProgress();
+    this.updateUnderstandingDisplay();
+
+    console.log('🧠 Понимание запроса импортировано:', insights);
+  }
+}
+
+// ========================================
+// 📁 modules/ui-manager.js (ФИНАЛ, Reset/Restore)
+// ========================================
+
+class UIManager {
+  constructor(widget) {
+    this.widget = widget;
+    this.root = widget.getRoot();
+
+    this.inputState = 'idle';
+    this.recordingTime = 0;
+    this.recordingTimer = null;
+
+    this.isInsightsExpanded = false;
+    this.elements = {};
+    this.bindToInternalEvents();
+  }
+
+  getRoot() {
+    return this.widget?.getRoot?.() || this.root || document;
+  }
+
+  $(selector) {
+    return this.getRoot()?.querySelector?.(selector) || null;
+  }
+
+  $byId(id) {
+    return this.widget?.$byId?.(id) || this.$(`#${id}`);
+  }
+
+  getInputPlaceholder() {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t('inputPlaceholder');
+    }
+    return 'Ask a question...';
+  }
+
+  t(key) {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t(key);
+    }
+    return '';
+  }
+
+  // ---------- init ----------
+  initializeUI() {
+    this.cacheElements();
+    this.setState('main');
+    this.isInsightsExpanded = this.widget.classList.contains('expanded');
+
+    const { messagesContainer } = this.elements;
+    if (messagesContainer) messagesContainer.style.overflowY = 'hidden';
+
+    this.widget.dialogStarted = false;
+    this.widget.understanding?.updateUnderstandingDisplay?.();
+  }
+
+  cacheElements() {
+    this.elements = {
+      textInput:         this.$byId('textInput'),
+      sendButton:        this.$byId('sendButton'),
+      mainButton:        this.$byId('mainButton'),
+
+      // Main screen elements
+      mainTextInput:     this.$byId('mainTextInput'),
+      mainToggleButton:  this.$byId('mainToggleButton'),
+      mainSendButton:    this.$byId('mainSendButton'),
+
+      // Chat screen elements
+      toggleButton:      this.$byId('toggleButton'),
+
+      messagesContainer: this.$byId('messagesContainer'),
+      thread:            this.$byId('thread'),
+
+      // Details screen elements
+      progressFill:      this.$byId('progressFill'),
+      progressText:      this.$byId('progressText'),
+    };
+  }
+
+  // ---------- события / Reset-Restore ----------
+  bindToInternalEvents() {
+    this.widget.events.on('recordingStarted', () => {
+      this.setState('recording');
+      // show recording overlays (both screens are safe)
+      try { this.widget.showRecordingIndicator('main'); } catch {}
+      try { this.widget.showRecordingIndicator('chat'); } catch {}
+      this.widget.updateSendButtonState('main');
+      this.widget.updateSendButtonState('chat');
+    });
+    this.widget.events.on('recordingStopped', () => {
+      this.setState('idle');
+      try { this.widget.hideRecordingIndicator('main'); } catch {}
+      try { this.widget.hideRecordingIndicator('chat'); } catch {}
+      this.widget.updateSendButtonState('main');
+      this.widget.updateSendButtonState('chat');
+    });
+    this.widget.events.on('recordingCancelled', () => {
+      this.setState('idle');
+      try { this.widget.hideRecordingIndicator('main'); } catch {}
+      try { this.widget.hideRecordingIndicator('chat'); } catch {}
+      this.widget.updateSendButtonState('main');
+      this.widget.updateSendButtonState('chat');
+    });
+    this.widget.events.on('timerUpdated', (t) => this.updateRecordingTimer(t));
+
+    this.widget.events.on('showNotification', (m) => this.showNotification(m));
+    this.widget.events.on('textMessageSent', () => {
+      const { textInput } = this.elements;
+      if (textInput) textInput.value = '';
+      this.setState('idle');
+    });
+
+    this.widget.events.on('request-reset',   () => this.resetSessionHard());
+    this.widget.events.on('request-restore', () => this.restoreSnapshotAndApply());
+  }
+
+  // ---------- state machine ----------
+  setState(next, data = {}) {
+    const prev = this.inputState;
+    if (prev === next) return;
+    this.inputState = next;
+    this.clearState(prev);
+    this.applyState(next, data);
+
+    this.widget.events.emit('uiStateChanged', { from: prev, to: next, data, insightsExpanded: this.isInsightsExpanded });
+  }
+
+  clearState(state) {
+    const { sendButton, textInput, mainToggleButton, mainSendButton, mainTextInput, toggleButton } = this.elements;
+    switch (state) {
+      case 'recording':
+        if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
+        if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = this.getInputPlaceholder(); }
+        sendButton?.classList.remove('active');
+        toggleButton?.classList.remove('active');
+        break;
+      case 'main':
+        if (mainTextInput) { mainTextInput.disabled = false; mainTextInput.style.opacity = '1'; mainTextInput.placeholder = this.getInputPlaceholder(); }
+        if (mainToggleButton) { mainToggleButton.disabled = false; mainToggleButton.classList.remove('active'); }
+        // Removed mainSendButton disabled state - always keep it enabled
+        break;
+      default: break;
+    }
+  }
+
+  applyState(state, data) {
+    switch (state) {
+      case 'idle':      this.applyIdleState(); break;
+      case 'typing':    this.applyTypingState(); break;
+      case 'recording': this.applyRecordingState(); break;
+      case 'main':      this.applyMainState(); break;
+      case 'recorded':  this.applyRecordedState(data); break;
+    }
+  }
+
+  // IDLE
+  applyIdleState() {
+    const { textInput, sendButton, toggleButton } = this.elements;
+    if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = this.getInputPlaceholder(); }
+    if (sendButton) {
+      // Always enable send button - let updateSendButtonState handle the logic
+      sendButton.disabled = false;
+      sendButton.classList.remove('active');
+    }
+    if (toggleButton) {
+      toggleButton.disabled = false;
+      toggleButton.classList.remove('active');
+    }
+  }
+
+  // MAIN
+  applyMainState() {
+    const { mainTextInput, mainToggleButton, mainSendButton } = this.elements;
+    if (mainTextInput) { 
+      mainTextInput.disabled = false; 
+      mainTextInput.style.opacity = '1'; 
+      mainTextInput.placeholder = this.getInputPlaceholder(); 
+    }
+    if (mainToggleButton) { 
+      mainToggleButton.disabled = false; 
+      mainToggleButton.classList.remove('active'); 
+    }
+    if (mainSendButton) { 
+      // Always enable send button - let updateSendButtonState handle the logic
+      mainSendButton.disabled = false; 
+      mainSendButton.classList.remove('active'); 
+    }
+  }
+
+  // TYPING
+  applyTypingState() {
+    const { textInput, sendButton, toggleButton } = this.elements;
+    if (sendButton) { 
+      // Always enable send button - let updateSendButtonState handle the logic
+      sendButton.disabled = false;
+      sendButton.classList.remove('active');
+    }
+    if (toggleButton) {
+      toggleButton.disabled = false;
+      toggleButton.classList.remove('active');
+    }
+  }
+
+  // RECORDING
+  applyRecordingState() {
+    const { textInput, sendButton, toggleButton } = this.elements;
+    if (textInput) { textInput.disabled = true; textInput.style.opacity = '0.7'; }
+    if (sendButton) { sendButton.classList.add('active'); sendButton.disabled = false; }
+    if (toggleButton) { toggleButton.disabled = false; toggleButton.classList.add('active'); }
+    this.recordingTime = 0;
+  }
+
+  // RECORDED
+  applyRecordedState() { this.applyIdleState(); }
+
+  // ---------- ввод ----------
+  handleTextInput() {
+    const { textInput } = this.elements;
+    const hasText = !!textInput?.value?.trim();
+    if (hasText && (this.inputState === 'idle' || this.inputState === 'main')) this.setState('typing');
+    else if (!hasText && this.inputState === 'typing') this.setState('idle');
+    else if (this.inputState === 'typing') this.applyTypingState();
+    
+    // Update send button state
+    this.widget.updateSendButtonState('chat');
+  }
+  handleTextKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey && !this.isMobile()) {
+      e.preventDefault();
+      const { textInput } = this.elements;
+      if (this.inputState === 'typing' && textInput?.value?.trim()) this.handleSendText();
+    }
+  }
+
+  // кнопки
+  handleMicClick() {
+    if (this.inputState === 'idle' || this.inputState === 'typing' || this.inputState === 'main') this.widget.audioRecorder.startRecording();
+  }
+  handleCancelClick() { if (this.inputState === 'recording') this.widget.audioRecorder.cancelRecording(); }
+  handleSendClick() {
+    console.log('🔘 Send button clicked. Current state:', this.inputState, 'Recording:', this.widget.audioRecorder?.isRecording);
+    
+    if (this.inputState === 'typing') {
+      const { textInput } = this.elements;
+      const text = textInput?.value?.trim();
+      if (text) {
+        this.handleSendText();
+      } else {
+        // Trigger shake animation for empty textfield
+        this.triggerShakeAnimation('chat');
+      }
+    } else if (this.inputState === 'recording') {
+      console.log('🎤 Sending recording...');
+      this.widget.audioRecorder.finishAndSend();
+    } else if (this.inputState === 'recorded') {
+      this.widget.api.sendMessage();
+    } else {
+      // For other states, check if there's text to send
+      const { textInput, mainTextInput } = this.elements;
+      const currentTextInput = textInput || mainTextInput;
+      const text = currentTextInput?.value?.trim();
+      if (text) {
+        if (currentTextInput === mainTextInput) {
+          this.widget.sendTextFromMainScreen(text);
+        } else {
+          this.handleSendText();
+        }
+      } else {
+        // Trigger shake animation for empty textfield
+        this.triggerShakeAnimation(textInput ? 'chat' : 'main');
+      }
+    }
+  }
+  isResetCommand(text) {
+    return String(text || '').trim().toLowerCase() === '//reset';
+  }
+  tryHandleResetCommand(text, screen = 'chat') {
+    if (!this.isResetCommand(text)) return false;
+    const { textInput, mainTextInput } = this.elements;
+    if (screen === 'main') {
+      if (mainTextInput) mainTextInput.value = '';
+      this.widget.updateSendButtonState('main');
+    } else {
+      if (textInput) textInput.value = '';
+      this.widget.updateSendButtonState('chat');
+    }
+    this.widget.clearSession();
+    return true;
+  }
+  handleSendText() {
+    const { textInput } = this.elements;
+    const text = textInput?.value?.trim();
+    if (!text) return;
+    if (this.tryHandleResetCommand(text, 'chat')) return;
+    this.widget.api.sendTextMessage();
+  }
+
+  handleToggleClick(screen) {
+    if (this.widget.audioRecorder.isRecording) {
+      // Cancel recording and clear input
+      this.widget.audioRecorder.cancelRecording();
+      if (screen === 'main') {
+        const mainTextInput = this.elements.mainTextInput;
+        if (mainTextInput) {
+          mainTextInput.value = '';
+          this.widget.updateSendButtonState('main');
+        }
+      } else if (screen === 'chat') {
+        const textInput = this.elements.textInput;
+        if (textInput) {
+          textInput.value = '';
+          this.widget.updateSendButtonState('chat');
+        }
+      }
+    } else {
+      // Start recording
+      this.handleMicClick();
+    }
+  }
+
+  // ---------- запись/таймер ----------
+  updateRecordingTimer(time) {
+    if (this.inputState !== 'recording') return;
+    const m = Math.floor(time / 60).toString().padStart(2, '0');
+    const s = (time % 60).toString().padStart(2, '0');
+    // Обновляем таймеры в обоих экранах
+    const chatTimer = this.$byId('chatRecordTimer');
+    const mainTimer = this.$byId('mainRecordTimer');
+    if (chatTimer) chatTimer.textContent = `${m}:${s}`;
+    if (mainTimer) mainTimer.textContent = `${m}:${s}`;
+    // На плейсхолдер больше не полагаемся
+  }
+  clearRecordingState() {
+    if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
+    this.recordingTime = 0;
+  }
+
+  // ---------- DOM события ----------
+  bindTextInputEvents(textInput) {
+    if (!textInput) return;
+    textInput.addEventListener('input', () => this.handleTextInput());
+    textInput.addEventListener('keydown', (e) => this.handleTextKeyDown(e));
+  }
+  bindUnifiedInputEvents() {
+    const { sendButton, mainButton, textInput, toggleButton, mainToggleButton, mainSendButton, mainTextInput } = this.elements;
+    this.bindTextInputEvents(textInput);
+    sendButton?.addEventListener('click', () => this.handleSendClick());
+    toggleButton?.addEventListener('click', () => this.handleToggleClick('chat'));
+    mainButton?.addEventListener('click', () => {
+      if (this.widget.audioRecorder?.isRecording) {
+        // If already recording, finish and send the recording
+        this.widget.audioRecorder.finishAndSend();
+      } else if (!mainButton.disabled) {
+        // If not recording, start recording
+        this.handleMicClick();
+      }
+    });
+    mainToggleButton?.addEventListener('click', () => this.handleToggleClick('main'));
+    
+    // Main screen send button
+    mainSendButton?.addEventListener('click', () => {
+      const text = mainTextInput?.value?.trim();
+      if (text) {
+        if (this.tryHandleResetCommand(text, 'main')) return;
+        this.widget.sendTextFromMainScreen(text);
+      } else {
+        // Trigger shake animation for empty textfield
+        this.triggerShakeAnimation('main');
+      }
+    });
+    
+    // Main screen text input events
+    mainTextInput?.addEventListener('input', () => this.widget.updateSendButtonState('main'));
+    mainTextInput?.addEventListener('keydown', (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const text = mainTextInput.value.trim();
+        if (text) {
+          if (this.tryHandleResetCommand(text, 'main')) return;
+          this.widget.sendTextFromMainScreen(text);
+        }
+      }
+    });
+  }
+
+  // ---------- чат/история ----------
+  _storageKey() { return `vw_thread_${this.widget.sessionId || 'default'}`; }
+  _snapshotKey() { return `vw_last_snapshot`; }
+
+  loadHistory() {
+    try {
+      const raw = localStorage.getItem(this._storageKey());
+      const list = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(list) && list.length) {
+        this.widget.messages = list;
+        this._renderThreadFromMessages(list);
+        this.activateDialogButtons();
+        this.updateMessageCount();
+      }
+    } catch (e) { console.warn('Не удалось загрузить историю:', e); }
+  }
+
+  _renderThreadFromMessages(list) {
+    const { messagesContainer, thread } = this.elements;
+    if (!messagesContainer || !thread) return;
+    this.$byId('emptyState')?.remove();
+    messagesContainer.style.overflowY = 'auto';
+    thread.innerHTML = '';
+    list.forEach(msg => this._appendBubble(msg));
+    this._scrollToBottom();
+  }
+
+  _saveHistory() {
+    try { localStorage.setItem(this._storageKey(), JSON.stringify(this.widget.messages.slice(-500))); }
+    catch (e) { console.warn('Не удалось сохранить историю:', e); }
+  }
+
+  addMessage(message) {
+    this.widget.messages.push({ ...message, timestamp: message.timestamp || new Date() });
+    this._saveHistory();
+
+    const { messagesContainer, emptyState } = this.elements;
+    if (this.widget.messages.length === 1) {
+      emptyState?.remove();
+      if (messagesContainer) messagesContainer.style.overflowY = 'auto';
+      this.activateDialogButtons();
+    }
+    this._appendBubble(message);
+    this._scrollToBottom();
+    this.updateMessageCount();
+  }
+
+  _appendBubble(message) {
+    const { thread } = this.elements;
+    if (!thread) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = `message ${message.type}`;
+    // v2 bubble markup
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble ' + (message.type === 'assistant' ? 'widget-bubble' : 'user-bubble');
+    if (message.type === 'assistant') {
+      if (message.greeting === true) {
+        bubble.textContent = '';
+        wrapper.appendChild(bubble);
+        thread.appendChild(wrapper);
+        const content = message.content || '';
+        let i = 0;
+        const tid = setInterval(() => {
+          if (i < content.length) {
+            bubble.textContent += content[i];
+            i++;
+            this._scrollToBottom();
+          } else {
+            clearInterval(tid);
+          }
+        }, 20);
+      } else {
+        try {
+          const html = renderMarkdown(message.content);
+          bubble.classList.add('vw-md');
+          bubble.innerHTML = html;
+        } catch (e) {
+          console.warn('Markdown render fallback:', e);
+          bubble.textContent = message.content;
+        }
+        wrapper.appendChild(bubble);
+        thread.appendChild(wrapper);
+      }
+    } else {
+      bubble.textContent = message.content;
+      wrapper.appendChild(bubble);
+      thread.appendChild(wrapper);
+    }
+  }
+
+  _scrollToBottom() {
+    const { messagesContainer } = this.elements;
+    if (!messagesContainer) return;
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  // ---------- Reset / Restore ----------
+  saveSnapshot() {
+    try {
+      const snapshot = { ts: Date.now(), sessionId: this.widget.sessionId, messages: this.widget.messages.slice(-500) };
+      localStorage.setItem(this._snapshotKey(), JSON.stringify(snapshot));
+      return true;
+    } catch (e) { console.warn('Не удалось сохранить снапшот:', e); return false; }
+  }
+
+  restoreSnapshotAndApply() {
+    try {
+      const raw = localStorage.getItem(this._snapshotKey());
+      if (!raw) { this.showNotification(`⛔ ${this.t('noSavedSession')}`); return false; }
+      const snap = JSON.parse(raw);
+      if (!snap || !Array.isArray(snap.messages)) { this.showNotification(`⛔ ${this.t('snapshotCorrupted')}`); return false; }
+
+      this.widget.messages = snap.messages;
+      this._setSessionIdAndDisplay(snap.sessionId);
+      this._renderThreadFromMessages(this.widget.messages);
+      this.activateDialogButtons();
+      this.updateMessageCount();
+      this.resetInsightsValues(false);
+      return true;
+    } catch (e) {
+      console.warn('Не удалось восстановить снапшот:', e);
+      this.showNotification(`⛔ ${this.t('restoreError')}`);
+      return false;
+    }
+  }
+
+  resetSessionHard() {
+    this.saveSnapshot();         // 1) сохраняем снимок
+    this.clearMessages();        // 2) чистим чат
+
+    // 3) ⚠️ НЕ генерим локальную sessionId — пусть сервер создаст новую
+    this._setSessionIdAndDisplay(null);
+    try {
+      localStorage.removeItem('vw_sessionId');
+      localStorage.removeItem('voiceWidgetSessionId');
+    } catch {}
+
+    this.resetInsightsValues(true);  // 4) чистим правую панель
+    this.showNotification(`🔄 ${this.t('sessionReset')}`); // 5) нотификация
+  }
+
+  resetInsightsValues(resetProgress = true) {
+    const setTxt = (id, txt) => { const el = this.$byId(id); if (el) el.textContent = txt; };
+    setTxt('nameValue', 'не определено');
+    setTxt('operationValue', 'не определена');
+    setTxt('budgetValue', 'не определен');
+    setTxt('typeValue', 'не определен');
+    setTxt('locationValue', 'не определен');
+    setTxt('roomsValue', 'не определено');
+    setTxt('areaValue', 'не определена');
+    setTxt('detailsValue', 'не определены');
+    setTxt('preferencesValue', 'не определены');
+
+    if (resetProgress) {
+      const { progressFill, progressText } = this.elements;
+      if (progressFill) progressFill.style.width = '0%';
+      if (progressText) progressText.textContent = '0% — ожидание';
+    }
+  }
+
+  _setSessionIdAndDisplay(sessionId) {
+    this.widget.sessionId = sessionId;
+
+    // синхронизируем localStorage — и для других модулей, и для консольных тестов
+    try {
+      localStorage.setItem('vw_sessionId', sessionId || '');
+      localStorage.setItem('voiceWidgetSessionId', sessionId || '');
+    } catch {}
+  }
+
+  _generateSessionId() { return 'ro' + Math.random().toString(16).slice(2, 10); } // оставил на всякий, но не используется
+
+  // ---------- утилиты ----------
+  activateDialogButtons() {
+    const { micButton } = this.elements;
+    if (micButton) { micButton.disabled = false; micButton.classList.add('active'); this.widget.dialogStarted = true; }
+  }
+  updateMessageCount() {
+    // Message count display removed in new layout
+  }
+  showLoading() { this.$byId('loadingIndicator')?.classList.add('active'); }
+  hideLoading() { this.$byId('loadingIndicator')?.classList.remove('active'); }
+  showNotification(m) { console.log('📢', m); }
+  showWarning(m) { console.log('⚠️', m); }
+
+  isMobile() { return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 'ontouchstart' in window; }
+  bindFunctionButtons() {}
+  bindAccordionEvents() {}
+
+  // очистка
+  clearMessages() {
+    this.widget.messages = [];
+    this._saveHistory();
+
+    const { thread } = this.elements;
+    if (thread) {
+      thread.innerHTML = '';
+    }
+
+    this.widget.dialogStarted = false;
+    this.setState('main');
+  }
+
+  // геттеры состояния
+  getCurrentState() { return this.inputState; }
+  isRecording() { return this.inputState === 'recording'; }
+  isTyping() { return this.inputState === 'typing'; }
+  isIdle() { return this.inputState === 'idle'; }
+
+  getInsightsPanelState() { return { expanded: this.widget.classList.contains('expanded'), canExpand: !this.isMobile() }; }
+  getFullUIState() {
+    return {
+      inputState: this.inputState,
+      insightsPanel: this.getInsightsPanelState(),
+      dialogStarted: this.widget.dialogStarted,
+      messagesCount: this.widget.messages.length
+    };
+  }
+
+  triggerShakeAnimation(screen) {
+    const textInput = screen === 'main' ? this.elements.mainTextInput : this.elements.textInput;
+    if (textInput) {
+      textInput.classList.add('shake');
+      setTimeout(() => {
+        textInput.classList.remove('shake');
+      }, 500);
+    }
+  }
+}
+
+// ========================================
+// 📁 modules/api-client.js (DB + Cards API)
+// ========================================
+
+class APIClient {
+  constructor(widget) {
+    this.widget = widget;
+    this.apiUrl = widget.apiUrl;
+    this.fieldName = widget.fieldName;   // оставлено для совместимости, но ключ файла — всегда 'audio'
+    this.responseField = widget.responseField;
+
+    // --- Cards state (infra for future "brain") ---
+    this.lastProposedCards = [];     // последние предложенные карточки (объекты)
+    this.lastShownCardId = null;     // последняя реально показанная карточка (id)
+  }
+
+  t(key, params = null) {
+    if (this.widget && typeof this.widget.t === 'function') {
+      return this.widget.t(key, params);
+    }
+    return '';
+  }
+
+  get disableServerUI() {
+    try {
+      const v = localStorage.getItem('vw_disableServerUI');
+      return v === '1' || v === 'true';
+    } catch { return false; }
+  }
+
+  // ---------- Cards API helpers ----------
+  _deriveCardsBaseUrl() {
+    // this.apiUrl обычно: https://.../api/audio/upload
+    // cards base:          https://.../api/cards
+    try {
+      const u = new URL(String(this.apiUrl));
+      u.pathname = u.pathname.replace(/\/api\/audio\/upload\/?$/i, '/api/cards');
+      return u.toString().replace(/\/$/, '');
+    } catch {
+      return String(this.apiUrl)
+        .replace(/\/api\/audio\/upload\/?$/i, '/api/cards')
+        .replace(/\/$/, '');
+    }
+  }
+
+  async fetchCardsSearch(params = {}) {
+    const base = this._deriveCardsBaseUrl();
+    const url = new URL(base + '/search');
+
+    const allowed = ['city', 'district', 'rooms', 'type', 'minPrice', 'maxPrice', 'limit'];
+    for (const k of allowed) {
+      const v = params[k];
+      if (v !== undefined && v !== null && String(v).trim() !== '') {
+        url.searchParams.set(k, String(v));
+      }
+    }
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error(`Cards search failed: ${res.status}`);
+    const data = await res.json().catch(() => ({}));
+    return Array.isArray(data.cards) ? data.cards : [];
+  }
+
+  async fetchCardById(id) {
+    const base = this._deriveCardsBaseUrl();
+    const url = `${base}/${encodeURIComponent(id)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Card fetch failed: ${res.status}`);
+    return await res.json().catch(() => null);
+  }
+
+  _rememberProposed(cards) {
+    if (Array.isArray(cards)) this.lastProposedCards = cards;
+  }
+
+  _rememberShown(cardId) {
+    if (!cardId) return;
+    this.lastShownCardId = String(cardId);
+  }
+
+  _notifyShownToServer(cardId) {
+    // show = факт видимости. Отправляем чуть позже, чтобы UI успел отрисовать.
+    if (!cardId) return;
+    try {
+      setTimeout(() => {
+        try { this.sendCardInteraction('show', cardId); } catch {}
+      }, 0);
+    } catch {}
+  }
+
+  // ---------- Hidden commands parsing ----------
+  extractHiddenCommands(rawText = '') {
+    if (!rawText) return { cleaned: '', commands: [] };
+    let cleaned = String(rawText);
+    const commands = [];
+
+    // triple-backtick JSON blocks
+    const codeBlockRe = /```json\s*([\s\S]*?)```/gi;
+    cleaned = cleaned.replace(codeBlockRe, (m, body) => {
+      try {
+        const obj = JSON.parse(body.trim());
+        if (obj && obj.vw_cmd) commands.push(obj);
+      } catch {}
+      return '';
+    });
+
+    // <CMD> ... </CMD> blocks with JSON
+    const tagRe = /<CMD>([\s\S]*?)<\/CMD>/gi;
+    cleaned = cleaned.replace(tagRe, (m, body) => {
+      try {
+        const obj = JSON.parse(body.trim());
+        if (obj && obj.vw_cmd) commands.push(obj);
+      } catch {}
+      return '';
+    });
+
+    // Trim extra whitespace left by removals
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').trim();
+    return { cleaned, commands };
+  }
+
+  async dispatchHiddenCommand(cmd) {
+    if (!cmd || !cmd.vw_cmd) return;
+    const name = String(cmd.vw_cmd);
+    const args = cmd.args || {};
+
+    try {
+      switch (name) {
+        case 'cards.list':
+        case 'cards.search_wider': {
+          // 🆕 Sprint I: client-driven путь изолирован — карточки не показываются
+          // Оставляем только сохранение для совместимости, но без визуального показа
+          // Показ карточек возможен только через server response.cards[]
+          const cards = await this.fetchCardsSearch(args);
+          this._rememberProposed(cards);
+
+          if (!cards.length) {
+            this.widget.ui?.showNotification?.('Карточки не найдены');
+            return;
+          }
+
+          // ⚠️ Изолировано: визуальный показ карточек удалён из client-driven пути
+          // Карточки могут быть показаны только через server response.cards[]
+          break;
+        }
+
+        case 'cards.show':
+        case 'cards.more_like_this': {
+          // 🆕 Sprint I: client-driven путь изолирован — карточки не показываются
+          // Оставляем только сохранение для совместимости, но без визуального показа
+          // Показ карточек возможен только через server response.cards[]
+          const id = args.id || args.external_id || args.property_id || null;
+
+          let card = null;
+
+          if (id) {
+            card = await this.fetchCardById(id);
+          } else if (this.lastProposedCards.length) {
+            // если ID не передали — берём первую из предложенных
+            card = this.lastProposedCards[0];
+          }
+
+          if (!card) {
+            this.widget.ui?.showNotification?.('Карточка не найдена');
+            return;
+          }
+
+          const cardId = card.id || card.external_id || null;
+
+          // ⚠️ Изолировано: визуальный показ карточек удалён из client-driven пути
+          // Карточки могут быть показаны только через server response.cards[]
+          // Сохраняем для совместимости, но не показываем визуально
+          this._rememberShown(cardId);
+          // Уведомление сервера о показе также изолировано (не вызывается без server-driven показа)
+
+          break;
+        }
+
+        default:
+          // неизвестные команды игнорируем
+          break;
+      }
+    } catch (e) {
+      console.warn('Hidden command error:', e);
+      this.widget.ui?.showNotification?.(this.t('processingCardsError'));
+    }
+  }
+
+  // Загрузка информации о сессии (только если sessionId есть)
+  async loadSessionInfo() {
+    if (!this.widget.sessionId) return { exists: null, expired: false };
+    try {
+      const sid = this.widget.sessionId;
+      const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`);
+      const response = await fetch(sessionUrl);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.insights) {
+          const migrated = this.widget.understanding.migrateInsights(data.insights);
+          this.widget.understanding.update(migrated);
+          console.log('📥 Загружены данные сессии:', data);
+        }
+        // 🆕 Sprint I: сохраняем role из server response (read-only)
+        if (data?.role !== undefined) {
+          this.widget.role = data.role;
+        } else {
+          console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+        }
+        return { exists: true, expired: false };
+      }
+      // Сессия удалена на сервере (TTL/manual clear): очищаем локальный thread и sid
+      if (response.status === 404) {
+        try { localStorage.removeItem(`vw_thread_${sid}`); } catch {}
+        try { this.widget.ui?._setSessionIdAndDisplay?.(null); } catch {}
+        return { exists: false, expired: true };
+      }
+    } catch {
+      console.log('ℹ️ Сессии на сервере нет или CORS — игнорируем');
+    }
+    return { exists: null, expired: false };
+  }
+
+  // ---------- Текст ----------
+  async sendTextMessage() {
+    const textInput = this.widget.$byId('textInput');
+    const sendButton = this.widget.$byId('sendButton');
+    const messageText = textInput?.value?.trim();
+    if (!messageText) return;
+
+    textInput.value = '';
+    if (sendButton) { sendButton.disabled = true; sendButton.classList.remove('active'); }
+    this.widget.ui.showLoading();
+
+    const userMessage = { type: 'user', content: messageText, timestamp: new Date() };
+    this.widget.ui.addMessage(userMessage);
+
+    // Логируем user_message перед отправкой
+    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
+      inputType: 'text',
+      text: messageText,
+      textLength: messageText.length
+    });
+
+    try {
+      const fd = new FormData();
+      fd.append('text', messageText);
+      fd.append('sessionId', this.widget.sessionId || '');
+
+      const replyLang = this.widget.getLangCode();
+      fd.append('lang', replyLang);
+      const speechLang = localStorage.getItem('vw_speechLang');
+      if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
+
+      console.log('📤 Текст →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
+
+      const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
+      const data = await response.json().catch(() => ({}));
+
+      // ✅ если сервер выдал sessionId — подхватываем и показываем
+      if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
+
+      // 🆕 Sprint I: сохраняем role из server response (read-only)
+      if (data?.role !== undefined) {
+        this.widget.role = data.role;
+      } else {
+        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+      }
+
+      console.log('📥 Ответ на текст:', {
+        sessionId: data.sessionId, messageCount: data.messageCount,
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
+      });
+
+      this.widget.ui.hideLoading();
+      this.widget.ui.updateMessageCount();
+
+      if (data.insights) this.widget.understanding.update(data.insights);
+
+      const assistantRaw = data[this.responseField] || this.t('responseMissing');
+      const parsed = this.extractHiddenCommands(assistantRaw);
+      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
+      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      // Dispatch hidden commands (after showing text)
+      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
+
+      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта
+      // Сервер отдаёт ui.autoSelectCardId; фронт запускает тот же путь, что и кнопка "Выбрать"
+      // (sendCardInteraction('select', id) → /interaction select → handoff UX).
+      try {
+        const autoId = data?.ui?.autoSelectCardId || null;
+        if (autoId) {
+          await this.sendCardInteraction('select', String(autoId));
+        }
+      } catch {}
+
+      // 🃏 карточки по предложению (после текста агента) — legacy flow
+      try {
+        if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
+          this._rememberProposed(data.cards);
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error:', e); }
+
+    } catch (error) {
+      this.widget.ui.hideLoading();
+      console.error('Ошибка при отправке текста:', error);
+      this.widget.ui.addMessage({
+        type: 'assistant',
+        content: this.t('sendTextError'),
+        timestamp: new Date()
+      });
+    } finally {
+      if (sendButton) sendButton.disabled = false;
+    }
+
+    this.widget.events.emit('textMessageSent', { text: messageText });
+  }
+
+  // Send text message from main screen (reuses existing flow)
+  async sendTextMessageFromText(messageText) {
+    if (!messageText) return;
+
+    this.widget.ui.showLoading();
+
+    // Логируем user_message перед отправкой
+    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
+      inputType: 'text',
+      text: messageText,
+      textLength: messageText.length
+    });
+
+    try {
+      const fd = new FormData();
+      fd.append('text', messageText);
+      fd.append('sessionId', this.widget.sessionId || '');
+
+      const replyLang = this.widget.getLangCode();
+      fd.append('lang', replyLang);
+      const speechLang = localStorage.getItem('vw_speechLang');
+      if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
+
+      console.log('📤 Текст (main) →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
+
+      const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
+      const data = await response.json().catch(() => ({}));
+
+      // ✅ если сервер выдал sessionId — подхватываем и показываем
+      if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
+
+      // 🆕 Sprint I: сохраняем role из server response (read-only)
+      if (data?.role !== undefined) {
+        this.widget.role = data.role;
+      } else {
+        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+      }
+
+      console.log('📥 Ответ на текст (main):', {
+        sessionId: data.sessionId, messageCount: data.messageCount,
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
+      });
+
+      this.widget.ui.hideLoading();
+      this.widget.ui.updateMessageCount();
+
+      if (data.insights) this.widget.understanding.update(data.insights);
+
+      const assistantRaw = data[this.responseField] || this.t('responseMissing');
+      const parsed = this.extractHiddenCommands(assistantRaw);
+      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
+      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      
+      // Логируем assistant_reply после получения ответа (main screen)
+      const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
+        ? data.cards.map(card => ({
+            id: card.id,
+            city: card.city || null,
+            district: card.district || null,
+            priceEUR: card.priceEUR || null,
+            rooms: card.rooms || null
+          }))
+        : [];
+      
+      logTelemetry(TelemetryEventTypes.ASSISTANT_REPLY, {
+        messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
+        hasCards: data.cards && data.cards.length > 0,
+        cards: cardsForLog,
+        stage: data.stage || null,
+        insights: data.insights || null
+      });
+      
+      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
+
+      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта (main)
+      try {
+        const autoId = data?.ui?.autoSelectCardId || null;
+        if (autoId) {
+          await this.sendCardInteraction('select', String(autoId));
+        }
+      } catch {}
+
+      // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
+      try {
+        if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
+          this._rememberProposed(data.cards);
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error (main):', e); }
+
+    } catch (error) {
+      this.widget.ui.hideLoading();
+      console.error('Ошибка при отправке текста (main):', error);
+      this.widget.ui.addMessage({
+        type: 'assistant',
+        content: this.t('sendTextError'),
+        timestamp: new Date()
+      });
+    }
+
+    this.widget.events.emit('textMessageSent', { text: messageText });
+  }
+
+  // ---------- Аудио ----------
+  async sendMessage() {
+    if (!this.widget.audioRecorder.audioBlob) {
+      console.error('Нет аудио для отправки');
+      return;
+    }
+
+    if (this.widget.audioRecorder.recordingTime < this.widget.audioRecorder.minRecordingTime) {
+      this.widget.ui.showNotification(this.t('shortRecording'));
+      return;
+    }
+
+    this.widget.ui.showLoading();
+
+    const userMessage = {
+      type: 'user',
+      content: this.t('voiceMessageLabel', { seconds: this.widget.audioRecorder.recordingTime }),
+      timestamp: new Date()
+    };
+    this.widget.ui.addMessage(userMessage);
+
+    // Логируем user_message перед отправкой аудио
+    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
+      inputType: 'audio',
+      audioDurationMs: this.widget.audioRecorder.recordingTime * 1000
+    });
+
+    try {
+      const fd = new FormData();
+
+      // ✅ ключ строго 'audio' (совместимость с бэком)
+      const blob = this.widget.audioRecorder.audioBlob;
+      const fname = (blob?.type || '').includes('wav') ? 'voice-message.wav' : 'voice-message.webm';
+      fd.append('audio', blob, fname);
+
+      fd.append('sessionId', this.widget.sessionId || '');
+
+      const replyLang = this.widget.getLangCode();
+      fd.append('lang', replyLang);
+      const speechLang = localStorage.getItem('vw_speechLang');
+      if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
+
+      if (this.fieldName && this.fieldName !== 'audio') {
+        console.warn(`[VW] fieldName='${this.fieldName}' игнорируется — используем 'audio'`);
+      }
+
+      console.log('📤 Аудио →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
+
+      const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json().catch(() => ({}));
+
+      // ✅ подхватываем новую sessionId с сервера
+      if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
+
+      // 🆕 Sprint I: сохраняем role из server response (read-only)
+      if (data?.role !== undefined) {
+        this.widget.role = data.role;
+      } else {
+        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+      }
+
+      console.log('📥 Ответ на аудио:', {
+        sessionId: data.sessionId, messageCount: data.messageCount,
+        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
+      });
+
+      this.widget.ui.hideLoading();
+      this.widget.ui.updateMessageCount();
+
+      // обновляем транскрипцию в последнем пользовательском сообщении
+      if (data.transcription) {
+        const lastUserMessage = this.widget.messages[this.widget.messages.length - 1];
+        if (lastUserMessage && lastUserMessage.type === 'user') {
+          lastUserMessage.content = data.transcription;
+          const userMsgs = this.widget.getRoot().querySelectorAll('.message.user');
+          const el = userMsgs[userMsgs.length - 1];
+          if (el) {
+            const bubble = el.querySelector('.message-bubble');
+            if (bubble) bubble.textContent = data.transcription;
+          }
+        }
+      }
+
+      if (data.insights) this.widget.understanding.update(data.insights);
+
+      const assistantRaw = data[this.responseField] || this.t('responseMissing');
+      const parsed = this.extractHiddenCommands(assistantRaw);
+
+      const assistantMessage = {
+        type: 'assistant',
+        content: parsed.cleaned || this.t('responseMissing'),
+        timestamp: new Date()
+      };
+      this.widget.ui.addMessage(assistantMessage);
+      
+      // Логируем assistant_reply после получения ответа (аудио)
+      const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
+        ? data.cards.map(card => ({
+            id: card.id,
+            city: card.city || null,
+            district: card.district || null,
+            priceEUR: card.priceEUR || null,
+            rooms: card.rooms || null
+          }))
+        : [];
+      
+      logTelemetry(TelemetryEventTypes.ASSISTANT_REPLY, {
+        messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
+        hasCards: data.cards && data.cards.length > 0,
+        cards: cardsForLog,
+        stage: data.stage || null,
+        insights: data.insights || null
+      });
+
+      // Dispatch hidden commands after showing text
+      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
+
+      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта (audio)
+      try {
+        const autoId = data?.ui?.autoSelectCardId || null;
+        if (autoId) {
+          await this.sendCardInteraction('select', String(autoId));
+        }
+      } catch {}
+
+      // 🃏 карточки по предложению (audio) — legacy flow
+      try {
+        if (Array.isArray(data.cards) && data.cards.length) {
+          this._rememberProposed(data.cards);
+          this.widget.suggestCardOption(data.cards[0]);
+        }
+      } catch (e) { console.warn('Cards handling error (audio):', e); }
+
+      this.widget.cleanupAfterSend();
+
+    } catch (error) {
+      this.widget.ui.hideLoading();
+      console.error('Ошибка при отправке аудио:', error);
+      this.widget.ui.addMessage({
+        type: 'assistant',
+        content: this.t('sendTextError'),
+        timestamp: new Date()
+      });
+    }
+
+    this.widget.events.emit('messageSent', { duration: this.widget.audioRecorder.recordingTime });
+  }
+
+  // 🆕 Sprint I: подтверждение факта рендера карточки в UI
+  async sendCardRendered(cardId) {
+    if (!cardId || !this.widget.sessionId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_card_rendered',
+          variantId: cardId,
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Card rendered confirmation sent:', { cardId, response: data });
+      } else {
+        console.warn('Failed to send card rendered confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending card rendered confirmation:', error);
+    }
+  }
+
+  // 🆕 Sprint IV: отправка события ui_slider_started
+  async sendSliderStarted() {
+    if (!this.widget.sessionId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_slider_started',
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Slider started confirmation sent:', { response: data });
+      } else {
+        console.warn('Failed to send slider started confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending slider started confirmation:', error);
+    }
+  }
+
+  // 🆕 Sprint IV: отправка события ui_slider_ended
+  async sendSliderEnded() {
+    if (!this.widget.sessionId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_slider_ended',
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Slider ended confirmation sent:', { response: data });
+      } else {
+        console.warn('Failed to send slider ended confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending slider ended confirmation:', error);
+    }
+  }
+
+  // 🆕 Sprint IV: отправка события ui_focus_changed
+  async sendFocusChanged(cardId) {
+    if (!this.widget.sessionId || !cardId) return;
+    
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'ui_focus_changed',
+          cardId: cardId,
+          sessionId: this.widget.sessionId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Focus changed confirmation sent:', { cardId, response: data });
+      } else {
+        console.warn('Failed to send focus changed confirmation:', response.status);
+      }
+    } catch (error) {
+      console.warn('Error sending focus changed confirmation:', error);
+    }
+  }
+
+  // ---------- Card Interactions ----------
+  async sendCardInteraction(action, variantId) {
+    // Для 'show' допустимо отсутствие variantId — сервер выберет кандидат по сессии
+    if (!variantId && action !== 'show') {
+      console.warn('No variant ID provided for card interaction');
+      return;
+    }
+
+    try {
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: action, // 'like' or 'next' or 'show'
+          variantId: variantId,
+          sessionId: this.widget.sessionId || ''
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📤 Card interaction sent:', { action, variantId, response: data });
+
+        // 🆕 Sprint I: сохраняем role из server response (read-only)
+        if (data?.role !== undefined) {
+          this.widget.role = data.role;
+        } else {
+          console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
+        }
+
+        // Для первого показа карточки ('show') карточку уже отрисовали локально,
+        // с бэка берём только текст-подпись. Для остальных действий — рендерим карточку.
+        if (action !== 'show') {
+          if (data && data.card) {
+            try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
+          }
+        }
+
+        if (data && data.assistantMessage) {
+          try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}
+        }
+
+        // Emit event for successful interaction
+        this.widget.events.emit('cardInteractionSent', { action, variantId, data });
+      } else {
+        console.error('Failed to send card interaction:', response.status);
+      }
+    } catch (error) {
+      console.error('Error sending card interaction:', error);
+    }
+  }
+}
+// ========================================
 /* 📁 voice-widget.js (ОБНОВЛЁННАЯ ВЕРСИЯ v2) */
 // ========================================
 
@@ -6,21 +2040,13 @@
 const ASSETS_BASE = (() => {
   try {
     const fromWindow = typeof window !== 'undefined' ? window.__VW_ASSETS_BASE__ : '';
-    const base = fromWindow || new URL('./assets/', import.meta.url).toString();
+    const base = fromWindow || 'assets/';
     return base.endsWith('/') ? base : base + '/';
-  } catch (e) {
-    // Fallback на относительный путь, если import.meta.url недоступен
-    const base = 'assets/';
-    return base;
+  } catch {
+    return 'assets/';
   }
 })();
 
-import { AudioRecorder } from './modules/audio-recorder.js';
-import { UnderstandingManager } from './modules/understanding-manager.js';
-import { UIManager } from './modules/ui-manager.js';
-import { APIClient } from './modules/api-client.js';
-import { EventManager } from './modules/event-manager.js';
-import { initTelemetry, setConsent as setTelemetryConsent, log as logTelemetry, EventTypes as TelemetryEventTypes } from './modules/telemetryClient.js';
 
 const LOCALES = {
   RU: {
