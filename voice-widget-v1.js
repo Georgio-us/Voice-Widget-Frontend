@@ -1244,6 +1244,29 @@ class UIManager {
   }
   showLoading() { this.$byId('loadingIndicator')?.classList.add('active'); }
   hideLoading() { this.$byId('loadingIndicator')?.classList.remove('active'); }
+  showThinkingIndicator() {
+    this.hideThinkingIndicator();
+    const { thread } = this.elements;
+    if (!thread) return null;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message assistant thinking-message';
+    wrapper.setAttribute('data-thinking', '1');
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble widget-bubble thinking-bubble';
+    bubble.innerHTML = '<span class="thinking-dots" aria-label="Thinking"><span></span><span></span><span></span></span>';
+    wrapper.appendChild(bubble);
+    thread.appendChild(wrapper);
+    this._scrollToBottom();
+    return wrapper;
+  }
+  hideThinkingIndicator(node = null) {
+    if (node?.parentNode) node.parentNode.removeChild(node);
+    this.getRoot()
+      ?.querySelectorAll?.('.thinking-message[data-thinking="1"]')
+      ?.forEach((el) => el.remove());
+  }
   showNotification(m) { console.log('📢', m); }
   showWarning(m) { console.log('⚠️', m); }
 
@@ -1523,10 +1546,10 @@ class APIClient {
 
     textInput.value = '';
     if (sendButton) { sendButton.disabled = true; sendButton.classList.remove('active'); }
-    this.widget.ui.showLoading();
 
     const userMessage = { type: 'user', content: messageText, timestamp: new Date() };
     this.widget.ui.addMessage(userMessage);
+    const thinkingEl = this.widget.ui.showThinkingIndicator();
 
     // Логируем user_message перед отправкой
     logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
@@ -1565,7 +1588,7 @@ class APIClient {
         insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
       });
 
-      this.widget.ui.hideLoading();
+      this.widget.ui.hideThinkingIndicator(thinkingEl);
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
@@ -1596,7 +1619,7 @@ class APIClient {
       } catch (e) { console.warn('Cards handling error:', e); }
 
     } catch (error) {
-      this.widget.ui.hideLoading();
+      this.widget.ui.hideThinkingIndicator(thinkingEl);
       console.error('Ошибка при отправке текста:', error);
       this.widget.ui.addMessage({
         type: 'assistant',
@@ -1614,7 +1637,7 @@ class APIClient {
   async sendTextMessageFromText(messageText) {
     if (!messageText) return;
 
-    this.widget.ui.showLoading();
+    const thinkingEl = this.widget.ui.showThinkingIndicator();
 
     // Логируем user_message перед отправкой
     logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
@@ -1653,7 +1676,7 @@ class APIClient {
         insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
       });
 
-      this.widget.ui.hideLoading();
+      this.widget.ui.hideThinkingIndicator(thinkingEl);
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
@@ -1701,7 +1724,7 @@ class APIClient {
       } catch (e) { console.warn('Cards handling error (main):', e); }
 
     } catch (error) {
-      this.widget.ui.hideLoading();
+      this.widget.ui.hideThinkingIndicator(thinkingEl);
       console.error('Ошибка при отправке текста (main):', error);
       this.widget.ui.addMessage({
         type: 'assistant',
@@ -1725,14 +1748,13 @@ class APIClient {
       return;
     }
 
-    this.widget.ui.showLoading();
-
     const userMessage = {
       type: 'user',
       content: this.t('voiceMessageLabel', { seconds: this.widget.audioRecorder.recordingTime }),
       timestamp: new Date()
     };
     this.widget.ui.addMessage(userMessage);
+    const thinkingEl = this.widget.ui.showThinkingIndicator();
 
     // Логируем user_message перед отправкой аудио
     logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
@@ -1781,7 +1803,7 @@ class APIClient {
         insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
       });
 
-      this.widget.ui.hideLoading();
+      this.widget.ui.hideThinkingIndicator(thinkingEl);
       this.widget.ui.updateMessageCount();
 
       // обновляем транскрипцию в последнем пользовательском сообщении
@@ -1851,7 +1873,7 @@ class APIClient {
       this.widget.cleanupAfterSend();
 
     } catch (error) {
-      this.widget.ui.hideLoading();
+      this.widget.ui.hideThinkingIndicator(thinkingEl);
       console.error('Ошибка при отправке аудио:', error);
       this.widget.ui.addMessage({
         type: 'assistant',

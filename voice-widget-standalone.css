@@ -1261,6 +1261,34 @@
                     margin-right: 0;
                     margin-left: auto;
                 }
+
+                .thinking-bubble {
+                    min-width: 52px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 10px 14px;
+                }
+                .thinking-dots {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    height: 10px;
+                }
+                .thinking-dots span {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background: currentColor;
+                    opacity: .25;
+                    animation: thinkingPulse 1s infinite ease-in-out;
+                }
+                .thinking-dots span:nth-child(2) { animation-delay: .15s; }
+                .thinking-dots span:nth-child(3) { animation-delay: .3s; }
+                @keyframes thinkingPulse {
+                    0%, 100% { opacity: .25; transform: translateY(0); }
+                    50% { opacity: 1; transform: translateY(-1px); }
+                }
                 
                 /* Стили для Context Screen */
                 .context-main-container {
@@ -2076,4 +2104,15 @@ voice-widget,
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.16)) !important;
   border-radius: 14px !important;
   background: var(--color-surface, rgba(255, 255, 255, 0.04)) !important;
+}
+
+.vw-app textarea.input-field,
+.vw-app .input-field,
+.vw-app .request-input,
+.vw-app .ctx-input,
+.vw-app .request-select,
+.vw-app .request-textarea,
+.vw-app .ctx-textarea,
+.vw-app .dial-btn {
+  font-size: 16px !important;
 }
