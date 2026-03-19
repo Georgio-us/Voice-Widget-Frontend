@@ -1076,6 +1076,9 @@
                     line-height: 1;
                     cursor: pointer;
                     user-select: none;
+                    pointer-events: auto;
+                    position: relative;
+                    z-index: 5;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
                     transition: transform .12s ease, opacity .12s ease;
                 }

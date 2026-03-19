@@ -1613,6 +1613,7 @@ class APIClient {
       // 🃏 карточки по предложению (после текста агента) — legacy flow
       try {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
+          this.widget.mergePropertiesToCatalog?.(data.cards);
           this._rememberProposed(data.cards);
           this.widget.suggestCardOption(data.cards[0]);
         }
@@ -1718,6 +1719,7 @@ class APIClient {
       // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
       try {
         if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
+          this.widget.mergePropertiesToCatalog?.(data.cards);
           this._rememberProposed(data.cards);
           this.widget.suggestCardOption(data.cards[0]);
         }
@@ -1865,6 +1867,7 @@ class APIClient {
       // 🃏 карточки по предложению (audio) — legacy flow
       try {
         if (Array.isArray(data.cards) && data.cards.length) {
+          this.widget.mergePropertiesToCatalog?.(data.cards);
           this._rememberProposed(data.cards);
           this.widget.suggestCardOption(data.cards[0]);
         }
@@ -2034,6 +2037,9 @@ class APIClient {
 
         // Для первого показа карточки ('show') карточку уже отрисовали локально,
         // с бэка берём только текст-подпись. Для остальных действий — рендерим карточку.
+        if (data && data.card) {
+          this.widget.mergePropertiesToCatalog?.([data.card]);
+        }
         if (action !== 'show') {
           if (data && data.card) {
             try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
@@ -3479,7 +3485,14 @@ render() {
     try { showScreen('request'); } catch {}
   });
   const objectsPill = this.$byId('objectsCounterPill');
-  const openPropertiesSlider = () => { try { this.renderPropertiesFromCatalog(); } catch {} };
+  const openPropertiesSlider = () => {
+    try {
+      console.log('objectsCounterPill clicked');
+      this.renderPropertiesFromCatalog();
+    } catch (error) {
+      console.error('objectsCounterPill click handler failed:', error);
+    }
+  };
   objectsPill?.addEventListener('click', openPropertiesSlider);
   objectsPill?.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter' || ev.key === ' ') {
@@ -5242,38 +5255,67 @@ render() {
 
   _getPropertiesEndpointCandidates() {
     const defaults = [
-      'https://voice-widget-backend-tgdubai-split.up.railway.app/api/properties',
-      'https://voice-widget-backend-tgdubai-split.up.railway.app/api/cards'
+      'https://voice-widget-backend-tgdubai-split.up.railway.app/api/cards/search?limit=2000'
     ];
     try {
       const u = new URL(String(this.apiUrl || ''));
       const base = `${u.protocol}//${u.host}`;
-      return [`${base}/api/properties`, `${base}/api/cards`, ...defaults];
+      return [`${base}/api/cards/search?limit=2000`, ...defaults];
     } catch {
       return defaults;
     }
+  }
+
+  _extractPropertiesList(data) {
+    const list = Array.isArray(data)
+      ? data
+      : Array.isArray(data.properties)
+        ? data.properties
+        : Array.isArray(data.cards)
+          ? data.cards
+          : Array.isArray(data.items)
+            ? data.items
+            : [];
+    return Array.isArray(list) ? list.filter((item) => item?.active !== false && item?.isActive !== false) : [];
+  }
+
+  _getPropertyCatalogKey(item, index = 0) {
+    const candidate = item?.id ?? item?.external_id ?? item?.externalId ?? item?.propertyId ?? item?.uid ?? null;
+    if (candidate != null && String(candidate).trim()) return String(candidate).trim().toUpperCase();
+    return `__idx_${index}_${(item?.title || '').toString().slice(0, 32)}`;
+  }
+
+  mergePropertiesToCatalog(properties = []) {
+    const incoming = this._extractPropertiesList(properties);
+    if (!window.appState) window.appState = {};
+    const current = Array.isArray(window.appState.allProperties) ? window.appState.allProperties : [];
+    const merged = new Map();
+    current.forEach((item, idx) => merged.set(this._getPropertyCatalogKey(item, idx), item));
+    incoming.forEach((item, idx) => merged.set(this._getPropertyCatalogKey(item, idx), item));
+    window.appState.allProperties = Array.from(merged.values());
+    this.updateObjectCount(window.appState.allProperties.length);
   }
 
   async loadAllProperties() {
     const candidates = this._getPropertiesEndpointCandidates();
     for (const endpoint of candidates) {
       try {
+        console.log('Fetching properties from:', endpoint);
         const response = await fetch(endpoint);
-        if (!response.ok) continue;
-        const data = await response.json().catch(() => ({}));
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data.properties)
-            ? data.properties
-            : Array.isArray(data.cards)
-              ? data.cards
-              : Array.isArray(data.items)
-                ? data.items
-                : [];
-        if (Array.isArray(list)) {
-          return list.filter((item) => item?.active !== false && item?.isActive !== false);
+        if (!response.ok) {
+          console.error('Properties fetch failed:', endpoint, response.status, response.statusText);
+          continue;
         }
-      } catch {}
+        const data = await response.json().catch(() => ({}));
+        const list = this._extractPropertiesList(data);
+        if (Array.isArray(list) && list.length) {
+          console.log('Properties loaded from:', endpoint, 'count:', list.length);
+          return list;
+        }
+        console.log('Properties endpoint returned empty list:', endpoint);
+      } catch (error) {
+        console.error('Properties fetch error from:', endpoint, error);
+      }
     }
     return [];
   }
@@ -5282,7 +5324,8 @@ render() {
     try {
       if (!window.appState) window.appState = {};
       const allProperties = await this.loadAllProperties();
-      window.appState.allProperties = Array.isArray(allProperties) ? allProperties : [];
+      window.appState.allProperties = [];
+      this.mergePropertiesToCatalog(allProperties);
       this.updateObjectCount(window.appState.allProperties.length);
     } catch {
       try {
