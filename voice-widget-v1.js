@@ -3064,13 +3064,13 @@ render() {
     <!-- Content -->
     <div class="content">
       <header class="app-header">
-        <button class="app-header-btn app-lang-btn" id="appLangButton" type="button">RU</button>
+        <button class="app-header-btn header-action-btn" id="appContactButton" type="button">Связаться</button>
         <div class="app-header-status">
           <span class="status-dot" aria-hidden="true"></span>
           <span id="appOnlineText">Online</span>
         </div>
         <div class="app-header-actions">
-          <button class="app-header-btn header-action-btn" id="appContactButton" type="button">Связаться</button>
+          <button class="app-header-btn app-lang-btn" id="appLangButton" type="button">RU</button>
           <button class="app-header-btn app-theme-btn" id="appThemeButton" type="button" aria-label="Toggle theme">◐</button>
         </div>
       </header>
