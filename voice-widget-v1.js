@@ -2871,6 +2871,7 @@ class VoiceWidget extends HTMLElement {
 
     // v2 menu overlay init (after DOM is ready)
     try { this.setupMenuOverlay(); } catch {}
+    try { this.initializePropertiesCatalog(); } catch {}
 
     
   }
@@ -3478,12 +3479,12 @@ render() {
     try { showScreen('request'); } catch {}
   });
   const objectsPill = this.$byId('objectsCounterPill');
-  const openContextScreen = () => { try { showScreen('context'); } catch {} };
-  objectsPill?.addEventListener('click', openContextScreen);
+  const openPropertiesSlider = () => { try { this.renderPropertiesFromCatalog(); } catch {} };
+  objectsPill?.addEventListener('click', openPropertiesSlider);
   objectsPill?.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter' || ev.key === ' ') {
       ev.preventDefault();
-      openContextScreen();
+      openPropertiesSlider();
     }
   });
 
@@ -5231,8 +5232,98 @@ render() {
     if (!pill) return;
     const numeric = Number(count);
     const value = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+    if (value === 0) {
+      pill.textContent = 'Объекты не найдены';
+      return;
+    }
     const formatted = new Intl.NumberFormat('en-US').format(value);
     pill.textContent = `Найдено ${formatted} объектов`;
+  }
+
+  _getPropertiesEndpointCandidates() {
+    const defaults = [
+      'https://voice-widget-backend-tgdubai-split.up.railway.app/api/properties',
+      'https://voice-widget-backend-tgdubai-split.up.railway.app/api/cards'
+    ];
+    try {
+      const u = new URL(String(this.apiUrl || ''));
+      const base = `${u.protocol}//${u.host}`;
+      return [`${base}/api/properties`, `${base}/api/cards`, ...defaults];
+    } catch {
+      return defaults;
+    }
+  }
+
+  async loadAllProperties() {
+    const candidates = this._getPropertiesEndpointCandidates();
+    for (const endpoint of candidates) {
+      try {
+        const response = await fetch(endpoint);
+        if (!response.ok) continue;
+        const data = await response.json().catch(() => ({}));
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.properties)
+            ? data.properties
+            : Array.isArray(data.cards)
+              ? data.cards
+              : Array.isArray(data.items)
+                ? data.items
+                : [];
+        if (Array.isArray(list)) {
+          return list.filter((item) => item?.active !== false && item?.isActive !== false);
+        }
+      } catch {}
+    }
+    return [];
+  }
+
+  async initializePropertiesCatalog() {
+    try {
+      if (!window.appState) window.appState = {};
+      const allProperties = await this.loadAllProperties();
+      window.appState.allProperties = Array.isArray(allProperties) ? allProperties : [];
+      this.updateObjectCount(window.appState.allProperties.length);
+    } catch {
+      try {
+        if (!window.appState) window.appState = {};
+        window.appState.allProperties = [];
+      } catch {}
+      this.updateObjectCount(0);
+    }
+  }
+
+  clearPropertiesSlider() {
+    try {
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+      if (host?.parentElement) host.parentElement.removeChild(host);
+      this.getRoot().querySelectorAll('.card-btn[data-action="send_card"], .card-btn[data-action="continue_dialog"]').forEach((btn) => {
+        const panel = btn.closest('.card-screen');
+        if (panel?.parentElement) panel.parentElement.removeChild(panel);
+      });
+      this.getRoot().querySelectorAll('.message.assistant.dynamic-card-comment').forEach((el) => el.remove());
+    } catch {}
+  }
+
+  renderPropertiesFromCatalog() {
+    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    if (!list.length) {
+      this.updateObjectCount(0);
+      return;
+    }
+    this.clearPropertiesSlider();
+    list.forEach((property) => {
+      try { this.showPropertyCard(property); } catch {}
+    });
+    requestAnimationFrame(() => {
+      try {
+        const messages = this.$byId('messagesContainer');
+        const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+        if (!messages || !host) return;
+        const targetTop = Math.max(0, host.offsetTop - 8);
+        messages.scrollTo({ top: targetTop, behavior: 'smooth' });
+      } catch {}
+    });
   }
 
   // Send text from main screen
