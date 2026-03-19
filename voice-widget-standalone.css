@@ -188,18 +188,20 @@
   /* overlay: растягиваем на всю плоскость изображения и прижимаем контент вправо-вверх (без absolute) */
   .card-screen .cs-image .cs-image-overlay{
     z-index:1;
-    position:relative;
+    position:absolute;
+    inset:0;
     width:100%;
     height:100%;
-    display:flex;
-    justify-content:flex-end;
-    align-items:flex-start;
-    padding:10px;
+    display:block;
+    padding:0;
     box-sizing:border-box;
+    pointer-events:none;
   }
   .card-screen .cs-image .cs-price-tag{
-    margin:10px 10px 0 auto;
-    align-self:flex-start;
+    position:absolute;
+    top:10px;
+    right:10px;
+    margin:0;
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -349,7 +351,8 @@
   }
   .cards-nav-btn--prev{ left:8px; }
   .cards-nav-btn--next{ right:8px; }
-  .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
+  .cards-track{ display:flex; gap:12px; width:max-content; min-width:100%; }
+  .cards-slider{ scroll-snap-type:x mandatory; scroll-padding-left:12px; }
   .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:350px; height:350px; max-height:350px; overflow:hidden; }
   .card-slide.active{ transform: scale(1); opacity:1; }
   /* flip: front and back in same grid cell (no absolute), size = max(front, back) */
@@ -426,7 +429,7 @@
   .cards-dots-row--overlay{
     position:absolute;
     left:50%;
-    bottom:10px;
+    bottom:12px;
     transform:translateX(-50%);
     z-index:3;
     margin:0;
@@ -437,22 +440,30 @@
   }
   /* actions container for clearer boundaries */
   .card-actions-wrap{ margin-top:auto; padding:0; border:none; border-radius:0; background:transparent; flex-shrink:0; }
-  .card-slide .card-actions-wrap{ display:flex; justify-content:flex-start; }
+  .card-slide .card-actions-wrap{ display:flex; justify-content:flex-end; align-items:flex-end; }
   .card-slide .card-more-btn{
     width:auto;
     min-width:0;
-    height:32px;
-    padding:0 12px;
+    height:28px;
+    padding:0 10px;
     border-radius:999px;
     border:1px solid rgba(255,255,255,.35);
     background:rgba(255,255,255,.14);
     color:#fff;
-    font-size:13px;
+    font-size:12px;
     font-weight:600;
     line-height:1;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
   }
+  .card-slide .card-more-btn svg{ width:12px; height:12px; display:block; }
   .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
   .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; position:relative; }
+  @media (max-width: 768px){
+    .cards-slider{ padding-left:12px; padding-right:6px; }
+    .card-slide{ flex:0 0 88%; }
+  }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
   /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */

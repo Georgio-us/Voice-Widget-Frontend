@@ -5544,11 +5544,15 @@ render() {
       host.innerHTML = `
         <div class="cs" style="background:transparent; box-shadow:none;">
           <div class="cards-slider">
-            <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">‹</button>
-            <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">›</button>
             <div class="cards-track"></div>
-        </div>
-      </div>`;
+          </div>
+          <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>`;
       thread.appendChild(host);
       
       // 🆕 Sprint IV: отправляем ui_slider_started при создании slider host (вход в slider-режим)
@@ -5620,7 +5624,10 @@ render() {
             <div class="cs-row"><div class="cs-title">${normalized.city}</div></div>
             <div class="cs-row"><div class="cs-sub">${metaLine}</div></div>
             <div class="card-actions-wrap">
-              <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">${locale.handoffDetails || 'Подробнее'}</button>
+              <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
+                <span>${locale.handoffDetails || 'Подробнее'}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
             </div>
           </div>
         </div>
