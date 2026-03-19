@@ -4965,6 +4965,8 @@ render() {
       // Показать карточку из последнего предложения
       const container = e.target.closest('.card-screen');
       if (container) container.remove();
+      this._catalogOverflowQueue = [];
+      this._catalogOverflowLoading = false;
       // ❗ Начинаем новый показ: удалим старый слайдер (если был)
       try {
         const oldHost = this.getRoot().querySelector('.card-screen.cards-slider-host');
@@ -5020,7 +5022,15 @@ render() {
       if (!slider) return;
       const delta = Math.max(120, Math.floor(slider.clientWidth * 0.9));
       slider.scrollBy({ left: delta, behavior: 'smooth' });
-      requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
+      requestAnimationFrame(() => {
+        try { this.updateActiveCardSlide(); } catch {}
+        try {
+          const slides = slider.querySelectorAll('.card-slide');
+          const active = slider.querySelector('.card-slide.active');
+          const idx = Array.from(slides).indexOf(active);
+          this.maybeAppendCatalogOverflow(idx, slides.length);
+        } catch {}
+      });
     } else if (e.target.matches('.cards-dot')) {
       // Навигация по слайдеру через точки
       const dot = e.target;
@@ -5392,6 +5402,25 @@ render() {
       });
       this.getRoot().querySelectorAll('.message.assistant.dynamic-card-comment').forEach((el) => el.remove());
     } catch {}
+    this._catalogOverflowQueue = [];
+    this._catalogOverflowLoading = false;
+  }
+
+  maybeAppendCatalogOverflow(activeIdx = 0, totalSlides = 0) {
+    try {
+      const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
+      if (!queue.length) return;
+      if (this._catalogOverflowLoading) return;
+      if (activeIdx < Math.max(0, totalSlides - 1)) return;
+      this._catalogOverflowLoading = true;
+      const nextChunk = queue.splice(0, 3);
+      nextChunk.forEach((property) => {
+        try { this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true }); } catch {}
+      });
+      this._catalogOverflowLoading = false;
+    } catch {
+      this._catalogOverflowLoading = false;
+    }
   }
 
   renderPropertiesFromCatalog() {
@@ -5401,8 +5430,10 @@ render() {
       return;
     }
     this.clearPropertiesSlider();
-    list.forEach((property) => {
-      try { this.showMockCardWithActions(this._toCardEngineShape(property)); } catch {}
+    const initialBatch = list.slice(0, 3);
+    this._catalogOverflowQueue = list.slice(3);
+    initialBatch.forEach((property, index) => {
+      try { this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: index > 0 }); } catch {}
     });
     requestAnimationFrame(() => {
       try {
@@ -5544,7 +5575,8 @@ render() {
   }
 
   // Add single card as slide into slider
-  addCardSlide(normalized) {
+  addCardSlide(normalized, options = {}) {
+    const { suppressAutoscroll = false } = options || {};
     const track = this.ensureCardsSlider();
     if (!track) return;
     const locale = this.getCurrentLocale();
@@ -5555,8 +5587,8 @@ render() {
     while (assetSlots.length < 4) assetSlots.push('');
     const metaParts = [
       `${normalized.district || ''}${normalized.neighborhood ? `, ${normalized.neighborhood}` : ''}`.trim(),
-      normalized.roomsLabel || '',
-      normalized.floorLabel || ''
+      normalized.roomsLabel ? `🛏️ ${normalized.roomsLabel}` : '',
+      normalized.floorLabel ? `🏢 ${normalized.floorLabel}` : ''
     ].filter(Boolean);
     const metaLine = metaParts.join(' • ');
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
@@ -5582,6 +5614,7 @@ render() {
               -->
             </div>
             <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+            <div class="cards-dots-row cards-dots-row--overlay"></div>
           </div>
           <div class="cs-body">
             <div class="cs-row"><div class="cs-title">${normalized.city}</div></div>
@@ -5653,25 +5686,29 @@ render() {
     requestAnimationFrame(() => {
       // вычисляем целевую позицию именно нового слайда
       const targetLeft = slide.offsetLeft;
-      try {
-        const slider = this.getRoot().querySelector('.cards-slider');
-        if (slider) slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
-        else track.scrollTo({ left: targetLeft, behavior: 'smooth' });
-      } catch { track.scrollTo({ left: targetLeft, behavior: 'smooth' }); }
-      // пометим новый слайд активным сразу
-      try {
-        const slider = this.getRoot().querySelector('.cards-slider');
-        const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
-        allSlides.forEach(s => s.classList.remove('active'));
-        slide.classList.add('active');
-        // обновим dots: активная — последний индекс
-        const rows = slider ? slider.querySelectorAll('.cards-dots-row') : [];
-        const activeIdx = allSlides.length ? allSlides.length - 1 : 0;
-        rows.forEach(row => {
-          const dots = row.querySelectorAll('.cards-dot');
-          dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
-        });
-      } catch {}
+      if (!suppressAutoscroll) {
+        try {
+          const slider = this.getRoot().querySelector('.cards-slider');
+          if (slider) slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
+          else track.scrollTo({ left: targetLeft, behavior: 'smooth' });
+        } catch { track.scrollTo({ left: targetLeft, behavior: 'smooth' }); }
+      }
+      // пометим новый слайд активным сразу только при авто-скролле
+      if (!suppressAutoscroll) {
+        try {
+          const slider = this.getRoot().querySelector('.cards-slider');
+          const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
+          allSlides.forEach(s => s.classList.remove('active'));
+          slide.classList.add('active');
+          // обновим dots: активная — последний индекс
+          const rows = slider ? slider.querySelectorAll('.cards-dots-row') : [];
+          const activeIdx = allSlides.length ? allSlides.length - 1 : 0;
+          rows.forEach(row => {
+            const dots = row.querySelectorAll('.cards-dot');
+            dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+          });
+        } catch {}
+      }
       // прокрутить именно контейнер сообщений до карточки
       try { this.scrollCardHostIntoView(); } catch {}
       try { this.renderSliderDots(); } catch {}
@@ -5679,15 +5716,15 @@ render() {
   }
 
   // Show property card in slider
-  showPropertyCard(property) {
+  showPropertyCard(property, options = {}) {
     const normalized = this.normalizeCardData(property);
-    this.addCardSlide(normalized);
+    this.addCardSlide(normalized, options);
   }
 
   // Show mock card in slider (with actions)
-  showMockCardWithActions(mock = {}) {
+  showMockCardWithActions(mock = {}, options = {}) {
     const normalized = this.normalizeCardData(mock);
-    this.addCardSlide(normalized);
+    this.addCardSlide(normalized, options);
   }
 
   // Обновить/установить динамический комментарий под активной карточкой
@@ -5792,6 +5829,7 @@ render() {
     }
     
     const activeIdx = Array.from(slides).indexOf(closest);
+    try { this.maybeAppendCatalogOverflow(activeIdx, slides.length); } catch {}
     // update each slide dots row
     const rows = slider.querySelectorAll('.cards-dots-row');
     rows.forEach(row => {

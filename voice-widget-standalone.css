@@ -198,7 +198,7 @@
     box-sizing:border-box;
   }
   .card-screen .cs-image .cs-price-tag{
-    margin-left:auto;
+    margin:10px 10px 0 auto;
     align-self:flex-start;
     display:inline-flex;
     align-items:center;
@@ -243,15 +243,13 @@
     display:grid;
     grid-template-rows:auto auto 1fr;
     gap:8px;
-    backdrop-filter:blur(12px);
-    -webkit-backdrop-filter:blur(12px);
-    background:rgba(0,0,0,.3);
-    color:#fff;
+    background:var(--bg-card);
+    color:var(--color-text);
     z-index:2;
   }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
-  .card-screen .cs-title{ font-weight:700; color:#fff; }
-  .card-screen .cs-sub{ font-size:12px; color:#fff; opacity:.88; }
+  .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
+  .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.88; }
   .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
   
 
@@ -330,7 +328,7 @@
   /* ===== Cards Slider ===== */
   .cards-slider{ width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; position:relative; }
   .cards-nav-btn{
-    display:none;
+    display:inline-flex;
     position:absolute;
     top:50%;
     transform:translateY(-50%);
@@ -351,9 +349,6 @@
   }
   .cards-nav-btn--prev{ left:8px; }
   .cards-nav-btn--next{ right:8px; }
-  @media (hover:hover) and (pointer:fine) and (min-width: 992px){
-    .cards-nav-btn{ display:inline-flex; }
-  }
   .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
   .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:350px; height:350px; max-height:350px; overflow:hidden; }
   .card-slide.active{ transform: scale(1); opacity:1; }
@@ -426,8 +421,20 @@
   .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
   /* dots row inside actions area (blue theme) */
   .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:2px 0 6px; flex-shrink:0; }
-  .cards-dot{ width:12px; height:6px; border-radius:6px; background:var(--color-accent); opacity:.5; border:1px solid var(--color-accent); transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
-  .cards-dot.active{ width:24px; background:var(--color-accent); opacity:1; }
+  .cards-dot{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.5); opacity:.9; border:1px solid rgba(255,255,255,.7); transition: transform .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
+  .cards-dot.active{ transform:scale(1.18); background:#fff; opacity:1; }
+  .cards-dots-row--overlay{
+    position:absolute;
+    left:50%;
+    bottom:10px;
+    transform:translateX(-50%);
+    z-index:3;
+    margin:0;
+    padding:4px 8px;
+    border-radius:999px;
+    background:rgba(0,0,0,.28);
+    pointer-events:auto;
+  }
   /* actions container for clearer boundaries */
   .card-actions-wrap{ margin-top:auto; padding:0; border:none; border-radius:0; background:transparent; flex-shrink:0; }
   .card-slide .card-actions-wrap{ display:flex; justify-content:flex-start; }
@@ -445,7 +452,6 @@
     line-height:1;
   }
   .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
-  .card-slide .cards-dots-row{ display:none !important; }
   .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; position:relative; }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
