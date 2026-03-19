@@ -4227,13 +4227,17 @@ render() {
       const assetUrl = assetEl.getAttribute('data-full-image') || this._extractBgUrl(assetEl);
       if (assetUrl) { this.openImageOverlay(assetUrl); return; }
     }
-    // ignore clicks on other buttons/icons
+    // ignore clicks on navigation/dots/buttons and keep click ownership local
+    if (e.target.closest('.cards-nav-btn, .cards-dots-row, .cards-dot')) {
+      try { e.stopPropagation(); } catch {}
+      return;
+    }
     if (e.target.closest('button')) return;
     // 1) direct <img> inside card screen
-    const imgEl = e.target.closest('.card-screen .cs-image img');
+    const imgEl = e.target.closest('.card-screen .cs-image-click-area img');
     if (imgEl && imgEl.src) { this.openImageOverlay(imgEl.src); return; }
     // 2) property card background or card mock image areas
-    const bgEl = e.target.closest('.card-image, .card-mock .cm-image, .card-screen .cs-image');
+    const bgEl = e.target.closest('.card-image, .card-mock .cm-image, .card-screen .cs-image-click-area');
     if (bgEl) {
       const url = this._extractBgUrl(bgEl);
       if (url) { this.openImageOverlay(url); return; }
@@ -5012,10 +5016,13 @@ render() {
       if (container) container.remove();
       this.events.emit('continue_dialog');
     } else if (e.target.closest('.cards-nav-btn[data-slider-nav="prev"]')) {
+      try { e.stopPropagation(); } catch {}
       this.scrollSliderByStep(-1);
     } else if (e.target.closest('.cards-nav-btn[data-slider-nav="next"]')) {
+      try { e.stopPropagation(); } catch {}
       this.scrollSliderByStep(1);
     } else if (e.target.matches('.cards-dot')) {
+      try { e.stopPropagation(); } catch {}
       // Навигация по слайдеру через точки
       const dot = e.target;
       const row = dot.closest('.cards-dots-row');
@@ -5582,12 +5589,6 @@ render() {
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
-          <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-price-tag">${normalized.priceLabel || ''}</div>
@@ -5599,7 +5600,15 @@ render() {
               </button>
               -->
             </div>
-            <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+            <div class="cs-image-click-area">
+              <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+            </div>
+            <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <div class="cards-dots-row cards-dots-row--overlay"></div>
           </div>
           <div class="cs-body">

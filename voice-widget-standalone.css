@@ -181,13 +181,13 @@
   .thread > .card-screen{ margin-top:-6px; margin-bottom:-6px; }
   .thread > .card-screen:first-child{ margin-top:0; }
   .thread > .card-screen:last-child{ margin-bottom:0; }
-  .card-screen .cs{ position:relative; background:transparent; color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; }
-  .card-screen .cs-image{ height:180px; min-height:180px; max-height:180px; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; overflow:hidden; }
-  .card-screen .cs-image > *{ grid-area:stack; }
+  .card-screen .cs{ position:relative; display:flex; flex-direction:column; background:transparent; color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; }
+  .card-screen .cs-image{ position:relative; height:180px; min-height:180px; max-height:180px; width:100%; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; overflow:hidden; }
+  .card-screen .cs-image .cs-image-click-area{ position:absolute; inset:0; z-index:1; cursor:pointer; }
   .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
   /* overlay: растягиваем на всю плоскость изображения и прижимаем контент вправо-вверх (без absolute) */
   .card-screen .cs-image .cs-image-overlay{
-    z-index:1;
+    z-index:2;
     position:absolute;
     inset:0;
     width:100%;
@@ -209,8 +209,6 @@
     border-radius:999px;
     background:rgba(0,0,0,.45);
     border:1px solid rgba(255,255,255,.28);
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
     color:#fff;
     font-size:13px;
     font-weight:600;
@@ -235,9 +233,7 @@
   .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image img{ width:100%; height:100%; max-height:180px; object-fit:cover; object-position:center; display:block; }
   .card-screen .cs-body{
-    position:absolute;
-    left:0;
-    bottom:0;
+    position:relative;
     width:100%;
     height:170px;
     padding:12px;
@@ -247,7 +243,7 @@
     gap:8px;
     background:var(--bg-card);
     color:var(--color-text);
-    z-index:2;
+    z-index:1;
   }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
@@ -345,9 +341,7 @@
     align-items:center;
     justify-content:center;
     cursor:pointer;
-    z-index:10;
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
+    z-index:8;
   }
   .cards-nav-btn--prev{ left:8px; }
   .cards-nav-btn--next{ right:8px; }
@@ -432,11 +426,11 @@
   .cards-dots-row--overlay{
     position:absolute;
     left:50%;
-    bottom:80px;
+    bottom:15px;
     width:auto;
     justify-content:center;
     transform:translateX(-50%);
-    z-index:20;
+    z-index:10;
     margin:0;
     padding:4px 8px;
     border-radius:999px;
@@ -465,7 +459,7 @@
   }
   .card-slide .card-more-btn svg{ width:12px; height:12px; display:block; }
   .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
-  .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; position:relative; }
+  .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; position:relative; display:flex; flex-direction:column; }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
   /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */
