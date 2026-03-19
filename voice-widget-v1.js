@@ -5388,10 +5388,6 @@ render() {
       this.updateObjectCount(0);
       return;
     }
-    try {
-      const echo = (this.getCurrentLocale()?.sliderEchoFromCatalog || 'Показываю найденные объекты из каталога.');
-      this.ui?.addMessage?.({ type: 'assistant', content: echo, timestamp: new Date() });
-    } catch {}
     this.clearPropertiesSlider();
     list.forEach((property) => {
       try { this.showMockCardWithActions(this._toCardEngineShape(property)); } catch {}
