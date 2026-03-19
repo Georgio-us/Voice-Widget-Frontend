@@ -4920,12 +4920,13 @@ render() {
       });
       
       this.events.emit('next_option', { variantId });
-    } else if (e.target.matches('.card-btn[data-action="select"]')) {
+    } else if (e.target.closest('.card-btn[data-action="select"]')) {
       // Flip: визуальный тест — показываем back сторону карточки
-      const slide = e.target.closest('.card-slide');
+      const selectBtn = e.target.closest('.card-btn[data-action="select"]');
+      const slide = selectBtn?.closest('.card-slide') || e.target.closest('.card-slide');
       if (slide) slide.classList.add('flipped');
       // RMv3 / Sprint 1 / Task 1: фиксируем факт выбора карточки на сервере (server-first)
-      const variantId = e.target.getAttribute('data-variant-id');
+      const variantId = selectBtn?.getAttribute('data-variant-id') || '';
       try {
         if (this.api && variantId) {
           this.api.sendCardInteraction('select', variantId);
@@ -5566,12 +5567,13 @@ render() {
     const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
     const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
     while (assetSlots.length < 4) assetSlots.push('');
-    const metaParts = [
-      `${normalized.district || ''}${normalized.neighborhood ? `, ${normalized.neighborhood}` : ''}`.trim(),
-      normalized.roomsLabel ? `🛏️ ${normalized.roomsLabel}` : '',
-      normalized.floorLabel ? `🏢 ${normalized.floorLabel}` : ''
+    const districtLine = `${normalized.district || ''}${normalized.neighborhood ? `, ${normalized.neighborhood}` : ''}`.trim();
+    const secondLine = [districtLine, normalized.roomsLabel || ''].filter(Boolean).join(' • ');
+    const featureParts = [
+      normalized.area_m2 ? `📐 ${normalized.area_m2} m²` : '',
+      normalized.bathrooms ? `🚿 ${normalized.bathrooms}` : '',
+      normalized.floor ? `🏢 ${normalized.floor}` : ''
     ].filter(Boolean);
-    const metaLine = metaParts.join(' • ');
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
       const isThumb = !!safeUrl;
@@ -5600,8 +5602,14 @@ render() {
             <div class="cards-dots-row cards-dots-row--overlay"></div>
           </div>
           <div class="cs-body">
-            <div class="cs-row"><div class="cs-title">${normalized.city}</div></div>
-            <div class="cs-row"><div class="cs-sub">${metaLine}</div></div>
+            <div class="cs-row cs-row--top">
+              <div class="cs-title">${normalized.city}</div>
+              <div class="cs-inline-price">${normalized.priceLabel || ''}</div>
+            </div>
+            <div class="cs-row"><div class="cs-sub">${secondLine}</div></div>
+            <div class="cs-row cs-row--features">
+              <div class="cs-features">${featureParts.map((item) => `<span class="cs-feature-item">${item}</span>`).join('')}</div>
+            </div>
             <div class="card-actions-wrap">
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
                 <span>${locale.handoffDetails || 'Подробнее'}</span>
