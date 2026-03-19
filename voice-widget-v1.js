@@ -3132,19 +3132,22 @@ render() {
               <div class="thread" id="thread"></div>
         </div>
           <div class="loading dialog-overlay" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
-        <div class="input-container">
-          <div class="text-input-wrapper">
-              <textarea id="textInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
-            <div class="recording-indicator" id="recordingIndicator" style="display: none;">
-                <div class="recording-label">Идёт запись</div>
-              <div class="record-timer" id="chatRecordTimer">00:00</div>
+          <div class="input-area">
+            <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Найдено 2,345 объектов</div>
+            <div class="input-container">
+              <div class="text-input-wrapper">
+                  <textarea id="textInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
+                <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+                    <div class="recording-label">Идёт запись</div>
+                  <div class="record-timer" id="chatRecordTimer">00:00</div>
+                </div>
+              </div>
+                <div class="input-buttons">
+                  <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone"></button>
+                  <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send"></button>
+            </div>
             </div>
           </div>
-            <div class="input-buttons">
-              <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone"></button>
-              <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send"></button>
-        </div>
-      </div>
         </div>
           </div>
 
@@ -3472,6 +3475,15 @@ render() {
   });
   this.$byId('appContactButton')?.addEventListener('click', () => {
     try { showScreen('request'); } catch {}
+  });
+  const objectsPill = this.$byId('objectsCounterPill');
+  const openContextScreen = () => { try { showScreen('context'); } catch {} };
+  objectsPill?.addEventListener('click', openContextScreen);
+  objectsPill?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      openContextScreen();
+    }
   });
 
   // Outside tap-to-close (no overlay, no page blocking)
@@ -5211,6 +5223,15 @@ render() {
     updateParam('areaValue', params.area, 'areaDot');
     updateParam('detailsValue', params.details ?? params.locationDetails, 'detailsDot');
     updateParam('preferencesValue', params.preferences ?? params.additional, 'preferencesDot');
+  }
+
+  updateObjectCount(count) {
+    const pill = this.$byId('objectsCounterPill');
+    if (!pill) return;
+    const numeric = Number(count);
+    const value = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+    const formatted = new Intl.NumberFormat('en-US').format(value);
+    pill.textContent = `Найдено ${formatted} объектов`;
   }
 
   // Send text from main screen

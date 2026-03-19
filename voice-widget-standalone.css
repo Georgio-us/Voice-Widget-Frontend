@@ -1051,6 +1051,37 @@
                 .dialog-screen .input-container{
                     margin: auto 0 var(--space-s) 0; /* top:auto pushes input to bottom */
                 }
+                .dialog-screen .input-area{
+                    margin-top: auto;
+                    display: flex;
+                    flex-direction: column;
+                    width: 100%;
+                }
+                .dialog-screen .input-area .input-container{
+                    margin: 0 0 var(--space-s) 0;
+                }
+                .objects-counter-pill{
+                    margin: 0 auto 12px auto;
+                    width: fit-content;
+                    padding: 8px 16px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    background: rgba(30, 30, 30, 0.6);
+                    backdrop-filter: blur(15px);
+                    -webkit-backdrop-filter: blur(15px);
+                    color: #FFFFFF;
+                    font-family: var(--ff);
+                    font-size: 14px;
+                    font-weight: 500;
+                    line-height: 1;
+                    cursor: pointer;
+                    user-select: none;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+                    transition: transform .12s ease, opacity .12s ease;
+                }
+                .objects-counter-pill:active{
+                    transform: scale(0.96);
+                }
                 
                 /* Make other v2 screens scrollable within widget bounds */
                 .context-screen .voice-widget-container,
