@@ -2063,6 +2063,8 @@ const LOCALES = {
     menuSelectedContext: 'Дополнительно',
     menuThemeToLight: 'Светлая тема',
     menuThemeToDark: 'Тёмная тема',
+    appHeaderContact: 'Связаться',
+    appHeaderOnline: 'Online',
     requestTitle: 'Оставить заявку',
     requestNameLabel: 'Имя',
     requestContactLabel: 'Контакт (телефон / WhatsApp / e-mail)',
@@ -2176,6 +2178,8 @@ const LOCALES = {
     menuSelectedContext: 'Insights',
     menuThemeToLight: 'Light mode',
     menuThemeToDark: 'Dark mode',
+    appHeaderContact: 'Contact',
+    appHeaderOnline: 'Online',
     requestTitle: 'Leave a request',
     requestNameLabel: 'Name',
     requestContactLabel: 'Contact (phone / WhatsApp / e-mail)',
@@ -2289,6 +2293,8 @@ const LOCALES = {
     menuSelectedContext: 'Insights',
     menuThemeToLight: 'Modo claro',
     menuThemeToDark: 'Modo oscuro',
+    appHeaderContact: 'Contactar',
+    appHeaderOnline: 'Online',
     requestTitle: 'Dejar una solicitud',
     requestNameLabel: 'Nombre',
     requestContactLabel: 'Contacto (telefono / WhatsApp / e-mail)',
@@ -2390,6 +2396,11 @@ const LOCALES = {
   }
 };
 
+// UA пока использует RU-копию интерфейса
+if (!LOCALES.UA) {
+  LOCALES.UA = { ...LOCALES.RU };
+}
+
 class VoiceWidget extends HTMLElement {
   constructor() {
     super();
@@ -2421,7 +2432,7 @@ class VoiceWidget extends HTMLElement {
     
     // 🆕 Sprint I: server-side role (read-only, обновляется из server responses)
     this.role = null;
-    this.supportedLanguages = ['RU', 'EN', 'AR'];
+    this.supportedLanguages = ['RU', 'UA', 'EN', 'AR'];
     this.defaultLanguage = 'EN';
     this.currentLang = this.defaultLanguage;
 
@@ -2544,6 +2555,12 @@ class VoiceWidget extends HTMLElement {
     this.updateInterface();
   }
 
+  switchLanguage() {
+    const current = String(this.currentLang || this.defaultLanguage || 'RU').toUpperCase();
+    const next = current === 'RU' ? 'UA' : 'RU';
+    this.setLanguage(next);
+  }
+
   getCurrentLocale() {
     return LOCALES[this.currentLang] || LOCALES[this.defaultLanguage] || LOCALES.EN;
   }
@@ -2596,6 +2613,10 @@ class VoiceWidget extends HTMLElement {
 
     setText('.main-text', locale.chatGreeting);
     setText('.sub-text', locale.chatSubGreeting);
+    setText('#appContactButton', locale.appHeaderContact || 'Связаться');
+    setText('#appOnlineText', locale.appHeaderOnline || 'Online');
+    setText('#appLangButton', ['UA', 'RU'].includes(this.currentLang) ? this.currentLang : 'RU');
+    setText('#appThemeButton', this.getTheme() === 'light' ? '◑' : '◐');
     setTextAll('.recording-label', locale.recordingLabel);
     setText('.loading-text', locale.loadingText);
     setTitle('mainToggleButton', locale.speakTitle);
@@ -3020,6 +3041,18 @@ render() {
 
     <!-- Content -->
     <div class="content">
+      <header class="app-header">
+        <button class="app-header-btn app-lang-btn" id="appLangButton" type="button">RU</button>
+        <div class="app-header-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="appOnlineText">Online</span>
+        </div>
+        <div class="app-header-actions">
+          <button class="app-header-btn header-action-btn" id="appContactButton" type="button">Связаться</button>
+          <button class="app-header-btn app-theme-btn" id="appThemeButton" type="button" aria-label="Toggle theme">◐</button>
+        </div>
+      </header>
+      <div class="app-body">
       <!-- Main Screen (скрыт через CSS, в DOM сохранён) -->
       <div class="main-screen hidden" id="mainScreen">
         <div class="voice-widget-container">
@@ -3335,6 +3368,7 @@ render() {
         </div>
       </div>
       </div>
+      </div>
 
       <!-- Cookie/Telemetry Consent Banner -->
       <div class="data-overlay" id="cookieOverlay" style="display:none;">
@@ -3407,6 +3441,16 @@ render() {
     // ensure menu overlay is attached to the active screen header
     try { this.setupMenuOverlay(); } catch {}
   };
+  // New top header actions
+  this.$byId('appLangButton')?.addEventListener('click', () => {
+    try { this.switchLanguage(); } catch {}
+  });
+  this.$byId('appThemeButton')?.addEventListener('click', () => {
+    try { this.toggleTheme(); this.updateInterface(); } catch {}
+  });
+  this.$byId('appContactButton')?.addEventListener('click', () => {
+    try { showScreen('request'); } catch {}
+  });
 
   // Outside tap-to-close (no overlay, no page blocking)
   // Important: we do NOT preventDefault / stopPropagation, so the host page remains fully interactive.
