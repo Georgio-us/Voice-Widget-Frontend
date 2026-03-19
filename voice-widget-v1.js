@@ -5012,25 +5012,9 @@ render() {
       if (container) container.remove();
       this.events.emit('continue_dialog');
     } else if (e.target.closest('.cards-nav-btn[data-slider-nav="prev"]')) {
-      const slider = this.getRoot().querySelector('.cards-slider');
-      if (!slider) return;
-      const delta = Math.max(120, Math.floor(slider.clientWidth * 0.9));
-      slider.scrollBy({ left: -delta, behavior: 'smooth' });
-      requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
+      this.scrollSliderByStep(-1);
     } else if (e.target.closest('.cards-nav-btn[data-slider-nav="next"]')) {
-      const slider = this.getRoot().querySelector('.cards-slider');
-      if (!slider) return;
-      const delta = Math.max(120, Math.floor(slider.clientWidth * 0.9));
-      slider.scrollBy({ left: delta, behavior: 'smooth' });
-      requestAnimationFrame(() => {
-        try { this.updateActiveCardSlide(); } catch {}
-        try {
-          const slides = slider.querySelectorAll('.card-slide');
-          const active = slider.querySelector('.card-slide.active');
-          const idx = Array.from(slides).indexOf(active);
-          this.maybeAppendCatalogOverflow(idx, slides.length);
-        } catch {}
-      });
+      this.scrollSliderByStep(1);
     } else if (e.target.matches('.cards-dot')) {
       // Навигация по слайдеру через точки
       const dot = e.target;
@@ -5041,9 +5025,7 @@ render() {
       const idx = dots.indexOf(dot);
       const slides = slider.querySelectorAll('.card-slide');
       if (idx >= 0 && slides[idx]) {
-        const left = slides[idx].offsetLeft;
-        slider.scrollTo({ left, behavior: 'smooth' });
-        try { this.updateActiveCardSlide(); } catch {}
+        this.scrollToSlideIndex(idx);
       }
     }
   });
@@ -5546,12 +5528,6 @@ render() {
           <div class="cards-slider">
             <div class="cards-track"></div>
           </div>
-          <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
         </div>`;
       thread.appendChild(host);
       
@@ -5606,6 +5582,12 @@ render() {
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+          <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-price-tag">${normalized.priceLabel || ''}</div>
@@ -5837,6 +5819,12 @@ render() {
     
     const activeIdx = Array.from(slides).indexOf(closest);
     try { this.maybeAppendCatalogOverflow(activeIdx, slides.length); } catch {}
+    slides.forEach((slideEl, index) => {
+      const prevBtn = slideEl.querySelector('.cards-nav-btn--prev');
+      const nextBtn = slideEl.querySelector('.cards-nav-btn--next');
+      if (prevBtn) prevBtn.classList.toggle('is-hidden', index === 0);
+      if (nextBtn) nextBtn.classList.toggle('is-hidden', index === slides.length - 1);
+    });
     // update each slide dots row
     const rows = slider.querySelectorAll('.cards-dots-row');
     rows.forEach(row => {
@@ -5859,6 +5847,37 @@ render() {
       }
     });
     try { this.updateActiveCardSlide(); } catch {}
+  }
+
+  scrollSliderByStep(direction = 1) {
+    try {
+      const slider = this.getRoot().querySelector('.cards-slider');
+      if (!slider) return;
+      const slides = Array.from(slider.querySelectorAll('.card-slide'));
+      if (!slides.length) return;
+      const active = slider.querySelector('.card-slide.active');
+      const currentIdx = Math.max(0, slides.indexOf(active));
+      const nextIdx = Math.max(0, Math.min(slides.length - 1, currentIdx + (direction < 0 ? -1 : 1)));
+      this.scrollToSlideIndex(nextIdx);
+    } catch {}
+  }
+
+  scrollToSlideIndex(index = 0) {
+    try {
+      const slider = this.getRoot().querySelector('.cards-slider');
+      if (!slider) return;
+      const slides = Array.from(slider.querySelectorAll('.card-slide'));
+      if (!slides.length) return;
+      const safeIndex = Math.max(0, Math.min(slides.length - 1, index));
+      const target = slides[safeIndex];
+      if (!target) return;
+      const centerOffset = Math.max(0, (slider.clientWidth - target.clientWidth) / 2);
+      const rawLeft = target.offsetLeft - centerOffset;
+      const maxLeft = Math.max(0, slider.scrollWidth - slider.clientWidth);
+      const left = Math.max(0, Math.min(maxLeft, rawLeft));
+      slider.scrollTo({ left, behavior: 'smooth' });
+      requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
+    } catch {}
   }
 
   // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------

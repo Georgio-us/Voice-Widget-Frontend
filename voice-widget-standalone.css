@@ -334,8 +334,8 @@
     position:absolute;
     top:50%;
     transform:translateY(-50%);
-    width:34px;
-    height:34px;
+    width:30px;
+    height:30px;
     border-radius:999px;
     border:1px solid rgba(255,255,255,.35);
     background:rgba(0,0,0,.45);
@@ -345,15 +345,18 @@
     align-items:center;
     justify-content:center;
     cursor:pointer;
-    z-index:4;
+    z-index:10;
     backdrop-filter:blur(10px);
     -webkit-backdrop-filter:blur(10px);
   }
   .cards-nav-btn--prev{ left:8px; }
   .cards-nav-btn--next{ right:8px; }
+  .card-slide .cards-nav-btn{ opacity:0; pointer-events:none; }
+  .card-slide.active .cards-nav-btn{ opacity:1; pointer-events:auto; }
+  .card-slide .cards-nav-btn.is-hidden{ display:none !important; }
   .cards-track{ display:flex; gap:12px; width:max-content; min-width:100%; }
-  .cards-slider{ scroll-snap-type:x mandatory; scroll-padding-left:12px; }
-  .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:350px; height:350px; max-height:350px; overflow:hidden; }
+  .cards-slider{ scroll-snap-type:x mandatory; scroll-padding-left:2.5%; scroll-padding-right:2.5%; padding:0; margin:0; overscroll-behavior-x:contain; }
+  .card-slide{ flex:0 0 95%; scroll-snap-align:center; scroll-snap-stop:always; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:350px; height:350px; max-height:350px; overflow:hidden; }
   .card-slide.active{ transform: scale(1); opacity:1; }
   /* flip: front and back in same grid cell (no absolute), size = max(front, back) */
   .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:350px; height:350px; max-height:350px; transition: opacity .25s ease; overflow:hidden; }
@@ -428,10 +431,12 @@
   .cards-dot.active{ transform:scale(1.18); background:#fff; opacity:1; }
   .cards-dots-row--overlay{
     position:absolute;
-    left:50%;
-    bottom:12px;
-    transform:translateX(-50%);
-    z-index:3;
+    left:0;
+    bottom:15px;
+    width:100%;
+    justify-content:center;
+    transform:none;
+    z-index:10;
     margin:0;
     padding:4px 8px;
     border-radius:999px;
@@ -460,10 +465,6 @@
   .card-slide .card-more-btn svg{ width:12px; height:12px; display:block; }
   .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
   .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; position:relative; }
-  @media (max-width: 768px){
-    .cards-slider{ padding-left:12px; padding-right:6px; }
-    .card-slide{ flex:0 0 88%; }
-  }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
   /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */
