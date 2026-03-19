@@ -181,7 +181,7 @@
   .thread > .card-screen{ margin-top:-6px; margin-bottom:-6px; }
   .thread > .card-screen:first-child{ margin-top:0; }
   .thread > .card-screen:last-child{ margin-bottom:0; }
-  .card-screen .cs{ background:var(--bg-card); color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; }
+  .card-screen .cs{ position:relative; background:transparent; color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; }
   .card-screen .cs-image{ height:180px; min-height:180px; max-height:180px; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; overflow:hidden; }
   .card-screen .cs-image > *{ grid-area:stack; }
   .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
@@ -196,6 +196,23 @@
     align-items:flex-start;
     padding:10px;
     box-sizing:border-box;
+  }
+  .card-screen .cs-image .cs-price-tag{
+    margin-left:auto;
+    align-self:flex-start;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:6px 10px;
+    border-radius:999px;
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.28);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    line-height:1;
   }
   .card-screen .cs-image .card-btn.like[data-action="like"]{
     display:inline-flex;
@@ -215,10 +232,26 @@
   .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image img{ width:100%; height:100%; max-height:180px; object-fit:cover; object-position:center; display:block; }
-  .card-screen .cs-body{ padding:10px 12px 6px; display:grid; gap:6px; flex:1 1 auto; min-height:0; }
+  .card-screen .cs-body{
+    position:absolute;
+    left:0;
+    bottom:0;
+    width:100%;
+    height:170px;
+    padding:12px;
+    box-sizing:border-box;
+    display:grid;
+    grid-template-rows:auto auto 1fr;
+    gap:8px;
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    background:rgba(0,0,0,.3);
+    color:#fff;
+    z-index:2;
+  }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
-  .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
-  .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.75; }
+  .card-screen .cs-title{ font-weight:700; color:#fff; }
+  .card-screen .cs-sub{ font-size:12px; color:#fff; opacity:.88; }
   .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
   
 
@@ -296,12 +329,37 @@
 
   /* ===== Cards Slider ===== */
   .cards-slider{ width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; position:relative; }
+  .cards-nav-btn{
+    display:none;
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:34px;
+    height:34px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.35);
+    background:rgba(0,0,0,.45);
+    color:#fff;
+    font-size:20px;
+    line-height:1;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:4;
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+  }
+  .cards-nav-btn--prev{ left:8px; }
+  .cards-nav-btn--next{ right:8px; }
+  @media (hover:hover) and (pointer:fine) and (min-width: 992px){
+    .cards-nav-btn{ display:inline-flex; }
+  }
   .cards-track{ display:flex; gap:12px; width:100%; scroll-snap-type:x mandatory; }
   .card-slide{ flex:0 0 100%; scroll-snap-align:start; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:350px; height:350px; max-height:350px; overflow:hidden; }
   .card-slide.active{ transform: scale(1); opacity:1; }
   /* flip: front and back in same grid cell (no absolute), size = max(front, back) */
   .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:350px; height:350px; max-height:350px; transition: opacity .25s ease; overflow:hidden; }
-  .card-slide-front{ opacity:1; pointer-events:auto; }
+  .card-slide-front{ opacity:1; pointer-events:auto; background:transparent; }
 
   .card-slide-back{ position:relative; height:350px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:20px; box-sizing:border-box; }
   .card-slide-back__bg{ position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.1; background-position:center; background-repeat:no-repeat; background-size:cover; }
@@ -371,8 +429,24 @@
   .cards-dot{ width:12px; height:6px; border-radius:6px; background:var(--color-accent); opacity:.5; border:1px solid var(--color-accent); transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
   .cards-dot.active{ width:24px; background:var(--color-accent); opacity:1; }
   /* actions container for clearer boundaries */
-  .card-actions-wrap{ margin:0 8px 8px; padding:6px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); flex-shrink:0; }
-  .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; display:flex; flex-direction:column; }
+  .card-actions-wrap{ margin-top:auto; padding:0; border:none; border-radius:0; background:transparent; flex-shrink:0; }
+  .card-slide .card-actions-wrap{ display:flex; justify-content:flex-start; }
+  .card-slide .card-more-btn{
+    width:auto;
+    min-width:0;
+    height:32px;
+    padding:0 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.14);
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    line-height:1;
+  }
+  .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
+  .card-slide .cards-dots-row{ display:none !important; }
+  .card-slide .cs{ width:100%; min-height:350px; height:350px; max-height:350px; overflow:hidden; position:relative; }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
   /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */

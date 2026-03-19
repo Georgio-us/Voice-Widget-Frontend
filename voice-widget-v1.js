@@ -5009,6 +5009,18 @@ render() {
       const container = e.target.closest('.card-screen');
       if (container) container.remove();
       this.events.emit('continue_dialog');
+    } else if (e.target.closest('.cards-nav-btn[data-slider-nav="prev"]')) {
+      const slider = this.getRoot().querySelector('.cards-slider');
+      if (!slider) return;
+      const delta = Math.max(120, Math.floor(slider.clientWidth * 0.9));
+      slider.scrollBy({ left: -delta, behavior: 'smooth' });
+      requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
+    } else if (e.target.closest('.cards-nav-btn[data-slider-nav="next"]')) {
+      const slider = this.getRoot().querySelector('.cards-slider');
+      if (!slider) return;
+      const delta = Math.max(120, Math.floor(slider.clientWidth * 0.9));
+      slider.scrollBy({ left: delta, behavior: 'smooth' });
+      requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
     } else if (e.target.matches('.cards-dot')) {
       // Навигация по слайдеру через точки
       const dot = e.target;
@@ -5501,6 +5513,8 @@ render() {
       host.innerHTML = `
         <div class="cs" style="background:transparent; box-shadow:none;">
           <div class="cards-slider">
+            <button type="button" class="cards-nav-btn cards-nav-btn--prev" data-slider-nav="prev" aria-label="Previous card">‹</button>
+            <button type="button" class="cards-nav-btn cards-nav-btn--next" data-slider-nav="next" aria-label="Next card">›</button>
             <div class="cards-track"></div>
         </div>
       </div>`;
@@ -5539,6 +5553,12 @@ render() {
     const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
     const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
     while (assetSlots.length < 4) assetSlots.push('');
+    const metaParts = [
+      `${normalized.district || ''}${normalized.neighborhood ? `, ${normalized.neighborhood}` : ''}`.trim(),
+      normalized.roomsLabel || '',
+      normalized.floorLabel || ''
+    ].filter(Boolean);
+    const metaLine = metaParts.join(' • ');
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
       const isThumb = !!safeUrl;
@@ -5552,6 +5572,7 @@ render() {
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
             <div class="cs-image-overlay">
+              <div class="cs-price-tag">${normalized.priceLabel || ''}</div>
               <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
               <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -5563,17 +5584,10 @@ render() {
             <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
           </div>
           <div class="cs-body">
-            <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
-            <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
-            <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
-          </div>
-          <div class="cards-dots-row"></div>
-          <div class="card-actions-wrap">
-            <div class="card-actions-panel">
-              <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
-              <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">${locale.cardNext || 'Ещё одну'}</button>
-            </div>
-            <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
+            <div class="cs-row"><div class="cs-title">${normalized.city}</div></div>
+            <div class="cs-row"><div class="cs-sub">${metaLine}</div></div>
+            <div class="card-actions-wrap">
+              <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">${locale.handoffDetails || 'Подробнее'}</button>
             </div>
           </div>
         </div>
