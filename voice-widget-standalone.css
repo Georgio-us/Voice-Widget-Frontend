@@ -248,22 +248,25 @@
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-row--top{ align-items:center; }
   .card-screen .cs-row--features{ min-height:20px; }
-  .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
+  .card-screen .cs-title{ font-weight:700; color:var(--color-text); flex:1; min-width:0; }
   .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.88; }
+  .card-screen .cs-price-badges{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0; }
   .card-screen .cs-inline-price{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:4px 10px;
+    padding:4px 9px;
     border-radius:999px;
     border:1px solid rgba(106,108,155,.35);
     background:rgba(106,108,155,.08);
     color:var(--color-text);
-    font-size:12px;
+    font-size:11px;
     font-weight:600;
     line-height:1;
     white-space:nowrap;
   }
+  .card-screen .cs-inline-price--total{ border-color:rgba(65,120,207,.45); background:rgba(65,120,207,.12); }
+  .card-screen .cs-inline-price--sqm{ border-color:rgba(106,108,155,.28); background:rgba(106,108,155,.05); opacity:.9; }
   .card-screen .cs-features{
     display:flex;
     flex-wrap:wrap;
@@ -272,7 +275,7 @@
     font-size:0.85rem;
     color:var(--color-text);
     opacity:.82;
-    min-height:1.1rem;
+    min-height:1rem;
   }
   .card-screen .cs-feature-item{ white-space:nowrap; }
   .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }

@@ -5292,6 +5292,12 @@ render() {
     const image = raw.image || raw.imageUrl || firstImage || '';
     const priceEUR = raw.priceEUR ?? raw.price_amount ?? raw.priceAmount ?? null;
     const price = raw.price ?? priceEUR ?? null;
+    const areaM2 = raw.area_m2 ?? raw.specs_area_m2 ?? raw.specs?.area_m2 ?? null;
+    const numericArea = Number(areaM2);
+    const numericPrice = Number(price);
+    const computedPricePerM2 = Number.isFinite(numericPrice) && numericPrice > 0 && Number.isFinite(numericArea) && numericArea > 0
+      ? Math.round(numericPrice / numericArea)
+      : null;
     return {
       ...raw,
       id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
@@ -5305,11 +5311,13 @@ render() {
       district: raw.district || raw.location_district || raw.location?.district || '',
       neighborhood: raw.neighborhood || raw.location_neighborhood || raw.location?.neighborhood || '',
       description: raw.description || raw.title || '',
+      property_type: raw.property_type || raw.propertyType || raw.type || '',
+      furnished: raw.furnished ?? raw.isFurnished ?? null,
       rooms: raw.rooms ?? raw.specs_rooms ?? raw.specs?.rooms ?? null,
       floor: raw.floor ?? raw.specs_floor ?? raw.specs?.floor ?? null,
       bathrooms: raw.bathrooms ?? raw.specs_bathrooms ?? raw.specs?.bathrooms ?? null,
-      area_m2: raw.area_m2 ?? raw.specs_area_m2 ?? raw.specs?.area_m2 ?? null,
-      price_per_m2: raw.price_per_m2 ?? null
+      area_m2: areaM2,
+      price_per_m2: raw.price_per_m2 ?? computedPricePerM2 ?? null
     };
   }
 
@@ -5567,13 +5575,18 @@ render() {
     const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
     const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
     while (assetSlots.length < 4) assetSlots.push('');
-    const districtLine = `${normalized.district || ''}${normalized.neighborhood ? `, ${normalized.neighborhood}` : ''}`.trim();
-    const secondLine = [districtLine, normalized.roomsLabel || ''].filter(Boolean).join(' • ');
-    const featureParts = [
-      normalized.area_m2 ? `📐 ${normalized.area_m2} m²` : '',
-      normalized.bathrooms ? `🚿 ${normalized.bathrooms}` : '',
-      normalized.floor ? `🏢 ${normalized.floor}` : ''
+    const locationLine = [normalized.city, normalized.district].filter(Boolean).join(', ') || normalized.city || normalized.district || '';
+    const row2Parts = [
+      normalized.propertyType ? `🏠 ${normalized.propertyType}` : '',
+      normalized.roomsLabel ? `🛏️ ${normalized.roomsLabel}` : '',
+      normalized.area_m2 ? `📐 ${normalized.area_m2} m²` : ''
     ].filter(Boolean);
+    const row3Parts = [
+      normalized.bathrooms ? `🚿 ${normalized.bathrooms}` : '',
+      normalized.floor ? `🏢 ${normalized.floor}` : '',
+      normalized.furnishedLabel ? `🛋️ ${normalized.furnishedLabel}` : ''
+    ].filter(Boolean);
+    const sqmPriceLabel = normalized.pricePerM2Label ? `${normalized.pricePerM2Label} AED/m²` : '';
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
       const isThumb = !!safeUrl;
@@ -5587,7 +5600,7 @@ render() {
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
             <div class="cs-image-overlay">
-              <div class="cs-price-tag">${normalized.priceLabel || ''}</div>
+              <div class="cs-price-tag">${normalized.id || ''}</div>
               <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
               <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -5603,12 +5616,17 @@ render() {
           </div>
           <div class="cs-body">
             <div class="cs-row cs-row--top">
-              <div class="cs-title">${normalized.city}</div>
-              <div class="cs-inline-price">${normalized.priceLabel || ''}</div>
+              <div class="cs-title">${locationLine}</div>
+              <div class="cs-price-badges">
+                <div class="cs-inline-price cs-inline-price--total">${normalized.priceLabel || ''}</div>
+                ${sqmPriceLabel ? `<div class="cs-inline-price cs-inline-price--sqm">${sqmPriceLabel}</div>` : ''}
+              </div>
             </div>
-            <div class="cs-row"><div class="cs-sub">${secondLine}</div></div>
             <div class="cs-row cs-row--features">
-              <div class="cs-features">${featureParts.map((item) => `<span class="cs-feature-item">${item}</span>`).join('')}</div>
+              <div class="cs-features">${row2Parts.map((item) => `<span class="cs-feature-item">${item}</span>`).join('')}</div>
+            </div>
+            <div class="cs-row cs-row--features">
+              <div class="cs-features">${row3Parts.map((item) => `<span class="cs-feature-item">${item}</span>`).join('')}</div>
             </div>
             <div class="card-actions-wrap">
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
@@ -6274,6 +6292,10 @@ render() {
     const city = raw.city || raw.location || '';
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
+    const propertyType = raw.property_type || raw.propertyType || raw.type || '';
+    const furnishedRaw = raw.furnished;
+    const furnishedBool = furnishedRaw === true || furnishedRaw === 'true' || furnishedRaw === 1 || furnishedRaw === '1';
+    const furnishedKnown = furnishedRaw !== null && furnishedRaw !== undefined && furnishedRaw !== '';
     const imageFromArray = Array.isArray(raw.images)
       ? raw.images.find((src) => typeof src === 'string' && src.trim())
       : null;
@@ -6325,6 +6347,9 @@ render() {
       price_per_m2: pricePerM2Num != null ? pricePerM2Num : (raw.price_per_m2 ?? null),
       pricePerM2Label,
       bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
+      propertyType,
+      furnished: furnishedKnown ? furnishedBool : null,
+      furnishedLabel: furnishedKnown ? (furnishedBool ? 'Furnished' : 'Unfurnished') : '',
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel
     };
