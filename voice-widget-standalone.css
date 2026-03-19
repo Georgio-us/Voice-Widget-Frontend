@@ -325,29 +325,6 @@
 
   /* ===== Cards Slider ===== */
   .cards-slider{ width:100%; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; position:relative; }
-  .cards-nav-btn{
-    display:inline-flex;
-    position:absolute;
-    top:42%;
-    transform:translateY(-50%);
-    width:30px;
-    height:30px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.35);
-    background:rgba(0,0,0,.45);
-    color:#fff;
-    font-size:20px;
-    line-height:1;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    z-index:8;
-  }
-  .cards-nav-btn--prev{ left:8px; }
-  .cards-nav-btn--next{ right:8px; }
-  .card-slide .cards-nav-btn{ opacity:0; pointer-events:none; }
-  .card-slide.active .cards-nav-btn{ opacity:1; pointer-events:auto; }
-  .card-slide .cards-nav-btn.is-hidden{ display:none !important; }
   .cards-track{ display:flex; gap:12px; width:max-content; min-width:100%; }
   .cards-slider{ scroll-snap-type:x mandatory; scroll-padding-left:2.5%; scroll-padding-right:2.5%; padding:0; margin:0; overscroll-behavior-x:contain; }
   .card-slide{ flex:0 0 95%; scroll-snap-align:center; scroll-snap-stop:always; transition: transform .3s ease, opacity .3s ease; transform: scale(.985); opacity:.95; display:grid; grid-template-columns:1fr; grid-template-rows:auto; min-height:350px; height:350px; max-height:350px; overflow:hidden; }
