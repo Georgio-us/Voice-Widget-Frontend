@@ -332,7 +332,7 @@
   .cards-nav-btn{
     display:inline-flex;
     position:absolute;
-    top:50%;
+    top:42%;
     transform:translateY(-50%);
     width:30px;
     height:30px;
@@ -431,12 +431,12 @@
   .cards-dot.active{ transform:scale(1.18); background:#fff; opacity:1; }
   .cards-dots-row--overlay{
     position:absolute;
-    left:0;
-    bottom:15px;
-    width:100%;
+    left:50%;
+    bottom:80px;
+    width:auto;
     justify-content:center;
-    transform:none;
-    z-index:10;
+    transform:translateX(-50%);
+    z-index:20;
     margin:0;
     padding:4px 8px;
     border-radius:999px;
@@ -450,7 +450,7 @@
     width:auto;
     min-width:0;
     height:28px;
-    padding:0 10px;
+    padding:8px 16px;
     border-radius:999px;
     border:1px solid rgba(255,255,255,.35);
     background:rgba(255,255,255,.14);
@@ -461,6 +461,7 @@
     display:inline-flex;
     align-items:center;
     gap:6px;
+    box-shadow:none;
   }
   .card-slide .card-more-btn svg{ width:12px; height:12px; display:block; }
   .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
