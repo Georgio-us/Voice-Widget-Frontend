@@ -2052,3 +2052,28 @@ voice-widget,
   width: 34px;
   padding: 0;
 }
+
+/* Final cleanup: hide legacy header and remove container chrome */
+.vw-app .screen-header {
+  display: none !important;
+}
+
+.vw-app .voice-widget-container,
+.vw-app .dialogue-container,
+.vw-app #messagesContainer {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.vw-app .input-container {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.vw-app textarea.input-field,
+.vw-app .input-field {
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.16)) !important;
+  border-radius: 14px !important;
+  background: var(--color-surface, rgba(255, 255, 255, 0.04)) !important;
+}
