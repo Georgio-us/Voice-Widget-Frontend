@@ -246,13 +246,23 @@
   }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; margin-bottom:12px; }
   .card-screen .cs-row--top{ align-items:center; }
+  .card-screen .cs-row--district{ min-height:16px; margin-bottom:14px; }
   .card-screen .cs-row--specs{ min-height:20px; }
-  .card-screen .cs-row--details{ min-height:18px; }
   .card-screen .cs-title{
     font-weight:700;
+    font-size:14px;
+    line-height:1.2;
     color:var(--color-text);
     flex:1;
     min-width:0;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .card-screen .cs-district{
+    font-size:11px;
+    line-height:1.2;
+    color:rgba(255,255,255,0.6);
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
@@ -300,19 +310,8 @@
     font-size:11px;
     font-weight:600;
     line-height:1.1;
-  }
-  .card-screen .cs-secondary{
-    width:100%;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-    font-size:0.85rem;
-    color:var(--color-text);
-    opacity:.82;
-  }
-  .card-screen .cs-secondary-item{
-    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
   

@@ -5575,17 +5575,13 @@ render() {
     const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
     const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
     while (assetSlots.length < 4) assetSlots.push('');
-    const locationLine = [normalized.city, normalized.district].filter(Boolean).join(', ') || normalized.city || normalized.district || '';
-    const row2Parts = [
-      normalized.propertyType ? `🏠 ${normalized.propertyType}` : '',
-      normalized.roomsLabel ? `🛏️ ${normalized.roomsLabel}` : '',
-      normalized.area_m2 ? `📐 ${normalized.area_m2} m²` : ''
-    ].filter(Boolean);
-    const row3Parts = [
-      normalized.bathrooms ? `🚿 ${normalized.bathrooms}` : '',
-      normalized.floor ? `🏢 ${normalized.floor}` : '',
-      normalized.furnishedLabel ? `🛋️ ${normalized.furnishedLabel}` : ''
-    ].filter(Boolean);
+    const headerLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || normalized.city || normalized.propertyType || '';
+    const districtLine = normalized.district || normalized.neighborhood || '';
+    const specsPills = [
+      `🛏️ ${normalized.rooms ? `${normalized.rooms} rooms` : '— rooms'}`,
+      `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
+      `🏢 ${normalized.floor ? `${normalized.floor} floor` : '— floor'}`
+    ];
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
       const isThumb = !!safeUrl;
@@ -5615,16 +5611,16 @@ render() {
           </div>
           <div class="cs-body">
             <div class="cs-row cs-row--top">
-              <div class="cs-title">${locationLine}</div>
+              <div class="cs-title">${headerLeft}</div>
               <div class="cs-price-badges">
                 <div class="cs-inline-price cs-inline-price--total">${normalized.priceLabel || ''}</div>
               </div>
             </div>
-            <div class="cs-row cs-row--specs">
-              <div class="cs-features cs-features--main-specs">${row2Parts.map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
+            <div class="cs-row cs-row--district">
+              <div class="cs-district">${districtLine}</div>
             </div>
-            <div class="cs-row cs-row--details">
-              <div class="cs-secondary">${row3Parts.map((item, index) => `<span class="cs-secondary-item">${item}${index < row3Parts.length - 1 ? ' •' : ''}</span>`).join('')}</div>
+            <div class="cs-row cs-row--specs">
+              <div class="cs-features cs-features--main-specs">${specsPills.map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
             </div>
             <div class="card-actions-wrap">
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
