@@ -5586,7 +5586,6 @@ render() {
       normalized.floor ? `🏢 ${normalized.floor}` : '',
       normalized.furnishedLabel ? `🛋️ ${normalized.furnishedLabel}` : ''
     ].filter(Boolean);
-    const sqmPriceLabel = normalized.pricePerM2Label ? `${normalized.pricePerM2Label} AED/m²` : '';
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
       const isThumb = !!safeUrl;
@@ -5619,14 +5618,13 @@ render() {
               <div class="cs-title">${locationLine}</div>
               <div class="cs-price-badges">
                 <div class="cs-inline-price cs-inline-price--total">${normalized.priceLabel || ''}</div>
-                ${sqmPriceLabel ? `<div class="cs-inline-price cs-inline-price--sqm">${sqmPriceLabel}</div>` : ''}
               </div>
             </div>
-            <div class="cs-row cs-row--features">
-              <div class="cs-features">${row2Parts.map((item) => `<span class="cs-feature-item">${item}</span>`).join('')}</div>
+            <div class="cs-row cs-row--specs">
+              <div class="cs-features cs-features--main-specs">${row2Parts.map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
             </div>
-            <div class="cs-row cs-row--features">
-              <div class="cs-features">${row3Parts.map((item) => `<span class="cs-feature-item">${item}</span>`).join('')}</div>
+            <div class="cs-row cs-row--details">
+              <div class="cs-secondary">${row3Parts.map((item, index) => `<span class="cs-secondary-item">${item}${index < row3Parts.length - 1 ? ' •' : ''}</span>`).join('')}</div>
             </div>
             <div class="card-actions-wrap">
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
