@@ -214,7 +214,7 @@
   .card-screen .cs-image .card-btn.like[data-action="like"] svg path{ fill: transparent; stroke:#ffffff; stroke-width:2; }
   .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
-  .card-screen .cs-image img{ width:100%; height:100%; max-height:306px; object-fit:cover; display:block; }
+  .card-screen .cs-image img{ width:100%; height:100%; max-height:180px; object-fit:cover; display:block; }
   .card-screen .cs-body{ padding:12px; display:grid; gap:8px; }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-title{ font-weight:700; color:var(--color-text); }

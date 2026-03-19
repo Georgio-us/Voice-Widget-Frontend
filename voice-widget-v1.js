@@ -5279,6 +5279,34 @@ render() {
     return Array.isArray(list) ? list.filter((item) => item?.active !== false && item?.isActive !== false) : [];
   }
 
+  _toCardEngineShape(raw = {}) {
+    const firstImage = Array.isArray(raw.images) && raw.images.length
+      ? raw.images.find((src) => typeof src === 'string' && src.trim())
+      : (typeof raw.images === 'string' ? raw.images : '');
+    const image = raw.image || raw.imageUrl || firstImage || '';
+    const priceEUR = raw.priceEUR ?? raw.price_amount ?? raw.priceAmount ?? null;
+    const price = raw.price ?? priceEUR ?? null;
+    return {
+      ...raw,
+      id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
+      image,
+      images: Array.isArray(raw.images)
+        ? raw.images
+        : (typeof raw.images === 'string' && raw.images.trim() ? [raw.images.trim()] : (image ? [image] : [])),
+      price,
+      priceEUR,
+      city: raw.city || raw.location_city || raw.location?.city || '',
+      district: raw.district || raw.location_district || raw.location?.district || '',
+      neighborhood: raw.neighborhood || raw.location_neighborhood || raw.location?.neighborhood || '',
+      description: raw.description || raw.title || '',
+      rooms: raw.rooms ?? raw.specs_rooms ?? raw.specs?.rooms ?? null,
+      floor: raw.floor ?? raw.specs_floor ?? raw.specs?.floor ?? null,
+      bathrooms: raw.bathrooms ?? raw.specs_bathrooms ?? raw.specs?.bathrooms ?? null,
+      area_m2: raw.area_m2 ?? raw.specs_area_m2 ?? raw.specs?.area_m2 ?? null,
+      price_per_m2: raw.price_per_m2 ?? null
+    };
+  }
+
   _getPropertyCatalogKey(item, index = 0) {
     const candidate = item?.id ?? item?.external_id ?? item?.externalId ?? item?.propertyId ?? item?.uid ?? null;
     if (candidate != null && String(candidate).trim()) return String(candidate).trim().toUpperCase();
@@ -5290,8 +5318,14 @@ render() {
     if (!window.appState) window.appState = {};
     const current = Array.isArray(window.appState.allProperties) ? window.appState.allProperties : [];
     const merged = new Map();
-    current.forEach((item, idx) => merged.set(this._getPropertyCatalogKey(item, idx), item));
-    incoming.forEach((item, idx) => merged.set(this._getPropertyCatalogKey(item, idx), item));
+    current.forEach((item, idx) => {
+      const normalized = this._toCardEngineShape(item);
+      merged.set(this._getPropertyCatalogKey(normalized, idx), normalized);
+    });
+    incoming.forEach((item, idx) => {
+      const normalized = this._toCardEngineShape(item);
+      merged.set(this._getPropertyCatalogKey(normalized, idx), normalized);
+    });
     window.appState.allProperties = Array.from(merged.values());
     this.updateObjectCount(window.appState.allProperties.length);
   }
@@ -5354,9 +5388,13 @@ render() {
       this.updateObjectCount(0);
       return;
     }
+    try {
+      const echo = (this.getCurrentLocale()?.sliderEchoFromCatalog || 'Показываю найденные объекты из каталога.');
+      this.ui?.addMessage?.({ type: 'assistant', content: echo, timestamp: new Date() });
+    } catch {}
     this.clearPropertiesSlider();
     list.forEach((property) => {
-      try { this.showPropertyCard(property); } catch {}
+      try { this.showMockCardWithActions(this._toCardEngineShape(property)); } catch {}
     });
     requestAnimationFrame(() => {
       try {
@@ -6167,7 +6205,7 @@ render() {
       const n = toInt(v);
       return n != null ? n.toLocaleString('en-US') : null;
     };
-    const priceNum = toInt(raw.price);
+    const priceNum = toInt(raw.price ?? raw.priceEUR ?? raw.price_amount ?? raw.priceAmount);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
     const areaNum = toInt(raw.area_m2);
@@ -6176,7 +6214,10 @@ render() {
     const city = raw.city || raw.location || '';
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
-    const image = raw.image || raw.imageUrl || '';
+    const imageFromArray = Array.isArray(raw.images)
+      ? raw.images.find((src) => typeof src === 'string' && src.trim())
+      : null;
+    const image = raw.image || raw.imageUrl || imageFromArray || '';
     const readList = (src) => {
       if (Array.isArray(src)) return src;
       if (typeof src === 'string') {
