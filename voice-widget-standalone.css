@@ -656,10 +656,10 @@
                   --fs-h1: 1.286em;        /* ~18px */
                   --fs-h2: 1.143em;        /* ~16px */
                   --fs-h3: 1em;            /* 14px */
-                  --fs-body: 1em;          /* 14px */
+                  --fs-body: 14px;
                   --fs-body-alt: 0.929em;  /* ~13px */
                   --fs-small: 0.857em;     /* ~12px */
-                  --fs-btn: 0.857em;       /* ~12px */
+                  --fs-btn: 14px;
                   --fs-micro: 0.714em;     /* ~10px */
                   /* line-heights */
                   --lh-tight: 1.2;
@@ -687,8 +687,8 @@
                   -webkit-text-size-adjust: 100%;
                   text-size-adjust: 100%;
                 }
-                &([data-theme="light"]),
-                &([theme="light"]) {
+                &[data-theme="light"],
+                &[theme="light"] {
                   --color-bg: #F7F7F7;
                   --color-text: #3D3D3D;
                   --color-accent: #4178CF;
@@ -697,135 +697,135 @@
                   --dialogue-border: rgba(0, 0, 0, 0.1);
                   --color-sub-surface: var(--color-sub-light);
                 }
-                &([data-theme="light"]) .widget-bubble,
-                &([theme="light"]) .widget-bubble,
-                &([data-theme="light"]) .dialog-screen .in-dialog-lead,
-                &([theme="light"]) .dialog-screen .in-dialog-lead {
+                &[data-theme="light"] .widget-bubble,
+                &[theme="light"] .widget-bubble,
+                &[data-theme="light"] .dialog-screen .in-dialog-lead,
+                &[theme="light"] .dialog-screen .in-dialog-lead {
                   background: var(--bg-card);
                 }
-                &([data-theme="light"]) .dialog-screen .in-dialog-lead__title,
-                &([theme="light"]) .dialog-screen .in-dialog-lead__title,
-                &([data-theme="light"]) .dialog-screen .in-dialog-lead__label,
-                &([theme="light"]) .dialog-screen .in-dialog-lead__label,
-                &([data-theme="light"]) .dialog-screen .in-dialog-lead__consent-text,
-                &([theme="light"]) .dialog-screen .in-dialog-lead__consent-text {
+                &[data-theme="light"] .dialog-screen .in-dialog-lead__title,
+                &[theme="light"] .dialog-screen .in-dialog-lead__title,
+                &[data-theme="light"] .dialog-screen .in-dialog-lead__label,
+                &[theme="light"] .dialog-screen .in-dialog-lead__label,
+                &[data-theme="light"] .dialog-screen .in-dialog-lead__consent-text,
+                &[theme="light"] .dialog-screen .in-dialog-lead__consent-text {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .dialog-screen .in-dialog-lead__input,
-                &([theme="light"]) .dialog-screen .in-dialog-lead__input {
+                &[data-theme="light"] .dialog-screen .in-dialog-lead__input,
+                &[theme="light"] .dialog-screen .in-dialog-lead__input {
                   color: var(--color-text);
                   caret-color: var(--color-text);
                   background: rgba(0, 0, 0, 0.06);
                   border-color: rgba(0, 0, 0, 0.15);
                 }
-                &([data-theme="light"]) .dialog-screen .in-dialog-lead__input::placeholder,
-                &([theme="light"]) .dialog-screen .in-dialog-lead__input::placeholder {
+                &[data-theme="light"] .dialog-screen .in-dialog-lead__input::placeholder,
+                &[theme="light"] .dialog-screen .in-dialog-lead__input::placeholder {
                   color: var(--color-text);
                   opacity: .5;
                 }
-                &([data-theme="light"]) .dialog-screen .in-dialog-thanks__title,
-                &([theme="light"]) .dialog-screen .in-dialog-thanks__title,
-                &([data-theme="light"]) .dialog-screen .in-dialog-thanks__text,
-                &([theme="light"]) .dialog-screen .in-dialog-thanks__text {
+                &[data-theme="light"] .dialog-screen .in-dialog-thanks__title,
+                &[theme="light"] .dialog-screen .in-dialog-thanks__title,
+                &[data-theme="light"] .dialog-screen .in-dialog-thanks__text,
+                &[theme="light"] .dialog-screen .in-dialog-thanks__text {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .user-bubble,
-                &([theme="light"]) .user-bubble {
+                &[data-theme="light"] .user-bubble,
+                &[theme="light"] .user-bubble {
                   background: transparent;
                   border: 1px solid var(--color-accent);
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .card-screen .cs,
-                &([theme="light"]) .card-screen .cs {
+                &[data-theme="light"] .card-screen .cs,
+                &[theme="light"] .card-screen .cs {
                   background: var(--bg-card);
                   color: #000000;
                 }
-                &([data-theme="light"]) .card-screen .cs-title,
-                &([theme="light"]) .card-screen .cs-title,
-                &([data-theme="light"]) .card-screen .cs-sub,
-                &([theme="light"]) .card-screen .cs-sub,
-                &([data-theme="light"]) .card-screen .cs-price,
-                &([theme="light"]) .card-screen .cs-price {
+                &[data-theme="light"] .card-screen .cs-title,
+                &[theme="light"] .card-screen .cs-title,
+                &[data-theme="light"] .card-screen .cs-sub,
+                &[theme="light"] .card-screen .cs-sub,
+                &[data-theme="light"] .card-screen .cs-price,
+                &[theme="light"] .card-screen .cs-price {
                   color: #000000;
                 }
-                &([data-theme="light"]) .menu-language-dropdown,
-                &([theme="light"]) .menu-language-dropdown {
+                &[data-theme="light"] .menu-language-dropdown,
+                &[theme="light"] .menu-language-dropdown {
                   background: var(--bg-card);
                 }
-                &([data-theme="light"]) .input-container,
-                &([theme="light"]) .input-container {
+                &[data-theme="light"] .input-container,
+                &[theme="light"] .input-container {
                   background:
                     linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
                     #4178CF border-box;
                 }
-                &([data-theme="light"]) .launcher__title,
-                &([theme="light"]) .launcher__title {
+                &[data-theme="light"] .launcher__title,
+                &[theme="light"] .launcher__title {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .launcher__subtitle,
-                &([theme="light"]) .launcher__subtitle {
+                &[data-theme="light"] .launcher__subtitle,
+                &[theme="light"] .launcher__subtitle {
                   color: var(--color-text);
                   opacity: .72;
                 }
-                &([data-theme="light"]) .main-text,
-                &([theme="light"]) .main-text,
-                &([data-theme="light"]) .sub-text,
-                &([theme="light"]) .sub-text {
+                &[data-theme="light"] .main-text,
+                &[theme="light"] .main-text,
+                &[data-theme="light"] .sub-text,
+                &[theme="light"] .sub-text {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .bg-grid,
-                &([theme="light"]) .bg-grid {
+                &[data-theme="light"] .bg-grid,
+                &[theme="light"] .bg-grid {
                   background:
                     repeating-linear-gradient(to right, rgba(65, 120, 207, 0.03) 0 1px, transparent 1px 50px),
                     repeating-linear-gradient(to bottom, rgba(65, 120, 207, 0.03) 0 1px, transparent 1px 70px);
                 }
-                &([data-theme="light"]) .menu-link,
-                &([theme="light"]) .menu-link,
-                &([data-theme="light"]) .data-storage-text,
-                &([theme="light"]) .data-storage-text,
-                &([data-theme="light"]) .main-message,
-                &([theme="light"]) .main-message,
-                &([data-theme="light"]) .footer-text,
-                &([theme="light"]) .footer-text,
-                &([data-theme="light"]) .ctx-consent .ctx-consent-text,
-                &([theme="light"]) .ctx-consent .ctx-consent-text,
-                &([data-theme="light"]) .dial-btn,
-                &([theme="light"]) .dial-btn {
+                &[data-theme="light"] .menu-link,
+                &[theme="light"] .menu-link,
+                &[data-theme="light"] .data-storage-text,
+                &[theme="light"] .data-storage-text,
+                &[data-theme="light"] .main-message,
+                &[theme="light"] .main-message,
+                &[data-theme="light"] .footer-text,
+                &[theme="light"] .footer-text,
+                &[data-theme="light"] .ctx-consent .ctx-consent-text,
+                &[theme="light"] .ctx-consent .ctx-consent-text,
+                &[data-theme="light"] .dial-btn,
+                &[theme="light"] .dial-btn {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .ctx-input,
-                &([theme="light"]) .ctx-input,
-                &([data-theme="light"]) .ctx-textarea,
-                &([theme="light"]) .ctx-textarea {
+                &[data-theme="light"] .ctx-input,
+                &[theme="light"] .ctx-input,
+                &[data-theme="light"] .ctx-textarea,
+                &[theme="light"] .ctx-textarea {
                   color: var(--color-text);
                   caret-color: var(--color-text);
                 }
-                &([data-theme="light"]) .request-title,
-                &([theme="light"]) .request-title,
-                &([data-theme="light"]) .request-field-label,
-                &([theme="light"]) .request-field-label,
-                &([data-theme="light"]) .request-consent-text,
-                &([theme="light"]) .request-consent-text {
+                &[data-theme="light"] .request-title,
+                &[theme="light"] .request-title,
+                &[data-theme="light"] .request-field-label,
+                &[theme="light"] .request-field-label,
+                &[data-theme="light"] .request-consent-text,
+                &[theme="light"] .request-consent-text {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .request-select-list,
-                &([theme="light"]) .request-select-list {
+                &[data-theme="light"] .request-select-list,
+                &[theme="light"] .request-select-list {
                   background: var(--bg-card);
                 }
-                &([data-theme="light"]) .dial-list,
-                &([theme="light"]) .dial-list {
+                &[data-theme="light"] .dial-list,
+                &[theme="light"] .dial-list {
                   background: var(--bg-card);
                 }
-                &([data-theme="light"]) .dial-item,
-                &([theme="light"]) .dial-item {
+                &[data-theme="light"] .dial-item,
+                &[theme="light"] .dial-item {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .dial-item:hover,
-                &([theme="light"]) .dial-item:hover {
+                &[data-theme="light"] .dial-item:hover,
+                &[theme="light"] .dial-item:hover {
                   background: rgba(0, 0, 0, 0.08);
                 }
-                &([data-theme="light"]) .request-select,
-                &([theme="light"]) .request-select {
+                &[data-theme="light"] .request-select,
+                &[theme="light"] .request-select {
                   color: var(--color-text);
                 }
                 &([data-telegram="1"]) {
@@ -864,19 +864,19 @@
                 &([data-telegram="1"]) .dialog-screen .dialogue-container {
                     max-width: none;
                 }
-                &([data-theme="light"]) .request-select-item,
-                &([theme="light"]) .request-select-item {
+                &[data-theme="light"] .request-select-item,
+                &[theme="light"] .request-select-item {
                   color: var(--color-text);
                 }
-                &([data-theme="light"]) .request-input,
-                &([theme="light"]) .request-input,
-                &([data-theme="light"]) .request-textarea,
-                &([theme="light"]) .request-textarea {
+                &[data-theme="light"] .request-input,
+                &[theme="light"] .request-input,
+                &[data-theme="light"] .request-textarea,
+                &[theme="light"] .request-textarea {
                   color: var(--color-text);
                   caret-color: var(--color-text);
                 }
-                &([data-theme="light"]) .input-field,
-                &([theme="light"]) .input-field {
+                &[data-theme="light"] .input-field,
+                &[theme="light"] .input-field {
                   color: var(--color-text);
                   caret-color: var(--color-text);
                 }
@@ -1082,6 +1082,18 @@
                 .objects-counter-pill:active{
                     transform: scale(0.96);
                 }
+                .app-footer-brand{
+                    font-size: 11px;
+                    color: rgba(var(--text-rgb, 255, 255, 255), 0.4);
+                    text-align: center;
+                    padding: 10px 0;
+                    margin-top: 5px;
+                }
+                .app-footer-brand a{
+                    color: inherit;
+                    text-decoration: underline;
+                    text-underline-offset: 2px;
+                }
                 
                 /* Make other v2 screens scrollable within widget bounds */
                 .context-screen .voice-widget-container,
@@ -1274,6 +1286,10 @@
                     line-height: 1.4;
                     word-wrap: break-word;
                     max-width: 97%;
+                }
+                .message-text {
+                    font-size: 14px;
+                    line-height: 1.4;
                 }
                 
                 .widget-bubble {
@@ -1507,13 +1523,9 @@
                 /* ========================= */
                 /* iOS: предотвратить zoom при фокусе на полях (минимум 16px) */
                 @supports (-webkit-touch-callout: none) {
-                  .input-field,
-                  .request-input,
-                  .ctx-input,
-                  .request-select,
-                  .request-textarea,
-                  .ctx-textarea,
-                  .dial-btn {
+                  textarea.input-field,
+                  textarea.request-textarea,
+                  textarea.ctx-textarea {
                     font-size: 16px;
                   }
                 }
@@ -2048,11 +2060,11 @@ voice-widget,
   position: sticky;
   top: 0;
   width: 100%;
-  min-height: 70px;
+  min-height: 60px;
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 15px 20px !important;
+  padding: 10px 20px !important;
   box-sizing: border-box;
   background: var(--color-bg);
   backdrop-filter: blur(10px);
@@ -2073,7 +2085,7 @@ voice-widget,
   align-items: center;
   gap: 6px;
   color: var(--color-text);
-  font-size: 16px !important;
+  font-size: 14px;
   font-weight: 500;
   position: absolute;
   left: 50%;
@@ -2103,7 +2115,7 @@ voice-widget,
   border-radius: 12px;
   height: 42px;
   padding: 0 12px;
-  font-size: 16px !important;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -2125,7 +2137,7 @@ voice-widget,
 .vw-app .app-header-status,
 .vw-app #appContactButton,
 .vw-app #appThemeButton {
-  font-size: 16px !important;
+  font-size: 14px;
 }
 
 .vw-app #appContactButton {
@@ -2158,12 +2170,7 @@ voice-widget,
 }
 
 .vw-app textarea.input-field,
-.vw-app .input-field,
-.vw-app .request-input,
-.vw-app .ctx-input,
-.vw-app .request-select,
-.vw-app .request-textarea,
-.vw-app .ctx-textarea,
-.vw-app .dial-btn {
+.vw-app textarea.request-textarea,
+.vw-app textarea.ctx-textarea {
   font-size: 16px !important;
 }

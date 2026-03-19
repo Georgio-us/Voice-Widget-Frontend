@@ -3148,6 +3148,7 @@ render() {
             </div>
             </div>
           </div>
+          <div class="app-footer-brand">Powered by <a href="#" target="_blank">VIA.AI</a> • Want your own?</div>
         </div>
           </div>
 
