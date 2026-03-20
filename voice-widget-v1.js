@@ -5648,6 +5648,7 @@ render() {
         <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
           <button type="button" class="card-back-header__close" aria-label="Back">Назад</button>
+          <span class="card-back-header__title">Property descrtiption</span>
         </div>
         <div class="card-back-scroll">
           <div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
