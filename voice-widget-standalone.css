@@ -398,7 +398,7 @@
   .card-slide-front,.card-slide-back{ grid-area:1/1; min-height:350px; height:350px; max-height:350px; transition: opacity .25s ease; overflow:hidden; }
   .card-slide-front{ opacity:1; pointer-events:auto; background:transparent; }
 
-  .card-slide-back{ position:relative; height:350px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:20px; box-sizing:border-box; }
+  .card-slide-back{ position:relative; height:350px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:12px; box-sizing:border-box; }
   .card-slide-back__bg{ position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.1; background-position:center; background-repeat:no-repeat; background-size:cover; }
   .card-slide-back__bg--fallback{ background-image:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); }
   .card-slide-back > :not(.card-slide-back__bg){ position:relative; z-index:1; }
@@ -416,20 +416,15 @@
   .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
   .card-form-header__spacer{ width:18px; flex-shrink:0; }
   /* Card back: info panel (description + specs + assets + CTA) */
-  .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
-  .card-back-header__close img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
-  .card-back-header__close:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
+  .card-back-header{ flex-shrink:0; display:flex; align-items:center; justify-content:flex-start; padding:0; margin-bottom:8px; width:100%; }
+  .card-back-header__close{ height:26px; flex-shrink:0; padding:0 10px; border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.06); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:var(--color-text); font-size:var(--fs-small); font-weight:600; border-radius:999px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
+  .card-back-header__close:hover{ background:rgba(255,255,255,.12); transform:translateY(-1px); opacity:1; }
   .card-back-header__close:active{ transform:translateY(0); opacity:.88; }
   .card-back-header__close:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-back-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
-  .card-back-header__spacer{ width:24px; flex-shrink:0; }
-  .card-back-description-slot{ height:180px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
-  .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
-  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:13px; font-weight: 500; color:var(--color-text); align-items:center; margin-top: 12px; }
-  .card-back-specs__item{ margin:0; }
-  .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
-  .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
+  .card-back-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:2px; }
+  .card-back-description-slot{ height:auto; min-height:0; overflow:visible; font-size:var(--fs-small); line-height:1.45; color:var(--color-text); margin-top:0; padding:0; border-radius:0; background:transparent; }
+  .card-back-specs{ display:flex; flex-wrap:wrap; gap:8px; flex-shrink:0; margin-top:0; }
+  .card-back-specs__item{ margin:0; display:inline-flex; align-items:center; justify-content:center; padding:4px 8px; border-radius:999px; border:1px solid rgba(106,108,155,.32); background:rgba(106,108,155,.08); color:var(--color-text); font-size:var(--fs-small); font-weight:600; line-height:1.1; white-space:nowrap; }
   .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
   .card-front-assets{
     position:absolute;
@@ -465,7 +460,11 @@
   }
   .card-back-asset__label{ text-transform:uppercase; letter-spacing:.35px; font-size:11px; }
   .card-back-asset.is-thumb .card-back-asset__label{ display:none; }
-  .card-slide-back .btn-open-form{ margin-top:auto; flex-shrink:0; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; }
+  .card-back-actions{ margin-top:10px; flex-shrink:0; display:flex; align-items:center; gap:8px; }
+  .card-back-actions .btn-open-form{ margin-top:0; flex:1 1 auto; min-width:0; height:40px; padding:0 14px; font-size:var(--fs-body); font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-back-icon-btn{ width:40px; height:40px; flex:0 0 40px; border:1px solid rgba(255,255,255,.24); background:rgba(255,255,255,.06); color:var(--color-text); border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; line-height:1; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
+  .card-back-icon-btn:hover{ background:rgba(255,255,255,.12); transform:translateY(-1px); }
+  .card-back-icon-btn:active{ transform:translateY(0); opacity:.88; }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }

@@ -5636,20 +5636,22 @@ render() {
       <div class="card-slide-back">
         <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
-          <button type="button" class="card-back-header__close" aria-label="Back">
-            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
-          </button>
-          <span class="card-back-header__title">${normalized.id || ''} / ${normalized.city || ''} / ${normalized.priceLabel || ''}</span>
-          <span class="card-back-header__spacer" aria-hidden="true"></span>
+          <button type="button" class="card-back-header__close" aria-label="Back">Назад</button>
         </div>
-        <div class="card-back-separator"></div><div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-        <div class="card-back-specs">
-          <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
-          <span class="card-back-specs__item">Price/m²: ${normalized.pricePerM2Label || 'null'} AED</span>
-          <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
-          <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
+        <div class="card-back-scroll">
+          <div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          <div class="card-back-specs">
+            <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
+            <span class="card-back-specs__item">Price/m²: ${normalized.pricePerM2Label || 'null'} AED</span>
+            <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
+            <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
+          </div>
         </div>
-        <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
+        <div class="card-back-actions">
+          <button type="button" class="btn-open-form card-back-primary-action">Записаться на просмотр</button>
+          <button type="button" class="card-back-icon-btn" aria-label="Поделиться" title="Поделиться">↗</button>
+          <button type="button" class="card-back-icon-btn" aria-label="План" title="План">⌗</button>
+        </div>
       </div>
       <div class="card-slide-form">
         <div class="card-form-header">
