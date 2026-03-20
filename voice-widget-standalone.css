@@ -1190,16 +1190,9 @@
                 .dialog-screen .input-area .input-container{
                     margin: 0;
                 }
-                .pill-sticky-wrapper{
-                    width: 100%;
-                    background: transparent;
-                    display: flex;
-                    justify-content: center;
-                    padding: 12px 0;
-                    z-index: 10;
-                }
                 .objects-counter-pill{
-                    margin: 0;
+                    margin: 0 auto -36px auto;
+                    display: block;
                     width: fit-content;
                     padding: 8px 16px;
                     border-radius: 999px;
@@ -1215,7 +1208,8 @@
                     cursor: pointer;
                     user-select: none;
                     pointer-events: auto;
-                    position: relative;
+                    position: sticky;
+                    top: 12px;
                     z-index: 100;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
                     transition: opacity .12s ease;
