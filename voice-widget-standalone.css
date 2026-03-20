@@ -202,7 +202,7 @@
     border-radius:999px;
     background:var(--shadow-strong);
     border:1px solid var(--border-light);
-    color:var(--text-primary);
+    color:var(--text-on-photo);
     font-size:13px;
     font-weight:600;
     line-height:1;
@@ -392,7 +392,7 @@
   .card-slide-front{ opacity:1; pointer-events:auto; background:transparent; }
 
   .card-slide-back{ position:relative; height:360px; overflow:hidden; opacity:0; pointer-events:none; background:var(--bg-card); border-radius:14px; display:flex; flex-direction:column; padding:12px; box-sizing:border-box; }
-  .card-slide-back__bg{ position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.1; background-position:center; background-repeat:no-repeat; background-size:cover; }
+  .card-slide-back__bg{ position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.7; background-position:center; background-repeat:no-repeat; background-size:cover; }
   .card-slide-back__bg--fallback{ background-image:repeating-linear-gradient(45deg,var(--skeleton-a),var(--skeleton-a) 12px,var(--skeleton-b) 12px,var(--skeleton-b) 24px); }
   .card-slide-back > :not(.card-slide-back__bg){ position:relative; z-index:1; }
   .card-slide.flipped .card-slide-front{ opacity:0; pointer-events:none; }
@@ -435,7 +435,7 @@
   .card-back-asset{
     width:40px; height:40px; border-radius:8px; flex-shrink:0;
     border:1px solid var(--border-light);
-    background-color:var(--color-sub-surface);
+    background-color:var(--border-light);
     background-position:center;
     background-repeat:no-repeat;
     background-size:cover;
@@ -458,8 +458,8 @@
   .card-back-asset__label{ text-transform:uppercase; letter-spacing:.35px; font-size:11px; }
   .card-back-asset.is-thumb .card-back-asset__label{ display:none; }
   .card-back-actions{ margin-top:20px; flex-shrink:0; display:flex; align-items:center; gap:8px; }
-  .card-back-actions .btn-open-form{ margin-top:0; flex:1 1 auto; min-width:0; height:40px; padding:0 14px; font-size:var(--fs-body); font-weight:600; color:var(--text-primary); background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .card-back-icon-btn{ width:40px; height:40px; flex:0 0 40px; border:1px solid var(--border-light); background:var(--bg-element); color:var(--color-text); border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; line-height:1; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
+  .card-back-actions .btn-open-form{ margin-top:0; flex:1 1 auto; min-width:0; height:40px; padding:0 14px; font-size:var(--fs-body); font-weight:600; color:var(--text-on-accent); background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-back-icon-btn{ width:40px; height:40px; flex:0 0 40px; border:1px solid var(--border-light); background:var(--border-light); color:var(--color-text); border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; line-height:1; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
   .card-back-icon-btn:hover{ background:var(--bg-element); transform:translateY(-1px); }
   .card-back-icon-btn:active{ transform:translateY(0); opacity:.88; }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
@@ -780,8 +780,11 @@
                   --text-primary: #FFFFFF;
                   --text-secondary: rgba(255,255,255,0.7);
                   --text-muted: rgba(255,255,255,0.4);
+                  --text-on-accent: #FFFFFF;
+                  --text-on-photo: #FFFFFF;
                   --color-accent: #4178CF;
                   --border-light: rgba(255,255,255,0.14);
+                  --grid-ghost-line: rgba(255,255,255,0.02);
                   /* semantic support tokens */
                   --bg-soft: var(--bg-element);
                   --bg-soft-hover: var(--bg-element);
@@ -802,6 +805,7 @@
                   --shadow-soft: rgba(0,0,0,.18);
                   --shadow-medium: rgba(0,0,0,.25);
                   --shadow-strong: rgba(0,0,0,.4);
+                  --counter-pill-shadow: 0 8px 32px rgba(0,0,0,.4);
                   --skeleton-a: #e9e9e9;
                   --skeleton-b: #f5f5f5;
                   --markdown-link: #C4B5FD;
@@ -878,10 +882,13 @@
                   --bg-card: #FFFFFF;
                   --bg-element: rgba(0,0,0,0.08);
                   --text-primary: #161515;
-                  --text-secondary: rgba(0,0,0,0.6);
+                  --text-secondary: rgba(0,0,0,0.85);
                   --text-muted: rgba(0,0,0,0.35);
+                  --text-on-accent: #FFFFFF;
+                  --text-on-photo: #FFFFFF;
                   --color-accent: #4178CF;
                   --border-light: rgba(0,0,0,0.1);
+                  --grid-ghost-line: rgba(0,0,0,0.03);
                   --bg-soft: var(--bg-element);
                   --bg-soft-hover: var(--bg-element);
                   --bg-overlay: var(--text-muted);
@@ -899,6 +906,7 @@
                   --state-success-soft: rgba(34, 197, 94, 0.18);
                   --state-error: #E85F62;
                   --insights-track-stroke: rgba(0,0,0,0.1);
+                  --counter-pill-shadow: none;
                   --img-mic: "mic-btn-light.svg";
                   --img-stop: "stop-btn-light.svg";
                   --img-send: "send-btn-light.svg";
@@ -1002,8 +1010,8 @@
                   pointer-events:none;
                   z-index:1; /* выше эллипсов, ниже контента */
                   background:
-                    repeating-linear-gradient(to right, var(--border-light) 0 1px, transparent 1px 50px),
-                    repeating-linear-gradient(to bottom, var(--border-light) 0 1px, transparent 1px 70px);
+                    repeating-linear-gradient(to right, var(--grid-ghost-line) 0 1px, transparent 1px 50px),
+                    repeating-linear-gradient(to bottom, var(--grid-ghost-line) 0 1px, transparent 1px 70px);
                 }
                 /* Main screen sections */
                 .main-header{ width:100%; max-width:360px; display:flex; flex-direction:column; align-items:center; gap:20px; padding: 15px }
@@ -1151,7 +1159,7 @@
                     cursor: pointer;
                     user-select: none;
                     pointer-events: auto;
-                    box-shadow: 0 8px 32px var(--shadow-strong);
+                    box-shadow: var(--counter-pill-shadow);
                     transition: transform .12s ease, opacity .12s ease;
                 }
                 .objects-counter-pill:active{
@@ -2268,7 +2276,7 @@ voice-widget,
 
 .vw-app .header-action-btn {
   border-color: var(--color-accent);
-  color: var(--text-primary);
+  color: var(--text-on-accent);
   background: var(--color-accent);
 }
 
