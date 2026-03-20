@@ -2943,48 +2943,59 @@ class VoiceWidget extends HTMLElement {
     return raw === 'light' ? 'light' : 'dark';
   }
 
+  getThemeToken(tokenName, fallback = '') {
+    try {
+      const raw = getComputedStyle(this).getPropertyValue(tokenName);
+      const value = String(raw || '').trim();
+      if (!value) return fallback;
+      return value.replace(/^["']|["']$/g, '');
+    } catch {
+      return fallback;
+    }
+  }
+
   getMicIconByTheme() {
-    return this.getTheme() === 'light' ? 'mic-btn-light.svg' : 'mic-btn.svg';
+    return this.getThemeToken('--img-mic', 'mic-btn.svg');
   }
 
   getStopIconByTheme() {
-    return this.getTheme() === 'light' ? 'stop-btn-light.svg' : 'stop-btn.svg';
+    return this.getThemeToken('--img-stop', 'stop-btn.svg');
   }
 
   getSendIconByTheme() {
-    return this.getTheme() === 'light' ? 'send-btn-light.svg' : 'send-btn.svg';
+    return this.getThemeToken('--img-send', 'send-btn.svg');
   }
 
   getStatsIconByTheme() {
-    return this.getTheme() === 'light' ? 'menu_light_theme.svg' : 'menu_dark_theme.svg';
+    return this.getThemeToken('--img-stats', 'menu_dark_theme.svg');
   }
 
   getCloseIconByTheme() {
-    return this.getTheme() === 'light' ? 'main_close_btn-light.svg' : 'main_close_btn.svg';
+    return this.getThemeToken('--img-close', 'main_close_btn.svg');
   }
 
   getContactIconByTheme() {
-    return this.getTheme() === 'light' ? 'Contactme-light.svg' : 'Contactme.svg';
+    return this.getThemeToken('--img-contact', 'Contactme.svg');
   }
 
   getLanguageIconByTheme() {
-    return this.getTheme() === 'light' ? 'Language-light.svg' : 'Language.svg';
+    return this.getThemeToken('--img-language', 'Language.svg');
   }
 
   getInsightsIconByTheme() {
-    return this.getTheme() === 'light' ? 'Insights-light.svg' : 'Insights.svg';
+    return this.getThemeToken('--img-insights', 'Insights.svg');
   }
 
   getLogoByTheme() {
-    return this.getTheme() === 'light' ? 'LOGO-light.svg' : 'LOGO.svg';
+    return this.getThemeToken('--img-logo', 'LOGO.svg');
   }
 
   getReturnIconByTheme() {
-    return this.getTheme() === 'light' ? 'return_light_btn.svg' : 'return_btn.svg';
+    return this.getThemeToken('--img-return', 'return_btn.svg');
   }
 
   getInsightsProgressTrackStrokeByTheme() {
-    return this.getTheme() === 'light' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+    return this.getThemeToken('--insights-track-stroke', this.getThemeToken('--border-light', ''));
   }
 
   updateSendButtonIcons() {
