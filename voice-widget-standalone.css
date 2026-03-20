@@ -160,7 +160,7 @@
   /* Mobile host centering handled by loader (#vw-host); no widget overrides here */
 
   /* Main Screen — скрыт навсегда, точка входа теперь dialogScreen */
-  .main-screen{ display:none; }
+  .vw-app .main-screen{ display:none; }
   .main-screen.hidden{ display:none; }
   /* v2 screens visibility */
   .dialog-screen.hidden{ display:none; }
@@ -318,8 +318,8 @@
 
   /* Compact markdown styles inside assistant bubbles */
   .vw-md { line-height:1.5; }
-  .vw-md > :first-child { margin-top: 0; }
-  .vw-md > :last-child { margin-bottom: 0; }
+  .vw-app .vw-md > :first-child { margin-top: 0; }
+  .vw-app .vw-md > :last-child { margin-bottom: 0; }
   .vw-md p { margin: 0 0 8px; }
   .vw-md h1, .vw-md h2, .vw-md h3, .vw-md h4, .vw-md h5, .vw-md h6 { margin: 8px 0 6px; line-height:1.2; }
   .vw-md ul, .vw-md ol { margin: 2px 0 6px 0; padding-left: 16px; }
@@ -405,7 +405,7 @@
   .card-slide.flipped .card-slide-front{ opacity:0; pointer-events:none; }
   .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
   .card-slide-form{ grid-area:1/1; min-height:350px; height:350px; max-height:350px; display:none; overflow:hidden; }
-  .card-slide--form-open .card-slide-back{ display:none; }
+  .vw-app .card-slide--form-open .card-slide-back{ display:none; }
   .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:350px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:20px; box-sizing:border-box; }
   .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
   .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
