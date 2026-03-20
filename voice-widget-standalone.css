@@ -1192,7 +1192,6 @@
                 }
                 .objects-counter-pill{
                     display: flex;
-                    margin: 12px auto;
                     position: relative;
                     width: fit-content;
                     z-index: 10;
