@@ -1219,8 +1219,8 @@
                     font-size: 11px;
                     color: rgba(var(--text-rgb, 255, 255, 255), 0.4);
                     text-align: center;
-                    padding: 10px 0;
-                    margin-top: 5px;
+                    padding: 4px 0 22px 0;
+                    margin-top: 0;
                 }
                 .app-footer-brand a{
                     color: inherit;
