@@ -2099,7 +2099,7 @@
     display:inline-flex;
     align-items:center;
     gap:10px;
-    color:rgba(255,255,255,.6);
+    color:rgba(230,230,230,.72);
     font-size:var(--fs-small);
     line-height:1.2;
     font-weight:500;
@@ -2111,43 +2111,46 @@
     white-space:nowrap;
   }
   .img-lightbox .lightbox-close-hint .tap-icon{
-    width:22px;
-    height:22px;
+    width:14px;
+    height:14px;
     position:relative;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    opacity:.95;
+    border-radius:50%;
+    background:rgba(235,235,235,.8);
+    box-shadow:0 0 0 2px rgba(235,235,235,.18);
   }
   .img-lightbox .lightbox-close-hint .tap-icon::before{
     content:"";
     position:absolute;
-    width:9px;
-    height:13px;
-    left:50%;
-    top:3px;
-    transform:translateX(-50%) rotate(-12deg);
-    border-radius:7px 7px 5px 5px;
-    border:1.4px solid rgba(255,255,255,.9);
-    background:rgba(255,255,255,.08);
-    box-sizing:border-box;
+    inset:-6px;
+    border-radius:50%;
+    border:1.2px solid rgba(235,235,235,.55);
+    opacity:0;
+    transform:scale(.55);
+    animation:hintPulseInner 1.6s ease-out infinite;
   }
   .img-lightbox .lightbox-close-hint .tap-icon::after{
     content:"";
     position:absolute;
-    inset:-4px;
-    border:1.2px solid rgba(255,255,255,.42);
+    inset:-12px;
+    border:1.2px solid rgba(235,235,235,.4);
     border-radius:50%;
-    box-shadow: 0 0 0 8px rgba(255,255,255,.14);
-    opacity:.1;
+    opacity:0;
     transform:scale(.45);
-    animation:hintPulse 1.6s ease-out infinite;
+    animation:hintPulseOuter 1.6s ease-out infinite;
     animation-delay:.2s;
   }
-  @keyframes hintPulse{
-    0%{ opacity:.2; transform:scale(.45); }
-    40%{ opacity:.55; }
+  @keyframes hintPulseInner{
+    0%{ opacity:.55; transform:scale(.55); }
+    70%{ opacity:.2; }
     100%{ opacity:0; transform:scale(1.45); }
+  }
+  @keyframes hintPulseOuter{
+    0%{ opacity:.45; transform:scale(.45); }
+    65%{ opacity:.16; }
+    100%{ opacity:0; transform:scale(1.95); }
   }
 }
 
