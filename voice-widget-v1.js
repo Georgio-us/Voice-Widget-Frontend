@@ -5648,7 +5648,7 @@ render() {
           </div>
         </div>
         <div class="card-back-actions">
-          <button type="button" class="btn-open-form card-back-primary-action">Записаться на просмотр</button>
+          <button type="button" class="btn-open-form card-back-primary-action">Связаться</button>
           <button type="button" class="card-back-icon-btn" aria-label="Поделиться" title="Поделиться">↗</button>
           <button type="button" class="card-back-icon-btn" aria-label="План" title="План">⌗</button>
         </div>
