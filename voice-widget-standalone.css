@@ -2094,74 +2094,60 @@
   .img-lightbox .lightbox-close-hint{
     position:absolute;
     left:50%;
-    top:56px;
+    top:28px;
     transform:translateX(-50%);
     display:inline-flex;
     align-items:center;
     gap:10px;
-    padding:8px 14px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.18);
-    background:rgba(0,0,0,.35);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     color:rgba(255,255,255,.6);
     font-size:var(--fs-small);
     line-height:1.2;
+    font-weight:500;
+    letter-spacing:.01em;
+    text-shadow: 0 2px 8px rgba(0,0,0,.45);
     z-index:1000;
     pointer-events:none;
     user-select:none;
     white-space:nowrap;
   }
-  .img-lightbox .lightbox-close-hint::after{
-    content:"";
-    position:absolute;
-    top:calc(100% + 8px);
-    left:50%;
-    transform:translateX(-50%);
-    width:2px;
-    height:18px;
-    background:linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.08));
-    border-radius:999px;
-  }
   .img-lightbox .lightbox-close-hint .tap-icon{
-    width:20px;
-    height:20px;
-    border-radius:50%;
-    border:1px solid rgba(255,255,255,.35);
-    background:rgba(255,255,255,.06);
+    width:22px;
+    height:22px;
     position:relative;
-    display:inline-block;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
     opacity:.95;
   }
   .img-lightbox .lightbox-close-hint .tap-icon::before{
     content:"";
     position:absolute;
-    width:8px;
-    height:12px;
+    width:9px;
+    height:13px;
     left:50%;
-    top:2px;
+    top:3px;
     transform:translateX(-50%) rotate(-12deg);
-    border-radius:6px 6px 5px 5px;
-    border:1.5px solid rgba(255,255,255,.85);
-    background:rgba(255,255,255,.15);
+    border-radius:7px 7px 5px 5px;
+    border:1.4px solid rgba(255,255,255,.9);
+    background:rgba(255,255,255,.08);
     box-sizing:border-box;
   }
   .img-lightbox .lightbox-close-hint .tap-icon::after{
     content:"";
     position:absolute;
-    inset:-8px;
-    border:1px solid rgba(255,255,255,.45);
+    inset:-4px;
+    border:1.2px solid rgba(255,255,255,.42);
     border-radius:50%;
-    opacity:0;
-    transform:scale(.72);
-    animation:hintPulse 1.9s ease-out infinite;
+    box-shadow: 0 0 0 8px rgba(255,255,255,.14);
+    opacity:.1;
+    transform:scale(.45);
+    animation:hintPulse 1.6s ease-out infinite;
     animation-delay:.2s;
   }
   @keyframes hintPulse{
-    0%{ opacity:0; transform:scale(.72); }
-    35%{ opacity:.75; }
-    100%{ opacity:0; transform:scale(1.9); }
+    0%{ opacity:.2; transform:scale(.45); }
+    40%{ opacity:.55; }
+    100%{ opacity:0; transform:scale(1.45); }
   }
 }
 
