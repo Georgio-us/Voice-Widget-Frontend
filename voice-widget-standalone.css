@@ -1190,6 +1190,14 @@
                 .dialog-screen .input-area .input-container{
                     margin: 0;
                 }
+                .pill-sticky-wrapper{
+                    width: 100%;
+                    background: transparent;
+                    display: flex;
+                    justify-content: center;
+                    padding: 12px 0;
+                    z-index: 10;
+                }
                 .objects-counter-pill{
                     margin: 0;
                     width: fit-content;
@@ -1207,10 +1215,7 @@
                     cursor: pointer;
                     user-select: none;
                     pointer-events: auto;
-                    position: absolute;
-                    top: 12px;
-                    left: 50%;
-                    transform: translateX(-50%);
+                    position: relative;
                     z-index: 100;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
                     transition: opacity .12s ease;
@@ -2163,6 +2168,8 @@ voice-widget,
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .vw-app .voice-widget-container {
