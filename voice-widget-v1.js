@@ -3061,6 +3061,7 @@ render() {
   <!-- Image lightbox overlay -->
   <div class="img-lightbox" id="imgLightbox" aria-hidden="true">
     <img id="imgLightboxImg" alt="">
+    <div class="lightbox-close-hint"><span class="tap-icon"></span>Click to close</div>
   </div>
 
   
@@ -4160,13 +4161,13 @@ render() {
       this._imageOverlayOpen = false;
     } catch {}
   };
-  // Lightbox interactions: click on backdrop closes; click on image — no action
+  // Lightbox interactions: click outside image closes
   try {
     const box = this.$byId('imgLightbox');
     const img = this.$byId('imgLightboxImg');
     if (box) {
       box.addEventListener('click', (e) => {
-        if (e.target === box) { // only backdrop, not image
+        if (img && !img.contains(e.target)) {
           e.stopPropagation();
           this.closeImageOverlay();
         }

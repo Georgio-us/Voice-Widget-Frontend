@@ -2084,12 +2084,59 @@
   }
   .img-lightbox.open{ display:flex; }
   .img-lightbox img{
-    max-width: 96vw;
-    max-height: 96vh;
+    max-width: 90vw;
+    max-height: 85vh;
     object-fit: contain;
     border-radius: 8px;
     box-shadow: 0 20px 60px rgba(0,0,0,.5);
     background: #111;
+  }
+  .img-lightbox .lightbox-close-hint{
+    position:absolute;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    color:rgba(255,255,255,.6);
+    font-size:var(--fs-small);
+    line-height:1.2;
+    pointer-events:none;
+    user-select:none;
+    white-space:nowrap;
+  }
+  .img-lightbox .lightbox-close-hint .tap-icon{
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.6);
+    position:relative;
+    display:inline-block;
+    opacity:.85;
+    animation:hintPulse 1.8s ease-out infinite;
+  }
+  .img-lightbox .lightbox-close-hint .tap-icon::before{
+    content:"";
+    position:absolute;
+    inset:2px;
+    border-radius:50%;
+    background:rgba(255,255,255,.55);
+  }
+  .img-lightbox .lightbox-close-hint .tap-icon::after{
+    content:"";
+    position:absolute;
+    inset:-7px;
+    border:1px solid rgba(255,255,255,.45);
+    border-radius:50%;
+    opacity:0;
+    transform:scale(.75);
+    animation:hintPulse 1.8s ease-out infinite;
+  }
+  @keyframes hintPulse{
+    0%{ opacity:.4; transform:scale(.9); }
+    40%{ opacity:1; transform:scale(1); }
+    100%{ opacity:.15; transform:scale(1.5); }
   }
 }
 
