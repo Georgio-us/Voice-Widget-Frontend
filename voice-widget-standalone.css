@@ -2094,11 +2094,17 @@
   .img-lightbox .lightbox-close-hint{
     position:absolute;
     left:50%;
-    top:40px;
+    top:56px;
     transform:translateX(-50%);
     display:inline-flex;
     align-items:center;
-    gap:8px;
+    gap:10px;
+    padding:8px 14px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color:rgba(255,255,255,.6);
     font-size:var(--fs-small);
     line-height:1.2;
@@ -2107,37 +2113,55 @@
     user-select:none;
     white-space:nowrap;
   }
+  .img-lightbox .lightbox-close-hint::after{
+    content:"";
+    position:absolute;
+    top:calc(100% + 8px);
+    left:50%;
+    transform:translateX(-50%);
+    width:2px;
+    height:18px;
+    background:linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,.08));
+    border-radius:999px;
+  }
   .img-lightbox .lightbox-close-hint .tap-icon{
-    width:16px;
-    height:16px;
+    width:20px;
+    height:20px;
     border-radius:50%;
-    border:1px solid rgba(255,255,255,.6);
+    border:1px solid rgba(255,255,255,.35);
+    background:rgba(255,255,255,.06);
     position:relative;
     display:inline-block;
-    opacity:.85;
+    opacity:.95;
   }
   .img-lightbox .lightbox-close-hint .tap-icon::before{
     content:"";
     position:absolute;
-    inset:2px;
-    border-radius:50%;
-    background:rgba(255,255,255,.55);
+    width:8px;
+    height:12px;
+    left:50%;
+    top:2px;
+    transform:translateX(-50%) rotate(-12deg);
+    border-radius:6px 6px 5px 5px;
+    border:1.5px solid rgba(255,255,255,.85);
+    background:rgba(255,255,255,.15);
+    box-sizing:border-box;
   }
   .img-lightbox .lightbox-close-hint .tap-icon::after{
     content:"";
     position:absolute;
-    inset:-7px;
+    inset:-8px;
     border:1px solid rgba(255,255,255,.45);
     border-radius:50%;
     opacity:0;
-    transform:scale(.75);
-    animation:hintPulse 1.8s ease-out infinite;
+    transform:scale(.72);
+    animation:hintPulse 1.9s ease-out infinite;
     animation-delay:.2s;
   }
   @keyframes hintPulse{
-    0%{ opacity:.4; transform:scale(.9); }
-    40%{ opacity:1; transform:scale(1); }
-    100%{ opacity:.15; transform:scale(1.5); }
+    0%{ opacity:0; transform:scale(.72); }
+    35%{ opacity:.75; }
+    100%{ opacity:0; transform:scale(1.9); }
   }
 }
 
