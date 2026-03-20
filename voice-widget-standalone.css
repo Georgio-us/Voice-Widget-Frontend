@@ -250,7 +250,7 @@
   .card-screen .cs-row--specs{ min-height:20px; }
   .card-screen .cs-title{
     font-weight:700;
-    font-size:14px;
+    font-size:var(--fs-body);
     line-height:1.2;
     color:var(--color-text);
     flex:1;
@@ -260,7 +260,7 @@
     text-overflow:ellipsis;
   }
   .card-screen .cs-district{
-    font-size:11px;
+    font-size:var(--fs-small);
     line-height:1.2;
     color:rgba(255,255,255,0.6);
     white-space:nowrap;
@@ -278,7 +278,7 @@
     border:1px solid rgba(106,108,155,.35);
     background:rgba(106,108,155,.08);
     color:var(--color-text);
-    font-size:11px;
+    font-size:var(--fs-body);
     font-weight:600;
     line-height:1;
     white-space:nowrap;
@@ -307,7 +307,7 @@
     border:1px solid rgba(106,108,155,.32);
     background:rgba(106,108,155,.08);
     color:var(--color-text);
-    font-size:11px;
+    font-size:var(--fs-small);
     font-weight:600;
     line-height:1.1;
     overflow:hidden;
@@ -491,7 +491,7 @@
     border:1px solid rgba(255,255,255,.35);
     background:rgba(255,255,255,.14);
     color:#fff;
-    font-size:12px;
+    font-size:var(--fs-body);
     font-weight:600;
     line-height:1;
     display:inline-flex;
