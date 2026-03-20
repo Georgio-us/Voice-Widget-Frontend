@@ -1176,10 +1176,10 @@
                     /* Anchor thread to bottom when content is short (messenger-like) */
                     display: flex; 
                     flex-direction: column; 
-                    justify-content: flex-end;
+                    justify-content: flex-start;
                 }
                 .dialog-screen .input-container{
-                    margin: auto 0 var(--space-s) 0; /* top:auto pushes input to bottom */
+                    margin: 0;
                 }
                 .dialog-screen .input-area{
                     margin-top: auto;
@@ -1188,10 +1188,10 @@
                     width: 100%;
                 }
                 .dialog-screen .input-area .input-container{
-                    margin: 0 0 var(--space-s) 0;
+                    margin: 0;
                 }
                 .objects-counter-pill{
-                    margin: 0 auto 12px auto;
+                    margin: 12px auto -36px auto;
                     width: fit-content;
                     padding: 8px 16px;
                     border-radius: 999px;
@@ -1207,8 +1207,9 @@
                     cursor: pointer;
                     user-select: none;
                     pointer-events: auto;
-                    position: relative;
-                    z-index: 5;
+                    position: sticky;
+                    top: 12px;
+                    z-index: 100;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
                     transition: transform .12s ease, opacity .12s ease;
                 }
@@ -2152,6 +2153,14 @@ voice-widget,
   margin: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.vw-app #messagesContainer {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .vw-app .voice-widget-container {
