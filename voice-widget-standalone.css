@@ -431,14 +431,24 @@
   .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
   .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
   .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
+  .card-front-assets{
+    position:absolute;
+    left:10px;
+    bottom:10px;
+    display:flex;
+    gap:8px;
+    z-index:3;
+    pointer-events:auto;
+  }
   .card-back-asset{
-    width:60px; height:60px; border-radius:12px; flex-shrink:0;
-    border:1px solid rgba(65,120,207,.2);
+    width:40px; height:40px; border-radius:8px; flex-shrink:0;
+    border:2px solid #FFFFFF;
     background-color:var(--color-sub-surface);
     background-position:center;
     background-repeat:no-repeat;
     background-size:cover;
     cursor:pointer;
+    pointer-events:auto;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -463,6 +473,7 @@
   .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
   /* dots row inside actions area (blue theme) */
   .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:2px 0 6px; flex-shrink:0; }
+  .card-slide-paginator.cards-dots-row{ gap:6px; margin:6px 0 8px; }
   .cards-dot{ width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.5); opacity:.9; border:1px solid rgba(255,255,255,.7); transition: transform .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
   .cards-dot.active{ transform:scale(1.18); background:#fff; opacity:1; }
   .cards-dots-row--overlay{

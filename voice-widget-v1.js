@@ -5608,7 +5608,7 @@ render() {
             <div class="cs-image-click-area">
               <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
             </div>
-            <div class="cards-dots-row cards-dots-row--overlay"></div>
+            <div class="card-front-assets">${assetTilesHtml}</div>
           </div>
           <div class="cs-body">
             <div class="cs-row cs-row--top">
@@ -5623,6 +5623,7 @@ render() {
             <div class="cs-row cs-row--specs">
               <div class="cs-features cs-features--main-specs">${specsPills.map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
             </div>
+            <div class="card-slide-paginator cards-dots-row"></div>
             <div class="card-actions-wrap">
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
                 <span>${locale.handoffDetails || 'Подробнее'}</span>
@@ -5648,7 +5649,6 @@ render() {
           <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
           <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
         </div>
-        <div class="card-back-assets">${assetTilesHtml}</div>
         <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
       </div>
       <div class="card-slide-form">
