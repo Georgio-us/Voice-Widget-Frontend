@@ -1176,7 +1176,7 @@
                     /* Anchor thread to bottom when content is short (messenger-like) */
                     display: flex; 
                     flex-direction: column; 
-                    justify-content: flex-start;
+                    justify-content: flex-end;
                 }
                 .dialog-screen .input-container{
                     margin: 0;
@@ -1191,7 +1191,7 @@
                     margin: 0;
                 }
                 .objects-counter-pill{
-                    margin: 12px auto -36px auto;
+                    margin: 0;
                     width: fit-content;
                     padding: 8px 16px;
                     border-radius: 999px;
@@ -1207,14 +1207,16 @@
                     cursor: pointer;
                     user-select: none;
                     pointer-events: auto;
-                    position: sticky;
+                    position: absolute;
                     top: 12px;
+                    left: 50%;
+                    transform: translateX(-50%);
                     z-index: 100;
                     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-                    transition: transform .12s ease, opacity .12s ease;
+                    transition: opacity .12s ease;
                 }
                 .objects-counter-pill:active{
-                    transform: scale(0.96);
+                    opacity: 0.9;
                 }
                 .app-footer-brand{
                     font-size: 11px;
