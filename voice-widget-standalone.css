@@ -1149,7 +1149,6 @@
                 /* Поле ввода */
                 .input-container {
                     width: 100%;
-                    max-width: 360px;
                     height: 60px;
                     background:
                       linear-gradient(#2B272C, #2B272C) padding-box,
