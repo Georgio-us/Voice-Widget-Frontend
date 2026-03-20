@@ -411,11 +411,11 @@
   .card-form-header__spacer{ width:18px; flex-shrink:0; }
   /* Card back: info panel (description + specs + assets + CTA) */
   .card-back-header{ flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0; margin-bottom:20px; width:100%; gap:10px; }
-  .card-back-header__title{ font-size:.875em; font-weight:400; color:var(--text-secondary); line-height:1.2; margin:0; text-align:right; }
   .card-back-header__close{ height:26px; flex-shrink:0; padding:0 10px; border:1px solid var(--border-light); background:var(--bg-element); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:var(--color-text); font-size:var(--fs-small); font-weight:600; border-radius:999px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
   .card-back-header__close:hover{ background:var(--bg-element); transform:translateY(-1px); opacity:1; }
   .card-back-header__close:active{ transform:translateY(0); opacity:.88; }
   .card-back-header__close:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+  .card-back-header__fav{ height:26px; flex-shrink:0; padding:0 10px; border:1px solid var(--border-light); background:var(--bg-element); display:inline-flex; align-items:center; justify-content:center; color:var(--text-secondary); font-size:.875em; font-weight:400; line-height:1.2; border-radius:999px; user-select:none; }
   .card-back-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:40px; padding-right:2px; }
   .card-back-description-slot{ height:110px; min-height:110px; overflow-y:auto; font-size:var(--fs-small); line-height:1.45; color:var(--color-text); font-weight:200; margin-top:0; padding:0; border-radius:0; background:transparent; scrollbar-width:thin; scrollbar-color:transparent transparent; -ms-overflow-style:none; }
   .card-back-description-slot::-webkit-scrollbar{ width:2px; }
