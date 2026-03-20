@@ -2094,7 +2094,7 @@
   .img-lightbox .lightbox-close-hint{
     position:absolute;
     left:50%;
-    bottom:24px;
+    top:40px;
     transform:translateX(-50%);
     display:inline-flex;
     align-items:center;
@@ -2102,6 +2102,7 @@
     color:rgba(255,255,255,.6);
     font-size:var(--fs-small);
     line-height:1.2;
+    z-index:1000;
     pointer-events:none;
     user-select:none;
     white-space:nowrap;
@@ -2114,7 +2115,6 @@
     position:relative;
     display:inline-block;
     opacity:.85;
-    animation:hintPulse 1.8s ease-out infinite;
   }
   .img-lightbox .lightbox-close-hint .tap-icon::before{
     content:"";
@@ -2132,6 +2132,7 @@
     opacity:0;
     transform:scale(.75);
     animation:hintPulse 1.8s ease-out infinite;
+    animation-delay:.2s;
   }
   @keyframes hintPulse{
     0%{ opacity:.4; transform:scale(.9); }
