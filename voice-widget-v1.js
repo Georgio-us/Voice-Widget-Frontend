@@ -6347,13 +6347,13 @@ render() {
       details: null,
       preferences: null
     };
-    const fromSession = (this?.session && this.session.insights && typeof this.session.insights === 'object')
-      ? this.session.insights
-      : null;
     const fromUnderstanding = (typeof this.getUnderstanding === 'function')
       ? (this.getUnderstanding() || {})
       : (this.understanding?.export?.() || {});
-    const source = fromSession || fromUnderstanding || {};
+    const fromSession = (this?.session && this.session.insights && typeof this.session.insights === 'object')
+      ? this.session.insights
+      : null;
+    const source = fromUnderstanding || fromSession || {};
     return Object.keys(empty).reduce((acc, key) => {
       const raw = source?.[key];
       acc[key] = (raw === undefined || raw === null || String(raw).trim() === '') ? null : raw;
