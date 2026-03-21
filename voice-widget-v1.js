@@ -2717,22 +2717,38 @@ class VoiceWidget extends HTMLElement {
     try {
       console.log('WebApp Version:', webAppVersion);
       try { tg?.ready?.(); } catch {}
-      tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
-      console.log('[TG Inline] switchInlineQuery invoked successfully');
-      return true;
-    } catch (error) {
-      console.warn('[TG Inline] switchInlineQuery failed (with chat filters):', error);
-      try {
-        // Fallback call without chat filters; some Telegram clients reject the second argument.
-        tg.switchInlineQuery(inlineQuery);
-        console.log('[TG Inline] switchInlineQuery invoked successfully (fallback mode)');
+      if (typeof tg?.switchInlineQueryChosenChat === 'function') {
+        tg.switchInlineQueryChosenChat(inlineQuery, {
+          allow_user_chats: true,
+          allow_group_chats: true,
+          allow_channel_chats: true
+        });
+        console.log('[TG Inline] switchInlineQueryChosenChat invoked successfully');
         return true;
-      } catch (fallbackError) {
-        const reason = fallbackError?.message || error?.message || 'unknown error';
-        console.warn('[TG Inline] switchInlineQuery fallback failed:', fallbackError);
-        this.showShareNotice(`Inline share failed (v${webAppVersion}): ${reason}`);
-        return false;
       }
+      if (typeof tg?.switchInlineQuery === 'function') {
+        tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+        console.log('[TG Inline] switchInlineQuery invoked successfully');
+        return true;
+      }
+      if (typeof tg?.switchInlineQueryCurrentChat === 'function') {
+        tg.switchInlineQueryCurrentChat(inlineQuery);
+        console.log('[TG Inline] switchInlineQueryCurrentChat invoked successfully');
+        return true;
+      }
+      const methodsState = {
+        chosenChat: typeof tg?.switchInlineQueryChosenChat,
+        switchInlineQuery: typeof tg?.switchInlineQuery,
+        currentChat: typeof tg?.switchInlineQueryCurrentChat
+      };
+      console.warn('[TG Inline] no inline switch method available:', methodsState);
+      this.showShareNotice(`Inline API unavailable (v${webAppVersion})`);
+      return false;
+    } catch (error) {
+      const reason = error?.message || 'unknown error';
+      console.warn('[TG Inline] inline switch call failed:', error);
+      this.showShareNotice(`Inline share failed (v${webAppVersion}): ${reason}`);
+      return false;
     }
   }
 
