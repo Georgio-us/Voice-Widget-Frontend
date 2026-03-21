@@ -2209,7 +2209,7 @@ const LOCALES = {
     ,stagePrimarySelection: 'Готов к первичному подбору'
     ,stageDetails: 'Уточнение деталей'
     ,stagePreciseSelection: 'Готов к точному подбору'
-    ,assistantGreeting: 'Здравствуйте! Я ваш помощник по подбору недвижимости в Estyle Properties.\n\nЯ помогу вам найти лучший вариант на нашем сайте. Опишите, пожалуйста, что бы вы хотели?'
+    ,assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
   },
   EN: {
     inputPlaceholder: 'Ask a question...',
@@ -2324,7 +2324,7 @@ const LOCALES = {
     ,stagePrimarySelection: 'Ready for initial selection'
     ,stageDetails: 'Refining details'
     ,stagePreciseSelection: 'Ready for precise selection'
-    ,assistantGreeting: "Hello! I'm your real estate assistant at Estyle Properties.\n\nI'll help you find the best option on our site. Please describe what you're looking for?"
+    ,assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
   },
   ES: {
     inputPlaceholder: 'Haz una pregunta...',
@@ -2439,7 +2439,7 @@ const LOCALES = {
     ,stagePrimarySelection: 'Listo para una primera seleccion'
     ,stageDetails: 'Afinando detalles'
     ,stagePreciseSelection: 'Listo para una seleccion precisa'
-    ,assistantGreeting: 'Hola! Soy tu asistente de inmobiliaria en Estyle Properties.\n\nTe ayudo a encontrar la mejor opcion en nuestra web. Cuentame, por favor, que buscas?'
+    ,assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
   }
 };
 
@@ -3827,7 +3827,14 @@ render() {
   this.classList.add("open");
   showScreen('dialog');
   try {
-    if (!sessionStorage.getItem('vw_greeting_shown')) {
+    const isTelegramMiniApp = !!(window?.Telegram?.WebApp);
+    const greetingAlreadyInMessages = Array.isArray(this.messages)
+      ? this.messages.some((m) => m && m.greeting === true)
+      : false;
+    if (isTelegramMiniApp && !greetingAlreadyInMessages) {
+      this.showGreetingMessage();
+      sessionStorage.setItem('vw_greeting_shown', '1');
+    } else if (!sessionStorage.getItem('vw_greeting_shown')) {
       this.showGreetingMessage();
       sessionStorage.setItem('vw_greeting_shown', '1');
     }
