@@ -6520,18 +6520,16 @@ render() {
       const modal = overlay.querySelector('.vw-contact-manager-modal');
       if (!modal) return;
       modal.innerHTML = `
-        <div class="vw-contact-manager-head">
+        <div class="vw-contact-manager-head" style="justify-content: center; padding-bottom: 6px;">
           <div class="vw-contact-manager-title">${locale.thanksTitle || 'Спасибо!'}</div>
-          <button type="button" class="vw-contact-manager-close" aria-label="Close">×</button>
         </div>
-        <div class="vw-contact-manager-body">
-          <div style="color: var(--text-secondary, rgba(255,255,255,0.7)); font-size: 0.875rem; line-height: 1.45; margin-bottom: 12px;">
+        <div class="vw-contact-manager-body" style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+          <div style="color: var(--text-secondary, rgba(255,255,255,0.7)); font-size: 0.875rem; line-height: 1.45; margin-bottom: 12px; max-width: 300px;">
             ${locale.thanksBody || 'Ваша заявка получена. Мы свяжемся с вами в ближайшее время.'}
           </div>
-          <button type="button" class="vw-contact-submit" data-role="thanks-close-btn">${locale.close || 'Закрыть'}</button>
+          <button type="button" class="vw-contact-submit" style="max-width: 220px;" data-role="thanks-close-btn">${locale.close || 'Закрыть'}</button>
         </div>
       `;
-      modal.querySelector('.vw-contact-manager-close')?.addEventListener('click', () => this.closeContactManagerPopup());
       modal.querySelector('[data-role="thanks-close-btn"]')?.addEventListener('click', () => this.closeContactManagerPopup());
     };
     const switchMethod = (method) => {
