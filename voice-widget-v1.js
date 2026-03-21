@@ -2618,7 +2618,7 @@ class VoiceWidget extends HTMLElement {
   buildTelegramPropertyLink(propId) {
     const safeId = this.normalizeDeepLinkPropId(propId);
     if (!safeId) return '';
-    return `${VW_SHARE_BASE_URL}/share/${VW_DEEP_LINK_PREFIX}${encodeURIComponent(safeId)}`;
+    return `${VW_SHARE_BASE_URL}/share/prop/${encodeURIComponent(safeId)}`;
   }
 
   showShareNotice(message) {

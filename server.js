@@ -42,10 +42,10 @@ function buildPropToken(propId) {
 }
 
 function buildShareUrl(propId) {
-  const token = buildPropToken(propId);
-  if (!token) return FRONTEND_APP_URL;
+  const normalized = normalizePropId(propId);
+  if (!normalized) return FRONTEND_APP_URL;
   const base = FRONTEND_APP_URL.replace(/\/+$/, '');
-  return `${base}/share/${token}`;
+  return `${base}/share/prop/${encodeURIComponent(normalized)}`;
 }
 
 function buildDirectMiniAppLink(propId) {
@@ -103,12 +103,20 @@ async function fetchPropertyById(propId) {
 
 function extractImage(card) {
   const images = Array.isArray(card?.images) ? card.images : [];
-  return (
+  const raw = (
+    card?.mainImage ||
+    card?.main_image ||
     card?.image ||
     card?.imageUrl ||
     images.find((src) => typeof src === 'string' && src.trim()) ||
     ''
   );
+  const source = String(raw || '').trim();
+  if (!source) return '';
+  if (/^https?:\/\//i.test(source)) return source;
+  const base = FRONTEND_APP_URL.replace(/\/+$/, '');
+  const path = source.startsWith('/') ? source : `/${source}`;
+  return `${base}${path}`;
 }
 
 function extractPrice(card) {
@@ -163,14 +171,8 @@ function buildShareOgMeta({ propId, card }) {
 function renderShareLandingHtml({ propId, card }) {
   const directLink = buildDirectMiniAppLink(propId);
   const og = buildShareOgMeta({ propId, card: card || {} });
-  const autoRedirectMeta = directLink
-    ? `<meta http-equiv="refresh" content="0;url=${esc(directLink)}">`
-    : '';
-  const autoRedirectScript = directLink
-    ? `<script>setTimeout(function(){window.location.href=${JSON.stringify(directLink)};},120);</script>`
-    : '';
   const openButton = directLink
-    ? `<a class="open-btn" href="${esc(directLink)}">Открыть в Mini App</a>`
+    ? `<a class="open-btn" href="${esc(directLink)}">Открыть объект в приложении</a>`
     : `<a class="open-btn" href="${esc(FRONTEND_APP_URL)}">Открыть каталог</a>`;
 
   return `<!doctype html>
@@ -179,7 +181,6 @@ function renderShareLandingHtml({ propId, card }) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   ${og.tags}
-  ${autoRedirectMeta}
   <style>
     :root { color-scheme: dark; }
     body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0d1117; color:#fff; font-family:Arial, sans-serif; }
@@ -188,7 +189,6 @@ function renderShareLandingHtml({ propId, card }) {
     .desc { margin:0 0 18px; color:rgba(255,255,255,.78); }
     .open-btn { display:inline-block; padding:12px 20px; border-radius:999px; background:#4178CF; color:#fff; text-decoration:none; font-weight:600; }
   </style>
-  ${autoRedirectScript}
 </head>
 <body>
   <main class="wrap">
