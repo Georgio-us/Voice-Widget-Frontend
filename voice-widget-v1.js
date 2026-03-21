@@ -2711,26 +2711,22 @@ class VoiceWidget extends HTMLElement {
     if (!propId) return false;
     const inlineTargetId = String(slide?.id || propId).trim() || propId;
     const inlineQuery = `share_prop_${inlineTargetId}`;
+    console.log('[TG Inline] preparing inline query:', inlineQuery);
     try {
       const tg = window?.Telegram?.WebApp;
+      console.log('[TG Inline] Telegram WebApp present:', Boolean(tg), 'switchInlineQuery type:', typeof tg?.switchInlineQuery);
       if (tg && typeof tg.switchInlineQuery === 'function') {
         tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+        console.log('[TG Inline] switchInlineQuery invoked successfully');
         return true;
       }
-    } catch {}
-    const shareUrl = this.buildTelegramPropertyLink(propId);
-    if (!shareUrl) return false;
-    const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`;
-    try {
-      window.open(telegramShareUrl, '_blank', 'noopener,noreferrer');
-      return true;
-    } catch {
-      try {
-        window.location.href = telegramShareUrl;
-        return true;
-      } catch {
-        return false;
-      }
+      console.warn('[TG Inline] switchInlineQuery is unavailable in current Telegram context');
+      this.showShareNotice('Inline share unavailable: проверьте Inline Mode у бота');
+      return false;
+    } catch (error) {
+      console.warn('[TG Inline] switchInlineQuery failed:', error);
+      this.showShareNotice('Inline share failed: проверьте настройки бота');
+      return false;
     }
   }
 
