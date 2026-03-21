@@ -133,6 +133,24 @@ function extractArea(card) {
   return `${Math.round(num)} m²`;
 }
 
+function extractRooms(card) {
+  const raw = card?.rooms ?? card?.specs_rooms ?? card?.specs?.rooms ?? '';
+  const num = Number(String(raw).replace(/[^0-9.]/g, ''));
+  if (Number.isFinite(num) && num > 0) return `${Math.round(num)} rooms`;
+  return String(raw || '').trim();
+}
+
+function extractFloor(card) {
+  const raw = card?.floor ?? card?.specs_floor ?? card?.specs?.floor ?? '';
+  const num = Number(String(raw).replace(/[^0-9.]/g, ''));
+  if (Number.isFinite(num) && num > 0) return `${Math.round(num)} floor`;
+  return String(raw || '').trim();
+}
+
+function extractCity(card) {
+  return String(card?.city || card?.location_city || card?.location?.city || 'Dubai').trim();
+}
+
 function extractType(card) {
   return String(card?.property_type || card?.propertyType || card?.type || 'Property').trim();
 }
@@ -145,13 +163,19 @@ function buildShareOgMeta({ propId, card }) {
   const image = extractImage(card);
   const price = extractPrice(card) || '—';
   const area = extractArea(card) || '—';
-  const title = `🏙 ${extractType(card)} in ${extractDistrict(card)}`;
-  const description = `Цена: ${price} | Площадь: ${area}. Посмотреть детали в приложении.`;
+  const rooms = extractRooms(card) || '— rooms';
+  const floor = extractFloor(card) || '— floor';
+  const district = extractDistrict(card);
+  const city = extractCity(card);
+  const propertyType = extractType(card);
+  const title = `🏙 ${propertyType} in ${district}`;
+  const description = `Цена: ${price} | Комнаты: ${rooms} | Площадь: ${area} | Этаж: ${floor} | Район: ${district}, ${city}. Посмотреть детали в приложении.`;
   const shareUrl = buildShareUrl(propId);
 
   const tags = [
     `<title>${esc(title)}</title>`,
     '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="VIA Properties">',
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(description)}">`,
     `<meta property="og:url" content="${esc(shareUrl)}">`,
@@ -171,6 +195,13 @@ function buildShareOgMeta({ propId, card }) {
 function renderShareLandingHtml({ propId, card }) {
   const directLink = buildDirectMiniAppLink(propId);
   const og = buildShareOgMeta({ propId, card: card || {} });
+  const price = extractPrice(card) || '—';
+  const area = extractArea(card) || '—';
+  const rooms = extractRooms(card) || '— rooms';
+  const floor = extractFloor(card) || '— floor';
+  const district = extractDistrict(card) || '—';
+  const city = extractCity(card) || 'Dubai';
+  const type = extractType(card) || 'Property';
   const openButton = directLink
     ? `<a class="open-btn" href="${esc(directLink)}">Открыть объект в приложении</a>`
     : `<a class="open-btn" href="${esc(FRONTEND_APP_URL)}">Открыть каталог</a>`;
@@ -184,14 +215,25 @@ function renderShareLandingHtml({ propId, card }) {
   <style>
     :root { color-scheme: dark; }
     body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#000000; color:#ffffff; font-family:Arial, sans-serif; }
-    .wrap { max-width:420px; padding:24px; text-align:center; }
-    .title { font-size:20px; line-height:1.3; margin:0 0 10px; }
+    .wrap { max-width:480px; padding:28px 22px; text-align:center; background:rgba(30,29,32,.72); border:1px solid rgba(255,255,255,.14); border-radius:16px; backdrop-filter:blur(10px); }
+    .title { font-size:22px; line-height:1.3; margin:0 0 8px; font-weight:700; }
+    .subtitle { margin:0 0 18px; color:rgba(255,255,255,.78); font-size:16px; }
+    .meta { margin:0 auto 20px; display:grid; grid-template-columns:1fr 1fr; gap:8px; max-width:420px; }
+    .chip { padding:10px 12px; border-radius:999px; background:rgba(71,106,165,.22); border:1px solid rgba(255,255,255,.14); color:#ffffff; font-size:15px; font-weight:500; }
     .open-btn { display:inline-block; padding:15px 30px; border-radius:10px; font-weight:bold; background:#2481cc; color:#ffffff; text-decoration:none; }
   </style>
 </head>
 <body>
   <main class="wrap">
     <h1 class="title">${esc(og.title)}</h1>
+    <p class="subtitle">${esc(`${city}, ${type}`)}</p>
+    <div class="meta">
+      <div class="chip">${esc(`Цена: ${price}`)}</div>
+      <div class="chip">${esc(`Район: ${district}`)}</div>
+      <div class="chip">${esc(`Комнаты: ${rooms}`)}</div>
+      <div class="chip">${esc(`Площадь: ${area}`)}</div>
+      <div class="chip">${esc(`Этаж: ${floor}`)}</div>
+    </div>
     ${openButton}
   </main>
 </body>
