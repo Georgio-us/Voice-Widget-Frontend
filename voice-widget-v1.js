@@ -2075,6 +2075,10 @@ const ASSETS_BASE = (() => {
   }
 })();
 
+const VW_TELEGRAM_BOT_USERNAME = 'viaproperties_bot';
+const VW_DEEP_LINK_PARAM = 'propId';
+const VW_DEEP_LINK_PREFIX = 'prop_';
+
 
 const LOCALES = {
   RU: {
@@ -2454,6 +2458,9 @@ class VoiceWidget extends HTMLElement {
     this.stream = null;
     this.audioBlob = null;
     this.recordedChunks = [];
+    this._deepLinkPropId = null;
+    this._activeDeepLinkPropId = null;
+    this._isDeepLinkMode = false;
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -2507,6 +2514,137 @@ class VoiceWidget extends HTMLElement {
     this.checkBrowserSupport();
     this._uiInitializedOnce = false;
     this._initializedOnce = true;
+  }
+
+  getDeepLinkPropIdFromUrl() {
+    try {
+      const value = new URLSearchParams(window.location.search).get(VW_DEEP_LINK_PARAM);
+      return value ? String(value).trim() : null;
+    } catch {
+      return null;
+    }
+  }
+
+  clearDeepLinkParamInUrl() {
+    try {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete(VW_DEEP_LINK_PARAM);
+      window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+    } catch {}
+  }
+
+  getCatalogPropertyById(propId) {
+    if (!propId) return null;
+    const target = String(propId).trim().toUpperCase();
+    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    return list.find((item) => String(item?.id || '').trim().toUpperCase() === target) || null;
+  }
+
+  renderSinglePropertyById(propId) {
+    const item = this.getCatalogPropertyById(propId);
+    if (!item) return false;
+    this.clearPropertiesSlider();
+    try {
+      this.showChatScreen();
+      this.showMockCardWithActions(this._toCardEngineShape(item), { suppressAutoscroll: false });
+      this._isDeepLinkMode = true;
+      this._activeDeepLinkPropId = String(propId).trim();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  tryOpenDeepLinkedProperty() {
+    const propId = this.getDeepLinkPropIdFromUrl();
+    this._deepLinkPropId = propId || null;
+    if (!propId) return false;
+    return this.renderSinglePropertyById(propId);
+  }
+
+  exitDeepLinkMode({ clearUrl = true } = {}) {
+    if (!this._isDeepLinkMode) return false;
+    this._isDeepLinkMode = false;
+    this._activeDeepLinkPropId = null;
+    this._deepLinkPropId = null;
+    if (clearUrl) this.clearDeepLinkParamInUrl();
+    this.renderPropertiesFromCatalog();
+    return true;
+  }
+
+  buildTelegramPropertyLink(propId) {
+    const safeId = String(propId || '').trim();
+    if (!safeId) return '';
+    return `https://t.me/${VW_TELEGRAM_BOT_USERNAME}?start=${VW_DEEP_LINK_PREFIX}${encodeURIComponent(safeId)}`;
+  }
+
+  showShareNotice(message) {
+    const text = String(message || '').trim();
+    if (!text) return;
+    try {
+      const tg = window?.Telegram?.WebApp;
+      if (tg && typeof tg.showAlert === 'function') {
+        tg.showAlert(text);
+        return;
+      }
+    } catch {}
+    try { window.alert(text); } catch {}
+  }
+
+  async copyTextToClipboard(text) {
+    const value = String(text || '');
+    if (!value) return false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return Boolean(ok);
+    } catch {
+      return false;
+    }
+  }
+
+  async sharePropertyFromSlide(slide) {
+    const card = slide?.querySelector('.cs');
+    const propId = card?.getAttribute('data-variant-id') || '';
+    if (!propId) return false;
+    const source = this.getCatalogPropertyById(propId);
+    const normalized = this.normalizeCardData(source || { id: propId });
+    const titleLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || 'Property';
+    const title = normalized.priceLabel ? `${titleLeft} — ${normalized.priceLabel}` : titleLeft;
+    const shareUrl = this.buildTelegramPropertyLink(propId);
+    if (!shareUrl) return false;
+    const payload = {
+      title,
+      text: 'Посмотри этот объект в моем боте:',
+      url: shareUrl
+    };
+    try {
+      if (navigator?.share) {
+        await navigator.share(payload);
+        return true;
+      }
+    } catch (error) {
+      if (!(error && error.name === 'AbortError')) {
+        console.warn('navigator.share failed, using clipboard fallback:', error);
+      }
+    }
+    const copied = await this.copyTextToClipboard(shareUrl);
+    this.showShareNotice(copied ? 'Ссылка скопирована' : shareUrl);
+    return copied;
   }
 
   detectTelegramWebApp() {
@@ -4945,9 +5083,16 @@ render() {
         }
       } catch {}
     } else if (e.target.closest('.card-back-header__close')) {
-      // Назад с описания на фото (front)
+      // В deep-link режиме возвращаемся в общий каталог, иначе обычный flip-back.
+      if (this._isDeepLinkMode) {
+        this.exitDeepLinkMode({ clearUrl: true });
+      } else {
+        const slide = e.target.closest('.card-slide');
+        if (slide) slide.classList.remove('flipped');
+      }
+    } else if (e.target.closest('.card-back-icon-btn[data-action="share-property"]')) {
       const slide = e.target.closest('.card-slide');
-      if (slide) slide.classList.remove('flipped');
+      try { await this.sharePropertyFromSlide(slide); } catch {}
     } else if (e.target.matches('.btn-open-form') || e.target.closest('.btn-open-form')) {
       // Описание -> форма заявки
       const slide = e.target.closest('.card-slide');
@@ -5387,6 +5532,7 @@ render() {
       window.appState.allProperties = [];
       this.mergePropertiesToCatalog(allProperties);
       this.updateObjectCount(window.appState.allProperties.length);
+      this.tryOpenDeepLinkedProperty();
     } catch {
       try {
         if (!window.appState) window.appState = {};
@@ -5661,8 +5807,8 @@ render() {
         </div>
         <div class="card-back-actions">
           <button type="button" class="btn-open-form card-back-primary-action">Связаться</button>
-          <button type="button" class="card-back-icon-btn" aria-label="Поделиться" title="Поделиться">↗</button>
-          <button type="button" class="card-back-icon-btn" aria-label="План" title="План">⌗</button>
+          <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться" title="Поделиться">↗</button>
+          <button type="button" class="card-back-icon-btn" data-action="show-plan" aria-label="План" title="План">⌗</button>
         </div>
       </div>
       <div class="card-slide-form">
