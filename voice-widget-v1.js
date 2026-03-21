@@ -1503,6 +1503,17 @@ class APIClient {
     }
   }
 
+  appendTelegramUserToFormData(fd) {
+    try {
+      const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      if (!fd || !tgUser) return;
+      if (tgUser.id != null) fd.append('tgUserId', String(tgUser.id));
+      if (tgUser.username) fd.append('tgUsername', String(tgUser.username));
+      if (tgUser.first_name) fd.append('tgFirstName', String(tgUser.first_name));
+      if (tgUser.last_name) fd.append('tgLastName', String(tgUser.last_name));
+    } catch {}
+  }
+
   // Загрузка информации о сессии (только если sessionId есть)
   async loadSessionInfo() {
     if (!this.widget.sessionId) return { exists: null, expired: false };
@@ -1567,6 +1578,7 @@ class APIClient {
       fd.append('lang', replyLang);
       const speechLang = localStorage.getItem('vw_speechLang');
       if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
+      this.appendTelegramUserToFormData(fd);
 
       console.log('📤 Текст →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
 
@@ -1656,6 +1668,7 @@ class APIClient {
       fd.append('lang', replyLang);
       const speechLang = localStorage.getItem('vw_speechLang');
       if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
+      this.appendTelegramUserToFormData(fd);
 
       console.log('📤 Текст (main) →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
 
@@ -1778,6 +1791,7 @@ class APIClient {
       fd.append('lang', replyLang);
       const speechLang = localStorage.getItem('vw_speechLang');
       if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
+      this.appendTelegramUserToFormData(fd);
 
       if (this.fieldName && this.fieldName !== 'audio') {
         console.warn(`[VW] fieldName='${this.fieldName}' игнорируется — используем 'audio'`);
@@ -3756,7 +3770,7 @@ render() {
     try { this.toggleTheme(); this.updateInterface(); } catch {}
   });
   this.$byId('appContactButton')?.addEventListener('click', () => {
-    try { showScreen('request'); } catch {}
+    try { this.openContactManagerPopup({ source: 'tg_header_main' }); } catch {}
   });
   const objectsPill = this.$byId('objectsCounterPill');
   const openPropertiesSlider = () => {
@@ -5226,7 +5240,12 @@ render() {
       e.target.closest('.btn-open-form')
     ) {
       const slide = e.target.closest('.card-slide');
-      try { this.openContactManagerPopup({ slide }); } catch {}
+      const cardId = String(
+        slide?.id ||
+        slide?.querySelector('.cs')?.getAttribute('data-variant-id') ||
+        ''
+      ).trim() || null;
+      try { this.openContactManagerPopup({ source: 'tg_property_card', propertyId: cardId, slide }); } catch {}
     } else if (e.target.closest('.card-form-header__back')) {
       // Форма -> назад к описанию
       const slide = e.target.closest('.card-slide');
@@ -6278,11 +6297,26 @@ render() {
   }
 
   async submitLead(payload = {}) {
+    const ensureSessionId = () => {
+      const current = String(payload?.sessionId || this.sessionId || '').trim();
+      if (current) return current;
+      const generated = `user_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      try {
+        localStorage.setItem('vw_sessionId', generated);
+        localStorage.setItem('voiceWidgetSessionId', generated);
+      } catch {}
+      this.sessionId = generated;
+      return generated;
+    };
+    const finalPayload = {
+      ...payload,
+      sessionId: ensureSessionId()
+    };
     const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
     const response = await fetch(leadsApiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(finalPayload)
     });
     const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
     if (result?.ok !== true) {
@@ -6407,7 +6441,8 @@ render() {
     } catch {}
   }
 
-  openContactManagerPopup({ slide } = {}) {
+  openContactManagerPopup(context = {}) {
+    const { slide = null, source: triggerSource = null, propertyId: contextPropertyId = null } = context || {};
     this.closeContactManagerPopup();
     this.ensureContactManagerStyles();
 
@@ -6417,11 +6452,13 @@ render() {
     const displayName = String(tgUser?.first_name || tgUser?.username || 'Mini App User').trim();
     const propertyId =
       String(
+        contextPropertyId ||
         slide?.id ||
         slide?.querySelector('.cs')?.getAttribute('data-variant-id') ||
         this?._lastSuggestedCard?.id ||
         ''
       ).trim() || null;
+    const normalizedSource = String(triggerSource || '').trim() || (propertyId ? 'tg_property_card' : 'tg_header_main');
 
     const overlay = document.createElement('div');
     overlay.id = 'vwContactManagerOverlay';
@@ -6557,7 +6594,7 @@ render() {
 
       const payload = {
         sessionId: this.sessionId || null,
-        source: 'tg_mini_app',
+        source: normalizedSource,
         name: displayName || 'Mini App User',
         phoneCountryCode,
         phoneNumber,
@@ -6566,7 +6603,7 @@ render() {
         telegramUsername: telegramValid ? telegramNormalized : null,
         comment: telegramValid ? `telegram:${telegramNormalized}` : null,
         language: (this.currentLang || this.defaultLanguage || 'en').toLowerCase(),
-        propertyId: propertyId,
+        propertyId: normalizedSource === 'tg_property_card' ? propertyId : null,
         consent: true
       };
 
