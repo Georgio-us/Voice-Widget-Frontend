@@ -214,13 +214,14 @@ function renderShareLandingHtml({ propId, card }) {
   ${og.tags}
   <style>
     :root { color-scheme: dark; }
-    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#000000; color:#ffffff; font-family:Arial, sans-serif; }
-    .wrap { max-width:480px; padding:28px 22px; text-align:center; background:rgba(30,29,32,.72); border:1px solid rgba(255,255,255,.14); border-radius:16px; backdrop-filter:blur(10px); }
-    .title { font-size:22px; line-height:1.3; margin:0 0 8px; font-weight:700; }
-    .subtitle { margin:0 0 18px; color:rgba(255,255,255,.78); font-size:16px; }
-    .meta { margin:0 auto 20px; display:grid; grid-template-columns:1fr 1fr; gap:8px; max-width:420px; }
-    .chip { padding:10px 12px; border-radius:999px; background:rgba(71,106,165,.22); border:1px solid rgba(255,255,255,.14); color:#ffffff; font-size:15px; font-weight:500; }
-    .open-btn { display:inline-block; padding:15px 30px; border-radius:10px; font-weight:bold; background:#2481cc; color:#ffffff; text-decoration:none; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#000; color:#fff; font-family:"SF Pro Display","Segoe UI",Arial,sans-serif; padding:18px; box-sizing:border-box; }
+    .wrap { width:min(100%, 420px); padding:16px 14px; text-align:center; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:linear-gradient(155deg, rgba(42,55,80,.38), rgba(17,18,22,.62)); box-shadow:0 14px 40px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(18px) saturate(130%); -webkit-backdrop-filter:blur(18px) saturate(130%); }
+    .title { font-size:18px; line-height:1.22; margin:0 0 4px; font-weight:700; letter-spacing:.1px; }
+    .subtitle { margin:0 0 12px; color:rgba(255,255,255,.72); font-size:13px; font-weight:500; }
+    .meta { margin:0 auto 12px; display:flex; flex-wrap:wrap; justify-content:center; gap:6px; max-width:100%; }
+    .chip { padding:6px 10px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#fff; font-size:12px; line-height:1.2; font-weight:500; white-space:nowrap; }
+    .open-btn { display:inline-block; padding:11px 16px; min-height:18px; border-radius:9px; font-size:14px; font-weight:700; background:linear-gradient(180deg, #2d8fe1, #2481cc); color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,.14); box-shadow:0 6px 18px rgba(36,129,204,.38); }
+    .open-btn:active { transform:translateY(1px); }
   </style>
 </head>
 <body>
