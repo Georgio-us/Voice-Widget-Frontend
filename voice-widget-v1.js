@@ -2713,16 +2713,10 @@ class VoiceWidget extends HTMLElement {
     const inlineQuery = `share_prop_${inlineTargetId}`;
     console.log('[TG Inline] preparing inline query:', inlineQuery);
     try {
-      const tg = window?.Telegram?.WebApp;
-      console.log('[TG Inline] Telegram WebApp present:', Boolean(tg), 'switchInlineQuery type:', typeof tg?.switchInlineQuery);
-      if (tg && typeof tg.switchInlineQuery === 'function') {
-        tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
-        console.log('[TG Inline] switchInlineQuery invoked successfully');
-        return true;
-      }
-      console.warn('[TG Inline] switchInlineQuery is unavailable in current Telegram context');
-      this.showShareNotice('Inline share unavailable: проверьте Inline Mode у бота');
-      return false;
+      console.log('WebApp Version:', window?.Telegram?.WebApp?.version);
+      window.Telegram.WebApp.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+      console.log('[TG Inline] switchInlineQuery invoked successfully');
+      return true;
     } catch (error) {
       console.warn('[TG Inline] switchInlineQuery failed:', error);
       this.showShareNotice('Inline share failed: проверьте настройки бота');
