@@ -6516,6 +6516,24 @@ render() {
 
     let selectedMethod = 'telegram';
     const setError = (message = '') => { if (errorEl) errorEl.textContent = String(message || ''); };
+    const renderPopupThanks = () => {
+      const modal = overlay.querySelector('.vw-contact-manager-modal');
+      if (!modal) return;
+      modal.innerHTML = `
+        <div class="vw-contact-manager-head">
+          <div class="vw-contact-manager-title">${locale.thanksTitle || 'Спасибо!'}</div>
+          <button type="button" class="vw-contact-manager-close" aria-label="Close">×</button>
+        </div>
+        <div class="vw-contact-manager-body">
+          <div style="color: var(--text-secondary, rgba(255,255,255,0.7)); font-size: 0.875rem; line-height: 1.45; margin-bottom: 12px;">
+            ${locale.thanksBody || 'Ваша заявка получена. Мы свяжемся с вами в ближайшее время.'}
+          </div>
+          <button type="button" class="vw-contact-submit" data-role="thanks-close-btn">${locale.close || 'Закрыть'}</button>
+        </div>
+      `;
+      modal.querySelector('.vw-contact-manager-close')?.addEventListener('click', () => this.closeContactManagerPopup());
+      modal.querySelector('[data-role="thanks-close-btn"]')?.addEventListener('click', () => this.closeContactManagerPopup());
+    };
     const switchMethod = (method) => {
       selectedMethod = method;
       methodButtons.forEach((btn) => btn.classList.toggle('is-active', btn.getAttribute('data-method') === method));
@@ -6610,12 +6628,11 @@ render() {
       try {
         submitBtn.disabled = true;
         await this.submitLead(payload);
-        this.closeContactManagerPopup();
-        try { this.renderInDialogLeadThanksBlock(); } catch {}
+        renderPopupThanks();
       } catch (err) {
         setError(err?.message || 'Failed to submit request');
       } finally {
-        submitBtn.disabled = false;
+        if (submitBtn && submitBtn.isConnected) submitBtn.disabled = false;
       }
     });
   }
