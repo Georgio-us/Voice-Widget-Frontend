@@ -2078,6 +2078,7 @@ const ASSETS_BASE = (() => {
 const VW_TELEGRAM_BOT_USERNAME = 'viaproperties_bot';
 const VW_DEEP_LINK_PARAM = 'propId';
 const VW_DEEP_LINK_PREFIX = 'prop_';
+const VW_SHARE_BASE_URL = 'https://voice-widget-frontend-tgdubai-split.up.railway.app';
 
 
 const LOCALES = {
@@ -2516,19 +2517,61 @@ class VoiceWidget extends HTMLElement {
     this._initializedOnce = true;
   }
 
-  getDeepLinkPropIdFromUrl() {
+  normalizeDeepLinkPropId(rawValue) {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return '';
+    const value = raw.replace(/\+/g, ' ').trim();
+    const withoutPrefix = value.toLowerCase().startsWith(VW_DEEP_LINK_PREFIX)
+      ? value.slice(VW_DEEP_LINK_PREFIX.length)
+      : value;
+    return String(withoutPrefix || '').trim().toUpperCase();
+  }
+
+  readTelegramStartParam() {
     try {
-      const value = new URLSearchParams(window.location.search).get(VW_DEEP_LINK_PARAM);
-      return value ? String(value).trim() : null;
-    } catch {
-      return null;
+      const fromUnsafe = window?.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      if (fromUnsafe) return String(fromUnsafe).trim();
+    } catch {}
+    try {
+      const initData = String(window?.Telegram?.WebApp?.initData || '').trim();
+      if (initData) {
+        const params = new URLSearchParams(initData);
+        const startParam = params.get('start_param');
+        if (startParam) return String(startParam).trim();
+      }
+    } catch {}
+    try {
+      const hash = String(window.location.hash || '');
+      const hashQuery = hash.includes('?') ? hash.split('?')[1] : hash.replace(/^#/, '');
+      const params = new URLSearchParams(hashQuery);
+      const fromHash = params.get('tgWebAppStartParam') || params.get('startapp');
+      if (fromHash) return String(fromHash).trim();
+    } catch {}
+    return '';
+  }
+
+  getDeepLinkPropIdFromUrl() {
+    const candidates = [];
+    try {
+      const params = new URLSearchParams(window.location.search);
+      candidates.push(params.get(VW_DEEP_LINK_PARAM));
+      candidates.push(params.get('startapp'));
+      candidates.push(params.get('start'));
+    } catch {}
+    candidates.push(this.readTelegramStartParam());
+    for (const value of candidates) {
+      const normalized = this.normalizeDeepLinkPropId(value);
+      if (normalized) return normalized;
     }
+    return null;
   }
 
   clearDeepLinkParamInUrl() {
     try {
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete(VW_DEEP_LINK_PARAM);
+      currentUrl.searchParams.delete('startapp');
+      currentUrl.searchParams.delete('start');
       window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
     } catch {}
   }
@@ -2573,9 +2616,9 @@ class VoiceWidget extends HTMLElement {
   }
 
   buildTelegramPropertyLink(propId) {
-    const safeId = String(propId || '').trim();
+    const safeId = this.normalizeDeepLinkPropId(propId);
     if (!safeId) return '';
-    return `https://t.me/${VW_TELEGRAM_BOT_USERNAME}?start=${VW_DEEP_LINK_PREFIX}${encodeURIComponent(safeId)}`;
+    return `${VW_SHARE_BASE_URL}/share/${VW_DEEP_LINK_PREFIX}${encodeURIComponent(safeId)}`;
   }
 
   showShareNotice(message) {
