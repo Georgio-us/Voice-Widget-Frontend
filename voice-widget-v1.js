@@ -5220,10 +5220,13 @@ render() {
     } else if (e.target.closest('.card-back-icon-btn[data-action="tg-share-property"]')) {
       const slide = e.target.closest('.card-slide');
       try { this.sharePropertyToTelegram(slide); } catch {}
-    } else if (e.target.matches('.btn-open-form') || e.target.closest('.btn-open-form')) {
-      // Описание -> форма заявки
+    } else if (
+      e.target.closest('[data-action="contact-manager"]') ||
+      e.target.matches('.btn-open-form') ||
+      e.target.closest('.btn-open-form')
+    ) {
       const slide = e.target.closest('.card-slide');
-      if (slide) slide.classList.add('card-slide--form-open');
+      try { this.openContactManagerPopup({ slide }); } catch {}
     } else if (e.target.closest('.card-form-header__back')) {
       // Форма -> назад к описанию
       const slide = e.target.closest('.card-slide');
@@ -5934,7 +5937,7 @@ render() {
           </div>
         </div>
         <div class="card-back-actions">
-          <button type="button" class="btn-open-form card-back-primary-action">Связаться</button>
+          <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">Связаться</button>
           <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
           <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
         </div>
@@ -6272,6 +6275,291 @@ render() {
         body: JSON.stringify({ action: 'handoff_cancel', sessionId })
       }).catch(() => {});
     } catch {}
+  }
+
+  async submitLead(payload = {}) {
+    const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
+    const response = await fetch(leadsApiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
+    if (result?.ok !== true) {
+      throw new Error(result?.error || 'Failed to submit lead');
+    }
+    return result;
+  }
+
+  ensureContactManagerStyles() {
+    if (document.getElementById('vw-contact-manager-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-contact-manager-styles';
+    style.textContent = `
+      .vw-contact-manager-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.64);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 10050;
+      }
+      .vw-contact-manager-modal {
+        width: min(420px, 100%);
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-card, #1e1d20);
+        color: var(--text-primary, #fff);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+      .vw-contact-manager-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px 10px;
+      }
+      .vw-contact-manager-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .vw-contact-manager-close {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        background: transparent;
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        font-size: 20px;
+        cursor: pointer;
+      }
+      .vw-contact-manager-body {
+        padding: 0 16px 16px;
+      }
+      .vw-contact-manager-switch {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .vw-contact-method-btn {
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        border-radius: 12px;
+        padding: 10px 8px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .vw-contact-method-btn.is-active {
+        color: var(--text-on-accent, #fff);
+        background: var(--color-accent, #4178CF);
+        border-color: transparent;
+      }
+      .vw-contact-input {
+        width: 100%;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        border-radius: 12px;
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 12px 14px;
+        font-size: 0.875rem;
+        outline: none;
+      }
+      .vw-contact-input:focus {
+        border-color: var(--color-accent, #4178CF);
+      }
+      .vw-contact-input-group {
+        display: none;
+      }
+      .vw-contact-input-group.is-active {
+        display: block;
+      }
+      .vw-contact-error {
+        min-height: 18px;
+        margin-top: 8px;
+        font-size: 0.75rem;
+        color: #ff7f7f;
+      }
+      .vw-contact-submit {
+        width: 100%;
+        margin-top: 8px;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--color-accent, #4178CF);
+        color: var(--text-on-accent, #fff);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  closeContactManagerPopup() {
+    try {
+      const popup = this.getRoot().querySelector('#vwContactManagerOverlay');
+      if (popup && popup.parentElement) popup.parentElement.removeChild(popup);
+    } catch {}
+  }
+
+  openContactManagerPopup({ slide } = {}) {
+    this.closeContactManagerPopup();
+    this.ensureContactManagerStyles();
+
+    const locale = this.getCurrentLocale();
+    const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
+    const username = tgUser?.username ? `@${String(tgUser.username).trim()}` : '';
+    const displayName = String(tgUser?.first_name || tgUser?.username || 'Mini App User').trim();
+    const propertyId =
+      String(
+        slide?.id ||
+        slide?.querySelector('.cs')?.getAttribute('data-variant-id') ||
+        this?._lastSuggestedCard?.id ||
+        ''
+      ).trim() || null;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vwContactManagerOverlay';
+    overlay.className = 'vw-contact-manager-overlay';
+    overlay.innerHTML = `
+      <div class="vw-contact-manager-modal" role="dialog" aria-modal="true" aria-label="Contact selector">
+        <div class="vw-contact-manager-head">
+          <div class="vw-contact-manager-title">Выберите контакт</div>
+          <button type="button" class="vw-contact-manager-close" aria-label="Close">×</button>
+        </div>
+        <div class="vw-contact-manager-body">
+          <div class="vw-contact-manager-switch">
+            <button type="button" class="vw-contact-method-btn is-active" data-method="telegram">Telegram</button>
+            <button type="button" class="vw-contact-method-btn" data-method="phone">Phone</button>
+            <button type="button" class="vw-contact-method-btn" data-method="email">Email</button>
+          </div>
+          <div class="vw-contact-input-group is-active" data-input-method="telegram">
+            <input type="text" class="vw-contact-input" data-role="telegram-input" value="${username.replace(/"/g, '&quot;')}" placeholder="@username">
+          </div>
+          <div class="vw-contact-input-group" data-input-method="phone">
+            <input type="tel" class="vw-contact-input" data-role="phone-input" placeholder="+971 50 123 45 67" inputmode="tel">
+          </div>
+          <div class="vw-contact-input-group" data-input-method="email">
+            <input type="email" class="vw-contact-input" data-role="email-input" placeholder="name@example.com" autocomplete="email">
+          </div>
+          <div class="vw-contact-error" data-role="error"></div>
+          <button type="button" class="vw-contact-submit" data-role="submit-btn">${locale.send || 'Отправить'}</button>
+        </div>
+      </div>
+    `;
+
+    this.getRoot().appendChild(overlay);
+
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toDigits = (v) => String(v || '').replace(/\D+/g, '');
+    const formatPhoneMask = (value) => {
+      const raw = String(value || '');
+      const withPlus = raw.trim().startsWith('+');
+      const digits = toDigits(raw).slice(0, 15);
+      if (!digits) return withPlus ? '+' : '';
+      const cc = digits.slice(0, 3);
+      const rest = digits.slice(3);
+      const chunks = rest.match(/.{1,3}/g) || [];
+      return `${withPlus ? '+' : '+'}${cc}${chunks.length ? ` ${chunks.join(' ')}` : ''}`;
+    };
+
+    const methodButtons = Array.from(overlay.querySelectorAll('.vw-contact-method-btn'));
+    const inputGroups = Array.from(overlay.querySelectorAll('.vw-contact-input-group'));
+    const telegramInput = overlay.querySelector('[data-role="telegram-input"]');
+    const phoneInput = overlay.querySelector('[data-role="phone-input"]');
+    const emailInput = overlay.querySelector('[data-role="email-input"]');
+    const errorEl = overlay.querySelector('[data-role="error"]');
+    const submitBtn = overlay.querySelector('[data-role="submit-btn"]');
+
+    let selectedMethod = 'telegram';
+    const setError = (message = '') => { if (errorEl) errorEl.textContent = String(message || ''); };
+    const switchMethod = (method) => {
+      selectedMethod = method;
+      methodButtons.forEach((btn) => btn.classList.toggle('is-active', btn.getAttribute('data-method') === method));
+      inputGroups.forEach((group) => group.classList.toggle('is-active', group.getAttribute('data-input-method') === method));
+      setError('');
+    };
+
+    methodButtons.forEach((btn) => {
+      btn.addEventListener('click', () => switchMethod(btn.getAttribute('data-method') || 'telegram'));
+    });
+
+    if (phoneInput) {
+      phoneInput.addEventListener('input', () => {
+        const caretAtEnd = phoneInput.selectionStart === phoneInput.value.length;
+        phoneInput.value = formatPhoneMask(phoneInput.value);
+        if (caretAtEnd) {
+          const len = phoneInput.value.length;
+          phoneInput.setSelectionRange(len, len);
+        }
+      });
+    }
+
+    overlay.querySelector('.vw-contact-manager-close')?.addEventListener('click', () => this.closeContactManagerPopup());
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) this.closeContactManagerPopup();
+    });
+
+    submitBtn?.addEventListener('click', async () => {
+      setError('');
+      let phoneCountryCode = null;
+      let phoneNumber = null;
+      let email = null;
+      let preferredContactMethod = selectedMethod;
+
+      if (selectedMethod === 'telegram') {
+        const telegramValue = String(telegramInput?.value || '').trim();
+        if (!telegramValue) {
+          setError('Введите Telegram username.');
+          return;
+        }
+      } else if (selectedMethod === 'phone') {
+        const rawDigits = toDigits(phoneInput?.value || '');
+        if (rawDigits.length < 9 || rawDigits.length > 15) {
+          setError(locale.invalidPhone || 'Invalid phone number');
+          return;
+        }
+        phoneCountryCode = `+${rawDigits.slice(0, Math.min(3, rawDigits.length))}`;
+        phoneNumber = rawDigits.slice(phoneCountryCode.replace('+', '').length) || rawDigits;
+      } else if (selectedMethod === 'email') {
+        const emailValue = String(emailInput?.value || '').trim();
+        if (!emailRe.test(emailValue)) {
+          setError(locale.invalidEmail || 'Invalid email');
+          return;
+        }
+        email = emailValue;
+      }
+
+      const payload = {
+        sessionId: this.sessionId || null,
+        source: 'tg_mini_app',
+        name: displayName || 'Mini App User',
+        phoneCountryCode,
+        phoneNumber,
+        email,
+        preferredContactMethod,
+        comment: selectedMethod === 'telegram' ? `telegram:${String(telegramInput?.value || '').trim()}` : null,
+        language: (this.currentLang || this.defaultLanguage || 'en').toLowerCase(),
+        propertyId: propertyId,
+        consent: true
+      };
+
+      try {
+        submitBtn.disabled = true;
+        await this.submitLead(payload);
+        this.closeContactManagerPopup();
+        try { this.renderInDialogLeadThanksBlock(); } catch {}
+      } catch (err) {
+        setError(err?.message || 'Failed to submit request');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
   }
 
   renderInDialogLeadThanksBlock() {
