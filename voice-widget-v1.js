@@ -2712,15 +2712,27 @@ class VoiceWidget extends HTMLElement {
     const inlineTargetId = String(slide?.id || propId).trim() || propId;
     const inlineQuery = `share_prop_${inlineTargetId}`;
     console.log('[TG Inline] preparing inline query:', inlineQuery);
+    const tg = window?.Telegram?.WebApp;
+    const webAppVersion = String(tg?.version || 'unknown');
     try {
-      console.log('WebApp Version:', window?.Telegram?.WebApp?.version);
-      window.Telegram.WebApp.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+      console.log('WebApp Version:', webAppVersion);
+      try { tg?.ready?.(); } catch {}
+      tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
       console.log('[TG Inline] switchInlineQuery invoked successfully');
       return true;
     } catch (error) {
-      console.warn('[TG Inline] switchInlineQuery failed:', error);
-      this.showShareNotice('Inline share failed: проверьте настройки бота');
-      return false;
+      console.warn('[TG Inline] switchInlineQuery failed (with chat filters):', error);
+      try {
+        // Fallback call without chat filters; some Telegram clients reject the second argument.
+        tg.switchInlineQuery(inlineQuery);
+        console.log('[TG Inline] switchInlineQuery invoked successfully (fallback mode)');
+        return true;
+      } catch (fallbackError) {
+        const reason = fallbackError?.message || error?.message || 'unknown error';
+        console.warn('[TG Inline] switchInlineQuery fallback failed:', fallbackError);
+        this.showShareNotice(`Inline share failed (v${webAppVersion}): ${reason}`);
+        return false;
+      }
     }
   }
 
