@@ -6442,7 +6442,7 @@ render() {
             <input type="text" class="vw-contact-input" data-role="telegram-input" value="${username.replace(/"/g, '&quot;')}" placeholder="@username">
           </div>
           <div class="vw-contact-input-group" data-input-method="phone">
-            <input type="tel" class="vw-contact-input" data-role="phone-input" placeholder="+971 50 123 45 67" inputmode="tel">
+            <input type="tel" class="vw-contact-input" data-role="phone-input" placeholder="+00 000 000 00 00" inputmode="tel">
           </div>
           <div class="vw-contact-input-group" data-input-method="email">
             <input type="email" class="vw-contact-input" data-role="email-input" placeholder="name@example.com" autocomplete="email">
@@ -6456,16 +6456,14 @@ render() {
     this.getRoot().appendChild(overlay);
 
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const tgRe = /^@?[a-zA-Z0-9_]{5,}$/;
     const toDigits = (v) => String(v || '').replace(/\D+/g, '');
     const formatPhoneMask = (value) => {
       const raw = String(value || '');
-      const withPlus = raw.trim().startsWith('+');
       const digits = toDigits(raw).slice(0, 15);
-      if (!digits) return withPlus ? '+' : '';
-      const cc = digits.slice(0, 3);
-      const rest = digits.slice(3);
-      const chunks = rest.match(/.{1,3}/g) || [];
-      return `${withPlus ? '+' : '+'}${cc}${chunks.length ? ` ${chunks.join(' ')}` : ''}`;
+      if (!digits) return '';
+      const chunks = digits.match(/.{1,3}/g) || [];
+      return `+${chunks.join(' ')}`;
     };
 
     const methodButtons = Array.from(overlay.querySelectorAll('.vw-contact-method-btn'));
@@ -6475,6 +6473,9 @@ render() {
     const emailInput = overlay.querySelector('[data-role="email-input"]');
     const errorEl = overlay.querySelector('[data-role="error"]');
     const submitBtn = overlay.querySelector('[data-role="submit-btn"]');
+    if (!username && telegramInput) {
+      try { telegramInput.focus(); } catch {}
+    }
 
     let selectedMethod = 'telegram';
     const setError = (message = '') => { if (errorEl) errorEl.textContent = String(message || ''); };
@@ -6510,30 +6511,49 @@ render() {
       let phoneCountryCode = null;
       let phoneNumber = null;
       let email = null;
-      let preferredContactMethod = selectedMethod;
 
-      if (selectedMethod === 'telegram') {
-        const telegramValue = String(telegramInput?.value || '').trim();
-        if (!telegramValue) {
-          setError('Введите Telegram username.');
-          return;
-        }
-      } else if (selectedMethod === 'phone') {
-        const rawDigits = toDigits(phoneInput?.value || '');
-        if (rawDigits.length < 9 || rawDigits.length > 15) {
-          setError(locale.invalidPhone || 'Invalid phone number');
-          return;
-        }
-        phoneCountryCode = `+${rawDigits.slice(0, Math.min(3, rawDigits.length))}`;
-        phoneNumber = rawDigits.slice(phoneCountryCode.replace('+', '').length) || rawDigits;
-      } else if (selectedMethod === 'email') {
-        const emailValue = String(emailInput?.value || '').trim();
-        if (!emailRe.test(emailValue)) {
-          setError(locale.invalidEmail || 'Invalid email');
-          return;
-        }
-        email = emailValue;
+      const telegramRaw = String(telegramInput?.value || '').trim();
+      const telegramNormalized = telegramRaw && !telegramRaw.startsWith('@') ? `@${telegramRaw}` : telegramRaw;
+      const telegramValid = tgRe.test(telegramNormalized);
+
+      const phoneDigits = toDigits(phoneInput?.value || '');
+      const phoneValid = phoneDigits.length >= 10 && phoneDigits.length <= 15;
+      if (phoneValid) {
+        phoneNumber = phoneDigits;
       }
+
+      const emailRaw = String(emailInput?.value || '').trim();
+      const emailValid = emailRe.test(emailRaw);
+      if (emailValid) {
+        email = emailRaw;
+      }
+
+      const hasAnyValidContact = telegramValid || phoneValid || emailValid;
+      if (!hasAnyValidContact) {
+        if (selectedMethod === 'phone') {
+          setError('Введите корректный номер (минимум 10 цифр)');
+        } else if (selectedMethod === 'email') {
+          setError(locale.invalidEmail || 'Invalid email');
+        } else {
+          setError('Введите Telegram username.');
+        }
+        return;
+      }
+
+      if (selectedMethod === 'phone' && phoneDigits.length > 0 && !phoneValid && !telegramValid && !emailValid) {
+        setError('Введите корректный номер (минимум 10 цифр)');
+        return;
+      }
+
+      const preferredContactMethod = phoneValid
+        ? (selectedMethod === 'phone' ? 'phone' : (selectedMethod === 'email' && emailValid ? 'email' : (selectedMethod === 'telegram' && telegramValid ? 'telegram' : 'phone')))
+        : (emailValid
+          ? (selectedMethod === 'email' ? 'email' : (selectedMethod === 'telegram' && telegramValid ? 'telegram' : 'email'))
+          : 'telegram');
+
+      const emailFallback = !email && telegramValid
+        ? `${telegramNormalized.replace(/^@/, '').toLowerCase()}@telegram.local`
+        : null;
 
       const payload = {
         sessionId: this.sessionId || null,
@@ -6541,9 +6561,10 @@ render() {
         name: displayName || 'Mini App User',
         phoneCountryCode,
         phoneNumber,
-        email,
+        email: email || emailFallback,
         preferredContactMethod,
-        comment: selectedMethod === 'telegram' ? `telegram:${String(telegramInput?.value || '').trim()}` : null,
+        telegramUsername: telegramValid ? telegramNormalized : null,
+        comment: telegramValid ? `telegram:${telegramNormalized}` : null,
         language: (this.currentLang || this.defaultLanguage || 'en').toLowerCase(),
         propertyId: propertyId,
         consent: true
