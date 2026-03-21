@@ -2709,13 +2709,18 @@ class VoiceWidget extends HTMLElement {
     const card = slide?.querySelector('.cs');
     const propId = card?.getAttribute('data-variant-id') || '';
     if (!propId) return false;
+    const inlineTargetId = String(slide?.id || propId).trim() || propId;
+    const inlineQuery = `share_prop_${inlineTargetId}`;
+    try {
+      const tg = window?.Telegram?.WebApp;
+      if (tg && typeof tg.switchInlineQuery === 'function') {
+        tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+        return true;
+      }
+    } catch {}
     const shareUrl = this.buildTelegramPropertyLink(propId);
     if (!shareUrl) return false;
-    const source = this.getCatalogPropertyById(propId);
-    const normalized = this.normalizeCardData(source || { id: propId });
-    const titleLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || 'Property';
-    const text = normalized.priceLabel ? `${titleLeft} — ${normalized.priceLabel}` : titleLeft;
-    const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+    const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}`;
     try {
       window.open(telegramShareUrl, '_blank', 'noopener,noreferrer');
       return true;
@@ -5815,6 +5820,7 @@ render() {
     const locale = this.getCurrentLocale();
     const slide = document.createElement('div');
     slide.className = 'card-slide';
+    if (normalized?.id) slide.id = String(normalized.id).trim();
     const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
     const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
     while (assetSlots.length < 4) assetSlots.push('');
