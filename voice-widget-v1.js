@@ -2705,6 +2705,30 @@ class VoiceWidget extends HTMLElement {
     return copied;
   }
 
+  sharePropertyToTelegram(slide) {
+    const card = slide?.querySelector('.cs');
+    const propId = card?.getAttribute('data-variant-id') || '';
+    if (!propId) return false;
+    const shareUrl = this.buildTelegramPropertyLink(propId);
+    if (!shareUrl) return false;
+    const source = this.getCatalogPropertyById(propId);
+    const normalized = this.normalizeCardData(source || { id: propId });
+    const titleLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || 'Property';
+    const text = normalized.priceLabel ? `${titleLeft} — ${normalized.priceLabel}` : titleLeft;
+    const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`;
+    try {
+      window.open(telegramShareUrl, '_blank', 'noopener,noreferrer');
+      return true;
+    } catch {
+      try {
+        window.location.href = telegramShareUrl;
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
   detectTelegramWebApp() {
     try {
       return !!(window?.Telegram && window.Telegram.WebApp);
@@ -5151,6 +5175,9 @@ render() {
     } else if (e.target.closest('.card-back-icon-btn[data-action="share-property"]')) {
       const slide = e.target.closest('.card-slide');
       try { await this.sharePropertyFromSlide(slide); } catch {}
+    } else if (e.target.closest('.card-back-icon-btn[data-action="tg-share-property"]')) {
+      const slide = e.target.closest('.card-slide');
+      try { this.sharePropertyToTelegram(slide); } catch {}
     } else if (e.target.matches('.btn-open-form') || e.target.closest('.btn-open-form')) {
       // Описание -> форма заявки
       const slide = e.target.closest('.card-slide');
@@ -5865,8 +5892,8 @@ render() {
         </div>
         <div class="card-back-actions">
           <button type="button" class="btn-open-form card-back-primary-action">Связаться</button>
-          <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться" title="Поделиться">↗</button>
-          <button type="button" class="card-back-icon-btn" data-action="show-plan" aria-label="План" title="План">⌗</button>
+          <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
+          <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
         </div>
       </div>
       <div class="card-slide-form">

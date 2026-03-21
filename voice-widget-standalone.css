@@ -462,6 +462,7 @@
   .card-back-actions{ margin-top:20px; flex-shrink:0; display:flex; align-items:center; gap:8px; }
   .card-back-actions .btn-open-form{ margin-top:0; flex:1 1 auto; min-width:0; height:40px; padding:0 14px; font-size:var(--fs-body); font-weight:600; color:var(--text-on-accent); background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .card-back-icon-btn{ width:40px; height:40px; flex:0 0 40px; border:1px solid var(--border-light); background:var(--border-light); color:var(--color-text); border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; line-height:1; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
+  .card-back-icon-btn img{ width:20px; height:20px; display:block; object-fit:contain; pointer-events:none; }
   .card-back-icon-btn:hover{ background:var(--bg-element); transform:translateY(-1px); }
   .card-back-icon-btn:active{ transform:translateY(0); opacity:.88; }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
