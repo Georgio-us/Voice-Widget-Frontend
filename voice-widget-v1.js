@@ -2459,7 +2459,7 @@ class VoiceWidget extends HTMLElement {
     this.stream = null;
     this.audioBlob = null;
     this.recordedChunks = [];
-    this._deepLinkPropId = null;
+    this._deepLinkPropId = this.getDeepLinkPropIdFromUrl();
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
 
@@ -2521,10 +2521,13 @@ class VoiceWidget extends HTMLElement {
     const raw = String(rawValue || '').trim();
     if (!raw) return '';
     const value = raw.replace(/\+/g, ' ').trim();
+    const tokenMatch = value.match(/prop_([a-z0-9_-]+)/i);
+    if (tokenMatch?.[1]) return String(tokenMatch[1]).trim().toUpperCase();
     const withoutPrefix = value.toLowerCase().startsWith(VW_DEEP_LINK_PREFIX)
       ? value.slice(VW_DEEP_LINK_PREFIX.length)
       : value;
-    return String(withoutPrefix || '').trim().toUpperCase();
+    const idMatch = String(withoutPrefix || '').trim().match(/^([a-z0-9_-]+)$/i);
+    return idMatch?.[1] ? idMatch[1].toUpperCase() : '';
   }
 
   readTelegramStartParam() {
@@ -2539,6 +2542,11 @@ class VoiceWidget extends HTMLElement {
         const startParam = params.get('start_param');
         if (startParam) return String(startParam).trim();
       }
+    } catch {}
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      const fromQuery = qs.get('tgWebAppStartParam') || qs.get('start_param') || qs.get('startapp') || qs.get('start');
+      if (fromQuery) return String(fromQuery).trim();
     } catch {}
     try {
       const hash = String(window.location.hash || '');
@@ -2559,6 +2567,13 @@ class VoiceWidget extends HTMLElement {
       candidates.push(params.get('start'));
     } catch {}
     candidates.push(this.readTelegramStartParam());
+    try {
+      const href = String(window.location.href || '');
+      const fromHref = href.match(/(?:startapp|start_param|tgWebAppStartParam)=([^&#]+)/i)?.[1] || '';
+      if (fromHref) candidates.push(decodeURIComponent(fromHref));
+      const propToken = href.match(/prop_[a-z0-9_-]+/i)?.[0] || '';
+      if (propToken) candidates.push(propToken);
+    } catch {}
     for (const value of candidates) {
       const normalized = this.normalizeDeepLinkPropId(value);
       if (normalized) return normalized;
@@ -2599,7 +2614,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   tryOpenDeepLinkedProperty() {
-    const propId = this.getDeepLinkPropIdFromUrl();
+    const propId = this._deepLinkPropId || this.getDeepLinkPropIdFromUrl();
     this._deepLinkPropId = propId || null;
     if (!propId) return false;
     return this.renderSinglePropertyById(propId);

@@ -183,17 +183,15 @@ function renderShareLandingHtml({ propId, card }) {
   ${og.tags}
   <style>
     :root { color-scheme: dark; }
-    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0d1117; color:#fff; font-family:Arial, sans-serif; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#000000; color:#ffffff; font-family:Arial, sans-serif; }
     .wrap { max-width:420px; padding:24px; text-align:center; }
     .title { font-size:20px; line-height:1.3; margin:0 0 10px; }
-    .desc { margin:0 0 18px; color:rgba(255,255,255,.78); }
-    .open-btn { display:inline-block; padding:12px 20px; border-radius:999px; background:#4178CF; color:#fff; text-decoration:none; font-weight:600; }
+    .open-btn { display:inline-block; padding:15px 30px; border-radius:10px; font-weight:bold; background:#2481cc; color:#ffffff; text-decoration:none; }
   </style>
 </head>
 <body>
   <main class="wrap">
     <h1 class="title">${esc(og.title)}</h1>
-    <p class="desc">${esc(og.description)}</p>
     ${openButton}
   </main>
 </body>
