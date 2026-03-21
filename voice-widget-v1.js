@@ -2714,6 +2714,14 @@ class VoiceWidget extends HTMLElement {
     console.log('[TG Inline] preparing inline query:', inlineQuery);
     const tg = window?.Telegram?.WebApp;
     const webAppVersion = String(tg?.version || 'unknown');
+    const initDataPresent = Boolean(String(tg?.initData || '').trim());
+    const chatType = tg?.initDataUnsafe?.chat_type || 'unknown';
+    const queryId = tg?.initDataUnsafe?.query_id || '';
+    console.log('[TG Inline] context:', { initDataPresent, chatType, hasQueryId: Boolean(queryId) });
+    if (!tg || !initDataPresent) {
+      this.showShareNotice('Inline share works only inside Telegram Mini App');
+      return false;
+    }
     try {
       console.log('WebApp Version:', webAppVersion);
       try { tg?.ready?.(); } catch {}
@@ -2727,7 +2735,8 @@ class VoiceWidget extends HTMLElement {
         return true;
       }
       if (typeof tg?.switchInlineQuery === 'function') {
-        tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+        // More compatible call: without chat filters.
+        tg.switchInlineQuery(inlineQuery);
         console.log('[TG Inline] switchInlineQuery invoked successfully');
         return true;
       }
