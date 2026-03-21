@@ -2693,16 +2693,20 @@ class VoiceWidget extends HTMLElement {
     try {
       if (navigator?.share) {
         await navigator.share(payload);
+        this.showShareNotice('Успешно отправлено ✓');
         return true;
       }
     } catch (error) {
-      if (!(error && error.name === 'AbortError')) {
-        console.warn('navigator.share failed, using clipboard fallback:', error);
-      }
+      if (error && error.name === 'AbortError') return false;
+      console.warn('navigator.share failed, using clipboard fallback:', error);
     }
     const copied = await this.copyTextToClipboard(shareUrl);
-    this.showShareNotice(copied ? 'Ссылка скопирована' : shareUrl);
-    return copied;
+    if (copied) {
+      this.showShareNotice('Ссылка скопирована ✓');
+      return true;
+    }
+    this.showShareNotice('Не удалось поделиться');
+    return false;
   }
 
   sharePropertyToTelegram(slide) {
