@@ -2735,10 +2735,16 @@ class VoiceWidget extends HTMLElement {
         return true;
       }
       if (typeof tg?.switchInlineQuery === 'function') {
-        // More compatible call: without chat filters.
-        tg.switchInlineQuery(inlineQuery);
-        console.log('[TG Inline] switchInlineQuery invoked successfully');
-        return true;
+        try {
+          tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+          console.log('[TG Inline] switchInlineQuery invoked successfully (with chooser filters)');
+          return true;
+        } catch (withFiltersError) {
+          console.warn('[TG Inline] switchInlineQuery with filters failed:', withFiltersError);
+          tg.switchInlineQuery(inlineQuery);
+          console.log('[TG Inline] switchInlineQuery invoked successfully (fallback no filters)');
+          return true;
+        }
       }
       if (typeof tg?.switchInlineQueryCurrentChat === 'function') {
         tg.switchInlineQueryCurrentChat(inlineQuery);
