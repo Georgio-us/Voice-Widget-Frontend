@@ -2248,6 +2248,7 @@ voice-widget,
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .vw-app .status-dot {
@@ -2311,6 +2312,12 @@ voice-widget,
 .vw-app #messagesContainer {
   border: none;
   box-shadow: none;
+}
+
+.vw-app #contextScreen {
+  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .vw-app .input-container {

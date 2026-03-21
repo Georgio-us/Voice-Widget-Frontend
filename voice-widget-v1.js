@@ -3449,7 +3449,7 @@ render() {
 
 
       <!-- Context Screen (v2) -->
-      <div class="context-screen hidden" id="contextScreen">
+      <div class="context-screen hidden" id="contextScreen" style="display:none;">
         <div class="voice-widget-container">
           <div class="bg-grid"></div>
           <div class="screen-header"></div>
@@ -3753,7 +3753,7 @@ render() {
   this.applyHostModeClasses();
   
   // Screen management (fresh query each time to avoid stale refs)
-  const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
+  const screenIds = ['mainScreen','dialogScreen','requestScreen'];
   const showScreen = (screenName) => {
     screenIds.forEach(id => this.$byId(id)?.classList.add('hidden'));
     const targetId = screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen';
@@ -3771,6 +3771,9 @@ render() {
   });
   this.$byId('appContactButton')?.addEventListener('click', () => {
     try { this.openContactManagerPopup({ source: 'tg_header_main' }); } catch {}
+  });
+  this.getRoot().querySelector('.app-header-status')?.addEventListener('click', () => {
+    try { this.openDebugInsightsPopup(); } catch (error) { console.error('Debug insights popup failed:', error); }
   });
   const objectsPill = this.$byId('objectsCounterPill');
   const openPropertiesSlider = () => {
@@ -6330,6 +6333,143 @@ render() {
       throw new Error(result?.error || 'Failed to submit lead');
     }
     return result;
+  }
+
+  getDebugInsightsSnapshot() {
+    const empty = {
+      name: null,
+      operation: null,
+      budget: null,
+      type: null,
+      location: null,
+      rooms: null,
+      area: null,
+      details: null,
+      preferences: null
+    };
+    const fromSession = (this?.session && this.session.insights && typeof this.session.insights === 'object')
+      ? this.session.insights
+      : null;
+    const fromUnderstanding = (typeof this.getUnderstanding === 'function')
+      ? (this.getUnderstanding() || {})
+      : (this.understanding?.export?.() || {});
+    const source = fromSession || fromUnderstanding || {};
+    return Object.keys(empty).reduce((acc, key) => {
+      const raw = source?.[key];
+      acc[key] = (raw === undefined || raw === null || String(raw).trim() === '') ? null : raw;
+      return acc;
+    }, { ...empty });
+  }
+
+  ensureDebugInsightsPopupStyles() {
+    if (document.getElementById('vw-debug-insights-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-debug-insights-styles';
+    style.textContent = `
+      .vw-debug-insights-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.64);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 10060;
+      }
+      .vw-debug-insights-modal {
+        width: min(420px, 100%);
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-card, #1e1d20);
+        color: var(--text-primary, #fff);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        padding: 14px 16px 16px;
+      }
+      .vw-debug-insights-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .vw-debug-insights-list {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+      }
+      .vw-debug-insights-list li {
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        font-size: 0.84rem;
+        line-height: 1.35;
+      }
+      .vw-debug-insights-list strong {
+        color: var(--text-primary, #fff);
+        font-weight: 600;
+      }
+      .vw-debug-insights-close {
+        width: 100%;
+        margin-top: 14px;
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        background: var(--color-accent, #4178CF);
+        color: var(--text-on-accent, #fff);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  closeDebugInsightsPopup() {
+    try {
+      const popup = this.getRoot().querySelector('#vwDebugInsightsOverlay');
+      if (popup && popup.parentElement) popup.parentElement.removeChild(popup);
+    } catch {}
+  }
+
+  openDebugInsightsPopup() {
+    this.closeDebugInsightsPopup();
+    this.ensureDebugInsightsPopupStyles();
+    const insights = this.getDebugInsightsSnapshot();
+    const labels = {
+      name: 'Name',
+      operation: 'Operation',
+      budget: 'Budget',
+      type: 'Type',
+      location: 'Location',
+      rooms: 'Rooms',
+      area: 'Area',
+      details: 'Details',
+      preferences: 'Preferences'
+    };
+    const pretty = (value) => {
+      if (value === null || value === undefined || value === '') return 'null';
+      if (typeof value === 'object') {
+        try { return JSON.stringify(value); } catch { return '[object]'; }
+      }
+      return String(value);
+    };
+    const listHtml = Object.keys(labels)
+      .map((key) => `<li><strong>${labels[key]}:</strong> ${pretty(insights[key])}</li>`)
+      .join('');
+    const overlay = document.createElement('div');
+    overlay.id = 'vwDebugInsightsOverlay';
+    overlay.className = 'vw-debug-insights-overlay';
+    overlay.innerHTML = `
+      <div class="vw-debug-insights-modal" role="dialog" aria-modal="true" aria-label="Debug insights">
+        <div class="vw-debug-insights-title">Debug Insights</div>
+        <ul class="vw-debug-insights-list">${listHtml}</ul>
+        <button type="button" class="vw-debug-insights-close" data-role="close">OK</button>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeDebugInsightsPopup());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeDebugInsightsPopup();
+    });
   }
 
   ensureContactManagerStyles() {
