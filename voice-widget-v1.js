@@ -5656,6 +5656,8 @@ render() {
     const computedPricePerM2 = Number.isFinite(numericPrice) && numericPrice > 0 && Number.isFinite(numericArea) && numericArea > 0
       ? Math.round(numericPrice / numericArea)
       : null;
+    const parsedScore = Number(raw.score ?? raw._score);
+    const parsedStrictScore = Number(raw.strictScore ?? raw._strictScore);
     return {
       ...raw,
       id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
@@ -5675,7 +5677,10 @@ render() {
       floor: raw.floor ?? raw.specs_floor ?? raw.specs?.floor ?? null,
       bathrooms: raw.bathrooms ?? raw.specs_bathrooms ?? raw.specs?.bathrooms ?? null,
       area_m2: areaM2,
-      price_per_m2: raw.price_per_m2 ?? computedPricePerM2 ?? null
+      price_per_m2: raw.price_per_m2 ?? computedPricePerM2 ?? null,
+      score: Number.isFinite(parsedScore) ? parsedScore : 0,
+      strictScore: Number.isFinite(parsedStrictScore) ? parsedStrictScore : 0,
+      matchTier: raw.matchTier || raw._tier || 'low'
     };
   }
 
@@ -5953,12 +5958,12 @@ render() {
     const districtLine = normalized.district || normalized.neighborhood || '';
     const scoreValue = (() => {
       const raw = Number(normalized.score);
-      if (!Number.isFinite(raw)) return null;
+      if (!Number.isFinite(raw)) return 0;
       return Math.max(0, Math.min(100, Math.round(raw)));
     })();
     const scoreTier = String(normalized.matchTier || '').toLowerCase();
     const scoreTierClass = ['high', 'mid', 'low'].includes(scoreTier) ? ` card-back-header__score--${scoreTier}` : '';
-    const scoreLabel = scoreValue == null ? 'Score: --' : `Score: ${scoreValue}%`;
+    const scoreLabel = `Score: ${scoreValue}%`;
     const specsPills = [
       `🛏️ ${normalized.rooms ? `${normalized.rooms} rooms` : '— rooms'}`,
       `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
