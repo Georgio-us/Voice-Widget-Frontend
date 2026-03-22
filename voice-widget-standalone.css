@@ -2342,53 +2342,6 @@ voice-widget,
   font-size: 16px;
 }
 
-/* Chat flow refinement: sticky pill in same scroll context + compact footer dock */
-.vw-app {
-  --messages-top-glass: 88px;
-}
-
-.vw-app .app-body {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.vw-app .app-body::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--messages-top-glass);
-  pointer-events: none;
-  z-index: 8;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--bg-main) 76%, transparent) 0%,
-    color-mix(in srgb, var(--bg-main) 38%, transparent) 64%,
-    transparent 100%
-  );
-}
-
-.vw-app #messagesContainer {
-  position: relative;
-  z-index: 1;
-}
-
-.vw-app .dialog-screen .dialogue-container {
-  justify-content: flex-start;
-}
-
-.vw-app #messagesContainer .objects-counter-pill {
-  position: sticky;
-  top: 10px;
-  margin: 12px auto 8px;
-  z-index: 12;
-  width: fit-content;
-}
-
 .vw-app .app-footer-dock {
   position: relative;
   z-index: 12;
