@@ -5951,6 +5951,14 @@ render() {
     while (assetSlots.length < 4) assetSlots.push('');
     const headerLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || normalized.city || normalized.propertyType || '';
     const districtLine = normalized.district || normalized.neighborhood || '';
+    const scoreValue = (() => {
+      const raw = Number(normalized.score);
+      if (!Number.isFinite(raw)) return null;
+      return Math.max(0, Math.min(100, Math.round(raw)));
+    })();
+    const scoreTier = String(normalized.matchTier || '').toLowerCase();
+    const scoreTierClass = ['high', 'mid', 'low'].includes(scoreTier) ? ` card-back-header__score--${scoreTier}` : '';
+    const scoreLabel = scoreValue == null ? 'Score: --' : `Score: ${scoreValue}%`;
     const specsPills = [
       `🛏️ ${normalized.rooms ? `${normalized.rooms} rooms` : '— rooms'}`,
       `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
@@ -6010,7 +6018,7 @@ render() {
         <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
           <button type="button" class="card-back-header__close" aria-label="Back">Назад</button>
-          <span class="card-back-header__fav" aria-hidden="true">В избранное</span>
+          <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
         </div>
         <div class="card-back-scroll">
           <div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
