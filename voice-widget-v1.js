@@ -5614,12 +5614,18 @@ render() {
     return out;
   }
 
+  _hasAnyInsight(snapshot = null) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+    return Object.values(snapshot).some((v) => v !== null && v !== undefined && String(v).trim() !== '');
+  }
+
   _detectNewInsight(insights = null) {
     const next = this._snapshotInsights(insights);
     if (!next) return false;
     if (!this._lastPillInsightsSnapshot) {
+      const hasAny = this._hasAnyInsight(next);
       this._lastPillInsightsSnapshot = next;
-      return false;
+      return hasAny;
     }
     const prev = this._lastPillInsightsSnapshot;
     this._lastPillInsightsSnapshot = next;
@@ -5805,6 +5811,17 @@ render() {
       if (!Number.isFinite(Number(window.appState.lastTotalMatches))) {
         window.appState.lastTotalMatches = 0;
       }
+      // Always-available catalog baseline: if session has no counts/candidates yet,
+      // preload global catalog so the pill stays actionable from first open.
+      if (!window.appState.allProperties.length) {
+        const all = await this.loadAllProperties();
+        if (Array.isArray(all) && all.length) {
+          this.replacePropertiesCatalog(all);
+          if ((Number(window.appState.lastTotalMatches) || 0) <= 0) {
+            window.appState.lastTotalMatches = all.length;
+          }
+        }
+      }
       this.updateObjectCount(window.appState.lastTotalMatches, { forceLabel: true });
       await this.tryOpenDeepLinkedProperty();
     } catch {}
@@ -5854,7 +5871,18 @@ render() {
   async renderPropertiesFromCatalog() {
     await this.hydrateCatalogFromBackend(60);
     this._sliderCheckpointShown = { 10: false, 20: false };
-    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    let list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    if (!list.length) {
+      const all = await this.loadAllProperties();
+      if (Array.isArray(all) && all.length) {
+        this.replacePropertiesCatalog(all);
+        list = window.appState.allProperties || [];
+        if ((Number(window?.appState?.lastTotalMatches) || 0) <= 0) {
+          window.appState.lastTotalMatches = list.length;
+          this.updateObjectCount(window.appState.lastTotalMatches, { forceLabel: true });
+        }
+      }
+    }
     if (!list.length) {
       this.updateObjectCount(Number(window?.appState?.lastTotalMatches) || 0);
       return;
