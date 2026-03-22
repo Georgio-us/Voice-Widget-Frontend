@@ -453,23 +453,22 @@ class UnderstandingManager {
   constructor(widget) {
     this.widget = widget;
 
-    // Расширенная структура понимания запроса (9 параметров)
+    // Расширенная структура понимания запроса (v2)
     this.understanding = {
-      // Блок 1: Основная информация (33.3%)
-      name: null,        // 11%
-      operation: null,   // 11%
-      budget: null,      // 11%
-
-      // Блок 2: Параметры недвижимости (33.3%)
-      type: null,        // 11%
-      location: null,    // 11%
-      rooms: null,       // 11%
-
-      // Блок 3: Детали и предпочтения (33.3%)
-      area: null,        // 11%
-      details: null,     // 11% (детали локации)
-      preferences: null, // 11%
-
+      name: null,
+      operation: null,
+      budget: null,
+      budgetMax: null,
+      type: null,
+      location: null,
+      rooms: null,
+      area: null,
+      areaMin: null,
+      areaMax: null,
+      floor: null,
+      features: null,
+      details: null,
+      preferences: null,
       progress: 0
     };
   }
@@ -513,18 +512,20 @@ class UnderstandingManager {
   // Гибкая система расчёта прогресса
   calculateProgress() {
     const weights = {
-      // Блок 1
-      name: 11,
-      operation: 11,
-      budget: 11,
-      // Блок 2
-      type: 11,
-      location: 11,
-      rooms: 11,
-      // Блок 3
-      area: 11,
-      details: 11,
-      preferences: 11
+      name: 7,
+      operation: 7,
+      budget: 7,
+      budgetMax: 7,
+      type: 7,
+      location: 7,
+      rooms: 7,
+      area: 7,
+      areaMin: 7,
+      areaMax: 7,
+      floor: 7,
+      features: 7,
+      details: 7,
+      preferences: 7
     };
 
     let total = 0;
@@ -578,6 +579,7 @@ class UnderstandingManager {
     this.updateInsightItem('location', this.understanding.location);
     this.updateInsightItem('rooms', this.understanding.rooms);
     this.updateInsightItem('area', this.understanding.area);
+    this.updateInsightItem('floor', this.understanding.floor);
     this.updateInsightItem('details', this.understanding.details);
     this.updateInsightItem('preferences', this.understanding.preferences);
   }
@@ -628,22 +630,20 @@ class UnderstandingManager {
     };
 
     const normalized = {
-      // Основная информация
       name: pick('name'),
       operation: pick('operation', 'operationType'),
       budget: pick('budget'),
-
-      // Параметры недвижимости
+      budgetMax: pick('budgetMax'),
       type: pick('type', 'propertyType'),
       location: pick('location', 'district'),
       rooms: pick('rooms'),
-
-      // Детали и предпочтения
       area: pick('area'),
+      areaMin: pick('areaMin'),
+      areaMax: pick('areaMax'),
+      floor: pick('floor'),
+      features: pick('features'),
       details: pick('details', 'locationDetails'),
       preferences: pick('preferences', 'additional'),
-
-      // Прогресс
       progress: oldInsights.progress ?? src?.progress ?? 0
     };
 
@@ -1541,6 +1541,17 @@ class APIClient {
     const response = await fetch(sessionUrl);
     if (!response.ok) throw new Error(`Session fetch failed: ${response.status}`);
     const sessionData = await response.json().catch(() => ({}));
+    const topCandidates = Array.isArray(sessionData.topCandidates)
+      ? sessionData.topCandidates.slice(0, Math.max(1, Number(limit) || 50))
+      : [];
+    if (topCandidates.length) {
+      return {
+        totalMatches: Number.isFinite(Number(sessionData.totalMatches)) ? Math.max(0, Number(sessionData.totalMatches)) : topCandidates.length,
+        strictMatches: Number.isFinite(Number(sessionData.strictMatches)) ? Math.max(0, Number(sessionData.strictMatches)) : null,
+        relaxedMatches: Number.isFinite(Number(sessionData.relaxedMatches)) ? Math.max(0, Number(sessionData.relaxedMatches)) : null,
+        cards: topCandidates
+      };
+    }
     const idsRaw = Array.isArray(sessionData.lastCandidates) ? sessionData.lastCandidates : [];
     const ids = idsRaw.map((id) => String(id || '').trim()).filter(Boolean).slice(0, Math.max(1, Number(limit) || 50));
     const cards = [];
@@ -1554,6 +1565,8 @@ class APIClient {
       totalMatches: Number.isFinite(Number(sessionData.totalMatches))
         ? Math.max(0, Number(sessionData.totalMatches))
         : cards.length,
+      strictMatches: Number.isFinite(Number(sessionData.strictMatches)) ? Math.max(0, Number(sessionData.strictMatches)) : null,
+      relaxedMatches: Number.isFinite(Number(sessionData.relaxedMatches)) ? Math.max(0, Number(sessionData.relaxedMatches)) : null,
       cards
     };
   }
@@ -2519,6 +2532,7 @@ class VoiceWidget extends HTMLElement {
     this._deepLinkPropId = this.getDeepLinkPropIdFromUrl();
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
+    this._sliderCheckpointShown = { 10: false, 20: false };
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -5567,7 +5581,7 @@ render() {
     const numeric = Number(count);
     const value = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
     if (value === 0) {
-      pill.textContent = 'Объекты не найдены';
+      pill.textContent = 'Открыть подборку';
       return;
     }
     const formatted = new Intl.NumberFormat('en-US').format(value);
@@ -5583,8 +5597,17 @@ render() {
       window.appState.lastTotalMatches = Math.max(0, totalMatches);
       this.updateObjectCount(window.appState.lastTotalMatches);
     }
+    const strictMatches = Number(data.strictMatches);
+    if (Number.isFinite(strictMatches)) {
+      window.appState.lastStrictMatches = Math.max(0, strictMatches);
+    }
+    const relaxedMatches = Number(data.relaxedMatches);
+    if (Number.isFinite(relaxedMatches)) {
+      window.appState.lastRelaxedMatches = Math.max(0, relaxedMatches);
+    }
 
     const cards = [];
+    if (Array.isArray(data.topCandidates)) cards.push(...data.topCandidates);
     if (Array.isArray(data.cards)) cards.push(...data.cards);
     if (data.card && typeof data.card === 'object') cards.push(data.card);
 
@@ -5729,6 +5752,8 @@ render() {
     } catch {}
     this._catalogOverflowQueue = [];
     this._catalogOverflowLoading = false;
+    this._sliderCheckpointShown = { 10: false, 20: false };
+    try { this.closeSliderCheckpointPopup(); } catch {}
   }
 
   maybeAppendCatalogOverflow(activeIdx = 0, totalSlides = 0) {
@@ -5763,6 +5788,7 @@ render() {
 
   async renderPropertiesFromCatalog() {
     await this.hydrateCatalogFromBackend(60);
+    this._sliderCheckpointShown = { 10: false, 20: false };
     const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
     if (!list.length) {
       this.updateObjectCount(Number(window?.appState?.lastTotalMatches) || 0);
@@ -6136,6 +6162,7 @@ render() {
     }
     
     const activeIdx = Array.from(slides).indexOf(closest);
+    try { this.maybeTriggerSliderCheckpoint(activeIdx); } catch {}
     try { this.maybeAppendCatalogOverflow(activeIdx, slides.length); } catch {}
     // update each slide dots row
     const rows = slider.querySelectorAll('.cards-dots-row');
@@ -6177,6 +6204,116 @@ render() {
       slider.scrollTo({ left, behavior: 'smooth' });
       requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
     } catch {}
+  }
+
+  ensureSliderCheckpointStyles() {
+    if (document.getElementById('vw-slider-checkpoint-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-slider-checkpoint-styles';
+    style.textContent = `
+      .vw-slider-checkpoint-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10070;
+        background: rgba(0, 0, 0, 0.58);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .vw-slider-checkpoint-modal {
+        width: min(420px, 100%);
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 86%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        color: var(--text-primary, #fff);
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+      .vw-slider-checkpoint-title { font-size: 0.95rem; font-weight: 700; }
+      .vw-slider-checkpoint-text { font-size: 0.82rem; color: var(--text-secondary, rgba(255,255,255,0.75)); line-height: 1.42; }
+      .vw-slider-checkpoint-actions { display: flex; gap: 10px; }
+      .vw-slider-checkpoint-btn {
+        flex: 1;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+      .vw-slider-checkpoint-btn--primary {
+        background: var(--color-accent, #4178CF);
+        color: var(--text-on-accent, #fff);
+        border-color: transparent;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  closeSliderCheckpointPopup() {
+    try {
+      const popup = this.getRoot().querySelector('#vwSliderCheckpointOverlay');
+      if (popup && popup.parentElement) popup.parentElement.removeChild(popup);
+    } catch {}
+  }
+
+  showSliderCheckpointPopup(level = 10) {
+    this.closeSliderCheckpointPopup();
+    this.ensureSliderCheckpointStyles();
+    const isSecond = Number(level) >= 20;
+    const title = isSecond
+      ? 'Точность совпадения снижается'
+      : 'Вы просмотрели 10 лучших совпадений';
+    const text = isSecond
+      ? 'Дальше идут варианты с более низкой релевантностью. Уточнить запрос или связаться с экспертом?'
+      : 'Дальше будут варианты с частичным соответствием. Хотите уточнить критерии или обсудить подбор с экспертом?';
+    const overlay = document.createElement('div');
+    overlay.id = 'vwSliderCheckpointOverlay';
+    overlay.className = 'vw-slider-checkpoint-overlay';
+    overlay.innerHTML = `
+      <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="Slider checkpoint">
+        <div class="vw-slider-checkpoint-title">${title}</div>
+        <div class="vw-slider-checkpoint-text">${text}</div>
+        <div class="vw-slider-checkpoint-actions">
+          <button type="button" class="vw-slider-checkpoint-btn" data-role="refine">Уточнить</button>
+          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">Связаться</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="refine"]')?.addEventListener('click', () => {
+      this.closeSliderCheckpointPopup();
+      try { this.$byId('textInput')?.focus(); } catch {}
+    });
+    overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
+      this.closeSliderCheckpointPopup();
+      try { this.openContactManagerPopup({ source: 'tg_header_main' }); } catch {}
+    });
+    overlay.addEventListener('click', (ev) => {
+      if (ev.target === overlay) this.closeSliderCheckpointPopup();
+    });
+  }
+
+  maybeTriggerSliderCheckpoint(activeIdx = 0) {
+    const viewed = Number(activeIdx) + 1;
+    if (!Number.isFinite(viewed) || viewed <= 0) return;
+    if (!this._sliderCheckpointShown || typeof this._sliderCheckpointShown !== 'object') {
+      this._sliderCheckpointShown = { 10: false, 20: false };
+    }
+    if (viewed >= 20 && this._sliderCheckpointShown[20] !== true) {
+      this._sliderCheckpointShown[20] = true;
+      this.showSliderCheckpointPopup(20);
+      return;
+    }
+    if (viewed >= 10 && this._sliderCheckpointShown[10] !== true) {
+      this._sliderCheckpointShown[10] = true;
+      this.showSliderCheckpointPopup(10);
+    }
   }
 
   // ---------- RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ----------
@@ -6291,10 +6428,15 @@ render() {
       name: null,
       operation: null,
       budget: null,
+      budgetMax: null,
       type: null,
       location: null,
       rooms: null,
       area: null,
+      areaMin: null,
+      areaMax: null,
+      floor: null,
+      features: null,
       details: null,
       preferences: null
     };
@@ -6410,10 +6552,15 @@ render() {
       name: 'Name',
       operation: 'Operation',
       budget: 'Budget',
+      budgetMax: 'Budget Max',
       type: 'Type',
       location: 'Location',
       rooms: 'Rooms',
       area: 'Area',
+      areaMin: 'Area Min',
+      areaMax: 'Area Max',
+      floor: 'Floor',
+      features: 'Features',
       details: 'Details',
       preferences: 'Preferences'
     };
