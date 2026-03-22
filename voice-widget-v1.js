@@ -3486,7 +3486,9 @@ render() {
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
           </div>
-          <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Найдено 2,345 объектов</div>
+          <div class="pill-overlay-lane" aria-hidden="false">
+            <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Найдено 2,345 объектов</div>
+          </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
         </div>
