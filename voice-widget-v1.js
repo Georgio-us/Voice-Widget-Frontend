@@ -1514,6 +1514,19 @@ class APIClient {
     } catch {}
   }
 
+  storeLastApiPayload(data, source = 'unknown') {
+    try {
+      this.widget._lastApiPayload = data && typeof data === 'object' ? JSON.parse(JSON.stringify(data)) : null;
+      this.widget._lastApiPayloadMeta = {
+        source,
+        at: new Date().toISOString()
+      };
+    } catch {
+      this.widget._lastApiPayload = data || null;
+      this.widget._lastApiPayloadMeta = { source, at: new Date().toISOString() };
+    }
+  }
+
   // Загрузка информации о сессии (только если sessionId есть)
   async loadSessionInfo() {
     if (!this.widget.sessionId) return { exists: null, expired: false };
@@ -1523,6 +1536,7 @@ class APIClient {
       const response = await fetch(sessionUrl);
       if (response.ok) {
         const data = await response.json();
+        this.storeLastApiPayload(data, 'loadSessionInfo');
         if (data.insights) {
           const migrated = this.widget.understanding.migrateInsights(data.insights);
           this.widget.understanding.update(migrated);
@@ -1584,6 +1598,7 @@ class APIClient {
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
+      this.storeLastApiPayload(data, 'sendTextMessage');
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -1674,6 +1689,7 @@ class APIClient {
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
+      this.storeLastApiPayload(data, 'sendTextMessageFromText');
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -1803,6 +1819,7 @@ class APIClient {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json().catch(() => ({}));
+      this.storeLastApiPayload(data, 'sendMessage');
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -6407,6 +6424,27 @@ render() {
         color: var(--text-primary, #fff);
         font-weight: 600;
       }
+      .vw-debug-insights-raw-title {
+        margin-top: 10px;
+        margin-bottom: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+      }
+      .vw-debug-insights-raw {
+        margin: 0;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        font-size: 0.72rem;
+        line-height: 1.35;
+        max-height: 160px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
       .vw-debug-insights-close {
         width: 100%;
         margin-top: 14px;
@@ -6455,6 +6493,19 @@ render() {
     const listHtml = Object.keys(labels)
       .map((key) => `<li><strong>${labels[key]}:</strong> ${pretty(insights[key])}</li>`)
       .join('');
+    const rawSourceInsights = (() => {
+      const src = (typeof this.getUnderstanding === 'function')
+        ? (this.getUnderstanding() || {})
+        : (this.understanding?.export?.() || {});
+      try { return JSON.stringify(src || {}, null, 2); } catch { return String(src || '{}'); }
+    })();
+    const rawApiPayload = (() => {
+      try {
+        const payload = this._lastApiPayload || {};
+        const meta = this._lastApiPayloadMeta || {};
+        return JSON.stringify({ meta, payload }, null, 2);
+      } catch { return '{}'; }
+    })();
     const overlay = document.createElement('div');
     overlay.id = 'vwDebugInsightsOverlay';
     overlay.className = 'vw-debug-insights-overlay';
@@ -6462,6 +6513,10 @@ render() {
       <div class="vw-debug-insights-modal" role="dialog" aria-modal="true" aria-label="Debug insights">
         <div class="vw-debug-insights-title">Debug Insights</div>
         <ul class="vw-debug-insights-list">${listHtml}</ul>
+        <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
+        <pre class="vw-debug-insights-raw">${rawSourceInsights}</pre>
+        <div class="vw-debug-insights-raw-title">Raw API JSON</div>
+        <pre class="vw-debug-insights-raw">${rawApiPayload}</pre>
         <button type="button" class="vw-debug-insights-close" data-role="close">OK</button>
       </div>
     `;
