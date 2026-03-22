@@ -1672,10 +1672,8 @@ class APIClient {
 
       // 🃏 карточки по предложению (после текста агента) — legacy flow
       try {
-        if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
-          this.widget.mergePropertiesToCatalog?.(data.cards);
-          this._rememberProposed(data.cards);
-          this.widget.suggestCardOption(data.cards[0]);
+        if (!this.disableServerUI && data?.ui?.suggestShowCard === true) {
+          await this.widget.renderPropertiesFromCatalog();
         }
       } catch (e) { console.warn('Cards handling error:', e); }
 
@@ -1781,10 +1779,8 @@ class APIClient {
 
       // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
       try {
-        if (!this.disableServerUI && Array.isArray(data.cards) && data.cards.length) {
-          this.widget.mergePropertiesToCatalog?.(data.cards);
-          this._rememberProposed(data.cards);
-          this.widget.suggestCardOption(data.cards[0]);
+        if (!this.disableServerUI && data?.ui?.suggestShowCard === true) {
+          await this.widget.renderPropertiesFromCatalog();
         }
       } catch (e) { console.warn('Cards handling error (main):', e); }
 
@@ -1932,10 +1928,8 @@ class APIClient {
 
       // 🃏 карточки по предложению (audio) — legacy flow
       try {
-        if (Array.isArray(data.cards) && data.cards.length) {
-          this.widget.mergePropertiesToCatalog?.(data.cards);
-          this._rememberProposed(data.cards);
-          this.widget.suggestCardOption(data.cards[0]);
+        if (!this.disableServerUI && data?.ui?.suggestShowCard === true) {
+          await this.widget.renderPropertiesFromCatalog();
         }
       } catch (e) { console.warn('Cards handling error (audio):', e); }
 
@@ -2111,10 +2105,6 @@ class APIClient {
           if (data && data.card) {
             try { this.widget.showMockCardWithActions(data.card); } catch (e) { console.warn('show card error:', e); }
           }
-        }
-
-        if (data && data.assistantMessage) {
-          try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}
         }
 
         // Emit event for successful interaction
@@ -5341,56 +5331,6 @@ render() {
     } else if (e.target.closest('.header-action.header-right')) {
       // Close widget from header right action
       try { this.closeWidget?.(); } catch {}
-    } else if (e.target.matches('.card-btn[data-action="send_card"]')) {
-      // Показать карточку из последнего предложения
-      const container = e.target.closest('.card-screen');
-      if (container) container.remove();
-      this._catalogOverflowQueue = [];
-      this._catalogOverflowLoading = false;
-      // ❗ Начинаем новый показ: удалим старый слайдер (если был)
-      try {
-        const oldHost = this.getRoot().querySelector('.card-screen.cards-slider-host');
-        if (oldHost && oldHost.parentElement) {
-          // 🆕 Sprint IV: отправляем ui_slider_ended перед удалением slider host (выход из slider-режима)
-          if (this.api) {
-            try {
-              this.api.sendSliderEnded();
-            } catch (e) {
-              console.warn('Error sending slider ended confirmation:', e);
-            }
-          }
-          oldHost.parentElement.removeChild(oldHost);
-        }
-      } catch {}
-      // Мгновенно покажем карточку локально, чтобы не ждать сети
-      try {
-        if (this._lastSuggestedCard) {
-          this.showMockCardWithActions(this._lastSuggestedCard);
-          this.scrollCardHostIntoView();
-          
-          // Логируем card_show
-          const track = this.getRoot().querySelector('.cards-slider .cards-track');
-          const slides = track ? track.querySelectorAll('.card-slide') : [];
-          
-          logTelemetry(TelemetryEventTypes.CARD_SHOW, {
-            propertyId: this._lastSuggestedCard.id,
-            index: 0,
-            totalInSlider: slides.length,
-            source: 'recommendation'
-          });
-        }
-      } catch {}
-      // Попросим у бэкенда динамический комментарий (первый показ)
-      try {
-        if (this._lastSuggestedCard && this._lastSuggestedCard.id) {
-          await this.api.sendCardInteraction('show', this._lastSuggestedCard.id);
-        }
-      } catch {}
-      this.events.emit('send_card');
-    } else if (e.target.matches('.card-btn[data-action="continue_dialog"]')) {
-      const container = e.target.closest('.card-screen');
-      if (container) container.remove();
-      this.events.emit('continue_dialog');
     } else if (e.target.matches('.cards-dot')) {
       try { e.stopPropagation(); } catch {}
       // Навигация по слайдеру через точки
@@ -5786,11 +5726,6 @@ render() {
     try {
       const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
       if (host?.parentElement) host.parentElement.removeChild(host);
-      this.getRoot().querySelectorAll('.card-btn[data-action="send_card"], .card-btn[data-action="continue_dialog"]').forEach((btn) => {
-        const panel = btn.closest('.card-screen');
-        if (panel?.parentElement) panel.parentElement.removeChild(panel);
-      });
-      this.getRoot().querySelectorAll('.message.assistant.dynamic-card-comment').forEach((el) => el.remove());
     } catch {}
     this._catalogOverflowQueue = [];
     this._catalogOverflowLoading = false;
@@ -6149,53 +6084,6 @@ render() {
     this.addCardSlide(normalized, options);
   }
 
-  // Обновить/установить динамический комментарий под активной карточкой
-  setCardComment(text = '') {
-    try {
-      const slider = this.getRoot().querySelector('.cards-slider');
-      if (!slider) return;
-      const apply = () => {
-        const active = slider.querySelector('.card-slide.active');
-        const host = active || slider.querySelector('.card-slide:last-child');
-        if (!host) return;
-        const wrap = host.querySelector('.card-dynamic-comment');
-        if (wrap) wrap.textContent = text || '';
-      };
-      // моментально на последний слайд
-      apply();
-      // повторим после layout/активации
-      requestAnimationFrame(apply);
-    } catch {}
-  }
-
-  // Рендер “пузыря” ассистента, синхронизированного с карточкой (не сохраняем в историю)
-  renderCardCommentBubble(text = '') {
-    try {
-      const thread = this.$byId('thread');
-      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
-      if (!thread || !host) return;
-      // Удалим предыдущий пузырь
-      const prev = this.getRoot().querySelector('.message.assistant.dynamic-card-comment');
-      if (prev && prev.parentElement) prev.parentElement.removeChild(prev);
-      if (!text) return;
-      // Определим связанный variantId активной карточки
-      const active = this.getRoot().querySelector('.cards-slider .card-slide.active .cs');
-      const variantId = active ? active.getAttribute('data-variant-id') : '';
-      // Построим пузырь с той же разметкой, что и обычный assistant
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message assistant dynamic-card-comment';
-      if (variantId) wrapper.setAttribute('data-variant-id', variantId);
-      const bubble = document.createElement('div');
-      bubble.className = 'message-bubble widget-bubble';
-      bubble.textContent = text;
-      wrapper.appendChild(bubble);
-      // Вставим сразу после слайдера
-      host.insertAdjacentElement('afterend', wrapper);
-      // И прокрутим контейнер сообщений так, чтобы карточка и пузырь были видны
-      this.scrollCardHostIntoView();
-    } catch {}
-  }
-
   // Прокрутка контейнера сообщений так, чтобы карточка была полностью видна
   scrollCardHostIntoView() {
     try {
@@ -6211,9 +6099,6 @@ render() {
       }
     } catch {}
   }
-
-  // (удалено) Генератор короткого комментария под карточкой.
-  // Источник подсказки теперь — ответ бэкенда (assistantMessage).
 
   // Highlight active slide (nearest to center)
   updateActiveCardSlide() {
@@ -6292,35 +6177,6 @@ render() {
       slider.scrollTo({ left, behavior: 'smooth' });
       requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
     } catch {}
-  }
-
-  // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------
-  suggestCardOption(data = {}) {
-    const thread = this.$byId('thread');
-    const messages = this.$byId('messagesContainer');
-    if (!thread || !messages) return;
-
-    this._lastSuggestedCard = data;
-    const locale = this.getCurrentLocale();
-
-    const panel = document.createElement('div');
-    panel.className = 'card-screen';
-    panel.innerHTML = `
-      <div class="cs" style="background:transparent; box-shadow:none;">
-        <div class="card-actions-wrap">
-        <div class="card-actions-panel">
-            <button class="card-btn like" data-action="send_card">${locale.cardShow}</button>
-            <button class="card-btn next" data-action="continue_dialog">${locale.cardCancel}</button>
-          </div>
-        </div>
-      </div>`;
-
-    thread.appendChild(panel);
-
-    requestAnimationFrame(() => {
-      const H = messages.clientHeight;
-      messages.scrollTop = Math.max(0, messages.scrollHeight - Math.floor(H * 0.7));
-    });
   }
 
   // ---------- RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ----------
@@ -6735,7 +6591,6 @@ render() {
         contextPropertyId ||
         slide?.id ||
         slide?.querySelector('.cs')?.getAttribute('data-variant-id') ||
-        this?._lastSuggestedCard?.id ||
         ''
       ).trim() || null;
     const normalizedSource = String(triggerSource || '').trim() || (propertyId ? 'tg_property_card' : 'tg_header_main');
