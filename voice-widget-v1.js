@@ -7253,9 +7253,13 @@ render() {
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
     const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
     const pricePerM2Label = formatNumberUS(pricePerM2Num != null ? pricePerM2Num : raw.price_per_m2);
+    const parsedScore = Number(raw.score ?? raw._score);
+    const parsedStrictScore = Number(raw.strictScore ?? raw._strictScore);
+    const normalizedTier = String(raw.matchTier ?? raw._tier ?? '').trim().toLowerCase();
+    const matchTier = ['high', 'mid', 'low'].includes(normalizedTier) ? normalizedTier : 'low';
 
     return {
-      id: raw.id || '',
+      id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
       image,
       assetImages,
       city,
@@ -7274,7 +7278,10 @@ render() {
       furnished: furnishedKnown ? furnishedBool : null,
       furnishedLabel: furnishedKnown ? (furnishedBool ? 'Furnished' : 'Unfurnished') : '',
       priceEUR: priceNum != null ? priceNum : null,
-      priceLabel
+      priceLabel,
+      score: Number.isFinite(parsedScore) ? parsedScore : 0,
+      strictScore: Number.isFinite(parsedStrictScore) ? parsedStrictScore : 0,
+      matchTier
     };
   }
 
