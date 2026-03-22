@@ -3486,27 +3486,29 @@ render() {
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
           </div>
-          <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Найдено 2,345 объектов</div>
           <div class="dialogue-container" id="messagesContainer">
+              <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Найдено 2,345 объектов</div>
               <div class="thread" id="thread"></div>
         </div>
           <div class="loading dialog-overlay" id="loadingIndicator"><span class="loading-text">Обрабатываю запрос <span class="dots"><span class="d1">•</span><span class="d2">•</span><span class="d3">•</span></span></span></div>
-          <div class="input-area">
-            <div class="input-container">
-              <div class="text-input-wrapper">
-                  <textarea id="textInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
-                <div class="recording-indicator" id="recordingIndicator" style="display: none;">
-                    <div class="recording-label">Идёт запись</div>
-                  <div class="record-timer" id="chatRecordTimer">00:00</div>
+          <div class="app-footer-dock">
+            <div class="input-area">
+              <div class="input-container">
+                <div class="text-input-wrapper">
+                    <textarea id="textInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
+                  <div class="recording-indicator" id="recordingIndicator" style="display: none;">
+                      <div class="recording-label">Идёт запись</div>
+                    <div class="record-timer" id="chatRecordTimer">00:00</div>
+                  </div>
                 </div>
+                  <div class="input-buttons">
+                    <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone"></button>
+                    <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send"></button>
               </div>
-                <div class="input-buttons">
-                  <button class="input-btn" id="toggleButton" type="button" title="Говорить"><img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone"></button>
-                  <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send"></button>
+              </div>
             </div>
+            <div class="app-footer-brand">Powered by <a href="#" target="_blank">VIA.AI</a> • Want your own?</div>
             </div>
-          </div>
-          <div class="app-footer-brand">Powered by <a href="#" target="_blank">VIA.AI</a> • Want your own?</div>
         </div>
           </div>
 

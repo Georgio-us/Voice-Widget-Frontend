@@ -2342,10 +2342,9 @@ voice-widget,
   font-size: 16px;
 }
 
-/* Scroll glass zones: content goes under top/bottom and dissolves smoothly */
+/* Chat flow refinement: sticky pill in same scroll context + compact footer dock */
 .vw-app {
-  --messages-top-glass: 96px;
-  --messages-bottom-glass: 168px;
+  --messages-top-glass: 88px;
 }
 
 .vw-app .app-body {
@@ -2354,36 +2353,21 @@ voice-widget,
   isolation: isolate;
 }
 
-.vw-app .app-body::before,
-.vw-app .app-body::after {
+.vw-app .app-body::before {
   content: "";
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
+  height: var(--messages-top-glass);
   pointer-events: none;
   z-index: 8;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-}
-
-.vw-app .app-body::before {
-  top: 0;
-  height: var(--messages-top-glass);
   background: linear-gradient(
     to bottom,
-    color-mix(in srgb, var(--bg-main) 78%, transparent) 0%,
-    color-mix(in srgb, var(--bg-main) 42%, transparent) 62%,
-    transparent 100%
-  );
-}
-
-.vw-app .app-body::after {
-  bottom: 0;
-  height: var(--messages-bottom-glass);
-  background: linear-gradient(
-    to top,
-    color-mix(in srgb, var(--bg-main) 84%, transparent) 0%,
-    color-mix(in srgb, var(--bg-main) 48%, transparent) 60%,
+    color-mix(in srgb, var(--bg-main) 76%, transparent) 0%,
+    color-mix(in srgb, var(--bg-main) 38%, transparent) 64%,
     transparent 100%
   );
 }
@@ -2391,25 +2375,35 @@ voice-widget,
 .vw-app #messagesContainer {
   position: relative;
   z-index: 1;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0px,
-    #000 56px,
-    #000 calc(100% - 120px),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0px,
-    #000 56px,
-    #000 calc(100% - 120px),
-    transparent 100%
-  );
 }
 
-.vw-app .objects-counter-pill,
-.vw-app .input-area,
-.vw-app .app-footer-brand {
+.vw-app .dialog-screen .dialogue-container {
+  justify-content: flex-start;
+}
+
+.vw-app #messagesContainer .objects-counter-pill {
+  position: sticky;
+  top: 10px;
+  margin: 12px auto 8px;
+  z-index: 12;
+  width: fit-content;
+}
+
+.vw-app .app-footer-dock {
   position: relative;
   z-index: 12;
+  width: 100%;
+  margin-top: auto;
+  background: color-mix(in srgb, var(--bg-main) 92%, transparent);
+  border-top: 1px solid var(--border-light);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.vw-app .app-footer-dock .input-area {
+  margin-top: 0;
+}
+
+.vw-app .app-footer-dock .app-footer-brand {
+  margin-top: 0;
 }
