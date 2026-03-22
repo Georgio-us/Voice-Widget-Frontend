@@ -1527,6 +1527,37 @@ class APIClient {
     }
   }
 
+  syncBackendDrivenState(data) {
+    try {
+      this.widget?.ingestBackendCatalogPayload?.(data);
+    } catch (e) {
+      console.warn('syncBackendDrivenState failed:', e);
+    }
+  }
+
+  async fetchSessionCandidates(limit = 50) {
+    if (!this.widget.sessionId) return { totalMatches: 0, cards: [] };
+    const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`);
+    const response = await fetch(sessionUrl);
+    if (!response.ok) throw new Error(`Session fetch failed: ${response.status}`);
+    const sessionData = await response.json().catch(() => ({}));
+    const idsRaw = Array.isArray(sessionData.lastCandidates) ? sessionData.lastCandidates : [];
+    const ids = idsRaw.map((id) => String(id || '').trim()).filter(Boolean).slice(0, Math.max(1, Number(limit) || 50));
+    const cards = [];
+    for (const id of ids) {
+      try {
+        const card = await this.fetchCardById(id);
+        if (card && typeof card === 'object') cards.push(card);
+      } catch {}
+    }
+    return {
+      totalMatches: Number.isFinite(Number(sessionData.totalMatches))
+        ? Math.max(0, Number(sessionData.totalMatches))
+        : cards.length,
+      cards
+    };
+  }
+
   // Загрузка информации о сессии (только если sessionId есть)
   async loadSessionInfo() {
     if (!this.widget.sessionId) return { exists: null, expired: false };
@@ -1537,6 +1568,7 @@ class APIClient {
       if (response.ok) {
         const data = await response.json();
         this.storeLastApiPayload(data, 'loadSessionInfo');
+        this.syncBackendDrivenState(data);
         if (data.insights) {
           const migrated = this.widget.understanding.migrateInsights(data.insights);
           this.widget.understanding.update(migrated);
@@ -1599,6 +1631,7 @@ class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       this.storeLastApiPayload(data, 'sendTextMessage');
+      this.syncBackendDrivenState(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -1690,6 +1723,7 @@ class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       this.storeLastApiPayload(data, 'sendTextMessageFromText');
+      this.syncBackendDrivenState(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -1820,6 +1854,7 @@ class APIClient {
 
       const data = await response.json().catch(() => ({}));
       this.storeLastApiPayload(data, 'sendMessage');
+      this.syncBackendDrivenState(data);
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -2057,6 +2092,7 @@ class APIClient {
 
       if (response.ok) {
         const data = await response.json();
+        this.syncBackendDrivenState(data);
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
 
         // 🆕 Sprint I: сохраняем role из server response (read-only)
@@ -2629,8 +2665,14 @@ class VoiceWidget extends HTMLElement {
     return list.find((item) => String(item?.id || '').trim().toUpperCase() === target) || null;
   }
 
-  renderSinglePropertyById(propId) {
-    const item = this.getCatalogPropertyById(propId);
+  async renderSinglePropertyById(propId) {
+    let item = this.getCatalogPropertyById(propId);
+    if (!item) {
+      try {
+        item = await this.api.fetchCardById(propId);
+        if (item) this.mergePropertiesToCatalog([item]);
+      } catch {}
+    }
     if (!item) return false;
     this.clearPropertiesSlider();
     try {
@@ -2644,11 +2686,11 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
-  tryOpenDeepLinkedProperty() {
+  async tryOpenDeepLinkedProperty() {
     const propId = this._deepLinkPropId || this.getDeepLinkPropIdFromUrl();
     this._deepLinkPropId = propId || null;
     if (!propId) return false;
-    return this.renderSinglePropertyById(propId);
+    return await this.renderSinglePropertyById(propId);
   }
 
   exitDeepLinkMode({ clearUrl = true } = {}) {
@@ -2657,7 +2699,7 @@ class VoiceWidget extends HTMLElement {
     this._activeDeepLinkPropId = null;
     this._deepLinkPropId = null;
     if (clearUrl) this.clearDeepLinkParamInUrl();
-    this.renderPropertiesFromCatalog();
+    this.renderPropertiesFromCatalog().catch(() => {});
     return true;
   }
 
@@ -3793,10 +3835,10 @@ render() {
     try { this.openDebugInsightsPopup(); } catch (error) { console.error('Debug insights popup failed:', error); }
   });
   const objectsPill = this.$byId('objectsCounterPill');
-  const openPropertiesSlider = () => {
+  const openPropertiesSlider = async () => {
     try {
       console.log('objectsCounterPill clicked');
-      this.renderPropertiesFromCatalog();
+      await this.renderPropertiesFromCatalog();
     } catch (error) {
       console.error('objectsCounterPill click handler failed:', error);
     }
@@ -5592,6 +5634,26 @@ render() {
     pill.textContent = `Найдено ${formatted} объектов`;
   }
 
+  ingestBackendCatalogPayload(data = {}) {
+    if (!data || typeof data !== 'object') return;
+    if (!window.appState) window.appState = {};
+
+    const totalMatches = Number(data.totalMatches);
+    if (Number.isFinite(totalMatches)) {
+      window.appState.lastTotalMatches = Math.max(0, totalMatches);
+      this.updateObjectCount(window.appState.lastTotalMatches);
+    }
+
+    const cards = [];
+    if (Array.isArray(data.cards)) cards.push(...data.cards);
+    if (data.card && typeof data.card === 'object') cards.push(data.card);
+
+    if (cards.length) {
+      this.mergePropertiesToCatalog(cards);
+      window.appState.lastBackendCandidatesAt = Date.now();
+    }
+  }
+
   _getPropertiesEndpointCandidates() {
     const defaults = [
       'https://voice-widget-backend-tgdubai-split.up.railway.app/api/cards/search?limit=2000'
@@ -5674,7 +5736,12 @@ render() {
       merged.set(this._getPropertyCatalogKey(normalized, idx), normalized);
     });
     window.appState.allProperties = Array.from(merged.values());
-    this.updateObjectCount(window.appState.allProperties.length);
+  }
+
+  replacePropertiesCatalog(properties = []) {
+    const incoming = this._extractPropertiesList(properties);
+    if (!window.appState) window.appState = {};
+    window.appState.allProperties = incoming.map((item) => this._toCardEngineShape(item));
   }
 
   async loadAllProperties() {
@@ -5704,18 +5771,15 @@ render() {
   async initializePropertiesCatalog() {
     try {
       if (!window.appState) window.appState = {};
-      const allProperties = await this.loadAllProperties();
-      window.appState.allProperties = [];
-      this.mergePropertiesToCatalog(allProperties);
-      this.updateObjectCount(window.appState.allProperties.length);
-      this.tryOpenDeepLinkedProperty();
-    } catch {
-      try {
-        if (!window.appState) window.appState = {};
+      if (!Array.isArray(window.appState.allProperties)) {
         window.appState.allProperties = [];
-      } catch {}
-      this.updateObjectCount(0);
-    }
+      }
+      if (!Number.isFinite(Number(window.appState.lastTotalMatches))) {
+        window.appState.lastTotalMatches = 0;
+      }
+      this.updateObjectCount(window.appState.lastTotalMatches);
+      await this.tryOpenDeepLinkedProperty();
+    } catch {}
   }
 
   clearPropertiesSlider() {
@@ -5749,10 +5813,24 @@ render() {
     }
   }
 
-  renderPropertiesFromCatalog() {
+  async hydrateCatalogFromBackend(limit = 50) {
+    try {
+      const payload = await this.api.fetchSessionCandidates(limit);
+      const cards = Array.isArray(payload?.cards) ? payload.cards : [];
+      this.replacePropertiesCatalog(cards);
+      this.ingestBackendCatalogPayload(payload);
+      return payload;
+    } catch (error) {
+      console.warn('hydrateCatalogFromBackend failed:', error);
+      return { totalMatches: 0, cards: [] };
+    }
+  }
+
+  async renderPropertiesFromCatalog() {
+    await this.hydrateCatalogFromBackend(60);
     const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
     if (!list.length) {
-      this.updateObjectCount(0);
+      this.updateObjectCount(Number(window?.appState?.lastTotalMatches) || 0);
       return;
     }
     this.clearPropertiesSlider();
