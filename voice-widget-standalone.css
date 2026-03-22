@@ -2341,3 +2341,75 @@ voice-widget,
 .vw-app textarea.ctx-textarea {
   font-size: 16px;
 }
+
+/* Scroll glass zones: content goes under top/bottom and dissolves smoothly */
+.vw-app {
+  --messages-top-glass: 96px;
+  --messages-bottom-glass: 168px;
+}
+
+.vw-app .app-body {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.vw-app .app-body::before,
+.vw-app .app-body::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 8;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.vw-app .app-body::before {
+  top: 0;
+  height: var(--messages-top-glass);
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--bg-main) 78%, transparent) 0%,
+    color-mix(in srgb, var(--bg-main) 42%, transparent) 62%,
+    transparent 100%
+  );
+}
+
+.vw-app .app-body::after {
+  bottom: 0;
+  height: var(--messages-bottom-glass);
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--bg-main) 84%, transparent) 0%,
+    color-mix(in srgb, var(--bg-main) 48%, transparent) 60%,
+    transparent 100%
+  );
+}
+
+.vw-app #messagesContainer {
+  position: relative;
+  z-index: 1;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0px,
+    #000 56px,
+    #000 calc(100% - 120px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0px,
+    #000 56px,
+    #000 calc(100% - 120px),
+    transparent 100%
+  );
+}
+
+.vw-app .objects-counter-pill,
+.vw-app .input-area,
+.vw-app .app-footer-brand {
+  position: relative;
+  z-index: 12;
+}
