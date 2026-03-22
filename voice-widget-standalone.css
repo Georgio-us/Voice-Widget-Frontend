@@ -2415,10 +2415,16 @@ voice-widget,
 }
 
 .vw-app .pill-overlay-lane .objects-counter-pill.is-state-insight {
-  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--border-light));
-  background: color-mix(in srgb, var(--bg-pill) 78%, var(--color-accent));
+  border-color: color-mix(in srgb, var(--color-accent) 72%, #7cf9ff);
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--color-accent) 86%, #58ffc7) 0%,
+      color-mix(in srgb, #58ffc7 62%, var(--color-accent)) 50%,
+      color-mix(in srgb, var(--color-accent) 86%, #7cf9ff) 100%);
   color: var(--text-on-accent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 28%, transparent), 0 6px 16px var(--shadow-soft);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 55%, transparent),
+    0 10px 24px color-mix(in srgb, var(--color-accent) 42%, transparent);
 }
 
 .vw-app .pill-overlay-lane .objects-counter-pill.is-state-cta {
@@ -2427,11 +2433,11 @@ voice-widget,
 }
 
 .vw-app .pill-overlay-lane .objects-counter-pill.is-text-animating {
-  animation: pillTextSwap .32s ease;
+  animation: pillTextSwap .45s ease;
 }
 
 .vw-app .pill-overlay-lane .objects-counter-pill.is-insight-pulse {
-  animation: pillPulse .95s ease;
+  animation: pillPulse 2s ease, pillShake .62s ease;
 }
 
 @keyframes pillTextSwap {
@@ -2440,9 +2446,86 @@ voice-widget,
 }
 
 @keyframes pillPulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); }
-  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-accent) 0%, transparent); }
-  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 0%, transparent); }
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, var(--color-accent) 58%, transparent),
+      0 10px 26px color-mix(in srgb, var(--color-accent) 48%, transparent);
+    filter: saturate(1.18);
+  }
+  70% {
+    box-shadow:
+      0 0 0 14px color-mix(in srgb, var(--color-accent) 0%, transparent),
+      0 10px 26px color-mix(in srgb, var(--color-accent) 0%, transparent);
+    filter: saturate(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 0%, transparent);
+    filter: saturate(1);
+  }
+}
+
+@keyframes pillShake {
+  0%, 100% { transform: translateX(0); }
+  12% { transform: translateX(-1.8px) rotate(-0.15deg); }
+  24% { transform: translateX(2.1px) rotate(0.15deg); }
+  36% { transform: translateX(-2.2px) rotate(-0.2deg); }
+  48% { transform: translateX(2.2px) rotate(0.2deg); }
+  60% { transform: translateX(-1.4px); }
+  72% { transform: translateX(1.4px); }
+  84% { transform: translateX(-0.8px); }
+}
+
+.vw-app .pill-overlay-lane .objects-counter-pill.is-state-cta.is-text-animating {
+  animation: pillCtaSettle 2s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+@keyframes pillCtaSettle {
+  0% { opacity: .34; transform: translateY(-4px) scale(.968); }
+  35% { opacity: .8; transform: translateY(0) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vw-app .input-container.is-recording-wave {
+  position: relative;
+  overflow: hidden;
+}
+
+.vw-app .input-container.is-recording-wave::before,
+.vw-app .input-container.is-recording-wave::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.vw-app .input-container.is-recording-wave::before {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-accent) 24%, transparent) 30%,
+    color-mix(in srgb, #7cf9ff 22%, transparent) 50%,
+    color-mix(in srgb, var(--color-accent) 24%, transparent) 70%,
+    transparent 100%
+  );
+  transform: translateX(-115%);
+  animation: inputWaveSweep 1.35s ease-in-out infinite;
+}
+
+.vw-app .input-container.is-recording-wave::after {
+  background: radial-gradient(circle at 14% 50%, color-mix(in srgb, var(--color-accent) 32%, transparent) 0%, transparent 62%);
+  opacity: .4;
+  animation: inputWaveGlow 1.35s ease-in-out infinite;
+}
+
+@keyframes inputWaveSweep {
+  0% { transform: translateX(-115%); }
+  100% { transform: translateX(115%); }
+}
+
+@keyframes inputWaveGlow {
+  0%, 100% { opacity: .2; }
+  50% { opacity: .52; }
 }
 
 .vw-app #messagesContainer {

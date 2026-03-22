@@ -5458,10 +5458,14 @@ render() {
     const wrapper = screen === 'main'
       ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
       : this.getRoot().querySelector('#textInput').closest('.text-input-wrapper');
+    const inputContainer = screen === 'main'
+      ? this.getRoot().querySelector('#mainTextInput').closest('.input-container')
+      : this.getRoot().querySelector('#textInput').closest('.input-container');
     
     if (indicator) {
       indicator.style.display = 'flex';
       if (wrapper) wrapper.classList.add('recording');
+      if (inputContainer) inputContainer.classList.add('is-recording-wave');
     }
   }
 
@@ -5473,10 +5477,14 @@ render() {
     const wrapper = screen === 'main'
       ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
       : this.getRoot().querySelector('#textInput').closest('.text-input-wrapper');
+    const inputContainer = screen === 'main'
+      ? this.getRoot().querySelector('#mainTextInput').closest('.input-container')
+      : this.getRoot().querySelector('#textInput').closest('.input-container');
     
     if (indicator) {
       indicator.style.display = 'none';
       if (wrapper) wrapper.classList.remove('recording');
+      if (inputContainer) inputContainer.classList.remove('is-recording-wave');
     }
   }
 
@@ -5638,10 +5646,18 @@ render() {
       this._pillCtaTimer = null;
     }
     this._setObjectsPillText('Новый инсайт', 'insight', { animate: true, pulse: true });
+    try {
+      const tg = window?.Telegram?.WebApp;
+      if (tg?.HapticFeedback?.notificationOccurred) {
+        tg.HapticFeedback.notificationOccurred('success');
+      } else if (navigator?.vibrate) {
+        navigator.vibrate([18, 26, 18]);
+      }
+    } catch {}
     this._pillCtaTimer = setTimeout(() => {
       this._setObjectsPillText('Смотреть подборку', 'cta', { animate: true, pulse: false });
       this._pillCtaTimer = null;
-    }, 1200);
+    }, 2000);
   }
 
   updateObjectCount(count, { forceLabel = false } = {}) {
