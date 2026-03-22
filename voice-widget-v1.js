@@ -238,7 +238,7 @@ class AudioRecorder {
         this.isRecording = false;
         this.recordingTime = 0;
         this.recordingTimer = null;
-        this.maxRecordingTime = 30;
+        this.maxRecordingTime = 60;
         this.minRecordingTime = 1;
         this.mediaRecorder = null; 
         this.stream = null;
@@ -2522,7 +2522,7 @@ class VoiceWidget extends HTMLElement {
     // базовые состояния
     this.isRecording = false;
     this.recordingTime = 0;
-    this.maxRecordingTime = 30;
+    this.maxRecordingTime = 60;
     this.minRecordingTime = 1;
     this.messages = [];
     this.mediaRecorder = null;
@@ -5245,25 +5245,6 @@ render() {
       
       this.events.emit('like', { variantId });
     } else if (e.target.matches('.card-btn[data-action="next"]')) {
-      // Лимит карточек в одном слайдере: максимум 12
-      try {
-        const track = this.getRoot().querySelector('.cards-slider .cards-track');
-        const count = track ? track.children.length : 0;
-        if (count >= 12) {
-          // shake-эффект на кнопке
-          const btn = e.target.closest('.card-btn.next') || e.target;
-          try {
-            btn.classList.add('shake');
-            setTimeout(() => btn.classList.remove('shake'), 500);
-          } catch {}
-          // системное сообщение ассистента
-          try {
-            const msg = 'Подскажите, какой из предложенных мною вариантов вам подошёл больше всего? Возможно, вы бы могли уточнить детальнее, что вы ищете, чтобы я смог предложить вам лучшие варианты?';
-            this.ui?.addMessage?.({ type: 'assistant', content: msg, timestamp: new Date() });
-          } catch {}
-          return; // не отправляем next при достигнутом лимите
-        }
-      } catch {}
       const variantId = e.target.getAttribute('data-variant-id');
       
       // Логируем card_next
@@ -6305,7 +6286,10 @@ render() {
     });
     overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
       this.closeSliderCheckpointPopup();
-      try { this.openContactManagerPopup({ source: 'tg_header_main' }); } catch {}
+      try {
+        const source = isSecond ? 'tg_slider_popup_20' : 'tg_slider_popup_10';
+        this.openContactManagerPopup({ source });
+      } catch {}
     });
     overlay.addEventListener('click', (ev) => {
       if (ev.target === overlay) this.closeSliderCheckpointPopup();
