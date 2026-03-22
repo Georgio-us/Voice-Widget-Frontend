@@ -2398,16 +2398,51 @@ voice-widget,
 
 .vw-app .pill-overlay-lane .objects-counter-pill {
   pointer-events: auto;
-  margin: 8px auto 0;
+  margin: 16px auto 0;
   position: relative;
   z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
+  min-width: 220px;
+  text-align: center;
+  white-space: nowrap;
   padding: 9px 20px;
   line-height: 1.15;
   font-weight: 600;
+  transition: background-color .25s ease, border-color .25s ease, box-shadow .25s ease, color .25s ease;
+}
+
+.vw-app .pill-overlay-lane .objects-counter-pill.is-state-insight {
+  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--border-light));
+  background: color-mix(in srgb, var(--bg-pill) 78%, var(--color-accent));
+  color: var(--text-on-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 28%, transparent), 0 6px 16px var(--shadow-soft);
+}
+
+.vw-app .pill-overlay-lane .objects-counter-pill.is-state-cta {
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--border-light));
+  background: color-mix(in srgb, var(--bg-pill) 88%, var(--color-accent));
+}
+
+.vw-app .pill-overlay-lane .objects-counter-pill.is-text-animating {
+  animation: pillTextSwap .32s ease;
+}
+
+.vw-app .pill-overlay-lane .objects-counter-pill.is-insight-pulse {
+  animation: pillPulse .95s ease;
+}
+
+@keyframes pillTextSwap {
+  0% { opacity: .58; transform: translateY(-2px) scale(.988); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes pillPulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); }
+  70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 0%, transparent); }
 }
 
 .vw-app #messagesContainer {

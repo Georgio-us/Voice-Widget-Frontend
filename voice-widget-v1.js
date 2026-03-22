@@ -2533,6 +2533,10 @@ class VoiceWidget extends HTMLElement {
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
     this._sliderCheckpointShown = { 10: false, 20: false };
+    this._pillState = 'default';
+    this._pillBaseCount = 0;
+    this._pillCtaTimer = null;
+    this._lastPillInsightsSnapshot = null;
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -5560,22 +5564,92 @@ render() {
     updateParam('preferencesValue', params.preferences ?? params.additional, 'preferencesDot');
   }
 
-  updateObjectCount(count) {
+  _buildPillDefaultLabel() {
+    const value = Number(this._pillBaseCount);
+    if (!Number.isFinite(value) || value <= 0) return 'Смотреть подборку';
+    const formatted = new Intl.NumberFormat('en-US').format(Math.max(0, value));
+    return `Найдено ${formatted} объектов`;
+  }
+
+  _setObjectsPillText(text, state = 'default', { animate = true, pulse = false } = {}) {
     const pill = this.$byId('objectsCounterPill');
     if (!pill) return;
-    const numeric = Number(count);
-    const value = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
-    if (value === 0) {
-      pill.textContent = 'Открыть подборку';
-      return;
+    this._pillState = state;
+    pill.dataset.state = state;
+    pill.textContent = String(text || '');
+    pill.classList.toggle('is-state-default', state === 'default');
+    pill.classList.toggle('is-state-insight', state === 'insight');
+    pill.classList.toggle('is-state-cta', state === 'cta');
+    if (animate) {
+      pill.classList.remove('is-text-animating');
+      // force reflow to restart animation
+      void pill.offsetWidth;
+      pill.classList.add('is-text-animating');
     }
-    const formatted = new Intl.NumberFormat('en-US').format(value);
-    pill.textContent = `Найдено ${formatted} объектов`;
+    if (pulse) {
+      pill.classList.remove('is-insight-pulse');
+      void pill.offsetWidth;
+      pill.classList.add('is-insight-pulse');
+    } else {
+      pill.classList.remove('is-insight-pulse');
+    }
+  }
+
+  _snapshotInsights(insights = null) {
+    if (!insights || typeof insights !== 'object') return null;
+    const keys = ['name', 'operation', 'budget', 'type', 'location', 'rooms', 'area', 'details', 'preferences'];
+    const out = {};
+    for (const key of keys) {
+      const raw = insights[key];
+      if (raw === null || raw === undefined) { out[key] = null; continue; }
+      if (typeof raw === 'number' && Number.isFinite(raw)) { out[key] = raw; continue; }
+      if (Array.isArray(raw)) {
+        const joined = raw.map((x) => String(x || '').trim().toLowerCase()).filter(Boolean).join('|');
+        out[key] = joined || null;
+        continue;
+      }
+      const str = String(raw).trim().toLowerCase();
+      out[key] = str || null;
+    }
+    return out;
+  }
+
+  _detectNewInsight(insights = null) {
+    const next = this._snapshotInsights(insights);
+    if (!next) return false;
+    if (!this._lastPillInsightsSnapshot) {
+      this._lastPillInsightsSnapshot = next;
+      return false;
+    }
+    const prev = this._lastPillInsightsSnapshot;
+    this._lastPillInsightsSnapshot = next;
+    return Object.keys(next).some((key) => next[key] !== null && next[key] !== prev[key]);
+  }
+
+  _runInsightPillSequence() {
+    if (this._pillCtaTimer) {
+      clearTimeout(this._pillCtaTimer);
+      this._pillCtaTimer = null;
+    }
+    this._setObjectsPillText('Новый инсайт', 'insight', { animate: true, pulse: true });
+    this._pillCtaTimer = setTimeout(() => {
+      this._setObjectsPillText('Смотреть подборку', 'cta', { animate: true, pulse: false });
+      this._pillCtaTimer = null;
+    }, 1200);
+  }
+
+  updateObjectCount(count, { forceLabel = false } = {}) {
+    const numeric = Number(count);
+    this._pillBaseCount = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+    if (forceLabel || this._pillState === 'default') {
+      this._setObjectsPillText(this._buildPillDefaultLabel(), 'default', { animate: false, pulse: false });
+    }
   }
 
   ingestBackendCatalogPayload(data = {}) {
     if (!data || typeof data !== 'object') return;
     if (!window.appState) window.appState = {};
+    const hasNewInsight = this._detectNewInsight(data.insights);
 
     const totalMatches = Number(data.totalMatches);
     if (Number.isFinite(totalMatches)) {
@@ -5600,6 +5674,7 @@ render() {
       this.mergePropertiesToCatalog(cards);
       window.appState.lastBackendCandidatesAt = Date.now();
     }
+    if (hasNewInsight) this._runInsightPillSequence();
   }
 
   _getPropertiesEndpointCandidates() {
@@ -5730,7 +5805,7 @@ render() {
       if (!Number.isFinite(Number(window.appState.lastTotalMatches))) {
         window.appState.lastTotalMatches = 0;
       }
-      this.updateObjectCount(window.appState.lastTotalMatches);
+      this.updateObjectCount(window.appState.lastTotalMatches, { forceLabel: true });
       await this.tryOpenDeepLinkedProperty();
     } catch {}
   }
