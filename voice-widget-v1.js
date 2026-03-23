@@ -1965,6 +1965,10 @@ const LOCALES = {
     cardSelect: 'Выбрать',
     cardNext: 'Ещё одну',
     cardBackContact: 'Связаться',
+    cardReadDescription: 'Описание',
+    cardDescriptionTitle: 'Описание объекта',
+    cardDescriptionOk: 'OK',
+    cardDescriptionEmpty: 'Описание пока недоступно',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
     pillCta: 'Смотреть подборку',
@@ -2060,6 +2064,10 @@ const LOCALES = {
     cardSelect: 'Обрати',
     cardNext: 'Ще одну',
     cardBackContact: "Зв'язатися",
+    cardReadDescription: 'Опис',
+    cardDescriptionTitle: "Опис об'єкта",
+    cardDescriptionOk: 'OK',
+    cardDescriptionEmpty: 'Опис поки недоступний',
     handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
     handoffDetails: 'Детальніше',
     pillCta: 'Дивитися добірку',
@@ -3541,6 +3549,32 @@ render() {
       });
       
       this.events.emit('next_option', { variantId });
+    } else if (e.target.closest('[data-action="read-description"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      const slide = e.target.closest('.card-slide');
+      const overlay = slide?.querySelector('.cs-description-overlay');
+      if (overlay) {
+        overlay.classList.add('open');
+        overlay.setAttribute('aria-hidden', 'false');
+      }
+    } else if (e.target.closest('[data-action="close-description"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      const slide = e.target.closest('.card-slide');
+      const overlay = slide?.querySelector('.cs-description-overlay');
+      if (overlay) {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+      }
+    } else if (e.target.matches('.cs-description-overlay')) {
+      const overlay = e.target;
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden', 'true');
     } else if (e.target.closest('.card-btn[data-action="select"]')) {
       // Flip: визуальный тест — показываем back сторону карточки
       const selectBtn = e.target.closest('.card-btn[data-action="select"]');
@@ -4250,6 +4284,9 @@ render() {
     const scoreTier = String(normalized.matchTier || '').toLowerCase();
     const scoreTierClass = ['high', 'mid', 'low'].includes(scoreTier) ? ` card-back-header__score--${scoreTier}` : '';
     const scoreLabel = `Score: ${scoreValue}%`;
+    const safeDescription = String(normalized.description || locale.cardDescriptionEmpty || 'Description unavailable')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
     const specsPills = [
       `🛏️ ${normalized.rooms ? `${normalized.rooms} rooms` : '— rooms'}`,
       `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
@@ -4291,6 +4328,10 @@ render() {
             </div>
             <div class="cs-row cs-row--district">
               <div class="cs-district">${districtLine}</div>
+              <button type="button" class="cs-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Описание'}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h8l4 4v12H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 4v4h4M9 13h6M9 16h6M9 10h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span>${locale.cardReadDescription || 'Описание'}</span>
+              </button>
             </div>
             <div class="cs-row cs-row--specs">
               <div class="cs-features cs-features--main-specs">${specsPills.map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
@@ -4303,6 +4344,13 @@ render() {
               </button>
             </div>
           </div>
+          <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
+            <div class="cs-description-panel">
+              <div class="cs-description-title">${locale.cardDescriptionTitle || 'Описание объекта'}</div>
+              <div class="cs-description-text">${safeDescription}</div>
+              <button type="button" class="cs-description-ok" data-action="close-description">${locale.cardDescriptionOk || 'OK'}</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card-slide-back">
@@ -4312,7 +4360,7 @@ render() {
           <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
         </div>
         <div class="card-back-scroll">
-          <div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          <div class="card-back-description-slot">${safeDescription}</div>
           <div class="card-back-specs">
             <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
             <span class="card-back-specs__item">Price/m²: ${normalized.pricePerM2Label || 'null'} AED</span>

@@ -235,7 +235,7 @@
   }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; margin-bottom:12px; }
   .card-screen .cs-row--top{ align-items:center; }
-  .card-screen .cs-row--district{ min-height:16px; margin-bottom:14px; }
+  .card-screen .cs-row--district{ min-height:16px; margin-bottom:14px; align-items:center; }
   .card-screen .cs-row--specs{ min-height:20px; }
   .card-screen .cs-title{
     font-weight:700;
@@ -255,7 +255,32 @@
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
+    min-width:0;
+    flex:1 1 auto;
   }
+  .card-screen .cs-description-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    height:24px;
+    padding:0 10px;
+    border-radius:999px;
+    border:1px solid var(--border-light);
+    background:color-mix(in srgb, #ffffff 18%, transparent);
+    color:var(--text-primary);
+    font-size:var(--fs-small);
+    font-weight:500;
+    line-height:1;
+    white-space:nowrap;
+    flex-shrink:0;
+    cursor:pointer;
+    transition: transform .16s ease, opacity .16s ease, background-color .16s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .card-screen .cs-description-btn svg{ width:12px; height:12px; color:var(--color-accent); flex:0 0 12px; }
+  .card-screen .cs-description-btn:hover{ transform:translateY(-1px); opacity:.96; }
+  .card-screen .cs-description-btn:active{ transform:translateY(0); opacity:.9; }
   .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.88; }
   .card-screen .cs-price-badges{ display:flex; align-items:center; flex-shrink:0; }
   .card-screen .cs-inline-price{
@@ -512,6 +537,68 @@
   .card-slide .card-more-btn:hover{ opacity:.95; transform:none; }
   .card-slide .card-more-btn:active{ transform: scale(0.96); }
   .card-slide .cs{ width:100%; min-height:360px; height:360px; max-height:360px; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+  .card-screen .cs-description-overlay{
+    position:absolute;
+    inset:0;
+    z-index:9;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    background:color-mix(in srgb, var(--bg-main) 62%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .card-screen .cs-description-overlay.open{ display:flex; }
+  .card-screen .cs-description-panel{
+    width:100%;
+    max-width:100%;
+    max-height:100%;
+    border-radius:14px;
+    border:1px solid var(--border-light);
+    background:color-mix(in srgb, var(--bg-card) 92%, transparent);
+    box-shadow:0 10px 26px var(--shadow-soft);
+    display:flex;
+    flex-direction:column;
+    padding:12px;
+    gap:10px;
+  }
+  .card-screen .cs-description-title{
+    font-size:var(--fs-body);
+    font-weight:600;
+    color:var(--text-primary);
+    line-height:1.2;
+  }
+  .card-screen .cs-description-text{
+    flex:1 1 auto;
+    min-height:0;
+    max-height:150px;
+    overflow-y:auto;
+    font-size:var(--fs-small);
+    color:var(--text-secondary);
+    line-height:1.45;
+    scrollbar-width:thin;
+    scrollbar-color:transparent transparent;
+  }
+  .card-screen .cs-description-text::-webkit-scrollbar{ width:2px; }
+  .card-screen .cs-description-text::-webkit-scrollbar-track{ background:transparent; }
+  .card-screen .cs-description-text::-webkit-scrollbar-thumb{ background:var(--bg-element); border-radius:999px; }
+  .card-screen .cs-description-ok{
+    align-self:center;
+    min-width:92px;
+    height:30px;
+    padding:0 14px;
+    border-radius:999px;
+    border:1px solid var(--border-light);
+    background:var(--border-light);
+    color:var(--text-primary);
+    font-size:var(--fs-small);
+    font-weight:600;
+    cursor:pointer;
+    transition: transform .16s ease, opacity .16s ease;
+  }
+  .card-screen .cs-description-ok:hover{ transform:translateY(-1px); }
+  .card-screen .cs-description-ok:active{ transform:translateY(0); opacity:.9; }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
   /* Reuse existing button base (.card-btn + .select/.next) via composition; do not touch other chat buttons */
