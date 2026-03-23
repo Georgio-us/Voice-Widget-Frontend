@@ -4605,14 +4605,22 @@ render() {
     moreBtn.setAttribute('data-action', 'show-hidden-specs');
     moreBtn.textContent = `+${Math.max(1, hiddenCount)}`;
     moreBtn.setAttribute('data-hidden-count', String(Math.max(1, hiddenCount)));
-    moreBtn.addEventListener('click', (ev) => {
+    let morePopupOpened = false;
+    const openMorePopup = (ev) => {
       try {
         ev.preventDefault();
         ev.stopPropagation();
+        if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
       } catch {}
+      if (morePopupOpened) return;
+      morePopupOpened = true;
+      setTimeout(() => { morePopupOpened = false; }, 250);
       const payloadHiddenCount = Number(moreBtn.getAttribute('data-hidden-count')) || 1;
       this.showBackSpecsOverflowPopup({ slide, hiddenCount: payloadHiddenCount });
-    });
+    };
+    moreBtn.addEventListener('click', openMorePopup);
+    moreBtn.addEventListener('pointerup', openMorePopup);
+    moreBtn.addEventListener('touchend', openMorePopup, { passive: false });
     target.appendChild(moreBtn);
   }
 

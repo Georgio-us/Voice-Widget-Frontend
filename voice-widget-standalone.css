@@ -491,6 +491,10 @@
     height:30px;
     width:100%;
     pointer-events:auto;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    position:relative;
+    z-index:2;
   }
   .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
   .card-front-assets{
