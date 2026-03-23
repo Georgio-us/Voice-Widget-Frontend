@@ -2419,8 +2419,11 @@ class VoiceWidget extends HTMLElement {
   sharePropertyToTelegram(slide) {
     const card = slide?.querySelector('.cs');
     const propId = card?.getAttribute('data-variant-id') || '';
-    if (!propId) return false;
-    const inlineTargetId = String(slide?.id || propId).trim() || propId;
+    if (!propId) {
+      console.warn('[TG Inline] missing property id for slide:', slide);
+      return false;
+    }
+    const inlineTargetId = String(propId).trim();
     const inlineQuery = `share_prop_${inlineTargetId}`;
     console.log('[TG Inline] preparing inline query:', inlineQuery);
     const tg = window?.Telegram?.WebApp;
@@ -2436,15 +2439,7 @@ class VoiceWidget extends HTMLElement {
     try {
       console.log('WebApp Version:', webAppVersion);
       try { tg?.ready?.(); } catch {}
-      if (typeof tg?.switchInlineQueryChosenChat === 'function') {
-        tg.switchInlineQueryChosenChat(inlineQuery, {
-          allow_user_chats: true,
-          allow_group_chats: true,
-          allow_channel_chats: true
-        });
-        console.log('[TG Inline] switchInlineQueryChosenChat invoked successfully');
-        return true;
-      }
+      // Prefer switchInlineQuery: in Mini App clients this path is generally the most stable.
       if (typeof tg?.switchInlineQuery === 'function') {
         try {
           tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
@@ -2456,6 +2451,15 @@ class VoiceWidget extends HTMLElement {
           console.log('[TG Inline] switchInlineQuery invoked successfully (fallback no filters)');
           return true;
         }
+      }
+      if (typeof tg?.switchInlineQueryChosenChat === 'function') {
+        tg.switchInlineQueryChosenChat(inlineQuery, {
+          allow_user_chats: true,
+          allow_group_chats: true,
+          allow_channel_chats: true
+        });
+        console.log('[TG Inline] switchInlineQueryChosenChat invoked successfully');
+        return true;
       }
       if (typeof tg?.switchInlineQueryCurrentChat === 'function') {
         tg.switchInlineQueryCurrentChat(inlineQuery);
