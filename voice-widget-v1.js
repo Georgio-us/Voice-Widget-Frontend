@@ -2568,7 +2568,7 @@ class VoiceWidget extends HTMLElement {
     setText('#appContactButton', locale.appHeaderContact || 'Связаться');
     setText('#appOnlineText', locale.appHeaderOnline || 'Online');
     setText('#appLangButton', ['UA', 'RU'].includes(this.currentLang) ? this.currentLang : 'RU');
-    setText('#appThemeButton', this.getTheme() === 'light' ? '◑' : '◐');
+    setText('#appThemeButton', '⋯');
     setTextAll('.recording-label', locale.recordingLabel);
     setText('.loading-text', locale.loadingText);
     setTitle('toggleButton', locale.speakTitle);
@@ -2718,18 +2718,11 @@ class VoiceWidget extends HTMLElement {
   }
 
   initTheme() {
-    let theme = 'dark';
-    try {
-      const saved = localStorage.getItem('vw_theme');
-      if (saved === 'light' || saved === 'dark') theme = saved;
-    } catch {}
-    this.applyTheme(theme);
+    this.applyTheme('dark');
   }
 
   getTheme() {
-    if (this._theme === 'light' || this._theme === 'dark') return this._theme;
-    const raw = this.getAttribute('data-theme');
-    return raw === 'light' ? 'light' : 'dark';
+    return 'dark';
   }
 
   getThemeToken(tokenName, fallback = '') {
@@ -2810,11 +2803,11 @@ class VoiceWidget extends HTMLElement {
   updateInsightsProgressTrackStroke() {}
 
   applyTheme(theme) {
-    const next = theme === 'light' ? 'light' : 'dark';
+    const next = 'dark';
     this._theme = next;
-    if (this.isConnected) this.setAttribute('data-theme', next);
-    else this._pendingThemeAttr = next;
-    try { localStorage.setItem('vw_theme', next); } catch {}
+    if (this.isConnected) this.setAttribute('data-theme', 'dark');
+    else this._pendingThemeAttr = 'dark';
+    try { localStorage.removeItem('vw_theme'); } catch {}
     try {
       this.updateToggleButtonState('chat');
       this.updateSendButtonIcons();
@@ -2826,8 +2819,8 @@ class VoiceWidget extends HTMLElement {
   }
 
   toggleTheme() {
-    const next = this.getTheme() === 'light' ? 'dark' : 'light';
-    this.applyTheme(next);
+    // Theme switching disabled: widget is always dark.
+    this.applyTheme('dark');
   }
 
   checkBrowserSupport() {
@@ -2868,7 +2861,7 @@ render() {
         </div>
         <div class="app-header-actions">
           <button class="app-header-btn app-lang-btn" id="appLangButton" type="button">RU</button>
-          <button class="app-header-btn app-theme-btn" id="appThemeButton" type="button" aria-label="Toggle theme">◐</button>
+          <button class="app-header-btn app-theme-btn app-theme-btn--placeholder" id="appThemeButton" type="button" aria-label="Soon" disabled>⋯</button>
         </div>
       </header>
       <div class="app-body">
@@ -2985,9 +2978,7 @@ render() {
   this.$byId('appLangButton')?.addEventListener('click', () => {
     try { this.switchLanguage(); } catch {}
   });
-  this.$byId('appThemeButton')?.addEventListener('click', () => {
-    try { this.toggleTheme(); this.updateInterface(); } catch {}
-  });
+  // Reserved button slot (no action yet).
   this.$byId('appContactButton')?.addEventListener('click', () => {
     try { this.openContactManagerPopup({ source: 'tg_header_main' }); } catch {}
   });
@@ -5681,10 +5672,6 @@ render() {
   updateMenuUI() {
     const overlay = this.getRoot().querySelector('.menu-overlay');
     if (!overlay) return;
-    const locale = this.getCurrentLocale();
-    const themeMode = this.getTheme();
-    const themeActionLabel = themeMode === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
-    const themeActionIcon = themeMode === 'light' ? 'dark-theme.svg' : 'light-theme.svg';
     if (this._menuState === 'closed' || !this._menuState) overlay.classList.remove('open'); else overlay.classList.add('open');
 
     // Toggle side header actions and logo on active screen
@@ -5710,25 +5697,11 @@ render() {
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
           </div>
           <div class="menu-col">
-            <button class="menu-btn menu-btn--reset" data-action="theme"><img class="menu-btn__icon" src="${ASSETS_BASE}${themeActionIcon}" alt="">${themeActionLabel}</button>
+            <button class="menu-btn menu-btn--reset menu-btn--placeholder" type="button" disabled><img class="menu-btn__icon" src="${ASSETS_BASE}menu_dark_theme.svg" alt="">Soon</button>
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
       if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
-      content.querySelectorAll('.menu-btn').forEach(btn => {
-        btn.onclick = (e) => {
-          const action = e.currentTarget.getAttribute('data-action');
-          if (!action) return;
-          if (action === 'theme') {
-            e.preventDefault();
-            e.stopPropagation();
-            this.toggleTheme();
-            this.updateMenuUI();
-            return;
-          }
-          this.updateMenuUI();
-        };
-      });
     } else {
       content.innerHTML = '';
     }

@@ -917,54 +917,6 @@
                   -webkit-text-size-adjust: 100%;
                   text-size-adjust: 100%;
                 }
-                &[data-theme="light"],
-                &[theme="light"] {
-                  --bg-main: #F7F7F7;
-                  --bg-card: #FFFFFF;
-                  --bg-element: rgba(0,0,0,0.08);
-                  --text-primary: #161515;
-                  --text-secondary: rgba(0,0,0,0.85);
-                  --text-muted: rgba(0,0,0,0.35);
-                  --text-on-accent: #FFFFFF;
-                  --text-on-photo: #FFFFFF;
-                  --color-accent: #4178CF;
-                  --border-light: rgba(0,0,0,0.1);
-                  --grid-ghost-line: rgba(0,0,0,0.03);
-                  --bg-soft: var(--bg-element);
-                  --bg-soft-hover: var(--bg-element);
-                  --bg-overlay: var(--text-muted);
-                  --bg-overlay-strong: var(--text-secondary);
-                  --bg-surface: var(--bg-card);
-                  --bg-page: var(--bg-main);
-                  --bg-pill: var(--bg-element);
-                  --border-strong: var(--border-light);
-                  --text-inverse: var(--text-primary);
-                  --text-link: var(--text-primary);
-                  --surface-modal: var(--bg-card);
-                  --surface-menu: var(--bg-card);
-                  --scrim: rgba(0,0,0,0.9);
-                  --state-success: #22c55e;
-                  --state-success-soft: rgba(34, 197, 94, 0.18);
-                  --state-error: #E85F62;
-                  --insights-track-stroke: rgba(0,0,0,0.1);
-                  --counter-pill-shadow: none;
-                  --img-mic: "mic-btn-light.svg";
-                  --img-stop: "stop-btn-light.svg";
-                  --img-send: "send-btn-light.svg";
-                  --img-stats: "menu_light_theme.svg";
-                  --img-close: "main_close_btn-light.svg";
-                  --img-contact: "Contactme-light.svg";
-                  --img-insights: "Insights-light.svg";
-                  --img-logo: "LOGO-light.svg";
-                  --img-return: "return_light_btn.svg";
-                  --color-bg: var(--bg-main);
-                  --color-text: var(--text-primary);
-                  --bg-bubble: rgba(71, 106, 165, 0.15);
-                  --dialogue-border: var(--border-light);
-                  --color-sub-dark: var(--bg-element);
-                  --color-sub-light: var(--bg-element);
-                  --color-sub-surface: var(--bg-element);
-                }
                 &([data-telegram="1"]) {
                     position: fixed;
                     inset: 0;
@@ -1899,6 +1851,13 @@ voice-widget,
   width: 42px;
   height: 42px;
   padding: 0;
+}
+
+.vw-app .app-theme-btn--placeholder,
+.vw-app .menu-btn--placeholder {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
 }
 
 .vw-app #appLangButton,
