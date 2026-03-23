@@ -1980,6 +1980,15 @@ const LOCALES = {
     sliderCheckpointText20: 'Дальше идут варианты с более низкой релевантностью. Уточнить запрос или связаться с экспертом?',
     sliderCheckpointRefine: 'Уточнить',
     sliderCheckpointContact: 'Связаться',
+    backSpecsOverflowTitle: 'Дополнительные детали',
+    backSpecsOverflowText: 'К сожалению, не вся информация поместилась в данной карточке. Чтобы узнать дополнительные детали, вы можете связаться с менеджером.',
+    backSpecsOverflowContact: 'Связаться',
+    backSpecsExtraType: 'Тип: апартаменты',
+    backSpecsExtraMarket: 'Рынок: первичный',
+    backSpecsExtraHandover: 'Сдача: Q4 2027',
+    backSpecsExtraFinish: 'Отделка: премиум',
+    backSpecsExtraParking: 'Паркинг: 1 место',
+    backSpecsExtraTerrace: 'Терраса: есть',
     contactManagerTitle: 'Выберите контакт',
     contactMethodTelegram: 'Telegram',
     contactMethodPhone: 'Телефон',
@@ -2079,6 +2088,15 @@ const LOCALES = {
     sliderCheckpointText20: 'Далі йдуть варіанти з нижчою релевантністю. Уточнити запит чи зв’язатися з експертом?',
     sliderCheckpointRefine: 'Уточнити',
     sliderCheckpointContact: "Зв'язатися",
+    backSpecsOverflowTitle: 'Додаткові деталі',
+    backSpecsOverflowText: "На жаль, не вся інформація помістилася в цій картці. Щоб дізнатися додаткові деталі, ви можете зв’язатися з менеджером.",
+    backSpecsOverflowContact: "Зв'язатися",
+    backSpecsExtraType: 'Тип: апартаменти',
+    backSpecsExtraMarket: 'Ринок: первинний',
+    backSpecsExtraHandover: 'Здача: Q4 2027',
+    backSpecsExtraFinish: 'Оздоблення: преміум',
+    backSpecsExtraParking: 'Паркінг: 1 місце',
+    backSpecsExtraTerrace: 'Тераса: є',
     contactManagerTitle: 'Оберіть контакт',
     contactMethodTelegram: 'Telegram',
     contactMethodPhone: 'Телефон',
@@ -3575,11 +3593,24 @@ render() {
       const overlay = e.target;
       overlay.classList.remove('open');
       overlay.setAttribute('aria-hidden', 'true');
+    } else if (e.target.closest('[data-action="show-hidden-specs"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      const slide = e.target.closest('.card-slide');
+      const hiddenCount = Number(e.target.closest('[data-action="show-hidden-specs"]')?.getAttribute('data-hidden-count')) || 0;
+      this.showBackSpecsOverflowPopup({ slide, hiddenCount });
     } else if (e.target.closest('.card-btn[data-action="select"]')) {
       // Flip: визуальный тест — показываем back сторону карточки
       const selectBtn = e.target.closest('.card-btn[data-action="select"]');
       const slide = selectBtn?.closest('.card-slide') || e.target.closest('.card-slide');
       if (slide) slide.classList.add('flipped');
+      if (slide) {
+        requestAnimationFrame(() => {
+          try { this.fitBackSpecsInSlide(slide); } catch {}
+        });
+      }
       // RMv3 / Sprint 1 / Task 1: фиксируем факт выбора карточки на сервере (server-first)
       const variantId = selectBtn?.getAttribute('data-variant-id') || '';
       try {
@@ -4252,7 +4283,10 @@ render() {
       
       // attach active slide updater
       const slider = host.querySelector('.cards-slider');
-      const update = () => { try { this.updateActiveCardSlide(); } catch {} };
+      const update = () => {
+        try { this.updateActiveCardSlide(); } catch {}
+        try { this.fitBackSpecsForAllSlides(); } catch {}
+      };
       if (slider) {
         slider.addEventListener('scroll', update, { passive: true });
         try { window.addEventListener('resize', update); } catch {}
@@ -4292,6 +4326,22 @@ render() {
       `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
       `🏢 ${normalized.floor ? `${normalized.floor} floor` : '— floor'}`
     ];
+    const backSpecsItems = [
+      { icon: '🛏️', text: normalized.rooms ? `${normalized.rooms} rooms` : '— rooms' },
+      { icon: '📐', text: normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²' },
+      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} AED/m²` : '— AED/m²' },
+      { icon: '🏢', text: normalized.floor ? `${normalized.floor} floor` : '— floor' },
+      { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' },
+      { icon: '🏠', text: locale.backSpecsExtraType || 'Тип: апартаменты' },
+      { icon: '📈', text: locale.backSpecsExtraMarket || 'Рынок: первичный' },
+      { icon: '🗓️', text: locale.backSpecsExtraHandover || 'Сдача: Q4 2027' },
+      { icon: '✨', text: locale.backSpecsExtraFinish || 'Отделка: премиум' },
+      { icon: '🚗', text: locale.backSpecsExtraParking || 'Паркинг: 1 место' },
+      { icon: '🌿', text: locale.backSpecsExtraTerrace || 'Терраса: есть' }
+    ];
+    const backSpecsHtml = backSpecsItems
+      .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
+      .join('');
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
       const isThumb = !!safeUrl;
@@ -4360,13 +4410,7 @@ render() {
           <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
         </div>
         <div class="card-back-scroll">
-          <div class="card-back-description-slot">${safeDescription}</div>
-          <div class="card-back-specs">
-            <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
-            <span class="card-back-specs__item">Price/m²: ${normalized.pricePerM2Label || 'null'} AED</span>
-            <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
-            <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
-          </div>
+          <div class="card-back-specs">${backSpecsHtml}</div>
         </div>
         <div class="card-back-actions">
           <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
@@ -4398,6 +4442,7 @@ render() {
       }
     } catch {}
     try { this.bindInDialogLeadForm(slide.querySelector('.card-slide-form .in-dialog-lead'), '_' + normalized.id); } catch {}
+    try { this.fitBackSpecsInSlide(slide); } catch {}
     
     // 🆕 Sprint I: отправляем подтверждение факта рендера карточки после визуального показа
     const cardId = normalized.id;
@@ -4535,6 +4580,97 @@ render() {
     try { this.updateActiveCardSlide(); } catch {}
   }
 
+  fitBackSpecsInSlide(slide) {
+    const target = slide?.querySelector?.('.card-back-specs');
+    if (!target) return;
+
+    const existingMore = target.querySelector('.card-back-specs__more');
+    if (existingMore && existingMore.parentElement) existingMore.parentElement.removeChild(existingMore);
+
+    const items = Array.from(target.querySelectorAll('.card-back-specs__item'));
+    if (!items.length) return;
+
+    items.forEach((item) => item.classList.remove('is-hidden'));
+    const maxPasses = items.length + 2;
+    let hiddenCount = 0;
+    let pass = 0;
+
+    while (target.scrollHeight > target.clientHeight && pass < maxPasses) {
+      const next = items[items.length - 1 - hiddenCount];
+      if (!next) break;
+      next.classList.add('is-hidden');
+      hiddenCount += 1;
+      pass += 1;
+    }
+
+    if (hiddenCount <= 0) return;
+
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'card-back-specs__more';
+    moreBtn.setAttribute('data-action', 'show-hidden-specs');
+    moreBtn.textContent = `+${hiddenCount}`;
+    moreBtn.setAttribute('data-hidden-count', String(hiddenCount));
+    target.appendChild(moreBtn);
+
+    while (target.scrollHeight > target.clientHeight) {
+      const nextVisible = [...items].reverse().find((item) => !item.classList.contains('is-hidden'));
+      if (!nextVisible) break;
+      nextVisible.classList.add('is-hidden');
+      hiddenCount += 1;
+      moreBtn.textContent = `+${hiddenCount}`;
+      moreBtn.setAttribute('data-hidden-count', String(hiddenCount));
+    }
+  }
+
+  fitBackSpecsForAllSlides() {
+    try {
+      const slides = this.getRoot().querySelectorAll('.cards-slider .card-slide');
+      slides.forEach((slide) => {
+        try { this.fitBackSpecsInSlide(slide); } catch {}
+      });
+    } catch {}
+  }
+
+  closeBackSpecsOverflowPopup() {
+    try {
+      const popup = this.getRoot().querySelector('#vwBackSpecsOverflowOverlay');
+      if (popup && popup.parentElement) popup.parentElement.removeChild(popup);
+    } catch {}
+  }
+
+  showBackSpecsOverflowPopup({ slide = null, hiddenCount = 0 } = {}) {
+    this.closeBackSpecsOverflowPopup();
+    const locale = this.getCurrentLocale();
+    const overlay = document.createElement('div');
+    overlay.id = 'vwBackSpecsOverflowOverlay';
+    overlay.className = 'vw-slider-checkpoint-overlay';
+    const cardId = String(
+      slide?.id ||
+      slide?.querySelector('.cs')?.getAttribute('data-variant-id') ||
+      ''
+    ).trim() || null;
+    overlay.innerHTML = `
+      <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="${locale.backSpecsOverflowTitle || 'Дополнительные детали'}">
+        <button type="button" class="vw-back-specs-close" data-role="close" aria-label="Close">×</button>
+        <div class="vw-slider-checkpoint-title">${locale.backSpecsOverflowTitle || 'Дополнительные детали'}</div>
+        <div class="vw-slider-checkpoint-text">${locale.backSpecsOverflowText || 'К сожалению, не вся информация поместилась в данной карточке. Чтобы узнать дополнительные детали, вы можете связаться с менеджером.'}${hiddenCount > 0 ? ` (+${hiddenCount})` : ''}</div>
+        <div class="vw-slider-checkpoint-actions">
+          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">${locale.backSpecsOverflowContact || locale.appHeaderContact || 'Связаться'}</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeBackSpecsOverflowPopup());
+    overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
+      this.closeBackSpecsOverflowPopup();
+      try { this.openContactManagerPopup({ source: 'tg_specs_overflow', propertyId: cardId, slide }); } catch {}
+    });
+    overlay.addEventListener('click', (ev) => {
+      if (ev.target === overlay) this.closeBackSpecsOverflowPopup();
+    });
+  }
+
   scrollToSlideIndex(index = 0) {
     try {
       const slider = this.getRoot().querySelector('.cards-slider');
@@ -4579,6 +4715,20 @@ render() {
         padding: 16px;
         display: grid;
         gap: 12px;
+        position: relative;
+      }
+      .vw-back-specs-close {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 24px;
+        height: 24px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        border-radius: 8px;
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        font-size: 16px;
+        line-height: 1;
       }
       .vw-slider-checkpoint-title { font-size: 0.95rem; font-weight: 700; }
       .vw-slider-checkpoint-text { font-size: 0.82rem; color: var(--text-secondary, rgba(255,255,255,0.75)); line-height: 1.42; }
