@@ -4329,18 +4329,18 @@ render() {
     const backSpecsItems = [
       { icon: '🛏️', text: normalized.rooms ? `${normalized.rooms} rooms` : '— rooms' },
       { icon: '📐', text: normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²' },
-      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} AED/m²` : '— AED/m²' },
+      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} AED/m²` : '— AED/m²', wide: true },
       { icon: '🏢', text: normalized.floor ? `${normalized.floor} floor` : '— floor' },
       { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' },
-      { icon: '🏠', text: locale.backSpecsExtraType || 'Тип: апартаменты' },
-      { icon: '📈', text: locale.backSpecsExtraMarket || 'Рынок: первичный' },
+      { icon: '🏠', text: locale.backSpecsExtraType || 'Тип: апартаменты', wide: true },
+      { icon: '📈', text: locale.backSpecsExtraMarket || 'Рынок: первичный', wide: true },
       { icon: '🗓️', text: locale.backSpecsExtraHandover || 'Сдача: Q4 2027' },
-      { icon: '✨', text: locale.backSpecsExtraFinish || 'Отделка: премиум' },
+      { icon: '✨', text: locale.backSpecsExtraFinish || 'Отделка: премиум', wide: true },
       { icon: '🚗', text: locale.backSpecsExtraParking || 'Паркинг: 1 место' },
       { icon: '🌿', text: locale.backSpecsExtraTerrace || 'Терраса: есть' }
     ];
     const backSpecsHtml = backSpecsItems
-      .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
+      .map((item) => `<span class="card-back-specs__item${item.wide ? ' is-wide' : ''}"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
       .join('');
     const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
       const safeUrl = String(assetUrl || '').trim();
@@ -4590,7 +4590,24 @@ render() {
     const items = Array.from(target.querySelectorAll('.card-back-specs__item'));
     if (!items.length) return;
 
-    items.forEach((item) => item.classList.remove('is-hidden'));
+    const normalizeGridState = () => {
+      const visible = items.filter((item) => !item.classList.contains('is-hidden'));
+      visible.forEach((item) => item.classList.remove('is-last-single', 'is-wide'));
+      if (!visible.length) return;
+      // Keep meaningful long chips as wide.
+      visible.forEach((item) => {
+        const textLen = String(item.textContent || '').trim().length;
+        if (textLen >= 26) item.classList.add('is-wide');
+      });
+      const totalCells = visible.reduce((sum, item) => sum + (item.classList.contains('is-wide') ? 2 : 1), 0);
+      if (totalCells % 2 === 1) {
+        const last = visible[visible.length - 1];
+        if (last) last.classList.add('is-last-single');
+      }
+    };
+
+    items.forEach((item) => item.classList.remove('is-hidden', 'is-last-single'));
+    normalizeGridState();
     const maxPasses = items.length + 2;
     let hiddenCount = 0;
     let pass = 0;
@@ -4599,8 +4616,10 @@ render() {
       const next = items[items.length - 1 - hiddenCount];
       if (!next) break;
       next.classList.add('is-hidden');
+      next.classList.remove('is-last-single');
       hiddenCount += 1;
       pass += 1;
+      normalizeGridState();
     }
 
     if (hiddenCount <= 0) return;
@@ -4617,9 +4636,11 @@ render() {
       const nextVisible = [...items].reverse().find((item) => !item.classList.contains('is-hidden'));
       if (!nextVisible) break;
       nextVisible.classList.add('is-hidden');
+      nextVisible.classList.remove('is-last-single');
       hiddenCount += 1;
       moreBtn.textContent = `+${hiddenCount}`;
       moreBtn.setAttribute('data-hidden-count', String(hiddenCount));
+      normalizeGridState();
     }
   }
 
