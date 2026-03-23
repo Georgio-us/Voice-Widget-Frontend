@@ -550,22 +550,6 @@ class UnderstandingManager {
       progressText.textContent = `${progress}% - ${this.getStageText(progress)}`;
     }
 
-    // v2 Context screen sync: update circular progress and text if present
-    try {
-      const ctx = this.widget.$byId('contextScreen');
-      if (ctx) {
-        const ctxText = ctx.querySelector('.progress-text');
-        if (ctxText) ctxText.textContent = `${progress}%`;
-        const activeArc = ctx.querySelector('.progress-ring svg circle:nth-of-type(2)');
-        if (activeArc) {
-          const CIRCUMFERENCE = 276.46; // as in v2
-          const clamped = Math.max(0, Math.min(100, Number(progress) || 0));
-          const offset = Math.max(0, (1 - clamped / 100) * CIRCUMFERENCE);
-          activeArc.setAttribute('stroke-dashoffset', String(offset));
-        }
-      }
-    } catch {}
-
     // Синхронизируем шкалу в хедере
     if (typeof this.widget.updateHeaderUnderstanding === 'function') {
       this.widget.updateHeaderUnderstanding(progress);
@@ -723,7 +707,7 @@ class UIManager {
   // ---------- init ----------
   initializeUI() {
     this.cacheElements();
-    this.setState('main');
+    this.setState('idle');
     this.isInsightsExpanded = this.widget.classList.contains('expanded');
 
     const { messagesContainer } = this.elements;
@@ -737,12 +721,6 @@ class UIManager {
     this.elements = {
       textInput:         this.$byId('textInput'),
       sendButton:        this.$byId('sendButton'),
-      mainButton:        this.$byId('mainButton'),
-
-      // Main screen elements
-      mainTextInput:     this.$byId('mainTextInput'),
-      mainToggleButton:  this.$byId('mainToggleButton'),
-      mainSendButton:    this.$byId('mainSendButton'),
 
       // Chat screen elements
       toggleButton:      this.$byId('toggleButton'),
@@ -760,24 +738,17 @@ class UIManager {
   bindToInternalEvents() {
     this.widget.events.on('recordingStarted', () => {
       this.setState('recording');
-      // show recording overlays (both screens are safe)
-      try { this.widget.showRecordingIndicator('main'); } catch {}
       try { this.widget.showRecordingIndicator('chat'); } catch {}
-      this.widget.updateSendButtonState('main');
       this.widget.updateSendButtonState('chat');
     });
     this.widget.events.on('recordingStopped', () => {
       this.setState('idle');
-      try { this.widget.hideRecordingIndicator('main'); } catch {}
       try { this.widget.hideRecordingIndicator('chat'); } catch {}
-      this.widget.updateSendButtonState('main');
       this.widget.updateSendButtonState('chat');
     });
     this.widget.events.on('recordingCancelled', () => {
       this.setState('idle');
-      try { this.widget.hideRecordingIndicator('main'); } catch {}
       try { this.widget.hideRecordingIndicator('chat'); } catch {}
-      this.widget.updateSendButtonState('main');
       this.widget.updateSendButtonState('chat');
     });
     this.widget.events.on('timerUpdated', (t) => this.updateRecordingTimer(t));
@@ -805,18 +776,13 @@ class UIManager {
   }
 
   clearState(state) {
-    const { sendButton, textInput, mainToggleButton, mainSendButton, mainTextInput, toggleButton } = this.elements;
+    const { sendButton, textInput, toggleButton } = this.elements;
     switch (state) {
       case 'recording':
         if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
         if (textInput) { textInput.disabled = false; textInput.style.opacity = '1'; textInput.placeholder = this.getInputPlaceholder(); }
         sendButton?.classList.remove('active');
         toggleButton?.classList.remove('active');
-        break;
-      case 'main':
-        if (mainTextInput) { mainTextInput.disabled = false; mainTextInput.style.opacity = '1'; mainTextInput.placeholder = this.getInputPlaceholder(); }
-        if (mainToggleButton) { mainToggleButton.disabled = false; mainToggleButton.classList.remove('active'); }
-        // Removed mainSendButton disabled state - always keep it enabled
         break;
       default: break;
     }
@@ -827,7 +793,6 @@ class UIManager {
       case 'idle':      this.applyIdleState(); break;
       case 'typing':    this.applyTypingState(); break;
       case 'recording': this.applyRecordingState(); break;
-      case 'main':      this.applyMainState(); break;
       case 'recorded':  this.applyRecordedState(data); break;
     }
   }
@@ -844,25 +809,6 @@ class UIManager {
     if (toggleButton) {
       toggleButton.disabled = false;
       toggleButton.classList.remove('active');
-    }
-  }
-
-  // MAIN
-  applyMainState() {
-    const { mainTextInput, mainToggleButton, mainSendButton } = this.elements;
-    if (mainTextInput) { 
-      mainTextInput.disabled = false; 
-      mainTextInput.style.opacity = '1'; 
-      mainTextInput.placeholder = this.getInputPlaceholder(); 
-    }
-    if (mainToggleButton) { 
-      mainToggleButton.disabled = false; 
-      mainToggleButton.classList.remove('active'); 
-    }
-    if (mainSendButton) { 
-      // Always enable send button - let updateSendButtonState handle the logic
-      mainSendButton.disabled = false; 
-      mainSendButton.classList.remove('active'); 
     }
   }
 
@@ -896,7 +842,7 @@ class UIManager {
   handleTextInput() {
     const { textInput } = this.elements;
     const hasText = !!textInput?.value?.trim();
-    if (hasText && (this.inputState === 'idle' || this.inputState === 'main')) this.setState('typing');
+    if (hasText && this.inputState === 'idle') this.setState('typing');
     else if (!hasText && this.inputState === 'typing') this.setState('idle');
     else if (this.inputState === 'typing') this.applyTypingState();
     
@@ -913,7 +859,7 @@ class UIManager {
 
   // кнопки
   handleMicClick() {
-    if (this.inputState === 'idle' || this.inputState === 'typing' || this.inputState === 'main') this.widget.audioRecorder.startRecording();
+    if (this.inputState === 'idle' || this.inputState === 'typing') this.widget.audioRecorder.startRecording();
   }
   handleCancelClick() { if (this.inputState === 'recording') this.widget.audioRecorder.cancelRecording(); }
   handleSendClick() {
@@ -935,34 +881,24 @@ class UIManager {
       this.widget.api.sendMessage();
     } else {
       // For other states, check if there's text to send
-      const { textInput, mainTextInput } = this.elements;
-      const currentTextInput = textInput || mainTextInput;
-      const text = currentTextInput?.value?.trim();
+      const { textInput } = this.elements;
+      const text = textInput?.value?.trim();
       if (text) {
-        if (currentTextInput === mainTextInput) {
-          this.widget.sendTextFromMainScreen(text);
-        } else {
-          this.handleSendText();
-        }
+        this.handleSendText();
       } else {
         // Trigger shake animation for empty textfield
-        this.triggerShakeAnimation(textInput ? 'chat' : 'main');
+        this.triggerShakeAnimation();
       }
     }
   }
   isResetCommand(text) {
     return String(text || '').trim().toLowerCase() === '//reset';
   }
-  tryHandleResetCommand(text, screen = 'chat') {
+  tryHandleResetCommand(text) {
     if (!this.isResetCommand(text)) return false;
-    const { textInput, mainTextInput } = this.elements;
-    if (screen === 'main') {
-      if (mainTextInput) mainTextInput.value = '';
-      this.widget.updateSendButtonState('main');
-    } else {
-      if (textInput) textInput.value = '';
-      this.widget.updateSendButtonState('chat');
-    }
+    const { textInput } = this.elements;
+    if (textInput) textInput.value = '';
+    this.widget.updateSendButtonState('chat');
     this.widget.clearSession();
     return true;
   }
@@ -970,26 +906,18 @@ class UIManager {
     const { textInput } = this.elements;
     const text = textInput?.value?.trim();
     if (!text) return;
-    if (this.tryHandleResetCommand(text, 'chat')) return;
+    if (this.tryHandleResetCommand(text)) return;
     this.widget.api.sendTextMessage();
   }
 
-  handleToggleClick(screen) {
+  handleToggleClick() {
     if (this.widget.audioRecorder.isRecording) {
       // Cancel recording and clear input
       this.widget.audioRecorder.cancelRecording();
-      if (screen === 'main') {
-        const mainTextInput = this.elements.mainTextInput;
-        if (mainTextInput) {
-          mainTextInput.value = '';
-          this.widget.updateSendButtonState('main');
-        }
-      } else if (screen === 'chat') {
-        const textInput = this.elements.textInput;
-        if (textInput) {
-          textInput.value = '';
-          this.widget.updateSendButtonState('chat');
-        }
+      const textInput = this.elements.textInput;
+      if (textInput) {
+        textInput.value = '';
+        this.widget.updateSendButtonState('chat');
       }
     } else {
       // Start recording
@@ -1002,11 +930,9 @@ class UIManager {
     if (this.inputState !== 'recording') return;
     const m = Math.floor(time / 60).toString().padStart(2, '0');
     const s = (time % 60).toString().padStart(2, '0');
-    // Обновляем таймеры в обоих экранах
+    // Обновляем таймер текущего экрана
     const chatTimer = this.$byId('chatRecordTimer');
-    const mainTimer = this.$byId('mainRecordTimer');
     if (chatTimer) chatTimer.textContent = `${m}:${s}`;
-    if (mainTimer) mainTimer.textContent = `${m}:${s}`;
     // На плейсхолдер больше не полагаемся
   }
   clearRecordingState() {
@@ -1021,45 +947,10 @@ class UIManager {
     textInput.addEventListener('keydown', (e) => this.handleTextKeyDown(e));
   }
   bindUnifiedInputEvents() {
-    const { sendButton, mainButton, textInput, toggleButton, mainToggleButton, mainSendButton, mainTextInput } = this.elements;
+    const { sendButton, textInput, toggleButton } = this.elements;
     this.bindTextInputEvents(textInput);
     sendButton?.addEventListener('click', () => this.handleSendClick());
-    toggleButton?.addEventListener('click', () => this.handleToggleClick('chat'));
-    mainButton?.addEventListener('click', () => {
-      if (this.widget.audioRecorder?.isRecording) {
-        // If already recording, finish and send the recording
-        this.widget.audioRecorder.finishAndSend();
-      } else if (!mainButton.disabled) {
-        // If not recording, start recording
-        this.handleMicClick();
-      }
-    });
-    mainToggleButton?.addEventListener('click', () => this.handleToggleClick('main'));
-    
-    // Main screen send button
-    mainSendButton?.addEventListener('click', () => {
-      const text = mainTextInput?.value?.trim();
-      if (text) {
-        if (this.tryHandleResetCommand(text, 'main')) return;
-        this.widget.sendTextFromMainScreen(text);
-      } else {
-        // Trigger shake animation for empty textfield
-        this.triggerShakeAnimation('main');
-      }
-    });
-    
-    // Main screen text input events
-    mainTextInput?.addEventListener('input', () => this.widget.updateSendButtonState('main'));
-    mainTextInput?.addEventListener('keydown', (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        const text = mainTextInput.value.trim();
-        if (text) {
-          if (this.tryHandleResetCommand(text, 'main')) return;
-          this.widget.sendTextFromMainScreen(text);
-        }
-      }
-    });
+    toggleButton?.addEventListener('click', () => this.handleToggleClick());
   }
 
   // ---------- чат/история ----------
@@ -1285,7 +1176,7 @@ class UIManager {
     }
 
     this.widget.dialogStarted = false;
-    this.setState('main');
+    this.setState('idle');
   }
 
   // геттеры состояния
@@ -1304,8 +1195,8 @@ class UIManager {
     };
   }
 
-  triggerShakeAnimation(screen) {
-    const textInput = screen === 'main' ? this.elements.mainTextInput : this.elements.textInput;
+  triggerShakeAnimation() {
+    const textInput = this.elements.textInput;
     if (textInput) {
       textInput.classList.add('shake');
       setTimeout(() => {
@@ -1705,111 +1596,6 @@ class APIClient {
     this.widget.events.emit('textMessageSent', { text: messageText });
   }
 
-  // Send text message from main screen (reuses existing flow)
-  async sendTextMessageFromText(messageText) {
-    if (!messageText) return;
-
-    const thinkingEl = this.widget.ui.showThinkingIndicator();
-
-    // Логируем user_message перед отправкой
-    logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
-      inputType: 'text',
-      text: messageText,
-      textLength: messageText.length
-    });
-
-    try {
-      const fd = new FormData();
-      fd.append('text', messageText);
-      fd.append('sessionId', this.widget.sessionId || '');
-
-      const replyLang = this.widget.getLangCode();
-      fd.append('lang', replyLang);
-      const speechLang = localStorage.getItem('vw_speechLang');
-      if (speechLang && speechLang !== 'auto') fd.append('speechLang', speechLang);
-      this.appendTelegramUserToFormData(fd);
-
-      console.log('📤 Текст (main) →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
-
-      const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
-      const data = await response.json().catch(() => ({}));
-      this.storeLastApiPayload(data, 'sendTextMessageFromText');
-      this.syncBackendDrivenState(data);
-
-      // ✅ если сервер выдал sessionId — подхватываем и показываем
-      if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
-
-      // 🆕 Sprint I: сохраняем role из server response (read-only)
-      if (data?.role !== undefined) {
-        this.widget.role = data.role;
-      } else {
-        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
-      }
-
-      console.log('📥 Ответ на текст (main):', {
-        sessionId: data.sessionId, messageCount: data.messageCount,
-        insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
-      });
-
-      this.widget.ui.hideThinkingIndicator(thinkingEl);
-      this.widget.ui.updateMessageCount();
-
-      if (data.insights) this.widget.understanding.update(data.insights);
-
-      const assistantRaw = data[this.responseField] || this.t('responseMissing');
-      const parsed = this.extractHiddenCommands(assistantRaw);
-      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
-      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
-      
-      // Логируем assistant_reply после получения ответа (main screen)
-      const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
-        ? data.cards.map(card => ({
-            id: card.id,
-            city: card.city || null,
-            district: card.district || null,
-            priceEUR: card.priceEUR || null,
-            rooms: card.rooms || null
-          }))
-        : [];
-      
-      logTelemetry(TelemetryEventTypes.ASSISTANT_REPLY, {
-        messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
-        hasCards: data.cards && data.cards.length > 0,
-        cards: cardsForLog,
-        stage: data.stage || null,
-        insights: data.insights || null
-      });
-      
-      for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
-
-      // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта (main)
-      try {
-        const autoId = data?.ui?.autoSelectCardId || null;
-        if (autoId) {
-          await this.sendCardInteraction('select', String(autoId));
-        }
-      } catch {}
-
-      // 🃏 карточки по предложению (main) — после текста агента (legacy flow)
-      try {
-        if (!this.disableServerUI && data?.ui?.suggestShowCard === true) {
-          await this.widget.renderPropertiesFromCatalog();
-        }
-      } catch (e) { console.warn('Cards handling error (main):', e); }
-
-    } catch (error) {
-      this.widget.ui.hideThinkingIndicator(thinkingEl);
-      console.error('Ошибка при отправке текста (main):', error);
-      this.widget.ui.addMessage({
-        type: 'assistant',
-        content: this.t('sendTextError'),
-        timestamp: new Date()
-      });
-    }
-
-    this.widget.events.emit('textMessageSent', { text: messageText });
-  }
-
   // ---------- Аудио ----------
   async sendMessage() {
     if (!this.widget.audioRecorder.audioBlob) {
@@ -2154,31 +1940,13 @@ const VW_SHARE_BASE_URL = 'https://voice-widget-frontend-tgdubai-split.up.railwa
 const LOCALES = {
   RU: {
     inputPlaceholder: 'Задайте вопрос...',
-    chatGreeting: 'Спроси меня!',
-    chatSubGreeting: 'Помогу найти лучший вариант',
     recordingLabel: 'Идет запись',
     loadingText: 'Обрабатываю запрос',
-    menuRequest: 'Оставить заявку',
     menuLanguage: 'Выбрать язык',
-    menuInsights: 'Дополнительно',
-    menuBackToDialog: 'Назад к диалогу',
-    menuSelectedRequest: 'Оставить заявку',
-    menuSelectedContext: 'Дополнительно',
     menuThemeToLight: 'Светлая тема',
     menuThemeToDark: 'Тёмная тема',
     appHeaderContact: 'Связаться',
     appHeaderOnline: 'Online',
-    requestTitle: 'Оставить заявку',
-    requestNameLabel: 'Имя',
-    requestContactLabel: 'Контакт (телефон / WhatsApp / e-mail)',
-    requestPreferredMethodLabel: 'Предпочитаемый способ связи',
-    requestCommentLabel: 'Комментарий (необязательно)',
-    requestNamePlaceholder: 'Ваше имя',
-    requestPhonePlaceholder: '1234567',
-    requestEmailPlaceholder: 'yourmail@gmail.com',
-    requestCommentPlaceholder: 'Короткая заметка',
-    requestContactError: 'Укажите телефон или email',
-    requestConsentError: 'Примите Политику конфиденциальности',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
     privacyPolicy: 'Политика конфиденциальности',
     send: 'Отправить',
@@ -2188,29 +1956,10 @@ const LOCALES = {
     understood: 'Понятно',
     thanksTitle: 'Спасибо!',
     thanksBody: 'Ваша заявка получена. Мы скоро с вами свяжемся.',
-    statusFulfilled: 'Статус: заполнено',
-    ctxDataStorage: 'Хранение и шифрование данных',
-    ctxStageMessage: 'Отлично! Вы заполнили систему данными, и теперь подбор будет точнее.',
-    ctxHint: 'Вы можете оставить заявку, чтобы менеджер сразу начал работу по вашему кейсу',
     leaveRequest: 'Оставить заявку',
     namePlaceholder: 'Имя',
     phonePlaceholder: 'Телефон',
     emailPlaceholder: 'E-mail',
-    contactError: 'Укажите телефон или email',
-    consentError: 'Примите Политику конфиденциальности',
-    privacyLeavingTitle: 'Переход на другой сайт',
-    privacyLeavingBody: 'Вы покидаете этот сайт и открываете Политику конфиденциальности в новой вкладке. Продолжить?',
-    spamRepeatTitle: 'Повторная отправка',
-    spamRepeatBody: 'Вы уже отправили заявку, желаете сделать это повторно?',
-    spamBlockBody: 'Вы уже отправили заявку, и сможете отправить ее повторно через <span class="timer"></span> секунд.',
-    whatDataTitle: 'Какие данные мы знаем?',
-    dataStorageTitle: 'Хранение и шифрование данных',
-    dataStorageBody: 'Мы храним данные на защищенных серверах в ЕС. Передача защищена современными TLS и HSTS; данные в хранилище зашифрованы (AES-256). Доступ строго ограничен и аудитируется. Мы не продаем ваши персональные данные. Вы можете запросить удаление в любой момент через поддержку.',
-    footerWhatData: 'Какие данные мы знаем?',
-    methodWhatsApp: 'WhatsApp',
-    methodTelegram: 'Telegram',
-    methodPhoneCall: 'Звонок',
-    methodEmail: 'Email',
     cardShow: 'Показать',
     cardCancel: 'Отменить',
     cardSelect: 'Выбрать',
@@ -2269,31 +2018,13 @@ const LOCALES = {
   },
   EN: {
     inputPlaceholder: 'Ask a question...',
-    chatGreeting: 'Ask me!',
-    chatSubGreeting: 'I can help you find the best option',
     recordingLabel: 'Recording',
     loadingText: 'Processing request',
-    menuRequest: 'Contact me',
     menuLanguage: 'Language',
-    menuInsights: 'Insights',
-    menuBackToDialog: 'Back to dialogue',
-    menuSelectedRequest: 'Leave request',
-    menuSelectedContext: 'Insights',
     menuThemeToLight: 'Light mode',
     menuThemeToDark: 'Dark mode',
     appHeaderContact: 'Contact',
     appHeaderOnline: 'Online',
-    requestTitle: 'Leave a request',
-    requestNameLabel: 'Name',
-    requestContactLabel: 'Contact (phone / WhatsApp / e-mail)',
-    requestPreferredMethodLabel: 'Preferred contact method',
-    requestCommentLabel: 'Comment (optional)',
-    requestNamePlaceholder: 'Your name',
-    requestPhonePlaceholder: '1234567',
-    requestEmailPlaceholder: 'yourmail@gmail.com',
-    requestCommentPlaceholder: 'Short note',
-    requestContactError: 'Please provide phone or email',
-    requestConsentError: 'Please accept the Privacy Policy',
     consentText: 'I consent to the processing of my data for managing this request and contacting me about properties.',
     privacyPolicy: 'Privacy Policy',
     send: 'Send',
@@ -2303,29 +2034,10 @@ const LOCALES = {
     understood: 'Understood',
     thanksTitle: 'Thank you!',
     thanksBody: "Your request has been received. We'll contact you soon.",
-    statusFulfilled: 'Status: fulfilled',
-    ctxDataStorage: 'Data storage & encrypting',
-    ctxStageMessage: "Well done! You've fulfilled the system with the data that will make search much closer to your goal!",
-    ctxHint: 'You can leave the request to make manager start working by your case immediately',
     leaveRequest: 'Leave request',
     namePlaceholder: 'Name',
     phonePlaceholder: 'Phone',
     emailPlaceholder: 'E-mail',
-    contactError: 'Please provide phone or email',
-    consentError: 'Please accept the Privacy Policy',
-    privacyLeavingTitle: 'Leaving this site',
-    privacyLeavingBody: "You're about to leave this site and open our Privacy Policy in a new tab. Do you want to continue?",
-    spamRepeatTitle: 'Repeated submission',
-    spamRepeatBody: 'You already sent a request. Do you want to submit it again?',
-    spamBlockBody: 'You already sent a request and can submit again in <span class="timer"></span> seconds.',
-    whatDataTitle: 'What data do we know?',
-    dataStorageTitle: 'Data storage & encrypting',
-    dataStorageBody: 'We store your data on secure EU-based servers. Data in transit is protected with modern TLS and HSTS; data at rest is encrypted (AES-256). Access is strictly limited and audited. We never sell your personal information. You can request deletion at any time via Support.',
-    footerWhatData: 'What data do we know?',
-    methodWhatsApp: 'WhatsApp',
-    methodTelegram: 'Telegram',
-    methodPhoneCall: 'Phone Call',
-    methodEmail: 'Email',
     cardShow: 'Show',
     cardCancel: 'Cancel',
     cardSelect: 'Select',
@@ -2384,31 +2096,13 @@ const LOCALES = {
   },
   ES: {
     inputPlaceholder: 'Haz una pregunta...',
-    chatGreeting: 'Preguntame!',
-    chatSubGreeting: 'Te ayudo a encontrar la mejor opcion',
     recordingLabel: 'Grabando',
     loadingText: 'Procesando solicitud',
-    menuRequest: 'Contactame',
     menuLanguage: 'Idioma',
-    menuInsights: 'Insights',
-    menuBackToDialog: 'Volver al dialogo',
-    menuSelectedRequest: 'Dejar solicitud',
-    menuSelectedContext: 'Insights',
     menuThemeToLight: 'Modo claro',
     menuThemeToDark: 'Modo oscuro',
     appHeaderContact: 'Contactar',
     appHeaderOnline: 'Online',
-    requestTitle: 'Dejar una solicitud',
-    requestNameLabel: 'Nombre',
-    requestContactLabel: 'Contacto (telefono / WhatsApp / e-mail)',
-    requestPreferredMethodLabel: 'Metodo de contacto preferido',
-    requestCommentLabel: 'Comentario (opcional)',
-    requestNamePlaceholder: 'Tu nombre',
-    requestPhonePlaceholder: '1234567',
-    requestEmailPlaceholder: 'correo@gmail.com',
-    requestCommentPlaceholder: 'Nota breve',
-    requestContactError: 'Indica telefono o email',
-    requestConsentError: 'Acepta la Politica de Privacidad',
     consentText: 'Acepto el tratamiento de mis datos para gestionar esta solicitud y contactarme sobre propiedades.',
     privacyPolicy: 'Politica de Privacidad',
     send: 'Enviar',
@@ -2418,29 +2112,10 @@ const LOCALES = {
     understood: 'Entendido',
     thanksTitle: 'Gracias!',
     thanksBody: 'Hemos recibido tu solicitud. Te contactaremos pronto.',
-    statusFulfilled: 'Estado: completado',
-    ctxDataStorage: 'Almacenamiento y cifrado de datos',
-    ctxStageMessage: 'Muy bien! Has completado el sistema con datos que haran la busqueda mas precisa.',
-    ctxHint: 'Puedes dejar una solicitud para que el gestor empiece a trabajar de inmediato',
     leaveRequest: 'Dejar solicitud',
     namePlaceholder: 'Nombre',
     phonePlaceholder: 'Telefono',
     emailPlaceholder: 'E-mail',
-    contactError: 'Indica telefono o email',
-    consentError: 'Acepta la Politica de Privacidad',
-    privacyLeavingTitle: 'Saliendo de este sitio',
-    privacyLeavingBody: 'Estas a punto de salir de este sitio y abrir nuestra Politica de Privacidad en una nueva pestana. Quieres continuar?',
-    spamRepeatTitle: 'Envio repetido',
-    spamRepeatBody: 'Ya enviaste una solicitud. Quieres enviarla de nuevo?',
-    spamBlockBody: 'Ya enviaste una solicitud y podras enviarla de nuevo en <span class="timer"></span> segundos.',
-    whatDataTitle: 'Que datos conocemos?',
-    dataStorageTitle: 'Almacenamiento y cifrado de datos',
-    dataStorageBody: 'Guardamos tus datos en servidores seguros de la UE. Los datos en transito estan protegidos con TLS y HSTS modernos; los datos en reposo estan cifrados (AES-256). El acceso es estrictamente limitado y auditado. Nunca vendemos tu informacion personal. Puedes solicitar la eliminacion en cualquier momento a traves de Soporte.',
-    footerWhatData: 'Que datos conocemos?',
-    methodWhatsApp: 'WhatsApp',
-    methodTelegram: 'Telegram',
-    methodPhoneCall: 'Llamada',
-    methodEmail: 'Email',
     cardShow: 'Mostrar',
     cardCancel: 'Cancelar',
     cardSelect: 'Seleccionar',
@@ -2969,171 +2644,29 @@ class VoiceWidget extends HTMLElement {
       if (el && typeof text === 'string') el.setAttribute('title', text);
     };
 
-    setPlaceholder('mainTextInput', locale.inputPlaceholder);
     setPlaceholder('textInput', locale.inputPlaceholder);
-    setPlaceholder('ctxName', locale.namePlaceholder);
-    setPlaceholder('ctxPhone', locale.phonePlaceholder);
-    setPlaceholder('ctxEmail', locale.emailPlaceholder);
-    setPlaceholder('reqName', locale.requestNamePlaceholder);
-    setPlaceholder('reqPhone', locale.requestPhonePlaceholder);
-    setPlaceholder('reqEmail', locale.requestEmailPlaceholder);
-    setPlaceholder('reqComment', locale.requestCommentPlaceholder);
     setPlaceholder('inDialogLeadName', locale.namePlaceholder);
-    setPlaceholder('inDialogLeadPhone', locale.requestPhonePlaceholder);
+    setPlaceholder('inDialogLeadPhone', locale.phonePlaceholder);
     setPlaceholder('inDialogLeadEmail', locale.emailPlaceholder);
 
-    setText('.main-text', locale.chatGreeting);
-    setText('.sub-text', locale.chatSubGreeting);
     setText('#appContactButton', locale.appHeaderContact || 'Связаться');
     setText('#appOnlineText', locale.appHeaderOnline || 'Online');
     setText('#appLangButton', ['UA', 'RU'].includes(this.currentLang) ? this.currentLang : 'RU');
     setText('#appThemeButton', this.getTheme() === 'light' ? '◑' : '◐');
     setTextAll('.recording-label', locale.recordingLabel);
     setText('.loading-text', locale.loadingText);
-    setTitle('mainToggleButton', locale.speakTitle);
     setTitle('toggleButton', locale.speakTitle);
-    setTitle('mainSendButton', locale.sendTitle);
     setTitle('sendButton', locale.sendTitle);
     root.querySelectorAll('.header-action.header-right').forEach((el) => el.setAttribute('title', locale.closeWidgetTitle));
     root.querySelectorAll('.header-action.header-left').forEach((el) => el.setAttribute('title', locale.statsTitle));
 
-    setText('#ctxStatusText', locale.statusFulfilled);
-    setText('#ctxStageMessage', locale.ctxStageMessage);
-    setText('.data-storage-text', locale.ctxDataStorage);
-    setText('.hint-text', locale.ctxHint);
-    setText('#ctxLeaveReqBtn', locale.leaveRequest);
-    setText('#ctxContactError', locale.contactError);
-    setText('#ctxConsentError', locale.consentError);
-    setText('#ctxSendBtn', locale.send);
-    setText('#ctxCancelBtn', locale.cancel);
-    setText('#ctxThanksDoneBtn', locale.close);
-    setText('#ctxThanksOverlayClose', locale.close);
-    setText('#ctxSpamWarningCancelBtn', locale.cancel);
-    setText('#ctxSpamWarningContinueBtn', locale.continue);
-    setText('#ctxSpamBlockCloseBtn', locale.understood);
-    setText('#whatDataUnderstoodBtn', locale.understood);
-    setText('#dataUnderstoodBtn', locale.understood);
-    setText('.footer-text', locale.footerWhatData);
-
-    setText('#reqContactError', locale.requestContactError);
-    setText('#reqConsentError', locale.requestConsentError);
-    setText('.request-send-btn', locale.send);
-    setText('.request-cancel-btn', locale.cancel);
-    setText('#requestThanksOverlayClose', locale.close);
-    setText('#requestSpamWarningCancelBtn', locale.cancel);
-    setText('#requestSpamWarningContinueBtn', locale.continue);
-    setText('#requestSpamBlockCloseBtn', locale.understood);
-    setText('#privacyCancelBtn', locale.cancel);
-    setText('#privacyContinueBtn', locale.continue);
-
-    const reqLabels = root.querySelectorAll('#requestScreen .request-field-label');
-    if (reqLabels[0]) reqLabels[0].textContent = locale.requestNameLabel;
-    if (reqLabels[1]) reqLabels[1].textContent = locale.requestContactLabel;
-    if (reqLabels[2]) reqLabels[2].textContent = locale.requestPreferredMethodLabel;
-    if (reqLabels[3]) reqLabels[3].textContent = locale.requestCommentLabel;
-    setText('#requestScreen .request-title', locale.requestTitle);
-
-    const consentTextNodes = root.querySelectorAll('.ctx-consent-text, .request-consent-text, .in-dialog-lead__consent-text');
+    const consentTextNodes = root.querySelectorAll('.in-dialog-lead__consent-text');
     consentTextNodes.forEach((node) => {
       const link = node.querySelector('a');
       if (link) link.textContent = locale.privacyPolicy;
       const textBeforeLink = `${locale.consentText} `;
       if (node.childNodes.length > 0) node.childNodes[0].textContent = textBeforeLink;
     });
-
-    const reqMethodList = this.$byIdFrom(root, 'reqMethodList');
-    if (reqMethodList) {
-      const options = reqMethodList.querySelectorAll('.request-select-item');
-      options.forEach((option) => {
-        const v = option.getAttribute('data-value');
-        if (v === 'WhatsApp') option.textContent = locale.methodWhatsApp;
-        if (v === 'Telegram') option.textContent = locale.methodTelegram;
-        if (v === 'Phone Call') option.textContent = locale.methodPhoneCall;
-        if (v === 'Email') option.textContent = locale.methodEmail;
-      });
-      const currentValue = this.$byIdFrom(root, 'reqMethod')?.value;
-      const reqMethodLabel = this.$byIdFrom(root, 'reqMethodLabel');
-      if (reqMethodLabel) {
-        if (currentValue === 'WhatsApp') reqMethodLabel.textContent = locale.methodWhatsApp;
-        if (currentValue === 'Telegram') reqMethodLabel.textContent = locale.methodTelegram;
-        if (currentValue === 'Phone Call') reqMethodLabel.textContent = locale.methodPhoneCall;
-        if (currentValue === 'Email') reqMethodLabel.textContent = locale.methodEmail;
-      }
-    }
-
-    const ctxPrivacy = this.$byIdFrom(root, 'ctxPrivacyOverlay');
-    if (ctxPrivacy) {
-      const title = ctxPrivacy.querySelector('.data-title');
-      const body = ctxPrivacy.querySelector('.data-body');
-      if (title) title.textContent = locale.privacyLeavingTitle;
-      if (body) body.textContent = locale.privacyLeavingBody;
-    }
-    const privacy = this.$byIdFrom(root, 'privacyOverlay');
-    if (privacy) {
-      const title = privacy.querySelector('.data-title');
-      const body = privacy.querySelector('.data-body');
-      if (title) title.textContent = locale.privacyLeavingTitle;
-      if (body) body.textContent = locale.privacyLeavingBody;
-    }
-    const ctxThanks = this.$byIdFrom(root, 'ctxThanks');
-    if (ctxThanks) {
-      const title = ctxThanks.querySelector('.ctx-thanks-title');
-      const body = ctxThanks.querySelector('.ctx-thanks-text');
-      if (title) title.textContent = locale.thanksTitle;
-      if (body) body.textContent = locale.thanksBody;
-    }
-    const reqThanks = this.$byIdFrom(root, 'requestThanksOverlay');
-    if (reqThanks) {
-      const title = reqThanks.querySelector('.data-title');
-      const body = reqThanks.querySelector('.data-body');
-      if (title) title.textContent = locale.thanksTitle;
-      if (body) body.textContent = locale.thanksBody;
-    }
-    const ctxThanksOverlay = this.$byIdFrom(root, 'ctxThanksOverlay');
-    if (ctxThanksOverlay) {
-      const title = ctxThanksOverlay.querySelector('.data-title');
-      const body = ctxThanksOverlay.querySelector('.data-body');
-      if (title) title.textContent = locale.thanksTitle;
-      if (body) body.textContent = locale.thanksBody;
-    }
-
-    const updateSpamBlockBody = (overlayId, timerId) => {
-      const overlay = this.$byIdFrom(root, overlayId);
-      const timer = this.$byIdFrom(root, timerId);
-      if (!overlay) return;
-      const title = overlay.querySelector('.data-title');
-      const body = overlay.querySelector('.data-body');
-      if (title) title.textContent = locale.spamRepeatTitle;
-      if (body) {
-        const timerValue = timer ? timer.textContent : '60';
-        body.innerHTML = locale.spamBlockBody.replace('<span class="timer"></span>', `<span id="${timerId}">${timerValue}</span>`);
-      }
-    };
-    const updateSpamWarnBody = (overlayId) => {
-      const overlay = this.$byIdFrom(root, overlayId);
-      if (!overlay) return;
-      const title = overlay.querySelector('.data-title');
-      const body = overlay.querySelector('.data-body');
-      if (title) title.textContent = locale.spamRepeatTitle;
-      if (body) body.textContent = locale.spamRepeatBody;
-    };
-    updateSpamWarnBody('ctxSpamWarningOverlay');
-    updateSpamWarnBody('requestSpamWarningOverlay');
-    updateSpamBlockBody('ctxSpamBlockOverlay', 'ctxSpamBlockTimer');
-    updateSpamBlockBody('requestSpamBlockOverlay', 'requestSpamBlockTimer');
-
-    const whatData = this.$byIdFrom(root, 'whatDataOverlay');
-    if (whatData) {
-      const title = whatData.querySelector('.data-title');
-      if (title) title.textContent = locale.whatDataTitle;
-    }
-    const dataOverlay = this.$byIdFrom(root, 'dataOverlay');
-    if (dataOverlay) {
-      const title = dataOverlay.querySelector('.data-title');
-      const body = dataOverlay.querySelector('.data-body');
-      if (title) title.textContent = locale.dataStorageTitle;
-      if (body) body.textContent = locale.dataStorageBody;
-    }
     const cookieOverlay = this.$byIdFrom(root, 'cookieOverlay');
     if (cookieOverlay) {
       const title = cookieOverlay.querySelector('.data-title');
@@ -3210,10 +2743,8 @@ class VoiceWidget extends HTMLElement {
     // Initialize understanding bar with 0%
     this.updateHeaderUnderstanding(0);
 
-    // Initialize send buttons with disabled state
-    const mainSendButton = this.$byId('mainSendButton');
+    // Initialize send button state
     const sendButton = this.$byId('sendButton');
-    if (mainSendButton) mainSendButton.setAttribute('aria-disabled', 'true');
     if (sendButton) sendButton.setAttribute('aria-disabled', 'true');
 
     console.log('✅ Voice Widget инициализирован');
@@ -3343,9 +2874,7 @@ class VoiceWidget extends HTMLElement {
 
   updateSendButtonIcons() {
     const nextSrc = `${ASSETS_BASE}${this.getSendIconByTheme()}`;
-    const mainSendImg = this.getRoot().querySelector('#mainSendButton img');
     const chatSendImg = this.getRoot().querySelector('#sendButton img');
-    if (mainSendImg) mainSendImg.setAttribute('src', nextSrc);
     if (chatSendImg) chatSendImg.setAttribute('src', nextSrc);
   }
 
@@ -3367,11 +2896,7 @@ class VoiceWidget extends HTMLElement {
     closeIcons.forEach((img) => img.setAttribute('src', nextSrc));
   }
 
-  updateInsightsProgressTrackStroke() {
-    const trackCircle = this.getRoot().querySelector('#contextScreen .progress-ring svg circle:first-child');
-    if (!trackCircle) return;
-    trackCircle.setAttribute('stroke', this.getInsightsProgressTrackStrokeByTheme());
-  }
+  updateInsightsProgressTrackStroke() {}
 
   applyTheme(theme) {
     const next = theme === 'light' ? 'light' : 'dark';
@@ -3380,7 +2905,6 @@ class VoiceWidget extends HTMLElement {
     else this._pendingThemeAttr = next;
     try { localStorage.setItem('vw_theme', next); } catch {}
     try {
-      this.updateToggleButtonState('main');
       this.updateToggleButtonState('chat');
       this.updateSendButtonIcons();
       this.updateStatsIcons();
@@ -3399,11 +2923,11 @@ class VoiceWidget extends HTMLElement {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const statusIndicator = this.$byId('statusIndicator');
       if (statusIndicator) statusIndicator.innerHTML = '<div class="status-text">❌ Браузер не поддерживает запись аудио</div>';
-      const mainButton = this.$byId('mainButton');
-      if (mainButton) {
-        mainButton.disabled = true;
-        mainButton.style.opacity = '0.5';
-        mainButton.style.cursor = 'not-allowed';
+      const toggleButton = this.$byId('toggleButton');
+      if (toggleButton) {
+        toggleButton.disabled = true;
+        toggleButton.style.opacity = '0.5';
+        toggleButton.style.cursor = 'not-allowed';
       }
     }
   }
@@ -3437,49 +2961,6 @@ render() {
         </div>
       </header>
       <div class="app-body">
-      <!-- Main Screen (скрыт через CSS, в DOM сохранён) -->
-      <div class="main-screen hidden" id="mainScreen">
-        <div class="voice-widget-container">
-            <div class="bg-grid"></div>
-            <div class="screen-header">
-              <button class="header-action header-left" type="button" title="Открыть меню">
-                <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
-              </button>
-              <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
-            </div>
-            <div class="main-center">
-              <div class="main-hero">
-                <button class="mic-button" id="mainButton" aria-pressed="false">
-                    <img src="${ASSETS_BASE}MicBig.png" alt="Microphone" style="width: 100%; height: 100%;">
-                </button>
-              </div>
-              <div class="main-copy">
-                <div class="text-container">
-                    <p class="main-text">${this.getCurrentLocale().chatGreeting}</p>
-                    <p class="sub-text">${this.getCurrentLocale().chatSubGreeting}</p>
-                </div>
-              </div>
-            </div>
-        <div class="input-container">
-          <div class="text-input-wrapper">
-                    <textarea id="mainTextInput" class="input-field" rows="1" placeholder="Write your request..."></textarea>
-                    <div class="recording-indicator" id="mainRecordingIndicator" style="display:none;">
-                        <div class="recording-label">Идёт запись</div>
-              <div class="record-timer" id="mainRecordTimer">00:00</div>
-            </div>
-          </div>
-                <div class="input-buttons">
-                    <button class="input-btn" id="mainToggleButton" type="button" title="Говорить">
-                        <img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone">
-                    </button>
-                    <button class="input-btn" id="mainSendButton" type="button" title="Отправить">
-                        <img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send">
-                    </button>
-                </div>
-            </div>
-        </div>
-      </div>
-
       <!-- Dialogue Screen (v2) — основной экран при открытии виджета -->
       <div class="dialog-screen" id="dialogScreen">
         <div class="voice-widget-container">
@@ -3517,250 +2998,6 @@ render() {
             </div>
         </div>
           </div>
-
-
-      <!-- Context Screen (v2) -->
-      <div class="context-screen hidden" id="contextScreen" style="display:none;">
-        <div class="voice-widget-container">
-          <div class="bg-grid"></div>
-          <div class="screen-header"></div>
-          <div class="context-main-container">
-            <div class="progress-grid-container">
-              <div class="grid-column-left"></div>
-              <div class="grid-column-center">
-                <div class="progress-ring">
-                  <svg width="100" height="100" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="${this.getInsightsProgressTrackStrokeByTheme()}" stroke-width="12"/>
-                    <circle cx="50" cy="50" r="44" fill="none" stroke="var(--color-accent)" stroke-width="12" stroke-dasharray="276.46" stroke-dashoffset="2.76" stroke-linecap="round" transform="rotate(-90 50 50)"/>
-                  </svg>
-                  <div class="progress-text" id="ctxProgressText">99%</div>
-            </div>
-          </div>
-              <div class="grid-column-right">
-                <div class="data-storage-text">Data storage & encrypting</div>
-          </div>
-            </div>
-            <div class="status-text" id="ctxStatusText">Status: fulfilled</div>
-            <div class="main-message" id="ctxStageMessage">Well done! You've fulfilled the system with the data that will make search much closer to your goal!</div>
-            <div class="context-gradient-line"></div>
-            <div class="hint-text">You can leave the request to make manager start working by your case immediately</div>
-            <div class="context-leave-request-button"><button class="context-leave-request-btn" id="ctxLeaveReqBtn">Leave request</button></div>
-            <div class="ctx-request-form" id="ctxRequestForm">
-              <div class="ctx-field">
-                <input class="ctx-input" id="ctxName" type="text" placeholder="Name">
-              </div>
-              <div class="ctx-field ctx-row">
-                <div class="dial-select">
-                  <button class="dial-btn" type="button" id="ctxDialBtn"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971</span></button>
-                  <div class="dial-list" id="ctxDialList">
-                    <div class="dial-item" data-cc="AE" data-code="+971"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971 AE</span></div>
-                    <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
-                    <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
-                    <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
-                    <div class="dial-item" data-cc="RU" data-code="+7"><span class="dial-flag">🇷🇺</span><span class="dial-code">+7 RU</span></div>
-                    <div class="dial-item" data-cc="PL" data-code="+48"><span class="dial-flag">🇵🇱</span><span class="dial-code">+48 PL</span></div>
-                    <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
-                  </div>
-                </div>
-                <input class="ctx-input" id="ctxPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Phone">
-              </div>
-              <div class="ctx-field">
-                <div class="email-wrap">
-                  <input class="ctx-input" id="ctxEmail" type="email" autocomplete="email" placeholder="E-mail">
-                  <span class="email-ghost" id="ctxEmailGhost"></span>
-                </div>
-              </div>
-              <input type="hidden" id="ctxCode" value="+971" />
-              <div class="ctx-error" id="ctxContactError">Please provide phone or email</div>
-              <div class="ctx-field">
-                <label class="ctx-consent">
-                  <input class="ctx-checkbox" id="ctxConsent" type="checkbox">
-                  <span class="ctx-consent-text">I consent to the processing of my data for managing this request and contacting me about properties. <a class="ctx-privacy-link" href="#">Privacy Policy</a></span>
-                </label>
-              </div>
-              <div class="ctx-error" id="ctxConsentError">Please accept the Privacy Policy</div>
-              <div class="ctx-actions">
-                <button class="ctx-send-btn" id="ctxSendBtn">Send</button>
-                <button class="ctx-cancel-btn" id="ctxCancelBtn">Cancel</button>
-              </div>
-            </div>
-            <!-- Context Privacy confirm Popup -->
-            <div class="data-overlay" id="ctxPrivacyOverlay" style="display:none;">
-              <div class="data-modal">
-                <div class="data-title">Leaving this site</div>
-                <div class="data-body">
-                  You’re about to leave this site and open our Privacy Policy in a new tab.
-                  Do you want to continue?
-                </div>
-                <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
-                  <button class="data-btn" id="ctxPrivacyCancelBtn">Cancel</button>
-                  <button class="data-btn" id="ctxPrivacyContinueBtn">Continue</button>
-                </div>
-              </div>
-            </div>
-            <div class="ctx-thanks" id="ctxThanks">
-              <div class="ctx-thanks-title">Thank you!</div>
-              <div class="ctx-thanks-text">Your request has been received. We’ll contact you soon.</div>
-              <button class="ctx-done-btn" id="ctxThanksDoneBtn">Close</button>
-            </div>
-              <!-- Context Thanks Popup -->
-              <div class="data-overlay" id="ctxThanksOverlay" style="display:none;">
-                <div class="data-modal">
-                  <div class="data-title">Thank you!</div>
-                  <div class="data-body">Your request has been received. We'll contact you soon.</div>
-                  <button class="data-btn" id="ctxThanksOverlayClose">Close</button>
-                </div>
-              </div>
-              <!-- Context Spam Warning Popup -->
-              <div class="data-overlay" id="ctxSpamWarningOverlay" style="display:none;">
-                <div class="data-modal">
-                  <div class="data-title">Повторная отправка</div>
-                  <div class="data-body">Вы уже отправили заявку, желаете сделать это повторно?</div>
-                  <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
-                    <button class="data-btn" id="ctxSpamWarningCancelBtn">Отмена</button>
-                    <button class="data-btn" id="ctxSpamWarningContinueBtn">Продолжить</button>
-                  </div>
-                </div>
-              </div>
-              <!-- Context Spam Block Popup -->
-              <div class="data-overlay" id="ctxSpamBlockOverlay" style="display:none;">
-                <div class="data-modal">
-                  <div class="data-title">Повторная отправка</div>
-                  <div class="data-body">Вы уже отправили заявку, и сможете отправить её повторно через <span id="ctxSpamBlockTimer">60</span> секунд.</div>
-                  <button class="data-btn" id="ctxSpamBlockCloseBtn">Понятно</button>
-                </div>
-              </div>
-            <!-- What data do we know popup -->
-            <div class="data-overlay" id="whatDataOverlay" style="display:none;">
-              <div class="data-modal">
-                <div class="data-title">What data do we know?</div>
-                <div class="data-body" id="whatDataBody">
-                  <!-- filled dynamically from insights -->
-                </div>
-                <button class="data-btn" id="whatDataUnderstoodBtn">Understood</button>
-              </div>
-            </div>
-            <!-- Data storage popup -->
-            <div class="data-overlay" id="dataOverlay" style="display:none;">
-              <div class="data-modal">
-                <div class="data-title">Data storage & encrypting</div>
-                <div class="data-body">
-                  We store your data on secure EU-based servers. Data in transit is protected with modern TLS and HSTS; data at rest is encrypted (AES‑256). Access is strictly limited and audited. We never sell your personal information. You can request deletion at any time via Support.
-                </div>
-                <button class="data-btn" id="dataUnderstoodBtn">Understood</button>
-              </div>
-            </div>
-          </div>
-          <div class="footer-text">What data do we know?</div>
-            </div>
-          </div>
-
-      <!-- Request Screen (v2) -->
-      <div class="request-screen hidden" id="requestScreen">
-        <div class="voice-widget-container">
-          <div class="bg-grid"></div>
-          <div class="screen-header"></div>
-          <div class="request-main-container">
-            <div class="request-title">Leave a request</div>
-            <div class="request-field">
-              <div class="request-field-label">Name</div>
-              <input class="request-input" id="reqName" type="text" placeholder="Your name" autocomplete="off" />
-      </div>
-            <div class="request-field">
-              <div class="request-field-label">Contact (phone/ WhatsApp/ e-mail)</div>
-              <div class="request-row">
-                <div class="dial-select">
-                  <button class="dial-btn" type="button" id="reqDialBtn"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971</span></button>
-                  <div class="dial-list" id="reqDialList">
-                    <div class="dial-item" data-cc="AE" data-code="+971"><span class="dial-flag">🇦🇪</span><span class="dial-code">+971 AE</span></div>
-                    <div class="dial-item" data-cc="FR" data-code="+33"><span class="dial-flag">🇫🇷</span><span class="dial-code">+33 FR</span></div>
-                    <div class="dial-item" data-cc="DE" data-code="+49"><span class="dial-flag">🇩🇪</span><span class="dial-code">+49 DE</span></div>
-                    <div class="dial-item" data-cc="UA" data-code="+380"><span class="dial-flag">🇺🇦</span><span class="dial-code">+380 UA</span></div>
-                    <div class="dial-item" data-cc="RU" data-code="+7"><span class="dial-flag">🇷🇺</span><span class="dial-code">+7 RU</span></div>
-                    <div class="dial-item" data-cc="PL" data-code="+48"><span class="dial-flag">🇵🇱</span><span class="dial-code">+48 PL</span></div>
-                    <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
-    </div>
-                </div>
-                <input class="request-input request-code-input" id="reqCode" type="hidden" value="+971" />
-                <input class="request-input request-phone-input" id="reqPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="1234567" />
-    </div>
-              <div class="email-wrap">
-                <input class="request-input" id="reqEmail" type="email" autocomplete="email" placeholder="yourmail@gmail.com" />
-                <span class="email-ghost" id="reqEmailGhost"></span>
-              </div>
-              <div class="request-error" id="reqContactError">Please provide phone or email</div>
-        </div>
-            <div class="request-field">
-              <div class="request-field-label">Preferred contact method</div>
-              <div class="request-select" id="reqMethodSelect"><span id="reqMethodLabel">WhatsApp</span><span class="request-caret">▾</span></div>
-              <div class="request-select-list" id="reqMethodList">
-                <div class="request-select-item" data-value="WhatsApp">WhatsApp</div>
-                <div class="request-select-item" data-value="Telegram">Telegram</div>
-                <div class="request-select-item" data-value="Phone Call">Phone Call</div>
-                <div class="request-select-item" data-value="Email">Email</div>
-              </div>
-              <input type="hidden" id="reqMethod" value="WhatsApp" />
-          </div>
-            <div class="request-field">
-              <div class="request-field-label">Comment (optional)</div>
-              <textarea class="request-textarea" id="reqComment" placeholder="Short note"></textarea>
-        </div>
-            <div class="request-actions-container">
-              <div class="request-consent">
-                <input class="request-checkbox" id="reqConsent" type="checkbox" />
-                <div class="request-consent-text">I consent to the processing of my data for managing this request and contacting me about properties. <a class="request-privacy-link" href="#">Privacy Policy</a></div>
-        </div>
-              <div class="request-error" id="reqConsentError">Please accept the Privacy Policy</div>
-              <div class="request-buttons">
-                <button class="request-send-btn">Send</button>
-                <button class="request-cancel-btn">Cancel</button>
-        </div>
-        </div>
-        </div>
-        </div>
-      <!-- Request Thanks Popup -->
-      <div class="data-overlay" id="requestThanksOverlay" style="display:none;">
-        <div class="data-modal">
-          <div class="data-title">Thank you!</div>
-          <div class="data-body">Your request has been received. We'll contact you soon.</div>
-          <button class="data-btn" id="requestThanksOverlayClose">Close</button>
-        </div>
-        </div>
-      <!-- Request Spam Warning Popup -->
-      <div class="data-overlay" id="requestSpamWarningOverlay" style="display:none;">
-        <div class="data-modal">
-          <div class="data-title">Повторная отправка</div>
-          <div class="data-body">Вы уже отправили заявку, желаете сделать это повторно?</div>
-          <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
-            <button class="data-btn" id="requestSpamWarningCancelBtn">Отмена</button>
-            <button class="data-btn" id="requestSpamWarningContinueBtn">Продолжить</button>
-          </div>
-        </div>
-      </div>
-      <!-- Request Spam Block Popup -->
-      <div class="data-overlay" id="requestSpamBlockOverlay" style="display:none;">
-        <div class="data-modal">
-          <div class="data-title">Повторная отправка</div>
-          <div class="data-body">Вы уже отправили заявку, и сможете отправить её повторно через <span id="requestSpamBlockTimer">60</span> секунд.</div>
-          <button class="data-btn" id="requestSpamBlockCloseBtn">Понятно</button>
-        </div>
-      </div>
-      <!-- Privacy confirm Popup -->
-      <div class="data-overlay" id="privacyOverlay" style="display:none;">
-        <div class="data-modal">
-          <div class="data-title">Leaving this site</div>
-          <div class="data-body">
-            You’re about to leave this site and open our Privacy Policy in a new tab.
-            Do you want to continue?
-          </div>
-          <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
-            <button class="data-btn" id="privacyCancelBtn">Cancel</button>
-            <button class="data-btn" id="privacyContinueBtn">Continue</button>
-          </div>
-        </div>
-      </div>
-      </div>
-      </div>
 
       <!-- Cookie/Telemetry Consent Banner -->
       <div class="data-overlay" id="cookieOverlay" style="display:none;">
@@ -3824,10 +3061,10 @@ render() {
   this.applyHostModeClasses();
   
   // Screen management (fresh query each time to avoid stale refs)
-  const screenIds = ['mainScreen','dialogScreen','requestScreen'];
+  const screenIds = ['dialogScreen'];
   const showScreen = (screenName) => {
     screenIds.forEach(id => this.$byId(id)?.classList.add('hidden'));
-    const targetId = screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen';
+    const targetId = screenName === 'dialog' ? 'dialogScreen' : `${screenName}Screen`;
     const targetEl = this.$byId(targetId) || this.$byId('dialogScreen');
     targetEl?.classList.remove('hidden');
     // ensure menu overlay is attached to the active screen header
@@ -4122,386 +3359,9 @@ render() {
 
   // Request Screen (v2) — без логики на данном этапе
   // Add basic validation and submit behavior
-  this.setupRequestForm = () => {
-    const root = this.getRoot();
-    const sendBtn = root.querySelector('.request-send-btn');
-    const cancelBtn = root.querySelector('.request-cancel-btn');
-    if (!sendBtn) return;
-    const thanksOverlay = this.$byIdFrom(root, 'requestThanksOverlay');
-    const get = (id) => this.$byIdFrom(root, id);
-    const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const toDigits = (v) => String(v || '').replace(/\D+/g, '');
-    const isEmail = (v) => emailRe.test(String(v || '').trim());
-    // Phone format (demo): country code + 9–10 national digits (operator 3 digits + 6–7 digits).
-    const isPhone = (cc, ph) => {
-      const ccDigits = toDigits(cc);
-      const phDigits = toDigits(ph);
-      if (!ccDigits || ccDigits.length < 1 || ccDigits.length > 3) return false;
-      if (!phDigits) return false;
-      if (phDigits.length < 9 || phDigits.length > 10) return false;
-      if (ccDigits.length + phDigits.length > 15) return false;
-      return true;
-    };
-    // Email inline completion (request)
-    const emailSuggestDomains = ['gmail.com','mail.ru','proton.me','rambler.ru','yahoo.com'];
-    const reqEmail = get('reqEmail');
-    const reqEmailGhost = get('reqEmailGhost');
-    const measureText = (inputEl, text) => {
-      if (!inputEl) return 0;
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const cs = getComputedStyle(inputEl);
-      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      return ctx.measureText(text).width;
-    };
-    const updateReqEmailGhost = () => {
-      const v = reqEmail?.value || '';
-      const at = v.indexOf('@');
-      if (!reqEmailGhost || at < 0) { if (reqEmailGhost) reqEmailGhost.textContent=''; return; }
-      const tail = v.slice(at + 1).toLowerCase();
-      let suggestion = null;
-      if (tail.length === 0) suggestion = emailSuggestDomains[0];
-      else suggestion = emailSuggestDomains.find(d => d.startsWith(tail));
-      if (!suggestion) { reqEmailGhost.textContent=''; return; }
-      const suffix = suggestion.slice(tail.length); // "съедаем" уже введённое
-      // позиция — ширина всего введённого текста
-      const padLeft = 10; // как у инпута
-      const left = padLeft + measureText(reqEmail, v);
-      reqEmailGhost.style.left = `${left}px`;
-      reqEmailGhost.textContent = suffix;
-      reqEmailGhost.dataset.domain = suggestion;
-    };
-    reqEmail?.addEventListener('input', updateReqEmailGhost);
-    reqEmailGhost?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!reqEmail || !reqEmailGhost) return;
-      const v = reqEmail.value;
-      const at = v.indexOf('@');
-      if (at < 0) return;
-      const local = v.slice(0, at);
-      const domain = reqEmailGhost.dataset.domain || '';
-      if (!domain) return;
-      reqEmail.value = `${local}@${domain}`;
-      reqEmail.focus();
-      updateReqEmailGhost();
-    });
-    // Dial select (request)
-    const reqDialBtn = get('reqDialBtn');
-    const reqDialList = get('reqDialList');
-    const reqCode = get('reqCode');
-    const toggleReqDial = (show) => { if (reqDialList) reqDialList.style.display = show ? 'block' : 'none'; };
-    reqDialBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const visible = reqDialList && reqDialList.style.display === 'block';
-      toggleReqDial(!visible);
-    });
-    reqDialList?.querySelectorAll('.dial-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const code = item.getAttribute('data-code') || '+971';
-        const flag = item.querySelector('.dial-flag')?.textContent || '🇦🇪';
-        if (reqDialBtn) {
-          const codeEl = reqDialBtn.querySelector('.dial-code'); const flagEl = reqDialBtn.querySelector('.dial-flag');
-          if (codeEl) codeEl.textContent = code;
-          if (flagEl) flagEl.textContent = flag;
-        }
-        if (reqCode) reqCode.value = code;
-        toggleReqDial(false);
-      });
-    });
-    document.addEventListener('click', (ev) => {
-      if (!reqDialList || !reqDialBtn) return;
-      const path = ev.composedPath ? ev.composedPath() : [];
-      if (![reqDialList, reqDialBtn].some(el => path.includes(el))) toggleReqDial(false);
-    }, { capture:true });
-    // Preferred contact method select
-    const reqMethodSelect = get('reqMethodSelect');
-    const reqMethodList = get('reqMethodList');
-    const reqMethodLabel = get('reqMethodLabel');
-    const reqMethodInput = get('reqMethod');
-    const toggleReqMethod = (show) => { if (reqMethodList) reqMethodList.style.display = show ? 'block' : 'none'; };
-    reqMethodSelect?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const visible = reqMethodList && reqMethodList.style.display === 'block';
-      toggleReqMethod(!visible);
-    });
-    reqMethodList?.querySelectorAll('.request-select-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const val = item.getAttribute('data-value') || 'WhatsApp';
-        if (reqMethodLabel) reqMethodLabel.textContent = val;
-        if (reqMethodInput) reqMethodInput.value = val;
-        toggleReqMethod(false);
-      });
-    });
-    document.addEventListener('click', (ev) => {
-      if (!reqMethodList || !reqMethodSelect) return;
-      const path = ev.composedPath ? ev.composedPath() : [];
-      if (![reqMethodList, reqMethodSelect].some(el => path.includes(el))) toggleReqMethod(false);
-    }, { capture:true });
-    const showContactError = (on, msg) => {
-      const el = get('reqContactError');
-      if (el && typeof msg === 'string' && msg.length) el.textContent = msg;
-      if (el) el.classList.toggle('visible', !!on);
-    };
-    const showConsentError = (on) => {
-      const wrap = root.querySelector('.request-consent');
-      const checkbox = get('reqConsent');
-      const textEl = wrap?.querySelector('.request-consent-text');
-      const el = get('reqConsentError');
-      if (el) el.classList.toggle('visible', !!on);
-      if (checkbox) checkbox.classList.toggle('error', !!on);
-      if (on && textEl) { textEl.classList.add('shake'); setTimeout(()=>textEl.classList.remove('shake'), 500); }
-    };
-    const shake = (el) => {
-      if (!el) return;
-      el.classList.add('shake');
-      setTimeout(() => el.classList.remove('shake'), 500);
-    };
-    // Clear hints on input
-    ['reqCode','reqPhone','reqEmail'].forEach(id => {
-      get(id)?.addEventListener('input', () => {
-        showContactError(false);
-        ['reqCode','reqPhone','reqEmail'].forEach(fid => markError(get(fid), false));
-      });
-    });
-    get('reqConsent')?.addEventListener('change', () => {
-      showConsentError(false);
-      const checkbox = get('reqConsent');
-      if (checkbox) checkbox.classList.remove('error');
-    });
-    sendBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      // read values
-      const name = get('reqName')?.value?.trim() || '';
-      const code = get('reqCode')?.value?.trim() || '';
-      const phone = get('reqPhone')?.value?.trim() || '';
-      const email = get('reqEmail')?.value?.trim() || '';
-      const consent = !!get('reqConsent')?.checked;
-      // validate contact
-      const phoneOk = isPhone(code, phone);
-      const emailOk = isEmail(email);
-      const contactOk = phoneOk || emailOk;
-      const phoneHas = phone.length > 0;
-      const emailHas = email.length > 0;
-      // if both empty -> shake both + generic error
-      if (!phoneHas && !emailHas) {
-        markError(get('reqPhone'), true);
-        markError(get('reqEmail'), true);
-        shake(get('reqPhone')); shake(get('reqEmail'));
-        showContactError(true, 'Required: phone or email');
-        // also check consent here to shake if needed
-        if (!consent) showConsentError(true);
-        return;
-      }
-      // If at least one is valid -> proceed (clear errors regardless of the other)
-      if (contactOk) {
-        markError(get('reqPhone'), false);
-        markError(get('reqEmail'), false);
-        showContactError(false);
-      } else {
-        // One or both present but invalid → show only one specific message, mark all invalid
-        markError(get('reqPhone'), phoneHas && !phoneOk);
-        markError(get('reqEmail'), emailHas && !emailOk);
-        let msg = phoneHas && !phoneOk
-          ? 'Invalid phone number. Use 9–10 digits after country code.'
-          : 'Invalid email address. Example: name@domain.com';
-        showContactError(true, msg);
-        if (!phoneOk && phoneHas) shake(get('reqPhone'));
-        if (!emailOk && emailHas) shake(get('reqEmail'));
-        return;
-      }
-      if (!consent) { showConsentError(true); shake(root.querySelector('.request-consent')); return; }
-      
-      // Проверка защиты от спама (общая для обеих форм)
-      const formType = 'lead'; // Общий тип для full и short форм
-      const submitCount = this.leadSpamProtection.getSubmitCount(formType);
-      const isBlocked = this.leadSpamProtection.isBlocked(formType);
-      const warningShown = this.leadSpamProtection.isWarningShown(formType);
-      
-      // Если заблокирован - показываем поп-ап блокировки
-      if (isBlocked) {
-        const blockOverlay = get('requestSpamBlockOverlay');
-        const timerEl = get('requestSpamBlockTimer');
-        if (blockOverlay && timerEl) {
-          const updateTimer = () => {
-            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
-            if (timerEl) timerEl.textContent = left;
-            if (left > 0) {
-              setTimeout(updateTimer, 1000);
-            } else {
-              if (blockOverlay) blockOverlay.style.display = 'none';
-            }
-          };
-          updateTimer();
-          blockOverlay.style.display = 'flex';
-        }
-        return;
-      }
-      
-      // Если счетчик уже 2 (после нажатия "Продолжить" во второй раз) - устанавливаем блокировку ПЕРЕД отправкой
-      if (submitCount === 2) {
-        this.leadSpamProtection.setBlocked(formType);
-        const blockOverlay = get('requestSpamBlockOverlay');
-        const timerEl = get('requestSpamBlockTimer');
-        if (blockOverlay && timerEl) {
-          const updateTimer = () => {
-            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
-            if (timerEl) timerEl.textContent = left;
-            if (left > 0) {
-              setTimeout(updateTimer, 1000);
-            } else {
-              if (blockOverlay) blockOverlay.style.display = 'none';
-            }
-          };
-          updateTimer();
-          blockOverlay.style.display = 'flex';
-        }
-        return;
-      }
-      
-      // Если вторая отправка и предупреждение еще не показывали - показываем поп-ап предупреждения
-      if (submitCount === 1 && !warningShown) {
-        const warningOverlay = get('requestSpamWarningOverlay');
-        if (warningOverlay) {
-          warningOverlay.style.display = 'flex';
-        }
-        return;
-      }
-      
-      // Отправляем данные на бэкенд
-      const submitLead = async () => {
-        try {
-          // Получаем базовый URL API (заменяем /api/audio/upload на /api/leads)
-          const leadsApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
-          
-          // Получаем значения формы
-          const comment = get('reqComment')?.value?.trim() || null;
-          const preferredMethodRaw = get('reqMethod')?.value || 'WhatsApp';
-          
-          // Нормализуем preferredContactMethod: WhatsApp -> whatsapp, Phone Call -> phone, Email -> email, Telegram -> telegram
-          const methodMap = {
-            'WhatsApp': 'whatsapp',
-            'Phone Call': 'phone',
-            'Email': 'email',
-            'Telegram': 'telegram'
-          };
-          // По умолчанию используем whatsapp, если метод не найден в мапе
-          const preferredContactMethod = methodMap[preferredMethodRaw] || 'whatsapp';
-          
-          const language = (this.currentLang || this.defaultLanguage).toLowerCase();
-          
-          // Формируем данные для отправки
-          const leadData = {
-            sessionId: this.sessionId || null,
-            source: 'widget_full_form',
-            name: name,
-            phoneCountryCode: code || null,
-            phoneNumber: phone || null,
-            email: email || null,
-            preferredContactMethod: preferredContactMethod,
-            comment: comment,
-            language: language,
-            propertyId: null, // пока не передаём
-            consent: true
-          };
-          
-          // Отправляем запрос
-          const response = await fetch(leadsApiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(leadData)
-          });
-          
-          const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
-          
-          if (result?.ok === true) {
-            // Успешно отправлено → показываем thanks popup
-            if (thanksOverlay) thanksOverlay.style.display = 'flex';
-            // Очищаем форму
-            ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
-            if (get('reqConsent')) get('reqConsent').checked = false;
-            showContactError(false); showConsentError(false);
-            
-            // Увеличиваем счетчик отправок
-            const submitCount = this.leadSpamProtection.getSubmitCount(formType);
-            this.leadSpamProtection.incrementSubmitCount(formType);
-            
-            // Если это третья отправка (submitCount был 2, стал 3) - устанавливаем блокировку
-            if (submitCount === 2) {
-              this.leadSpamProtection.setBlocked(formType);
-            }
-          } else {
-            // Ошибка валидации или сервера
-            const errorMsg = result.error || 'Failed to submit request. Please try again later.';
-            showContactError(true, errorMsg);
-            console.error('❌ Lead submission error:', result);
-          }
-        } catch (err) {
-          // Ошибка сети или другая непредвиденная ошибка
-          console.error('❌ Lead submission network error:', err);
-          showContactError(true, 'Network error. Please check your connection and try again.');
-        }
-      };
-      
-      // Вызываем асинхронную функцию отправки (если не показан поп-ап предупреждения)
-      if (!(submitCount === 1 && !warningShown)) {
-        submitLead();
-      }
-    });
-    cancelBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
-      if (get('reqConsent')) get('reqConsent').checked = false;
-      ['reqCode','reqPhone','reqEmail'].forEach(id => markError(get(id), false));
-      showContactError(false); showConsentError(false);
-      if (reqEmailGhost) reqEmailGhost.textContent='';
-    });
-    this.$byIdFrom(root, 'requestThanksOverlayClose')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (thanksOverlay) thanksOverlay.style.display = 'none';
-    });
-    // Обработчик закрытия поп-апа блокировки
-    this.$byIdFrom(root, 'requestSpamBlockCloseBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const blockOverlay = this.$byIdFrom(root, 'requestSpamBlockOverlay');
-      if (blockOverlay) blockOverlay.style.display = 'none';
-    });
-    // Обработчики поп-апа предупреждения для full form
-    const requestWarningOverlay = this.$byIdFrom(root, 'requestSpamWarningOverlay');
-    const requestWarningCancelBtn = this.$byIdFrom(root, 'requestSpamWarningCancelBtn');
-    const requestWarningContinueBtn = this.$byIdFrom(root, 'requestSpamWarningContinueBtn');
-    if (requestWarningCancelBtn) {
-      requestWarningCancelBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (requestWarningOverlay) requestWarningOverlay.style.display = 'none';
-        this.leadSpamProtection.setWarningShown('lead');
-      });
-    }
-    if (requestWarningContinueBtn) {
-      requestWarningContinueBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (requestWarningOverlay) requestWarningOverlay.style.display = 'none';
-        this.leadSpamProtection.setWarningShown('lead');
-        // Увеличиваем счетчик ДО отправки, чтобы третья попытка сразу показывала блокировку
-        this.leadSpamProtection.incrementSubmitCount('lead');
-        // Продолжаем отправку после закрытия поп-апа
-        // Вызываем обработчик кнопки отправки напрямую
-        const sendBtn = root.querySelector('.request-send-btn');
-        if (sendBtn) {
-          // Эмулируем клик для повторной отправки
-          sendBtn.click();
-        }
-      });
-    }
-  };
-  try { this.setupRequestForm(); } catch {}
- 
 
   // Expose helpers
   this.showScreen = showScreen;
-  this.showMainScreen = () => showScreen('main');
   this.showChatScreen = () => showScreen('dialog');
   this.showGreetingMessage = () => {
     try { this.ui?.addMessage?.({ type: 'assistant', content: this.t('assistantGreeting') || '', timestamp: new Date(), greeting: true }); } catch {}
@@ -4667,536 +3527,7 @@ render() {
   this.resetLegacyMenuState = () => {};
 
   // Helper: reset Request screen state
-  this.resetRequestScreen = () => {
-    try {
-      const thanksOverlay = this.$byId('requestThanksOverlay');
-      if (thanksOverlay) thanksOverlay.style.display = 'none';
-      const get = (id) => this.$byId(id);
-      // Clear fields
-      ['reqName','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value = ''; });
-      const consent = get('reqConsent');
-      if (consent) consent.checked = false, consent.classList.remove('error');
-      // Errors and hints
-      ['reqCode','reqPhone','reqEmail'].forEach(id => { const el = get(id); if (el) el.classList.remove('error'); });
-      const errContact = get('reqContactError'); if (errContact) errContact.classList.remove('visible');
-      const errConsent = get('reqConsentError'); if (errConsent) errConsent.classList.remove('visible');
-      // Preferred method select
-      const methodLabel = get('reqMethodLabel'); if (methodLabel) methodLabel.textContent = 'WhatsApp';
-      const methodList = get('reqMethodList'); if (methodList) methodList.style.display = 'none';
-      const methodHidden = get('reqMethod'); if (methodHidden) methodHidden.value = 'WhatsApp';
-      // Dial select defaults
-      const dialBtn = get('reqDialBtn'); 
-      if (dialBtn) {
-        const codeEl = dialBtn.querySelector('.dial-code'); const flagEl = dialBtn.querySelector('.dial-flag');
-        if (codeEl) codeEl.textContent = '+971';
-        if (flagEl) flagEl.textContent = '🇦🇪';
-      }
-      const dialList = get('reqDialList'); if (dialList) dialList.style.display = 'none';
-      const codeHidden = get('reqCode'); if (codeHidden) codeHidden.value = '+971';
-    } catch {}
-  };
 
-  // Helper: reset Context screen state (Leave request form)
-  this.resetContextScreen = () => {
-    try {
-      const get = (id) => this.$byId(id);
-      const form = get('ctxRequestForm');
-      const btnWrap = this.getRoot().querySelector('.context-leave-request-button');
-      const thanks = get('ctxThanks');
-      const thanksOverlay = get('ctxThanksOverlay');
-      if (thanks) thanks.style.display = 'none';
-      if (thanksOverlay) thanksOverlay.style.display = 'none';
-      if (form) form.style.display = 'none';
-      if (btnWrap) btnWrap.style.display = 'block';
-      // Clear fields
-      ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = get(id); if (el) el.value = ''; });
-      const consent = get('ctxConsent'); if (consent) consent.checked = false, consent.classList.remove('error');
-      // Errors
-      ['ctxPhone','ctxEmail'].forEach(id => { const el = get(id); if (el) el.classList.remove('error'); });
-      const errContact = get('ctxContactError'); if (errContact) errContact.classList.remove('visible');
-      const errConsent = get('ctxConsentError'); if (errConsent) errConsent.classList.remove('visible');
-      // Dial defaults
-      const dialBtn = get('ctxDialBtn');
-      if (dialBtn) {
-        const codeEl = dialBtn.querySelector('.dial-code'); const flagEl = dialBtn.querySelector('.dial-flag');
-        if (codeEl) codeEl.textContent = '+971';
-        if (flagEl) flagEl.textContent = '🇦🇪';
-      }
-      const dialList = get('ctxDialList'); if (dialList) dialList.style.display = 'none';
-      const codeHidden = get('ctxCode'); if (codeHidden) codeHidden.value = '+971';
-    } catch {}
-  };
-  
-  
-  // Context: leave request inline form toggles
-  this.setupContextRequestForm = () => {
-    const btn = this.$byId('ctxLeaveReqBtn');
-    const form = this.$byId('ctxRequestForm');
-    const ctxHint = this.getRoot().querySelector('#contextScreen .hint-text');
-    const thanks = this.$byId('ctxThanks'); // legacy inline
-    const thanksOverlay = this.$byId('ctxThanksOverlay');
-    if (!btn || !form) return;
-    const get = (id) => this.$byId(id);
-    const markError = (el, on) => { if (!el) return; el.classList.toggle('error', !!on); };
-    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const toDigits = (v) => String(v || '').replace(/\D+/g, '');
-    const isEmail = (v) => emailRe.test(String(v || '').trim());
-    const isPhone = (cc, v) => {
-      const ccDigits = toDigits(cc);
-      const phDigits = toDigits(v);
-      if (!ccDigits || ccDigits.length < 1 || ccDigits.length > 3) return false;
-      if (!phDigits) return false;
-      if (phDigits.length < 9 || phDigits.length > 10) return false;
-      if (ccDigits.length + phDigits.length > 15) return false;
-      return true;
-    };
-    // Email inline completion (context)
-    const ctxEmail = get('ctxEmail');
-    const ctxEmailGhost = get('ctxEmailGhost');
-    const updateCtxEmailGhost = () => {
-      const v = ctxEmail?.value || '';
-      const at = v.indexOf('@');
-      if (!ctxEmailGhost || at < 0) { if (ctxEmailGhost) ctxEmailGhost.textContent=''; return; }
-      const tail = v.slice(at + 1).toLowerCase();
-      let suggestion = null;
-      if (tail.length === 0) suggestion = emailSuggestDomains[0];
-      else suggestion = emailSuggestDomains.find(d => d.startsWith(tail));
-      if (!suggestion) { ctxEmailGhost.textContent=''; return; }
-      const suffix = suggestion.slice(tail.length);
-      const padLeft = 10;
-      const left = padLeft + measureText(ctxEmail, v);
-      ctxEmailGhost.style.left = `${left}px`;
-      ctxEmailGhost.textContent = suffix;
-      ctxEmailGhost.dataset.domain = suggestion;
-    };
-    ctxEmail?.addEventListener('input', updateCtxEmailGhost);
-    ctxEmailGhost?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!ctxEmail || !ctxEmailGhost) return;
-      const v = ctxEmail.value;
-      const at = v.indexOf('@');
-      if (at < 0) return;
-      const local = v.slice(0, at);
-      const domain = ctxEmailGhost.dataset.domain || '';
-      if (!domain) return;
-      ctxEmail.value = `${local}@${domain}`;
-      ctxEmail.focus();
-      updateCtxEmailGhost();
-    });
-    // Dial select (context)
-    const ctxDialBtn = get('ctxDialBtn');
-    const ctxDialList = get('ctxDialList');
-    const ctxCode = get('ctxCode');
-    const toggleCtxDial = (show) => { if (ctxDialList) ctxDialList.style.display = show ? 'block' : 'none'; };
-    ctxDialBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const visible = ctxDialList && ctxDialList.style.display === 'block';
-      toggleCtxDial(!visible);
-    });
-    ctxDialList?.querySelectorAll('.dial-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const code = item.getAttribute('data-code') || '+971';
-        const flag = item.querySelector('.dial-flag')?.textContent || '🇦🇪';
-        if (ctxDialBtn) {
-          const codeEl = ctxDialBtn.querySelector('.dial-code'); const flagEl = ctxDialBtn.querySelector('.dial-flag');
-          if (codeEl) codeEl.textContent = code;
-          if (flagEl) flagEl.textContent = flag;
-        }
-        if (ctxCode) ctxCode.value = code;
-        toggleCtxDial(false);
-      });
-    });
-    document.addEventListener('click', (ev) => {
-      if (!ctxDialList || !ctxDialBtn) return;
-      const path = ev.composedPath ? ev.composedPath() : [];
-      if (![ctxDialList, ctxDialBtn].some(el => path.includes(el))) toggleCtxDial(false);
-    }, { capture:true });
-    const showContactError = (on, msg) => { const el = get('ctxContactError'); if (el && typeof msg === 'string' && msg.length) el.textContent = msg; if (el) el.classList.toggle('visible', !!on); };
-    const showConsentError = (on) => {
-      const wrap = form.querySelector('.ctx-consent');
-      const checkbox = get('ctxConsent');
-      const textEl = wrap?.querySelector('.ctx-consent-text');
-      const el = get('ctxConsentError');
-      if (el) el.classList.toggle('visible', !!on);
-      if (checkbox) checkbox.classList.toggle('error', !!on);
-      if (on && textEl) { textEl.classList.add('shake'); setTimeout(()=>textEl.classList.remove('shake'), 500); }
-    };
-    const shake = (el) => { if (!el) return; el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 500); };
-    btn.addEventListener('click', () => {
-      btn.parentElement.style.display = 'none';
-      form.style.display = 'block';
-      if (ctxHint) ctxHint.style.display = 'none';
-      try { this.$byId('ctxName')?.focus(); } catch {}
-    });
-    this.$byId('ctxCancelBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      form.style.display = 'none';
-      btn.parentElement.style.display = 'block';
-      if (ctxHint) ctxHint.style.display = '';
-      // clear errors
-      ['ctxPhone','ctxEmail'].forEach(id => markError(get(id), false));
-      showContactError(false); showConsentError(false);
-    });
-    // clear errors on input/change
-    ['ctxPhone','ctxEmail'].forEach(id => get(id)?.addEventListener('input', () => {
-      ['ctxPhone','ctxEmail'].forEach(fid => markError(get(fid), false));
-      showContactError(false);
-    }));
-    get('ctxConsent')?.addEventListener('change', () => {
-      showConsentError(false);
-      const checkbox = get('ctxConsent');
-      if (checkbox) checkbox.classList.remove('error');
-    });
-    this.$byId('ctxSendBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      // validation
-      const name = get('ctxName')?.value?.trim() || '';
-      const code = get('ctxCode')?.value?.trim() || '';
-      const phone = get('ctxPhone')?.value?.trim() || '';
-      const email = get('ctxEmail')?.value?.trim() || '';
-      const consent = !!get('ctxConsent')?.checked;
-      
-      // Валидация имени
-      if (!name || name.length === 0) {
-        markError(get('ctxName'), true);
-        shake(get('ctxName'));
-        showContactError(true, 'Name is required');
-        if (!consent) showConsentError(true);
-        return;
-      }
-      
-      const phoneOk = isPhone(code, phone);
-      const emailOk = isEmail(email);
-      const contactOk = phoneOk || emailOk;
-      const phoneHas = phone.length > 0;
-      const emailHas = email.length > 0;
-      // empty both → generic error + shake both
-      if (!phoneHas && !emailHas) {
-        markError(get('ctxPhone'), true);
-        markError(get('ctxEmail'), true);
-        shake(get('ctxPhone')); shake(get('ctxEmail'));
-        showContactError(true, 'Required: phone or email');
-        if (!consent) showConsentError(true);
-        return;
-      }
-      if (contactOk) {
-        markError(get('ctxPhone'), false);
-        markError(get('ctxEmail'), false);
-        markError(get('ctxName'), false);
-        showContactError(false);
-      } else {
-        markError(get('ctxPhone'), phoneHas && !phoneOk);
-        markError(get('ctxEmail'), emailHas && !emailOk);
-        let msg = phoneHas && !phoneOk
-          ? 'Invalid phone number. Use 9–10 digits after country code.'
-          : 'Invalid email address. Example: name@domain.com';
-        showContactError(true, msg);
-        if (!phoneOk && phoneHas) shake(get('ctxPhone'));
-        if (!emailOk && emailHas) shake(get('ctxEmail'));
-        return;
-      }
-      if (!consent) { showConsentError(true); shake(form.querySelector('.ctx-consent')); return; }
-      
-      // Проверка защиты от спама (общая для обеих форм)
-      const formType = 'lead'; // Общий тип для full и short форм
-      const submitCount = this.leadSpamProtection.getSubmitCount(formType);
-      const isBlocked = this.leadSpamProtection.isBlocked(formType);
-      const warningShown = this.leadSpamProtection.isWarningShown(formType);
-      
-      // Если заблокирован - показываем поп-ап блокировки
-      if (isBlocked) {
-        const blockOverlay = get('ctxSpamBlockOverlay');
-        const timerEl = get('ctxSpamBlockTimer');
-        if (blockOverlay && timerEl) {
-          const updateTimer = () => {
-            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
-            if (timerEl) timerEl.textContent = left;
-            if (left > 0) {
-              setTimeout(updateTimer, 1000);
-            } else {
-              if (blockOverlay) blockOverlay.style.display = 'none';
-            }
-          };
-          updateTimer();
-          blockOverlay.style.display = 'flex';
-        }
-        return;
-      }
-      
-      // Если счетчик уже 2 (после нажатия "Продолжить" во второй раз) - устанавливаем блокировку ПЕРЕД отправкой
-      if (submitCount === 2) {
-        this.leadSpamProtection.setBlocked(formType);
-        const blockOverlay = get('ctxSpamBlockOverlay');
-        const timerEl = get('ctxSpamBlockTimer');
-        if (blockOverlay && timerEl) {
-          const updateTimer = () => {
-            const left = this.leadSpamProtection.getBlockedTimeLeft(formType);
-            if (timerEl) timerEl.textContent = left;
-            if (left > 0) {
-              setTimeout(updateTimer, 1000);
-            } else {
-              if (blockOverlay) blockOverlay.style.display = 'none';
-            }
-          };
-          updateTimer();
-          blockOverlay.style.display = 'flex';
-        }
-        return;
-      }
-      
-      // Если вторая отправка и предупреждение еще не показывали - показываем поп-ап предупреждения
-      if (submitCount === 1 && !warningShown) {
-        const warningOverlay = get('ctxSpamWarningOverlay');
-        if (warningOverlay) {
-          warningOverlay.style.display = 'flex';
-        }
-        return;
-      }
-      
-      // Отправляем данные на бэкенд
-      const submitShortFormLead = async () => {
-        try {
-          // Получаем базовый URL API (заменяем /api/audio/upload на /api/leads)
-          const leadsApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
-          
-          const language = (this.currentLang || this.defaultLanguage).toLowerCase();
-          
-          // Формируем данные для отправки (short form не имеет preferredContactMethod и comment)
-          const leadData = {
-            sessionId: this.sessionId || null,
-            source: 'widget_short_form',
-            name: name,
-            phoneCountryCode: code || null,
-            phoneNumber: phone || null,
-            email: email || null,
-            preferredContactMethod: 'phone', // по умолчанию для short form
-            comment: null, // short form не имеет поля комментария
-            language: language,
-            propertyId: null, // пока не передаём
-            consent: true
-          };
-          
-          // Отправляем запрос
-          const response = await fetch(leadsApiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(leadData)
-          });
-          
-          const result = await response.json().catch(() => ({ ok: false, error: 'Failed to parse server response' }));
-          
-          if (result?.ok === true) {
-            // Успешно отправлено → показываем thanks popup
-            form.style.display = 'none';
-            if (thanksOverlay) thanksOverlay.style.display = 'flex';
-            // Очищаем поля
-            ['ctxName','ctxPhone','ctxEmail'].forEach(id => { const el = this.$byId(id); if (el) el.value=''; });
-            const c = this.$byId('ctxConsent'); if (c) c.checked = false;
-            showContactError(false); showConsentError(false);
-            
-            // Увеличиваем счетчик отправок (если еще не увеличен при нажатии "Продолжить")
-            const currentCount = this.leadSpamProtection.getSubmitCount(formType);
-            // Увеличиваем только если счетчик еще не был увеличен (не был нажат "Продолжить")
-            if (currentCount < 2) {
-              this.leadSpamProtection.incrementSubmitCount(formType);
-            }
-            
-            // Телеметрия: логируем успешную отправку short form
-            try {
-              logTelemetry(TelemetryEventTypes.LEAD_FORM_SUBMIT, {
-                formType: 'short',
-                sessionId: this.sessionId || null,
-                language: language,
-                hasComment: false,
-                preferredContactMethod: 'phone',
-                leadId: result.leadId || null
-              });
-            } catch (err) {
-              console.error('❌ Failed to log LEAD_FORM_SUBMIT:', err);
-            }
-          } else {
-            // Ошибка валидации или сервера
-            const errorMsg = result.error || 'Failed to submit request. Please try again later.';
-            showContactError(true, errorMsg);
-            console.error('❌ Lead submission error:', result);
-            
-            // Телеметрия: логируем ошибку отправки
-            try {
-              logTelemetry(TelemetryEventTypes.LEAD_FORM_ERROR, {
-                formType: 'short',
-                sessionId: this.sessionId || null,
-                language: language,
-                error: errorMsg
-              });
-            } catch (err) {
-              console.error('❌ Failed to log LEAD_FORM_ERROR:', err);
-            }
-          }
-        } catch (err) {
-          // Ошибка сети или другая непредвиденная ошибка
-          console.error('❌ Lead submission network error:', err);
-          showContactError(true, 'Network error. Please check your connection and try again.');
-          
-          // Телеметрия: логируем сетевую ошибку
-          try {
-            logTelemetry(TelemetryEventTypes.LEAD_FORM_ERROR, {
-              formType: 'short',
-              sessionId: this.sessionId || null,
-              language: (this.currentLang || this.defaultLanguage).toLowerCase(),
-              error: 'Network error'
-            });
-          } catch (telemetryErr) {
-            console.error('❌ Failed to log LEAD_FORM_ERROR:', telemetryErr);
-          }
-        }
-      };
-      
-      // Вызываем асинхронную функцию отправки (если не показан поп-ап предупреждения)
-      if (!(submitCount === 1 && !warningShown)) {
-        submitShortFormLead();
-      }
-    });
-    // Обработчик закрытия поп-апа блокировки для short form
-    this.$byId('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const blockOverlay = this.$byId('ctxSpamBlockOverlay');
-      if (blockOverlay) blockOverlay.style.display = 'none';
-    });
-    this.$byId('ctxThanksDoneBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (thanks) thanks.style.display = 'none';
-      btn.parentElement.style.display = 'block';
-      if (ctxHint) ctxHint.style.display = '';
-    });
-    this.$byId('ctxThanksOverlayClose')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (thanksOverlay) thanksOverlay.style.display = 'none';
-      btn.parentElement.style.display = 'block';
-      if (ctxHint) ctxHint.style.display = '';
-    });
-    // Обработчик закрытия поп-апа блокировки для short form
-    this.$byId('ctxSpamBlockCloseBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const blockOverlay = this.$byId('ctxSpamBlockOverlay');
-      if (blockOverlay) blockOverlay.style.display = 'none';
-    });
-    // Обработчики поп-апа предупреждения для short form
-    const ctxWarningOverlay = this.$byId('ctxSpamWarningOverlay');
-    const ctxWarningCancelBtn = this.$byId('ctxSpamWarningCancelBtn');
-    const ctxWarningContinueBtn = this.$byId('ctxSpamWarningContinueBtn');
-    if (ctxWarningCancelBtn) {
-      ctxWarningCancelBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (ctxWarningOverlay) ctxWarningOverlay.style.display = 'none';
-        this.leadSpamProtection.setWarningShown('lead');
-      });
-    }
-    if (ctxWarningContinueBtn) {
-      ctxWarningContinueBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (ctxWarningOverlay) ctxWarningOverlay.style.display = 'none';
-        this.leadSpamProtection.setWarningShown('lead');
-        // Увеличиваем счетчик ДО отправки, чтобы третья попытка сразу показывала блокировку
-        this.leadSpamProtection.incrementSubmitCount('lead');
-        // Продолжаем отправку после закрытия поп-апа
-        // Вызываем обработчик кнопки отправки напрямую
-        const sendBtn = this.$byId('ctxSendBtn');
-        if (sendBtn) {
-          // Эмулируем клик для повторной отправки
-          sendBtn.click();
-        }
-      });
-    }
-  };
-  try { this.setupContextRequestForm(); } catch {}
-  
-  // Context: Data storage info popup
-  this.setupDataStoragePopup = () => {
-    const trigger = this.getRoot().querySelector('.data-storage-text');
-    const overlay = this.$byId('dataOverlay');
-    const btn = this.$byId('dataUnderstoodBtn');
-    trigger?.addEventListener('click', () => { if (overlay) overlay.style.display = 'flex'; });
-    btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
-  };
-  try { this.setupDataStoragePopup(); } catch {}
-  
-  // Context: "What data do we know?" popup (insights)
-  this.setupWhatDataPopup = () => {
-    const trigger = this.getRoot().querySelector('#contextScreen .footer-text');
-    const overlay = this.$byId('whatDataOverlay');
-    const body = this.$byId('whatDataBody');
-    const btn = this.$byId('whatDataUnderstoodBtn');
-    const labelMap = {
-      name: 'Name',
-      operation: 'Operation',
-      budget: 'Budget',
-      type: 'Type',
-      location: 'Location',
-      rooms: 'Rooms',
-      area: 'Area',
-      details: 'Details',
-      preferences: 'Preferences'
-    };
-    const render = () => {
-      const u = (typeof this.getUnderstanding === 'function') ? this.getUnderstanding() : (this.understanding?.export?.() || {});
-      const lines = [];
-      Object.keys(labelMap).forEach((k) => {
-        const v = u?.[k];
-        if (v !== null && v !== undefined && String(v).trim().length) {
-          lines.push(`<li><b>${labelMap[k]}:</b> ${String(v)}</li>`);
-        }
-      });
-      const listHtml = lines.length ? `<ul style="padding-left:16px; margin:6px 0 10px 0;">${lines.join('')}</ul>` : `<div style="margin:6px 0 10px 0;">No data collected yet.</div>`;
-      const consent = `<div style="margin-top:10px;">We collect information only with your consent and use it non‑commercially to improve property matching.</div>`;
-      if (body) body.innerHTML = listHtml + consent;
-    };
-    trigger?.addEventListener('click', () => { render(); if (overlay) overlay.style.display = 'flex'; });
-    btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
-  };
-  try { this.setupWhatDataPopup(); } catch {}
-
-  // Request: Privacy Policy confirm
-  this.setupPrivacyConfirm = () => {
-    const link = this.getRoot().querySelector('.request-privacy-link');
-    const overlay = this.$byId('privacyOverlay');
-    const btnCancel = this.$byId('privacyCancelBtn');
-    const btnContinue = this.$byId('privacyContinueBtn');
-    const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
-    if (link) {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (overlay) overlay.style.display = 'flex';
-      });
-    }
-    btnCancel?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
-    btnContinue?.addEventListener('click', () => {
-      try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { location.href = url; }
-      if (overlay) overlay.style.display = 'none';
-    });
-  };
-  try { this.setupPrivacyConfirm(); } catch {}
-  // Context: Privacy Policy confirm
-  this.setupContextPrivacyConfirm = () => {
-    const link = this.getRoot().querySelector('.ctx-privacy-link');
-    const overlay = this.$byId('ctxPrivacyOverlay');
-    const btnCancel = this.$byId('ctxPrivacyCancelBtn');
-    const btnContinue = this.$byId('ctxPrivacyContinueBtn');
-    const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
-    if (link) {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (overlay) overlay.style.display = 'flex';
-      });
-    }
-    btnCancel?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
-    btnContinue?.addEventListener('click', () => {
-      try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { location.href = url; }
-      if (overlay) overlay.style.display = 'none';
-    });
-  };
-  try { this.setupContextPrivacyConfirm(); } catch {}
   // Thread auto-scroll helper
   this._isThreadNearBottom = true;
   this.scrollThreadToBottom = (force = false) => {
@@ -5365,37 +3696,22 @@ render() {
     // события рекордера → UI
     this.events.on('recordingStarted', () => {
       this.showChatScreen();
-      // Show recording indicator on current screen
-      const isMainScreen = this.$byId('mainScreen')?.classList.contains('hidden') === false;
-      this.showRecordingIndicator(isMainScreen ? 'main' : 'chat');
-      // Update toggle button state for both screens
-      this.updateToggleButtonState('main');
+      this.showRecordingIndicator('chat');
       this.updateToggleButtonState('chat');
     });
     this.events.on('recordingStopped', () => {
-      // Hide recording indicators
-      this.hideRecordingIndicator('main');
       this.hideRecordingIndicator('chat');
-      // Update toggle button state for both screens
-      this.updateToggleButtonState('main');
       this.updateToggleButtonState('chat');
     });
     this.events.on('recordingCancelled', () => {
-      // Hide recording indicators
-      this.hideRecordingIndicator('main');
       this.hideRecordingIndicator('chat');
-      // Update toggle button state for both screens
-      this.updateToggleButtonState('main');
       this.updateToggleButtonState('chat');
     });
 
-    // Text message sent - switch to chat screen if on main
+    // Text message sent - ensure chat screen visible
     this.events.on('textMessageSent', (d) => { 
       console.log('📤 Text message sent:', d?.text?.slice(0,50));
-      // Switch to chat screen if we're on main screen
-      if (this.$byId('mainScreen')?.classList.contains('hidden') === false) {
-        this.showChatScreen();
-      }
+      this.showChatScreen();
     });
 
     // understanding
@@ -5451,16 +3767,10 @@ render() {
 
   // Recording indicator management
   showRecordingIndicator(screen = 'chat') {
-    const indicator = screen === 'main' 
-      ? this.$byId('mainRecordingIndicator')
-      : this.$byId('recordingIndicator');
-    
-    const wrapper = screen === 'main'
-      ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
-      : this.getRoot().querySelector('#textInput').closest('.text-input-wrapper');
-    const inputContainer = screen === 'main'
-      ? this.getRoot().querySelector('#mainTextInput').closest('.input-container')
-      : this.getRoot().querySelector('#textInput').closest('.input-container');
+    const indicator = this.$byId('recordingIndicator');
+    const textInput = this.getRoot().querySelector('#textInput');
+    const wrapper = textInput ? textInput.closest('.text-input-wrapper') : null;
+    const inputContainer = textInput ? textInput.closest('.input-container') : null;
     
     if (indicator) {
       indicator.style.display = 'flex';
@@ -5470,16 +3780,10 @@ render() {
   }
 
   hideRecordingIndicator(screen = 'chat') {
-    const indicator = screen === 'main' 
-      ? this.$byId('mainRecordingIndicator')
-      : this.$byId('recordingIndicator');
-    
-    const wrapper = screen === 'main'
-      ? this.getRoot().querySelector('#mainTextInput').closest('.text-input-wrapper')
-      : this.getRoot().querySelector('#textInput').closest('.text-input-wrapper');
-    const inputContainer = screen === 'main'
-      ? this.getRoot().querySelector('#mainTextInput').closest('.input-container')
-      : this.getRoot().querySelector('#textInput').closest('.input-container');
+    const indicator = this.$byId('recordingIndicator');
+    const textInput = this.getRoot().querySelector('#textInput');
+    const wrapper = textInput ? textInput.closest('.text-input-wrapper') : null;
+    const inputContainer = textInput ? textInput.closest('.input-container') : null;
     
     if (indicator) {
       indicator.style.display = 'none';
@@ -5493,7 +3797,7 @@ render() {
 
   
   startRecording() {
-    if (this.ui.getCurrentState() === 'idle' || this.ui.getCurrentState() === 'typing' || this.ui.getCurrentState() === 'main') {
+    if (this.ui.getCurrentState() === 'idle' || this.ui.getCurrentState() === 'typing') {
       return this.audioRecorder.startRecording();
     }
     console.warn('⚠️ Cannot start recording in state:', this.ui.getCurrentState());
@@ -5517,35 +3821,10 @@ render() {
     // Update progress
     const progressFill = this.$byId('progressFill');
     const progressText = this.$byId('progressText');
-    const ctxProgressText = this.$byId('ctxProgressText');
-    const ctxStatusText = this.$byId('ctxStatusText');
-    const ctxStageMessage = this.$byId('ctxStageMessage');
-      const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
+    const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
     if (progressFill && progressText) {
       progressFill.style.width = `${progress}%`;
       progressText.textContent = `${progress}% — ${progress === 0 ? 'ожидание' : 'обработка'}`;
-    }
-    if (ctxProgressText) ctxProgressText.textContent = `${Math.max(0, Math.min(99, Math.round(progress)))}%`;
-    if (ctxStatusText || ctxStageMessage) {
-      // Map progress to state (explicit ranges with fallbacks)
-      const p = progress;
-      let status = 'initial request';
-      let message = 'We’ve received your initial request. Share a few details to get started.';
-      if ((p >= 22 && p <= 33) || (p >= 12 && p < 22)) {
-        status = 'more info added';
-        message = 'Great — we added more details. Keep going to refine the search.';
-      } else if ((p >= 44 && p <= 55) || (p > 33 && p < 44)) {
-        status = 'half path done';
-        message = 'Halfway there. A couple more details will sharpen the results.';
-      } else if ((p >= 66 && p <= 77) || (p > 55 && p < 66)) {
-        status = 'almost done';
-        message = 'Almost done. Final tweaks and we’ll have precise matches.';
-      } else if ((p >= 88 && p <= 99) || (p > 77)) {
-        status = 'fulfilled';
-        message = 'Well done! Your data is enough for a confident, targeted search.';
-      }
-      if (ctxStatusText) ctxStatusText.textContent = `Status: ${status}`;
-      if (ctxStageMessage) ctxStageMessage.textContent = message;
     }
 
     // Update parameter values and dots
@@ -5920,41 +4199,10 @@ render() {
     });
   }
 
-  // Send text from main screen
-  sendTextFromMainScreen(text) {
-    // Clear input
-    const mainTextInput = this.$byId('mainTextInput');
-    if (mainTextInput) {
-      mainTextInput.value = '';
-          // Update send button state
-    const mainSendButton = this.$byId('mainSendButton');
-    if (mainSendButton) {
-      mainSendButton.disabled = true;
-      mainSendButton.setAttribute('aria-disabled', 'true');
-    }
-    }
-
-    // Switch to chat screen
-    this.showChatScreen();
-
-    // Add user message to chat
-    const userMessage = { type: 'user', content: text, timestamp: new Date() };
-    this.ui.addMessage(userMessage);
-
-    // Send to API
-    this.api.sendTextMessageFromText(text);
-  }
-
   // Update toggle button state
   updateToggleButtonState(screen) {
     const isRecording = this.audioRecorder.isRecording;
-    let toggleButton = null;
-
-    if (screen === 'main') {
-      toggleButton = this.$byId('mainToggleButton');
-    } else if (screen === 'chat') {
-      toggleButton = this.$byId('toggleButton');
-    }
+    const toggleButton = this.$byId('toggleButton');
 
     if (toggleButton) {
       if (isRecording) {
@@ -5971,16 +4219,8 @@ render() {
 
   // Update send button state
   updateSendButtonState(screen) {
-    let textInput = null;
-    let sendButton = null;
-
-    if (screen === 'main') {
-      textInput = this.$byId('mainTextInput');
-      sendButton = this.$byId('mainSendButton');
-    } else if (screen === 'chat') {
-      textInput = this.$byId('textInput');
-      sendButton = this.$byId('sendButton');
-    }
+    const textInput = this.$byId('textInput');
+    const sendButton = this.$byId('sendButton');
 
     if (textInput && sendButton) {
       const text = textInput.value.trim();
@@ -6478,7 +4718,7 @@ render() {
 
   // ---------- RMv3: In-dialog lead block (UI-only) ----------
   // ВАЖНО:
-  // - новая сущность: in-dialog lead block (не requestScreen/contextScreen)
+  // - новая сущность: in-dialog lead block
   // - только UI: нет submit handler, нет fetch, нет валидации/ошибок
   // - demo-only trigger: кликом по “Подробнее” в post-handoff блоке
   cancelHandoffFlowUI() {
@@ -7223,7 +5463,7 @@ render() {
                     <div class="dial-item" data-cc="UK" data-code="+44"><span class="dial-flag">🇬🇧</span><span class="dial-code">+44 UK</span></div>
                   </div>
                 </div>
-                <input class="in-dialog-lead__input" id="inDialogLeadPhone${s}" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.requestPhonePlaceholder}">
+                <input class="in-dialog-lead__input" id="inDialogLeadPhone${s}" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.phonePlaceholder}">
                 <input id="inDialogLeadCode${s}" type="hidden" value="+971" />
               </div>
             </div>
@@ -7472,7 +5712,6 @@ render() {
 
   disconnectedCallback() {
     // Clean up recording timers
-    this.stopRecordingTimer('main');
     this.stopRecordingTimer('chat');
     
     this.audioRecorder?.cleanupRecording?.();
@@ -7498,10 +5737,7 @@ render() {
   setupMenuOverlay() {
     // Привязываем overlay к header активного экрана
     const container = this.getRoot().querySelector(
-      '.main-screen:not(.hidden) .screen-header, ' +
-      '.dialog-screen:not(.hidden) .screen-header, ' +
-      '.context-screen:not(.hidden) .screen-header, ' +
-      '.request-screen:not(.hidden) .screen-header'
+      '.dialog-screen:not(.hidden) .screen-header'
     );
     let overlay = this.getRoot().querySelector('.menu-overlay');
     if (!container) {
@@ -7521,12 +5757,11 @@ render() {
     }
     this.updateMenuUI();
     // Открытие/закрытие overlay через левую кнопку (stats) активного header.
-    const statsBtn = container.querySelector('.header-action.header-left');
+      const statsBtn = container.querySelector('.header-action.header-left');
     if (statsBtn) {
       statsBtn.onclick = () => {
         if (this._menuState === 'closed' || !this._menuState) this._menuState = 'open';
         else if (this._menuState === 'open') this._menuState = 'closed';
-        else if (this._menuState === 'selected') this._menuState = 'open';
         this.updateMenuUI();
       };
     }
@@ -7574,10 +5809,7 @@ render() {
     // Toggle side header actions and logo on active screen
     try {
       const activeHeader = this.getRoot().querySelector(
-        '.main-screen:not(.hidden) .screen-header, ' +
-        '.dialog-screen:not(.hidden) .screen-header, ' +
-        '.context-screen:not(.hidden) .screen-header, ' +
-        '.request-screen:not(.hidden) .screen-header'
+        '.dialog-screen:not(.hidden) .screen-header'
       );
       if (activeHeader) activeHeader.classList.toggle('menu-opened', !!(this._menuState && this._menuState !== 'closed'));
     } catch {}
@@ -7593,7 +5825,6 @@ render() {
       content.innerHTML = `
         <div class="menu-grid">
           <div class="menu-col">
-            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="">${locale.menuRequest}</button>
             <div class="menu-language ${this._menuLanguageDropdownOpen ? 'open' : ''}" data-language-picker>
               <button class="menu-btn menu-btn--language menu-language-trigger" type="button" data-action="language">
                 <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">${locale.menuLanguage}
@@ -7607,12 +5838,11 @@ render() {
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
           </div>
           <div class="menu-col">
-            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getInsightsIconByTheme()}" alt="">${locale.menuInsights}</button>
             <button class="menu-btn menu-btn--reset" data-action="theme"><img class="menu-btn__icon" src="${ASSETS_BASE}${themeActionIcon}" alt="">${themeActionLabel}</button>
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this._menuLanguageDropdownOpen = false; this.updateMenuUI(); };
+      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this._menuLanguageDropdownOpen = false; this.updateMenuUI(); };
       content.querySelectorAll('[data-language-code]').forEach(btn => {
         btn.onclick = (e) => {
           e.preventDefault();
@@ -7643,31 +5873,9 @@ render() {
             return;
           }
           this._menuLanguageDropdownOpen = false;
-          if (action === 'request') { this.showScreen('request'); this._selectedMenu = 'request'; this._menuState = 'selected'; }
-          if (action === 'context') { this.showScreen('context'); this._selectedMenu = 'context'; this._menuState = 'selected'; }
           this.updateMenuUI();
         };
       });
-      syncLanguageOutsideClick();
-    } else if (this._menuState === 'selected') {
-      const labelMap = { request: locale.menuSelectedRequest, context: locale.menuSelectedContext };
-      const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : 'menu-badge--context';
-      content.innerHTML = `
-        <div class="menu-grid menu-grid--selected">
-          <div class="menu-col menu-col--single">
-            <button class="menu-link" data-action="back">${locale.menuBackToDialog}</button>
-          </div>
-          <div class="menu-col menu-col--single menu-col--middle" style="justify-content:center;">
-            <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
-          </div>
-          <div class="menu-col menu-col--single">
-            <div class="menu-badge ${colorClass}">${labelMap[this._selectedMenu] || ''}</div>
-          </div>
-        </div>`;
-      const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
-      const backBtn = content.querySelector('[data-action="back"]');
-      if (backBtn) backBtn.onclick = () => { this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
       syncLanguageOutsideClick();
     } else {
       content.innerHTML = '';
