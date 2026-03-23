@@ -4655,11 +4655,11 @@ render() {
     ).trim() || null;
     overlay.innerHTML = `
       <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="${locale.backSpecsOverflowTitle || 'Дополнительные детали'}">
-        <button type="button" class="vw-back-specs-close" data-role="close" aria-label="Close">×</button>
         <div class="vw-slider-checkpoint-title">${locale.backSpecsOverflowTitle || 'Дополнительные детали'}</div>
         <div class="vw-slider-checkpoint-text">${locale.backSpecsOverflowText || 'К сожалению, не вся информация поместилась в данной карточке. Чтобы узнать дополнительные детали, вы можете связаться с менеджером.'}${hiddenCount > 0 ? ` (+${hiddenCount})` : ''}</div>
         <div class="vw-slider-checkpoint-actions">
           <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">${locale.backSpecsOverflowContact || locale.appHeaderContact || 'Связаться'}</button>
+          <button type="button" class="vw-slider-checkpoint-btn" data-role="close">${locale.cancel || 'Отмена'}</button>
         </div>
       </div>
     `;
@@ -4719,19 +4719,6 @@ render() {
         display: grid;
         gap: 12px;
         position: relative;
-      }
-      .vw-back-specs-close {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        width: 24px;
-        height: 24px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        border-radius: 8px;
-        background: var(--bg-element, rgba(255,255,255,0.12));
-        color: var(--text-primary, #fff);
-        font-size: 16px;
-        line-height: 1;
       }
       .vw-slider-checkpoint-title { font-size: 0.95rem; font-weight: 700; }
       .vw-slider-checkpoint-text { font-size: 0.82rem; color: var(--text-secondary, rgba(255,255,255,0.75)); line-height: 1.42; }
