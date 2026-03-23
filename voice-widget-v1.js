@@ -4634,6 +4634,8 @@ render() {
 
   showBackSpecsOverflowPopup({ slide = null, hiddenCount = 0 } = {}) {
     this.closeBackSpecsOverflowPopup();
+    // Reuse checkpoint modal styles; ensure they are mounted even if checkpoint popup never appeared.
+    this.ensureSliderCheckpointStyles();
     const locale = this.getCurrentLocale();
     const overlay = document.createElement('div');
     overlay.id = 'vwBackSpecsOverflowOverlay';
