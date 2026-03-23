@@ -1964,8 +1964,25 @@ const LOCALES = {
     cardCancel: 'Отменить',
     cardSelect: 'Выбрать',
     cardNext: 'Ещё одну',
+    cardBackContact: 'Связаться',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
+    pillCta: 'Смотреть подборку',
+    pillNewInsight: 'Новый инсайт',
+    pillFound: 'Найдено {count} объектов',
+    sliderCheckpointTitle10: 'Вы просмотрели 10 лучших совпадений',
+    sliderCheckpointTitle20: 'Точность совпадения снижается',
+    sliderCheckpointText10: 'Дальше будут варианты с частичным соответствием. Хотите уточнить критерии или обсудить подбор с экспертом?',
+    sliderCheckpointText20: 'Дальше идут варианты с более низкой релевантностью. Уточнить запрос или связаться с экспертом?',
+    sliderCheckpointRefine: 'Уточнить',
+    sliderCheckpointContact: 'Связаться',
+    contactManagerTitle: 'Выберите контакт',
+    contactMethodTelegram: 'Telegram',
+    contactMethodPhone: 'Телефон',
+    contactMethodEmail: 'Email',
+    contactManagerAria: 'Выбор контакта',
+    contactManagerErrorTelegram: 'Введите Telegram username.',
+    contactManagerPhoneMinDigits: 'Введите корректный номер (минимум 10 цифр)',
     inDialogLeadTitle: 'Оставьте контакты',
     inDialogLeadNameLabel: 'Имя',
     inDialogLeadPhoneLabel: 'Телефон',
@@ -2042,8 +2059,25 @@ const LOCALES = {
     cardCancel: 'Скасувати',
     cardSelect: 'Обрати',
     cardNext: 'Ще одну',
+    cardBackContact: "Зв'язатися",
     handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
     handoffDetails: 'Детальніше',
+    pillCta: 'Дивитися добірку',
+    pillNewInsight: 'Новий інсайт',
+    pillFound: 'Знайдено {count} обʼєктів',
+    sliderCheckpointTitle10: 'Ви переглянули 10 найкращих збігів',
+    sliderCheckpointTitle20: 'Точність збігів знижується',
+    sliderCheckpointText10: 'Далі будуть варіанти з частковою відповідністю. Хочете уточнити критерії або обговорити підбір з експертом?',
+    sliderCheckpointText20: 'Далі йдуть варіанти з нижчою релевантністю. Уточнити запит чи зв’язатися з експертом?',
+    sliderCheckpointRefine: 'Уточнити',
+    sliderCheckpointContact: "Зв'язатися",
+    contactManagerTitle: 'Оберіть контакт',
+    contactMethodTelegram: 'Telegram',
+    contactMethodPhone: 'Телефон',
+    contactMethodEmail: 'Email',
+    contactManagerAria: 'Вибір контакту',
+    contactManagerErrorTelegram: 'Введіть Telegram username.',
+    contactManagerPhoneMinDigits: 'Введіть коректний номер (мінімум 10 цифр)',
     inDialogLeadTitle: 'Залиште контакти',
     inDialogLeadNameLabel: "Ім'я",
     inDialogLeadPhoneLabel: 'Телефон',
@@ -2567,7 +2601,7 @@ class VoiceWidget extends HTMLElement {
 
     setText('#appContactButton', locale.appHeaderContact || 'Связаться');
     setText('#appOnlineText', locale.appHeaderOnline || 'Online');
-    setText('#appLangButton', ['UA', 'RU'].includes(this.currentLang) ? this.currentLang : 'RU');
+    setText('#appLangButton', ['UA', 'RU'].includes(this.currentLang) ? this.currentLang : 'UA');
     setText('#appThemeButton', '⋯');
     setTextAll('.recording-label', locale.recordingLabel);
     setText('.loading-text', locale.loadingText);
@@ -2854,7 +2888,7 @@ render() {
     <!-- Content -->
     <div class="content">
       <header class="app-header">
-        <button class="app-header-btn header-action-btn" id="appContactButton" type="button">Связаться</button>
+          <button class="app-header-btn header-action-btn" id="appContactButton" type="button">Зв'язатися</button>
         <div class="app-header-status">
           <span class="status-dot" aria-hidden="true"></span>
           <span id="appOnlineText">Online</span>
@@ -2876,7 +2910,7 @@ render() {
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
           </div>
           <div class="pill-overlay-lane" aria-hidden="false">
-            <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Найдено 2,345 объектов</div>
+            <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Знайдено 2,345 обʼєктів</div>
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
@@ -3754,10 +3788,11 @@ render() {
   }
 
   _buildPillDefaultLabel() {
+    const locale = this.getCurrentLocale();
     const value = Number(this._pillBaseCount);
-    if (!Number.isFinite(value) || value <= 0) return 'Смотреть подборку';
+    if (!Number.isFinite(value) || value <= 0) return locale.pillCta || 'Смотреть подборку';
     const formatted = new Intl.NumberFormat('en-US').format(Math.max(0, value));
-    return `Найдено ${formatted} объектов`;
+    return this.t('pillFound', { count: formatted }) || `Найдено ${formatted} объектов`;
   }
 
   _setObjectsPillText(text, state = 'default', { animate = true, pulse = false } = {}) {
@@ -3822,11 +3857,12 @@ render() {
   }
 
   _runInsightPillSequence() {
+    const locale = this.getCurrentLocale();
     if (this._pillCtaTimer) {
       clearTimeout(this._pillCtaTimer);
       this._pillCtaTimer = null;
     }
-    this._setObjectsPillText('Новый инсайт', 'insight', { animate: true, pulse: true });
+    this._setObjectsPillText(locale.pillNewInsight || 'Новый инсайт', 'insight', { animate: true, pulse: true });
     try {
       const tg = window?.Telegram?.WebApp;
       if (tg?.HapticFeedback?.notificationOccurred) {
@@ -3836,7 +3872,7 @@ render() {
       }
     } catch {}
     this._pillCtaTimer = setTimeout(() => {
-      this._setObjectsPillText('Смотреть подборку', 'cta', { animate: true, pulse: false });
+      this._setObjectsPillText(locale.pillCta || 'Смотреть подборку', 'cta', { animate: true, pulse: false });
       this._pillCtaTimer = null;
     }, 2000);
   }
@@ -4281,7 +4317,7 @@ render() {
           </div>
         </div>
         <div class="card-back-actions">
-          <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">Связаться</button>
+          <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
           <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
           <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
         </div>
@@ -4524,13 +4560,14 @@ render() {
   showSliderCheckpointPopup(level = 10) {
     this.closeSliderCheckpointPopup();
     this.ensureSliderCheckpointStyles();
+    const locale = this.getCurrentLocale();
     const isSecond = Number(level) >= 20;
     const title = isSecond
-      ? 'Точность совпадения снижается'
-      : 'Вы просмотрели 10 лучших совпадений';
+      ? (locale.sliderCheckpointTitle20 || 'Точность совпадения снижается')
+      : (locale.sliderCheckpointTitle10 || 'Вы просмотрели 10 лучших совпадений');
     const text = isSecond
-      ? 'Дальше идут варианты с более низкой релевантностью. Уточнить запрос или связаться с экспертом?'
-      : 'Дальше будут варианты с частичным соответствием. Хотите уточнить критерии или обсудить подбор с экспертом?';
+      ? (locale.sliderCheckpointText20 || 'Дальше идут варианты с более низкой релевантностью. Уточнить запрос или связаться с экспертом?')
+      : (locale.sliderCheckpointText10 || 'Дальше будут варианты с частичным соответствием. Хотите уточнить критерии или обсудить подбор с экспертом?');
     const overlay = document.createElement('div');
     overlay.id = 'vwSliderCheckpointOverlay';
     overlay.className = 'vw-slider-checkpoint-overlay';
@@ -4539,8 +4576,8 @@ render() {
         <div class="vw-slider-checkpoint-title">${title}</div>
         <div class="vw-slider-checkpoint-text">${text}</div>
         <div class="vw-slider-checkpoint-actions">
-          <button type="button" class="vw-slider-checkpoint-btn" data-role="refine">Уточнить</button>
-          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">Связаться</button>
+          <button type="button" class="vw-slider-checkpoint-btn" data-role="refine">${locale.sliderCheckpointRefine || 'Уточнить'}</button>
+          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">${locale.sliderCheckpointContact || 'Связаться'}</button>
         </div>
       </div>
     `;
@@ -5008,16 +5045,16 @@ render() {
     overlay.id = 'vwContactManagerOverlay';
     overlay.className = 'vw-contact-manager-overlay';
     overlay.innerHTML = `
-      <div class="vw-contact-manager-modal" role="dialog" aria-modal="true" aria-label="Contact selector">
+      <div class="vw-contact-manager-modal" role="dialog" aria-modal="true" aria-label="${locale.contactManagerAria || 'Contact selector'}">
         <div class="vw-contact-manager-head">
-          <div class="vw-contact-manager-title">Выберите контакт</div>
+          <div class="vw-contact-manager-title">${locale.contactManagerTitle || 'Выберите контакт'}</div>
           <button type="button" class="vw-contact-manager-close" aria-label="Close">×</button>
         </div>
         <div class="vw-contact-manager-body">
           <div class="vw-contact-manager-switch">
-            <button type="button" class="vw-contact-method-btn is-active" data-method="telegram">Telegram</button>
-            <button type="button" class="vw-contact-method-btn" data-method="phone">Phone</button>
-            <button type="button" class="vw-contact-method-btn" data-method="email">Email</button>
+            <button type="button" class="vw-contact-method-btn is-active" data-method="telegram">${locale.contactMethodTelegram || 'Telegram'}</button>
+            <button type="button" class="vw-contact-method-btn" data-method="phone">${locale.contactMethodPhone || 'Phone'}</button>
+            <button type="button" class="vw-contact-method-btn" data-method="email">${locale.contactMethodEmail || 'Email'}</button>
           </div>
           <div class="vw-contact-input-group is-active" data-input-method="telegram">
             <input type="text" class="vw-contact-input" data-role="telegram-input" value="${username.replace(/"/g, '&quot;')}" placeholder="@username">
@@ -5128,17 +5165,17 @@ render() {
       const hasAnyValidContact = telegramValid || phoneValid || emailValid;
       if (!hasAnyValidContact) {
         if (selectedMethod === 'phone') {
-          setError('Введите корректный номер (минимум 10 цифр)');
+          setError(locale.contactManagerPhoneMinDigits || 'Введите корректный номер (минимум 10 цифр)');
         } else if (selectedMethod === 'email') {
           setError(locale.invalidEmail || 'Invalid email');
         } else {
-          setError('Введите Telegram username.');
+          setError(locale.contactManagerErrorTelegram || 'Введите Telegram username.');
         }
         return;
       }
 
       if (selectedMethod === 'phone' && phoneDigits.length > 0 && !phoneValid && !telegramValid && !emailValid) {
-        setError('Введите корректный номер (минимум 10 цифр)');
+        setError(locale.contactManagerPhoneMinDigits || 'Введите корректный номер (минимум 10 цифр)');
         return;
       }
 
