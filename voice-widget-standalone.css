@@ -864,7 +864,6 @@
                   --img-stats: "menu_dark_theme.svg";
                   --img-close: "main_close_btn.svg";
                   --img-contact: "Contactme.svg";
-                  --img-language: "Language.svg";
                   --img-insights: "Insights.svg";
                   --img-logo: "LOGO.svg";
                   --img-return: "return_btn.svg";
@@ -955,7 +954,6 @@
                   --img-stats: "menu_light_theme.svg";
                   --img-close: "main_close_btn-light.svg";
                   --img-contact: "Contactme-light.svg";
-                  --img-language: "Language-light.svg";
                   --img-insights: "Insights-light.svg";
                   --img-logo: "LOGO-light.svg";
                   --img-return: "return_light_btn.svg";
@@ -1579,56 +1577,8 @@
                     padding: 0 6px;
                 }
                 .menu-btn:hover { transform: scale(1.05); opacity: 0.85; }
-                .menu-btn--language { color: var(--color-text); }
                 .menu-btn--reset { color: var(--color-text); }
                 .menu-btn .menu-btn__icon{ width:18px; height:18px; flex:0 0 18px; }
-                .menu-btn--language .menu-btn__icon{ width:16px; height:16px; flex:0 0 16px; }
-                .menu-language {
-                    position: relative;
-                    width: 140px;
-                }
-                .menu-language-trigger {
-                    width: 140px;
-                }
-                .menu-language-dropdown {
-                    position: absolute;
-                    top: calc(100% + 6px);
-                    left: 0;
-                    width: 140px;
-                    border-radius: 12px;
-                    border: 1px solid var(--border-light);
-                    background: var(--surface-menu);
-                    box-shadow: 0 8px 20px var(--shadow-medium);
-                    display: none;
-                    z-index: 20;
-                    padding: 4px;
-                }
-                .menu-language-dropdown.open {
-                    display: block;
-                }
-                .menu-language-option {
-                    width: 100%;
-                    height: 24px;
-                    border: none;
-                    border-radius: 8px;
-                    background: transparent;
-                    color: var(--color-text);
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 6px;
-                    padding: 0 8px;
-                    font-family: var(--ff);
-                    font-size: 12px;
-                    font-weight: 500;
-                    cursor: pointer;
-                }
-                .menu-language-option:hover {
-                    background: var(--bg-element);
-                }
-                .menu-language-option.is-active {
-                    color: var(--color-text);
-                    background: var(--bg-element);
-                }
                 .menu-link {
                     width: 110px;
                     height: 25px;

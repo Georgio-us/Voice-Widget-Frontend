@@ -1985,199 +1985,116 @@ const LOCALES = {
     noSavedSession: 'Нет сохраненной сессии для восстановления',
     snapshotCorrupted: 'Снимок состояния поврежден',
     restoreError: 'Ошибка восстановления',
-    sessionReset: 'Сессия сброшена'
-    ,micErrorDuringRecord: 'Произошла ошибка во время записи'
-    ,recordingCancelled: 'Запись отменена'
-    ,micAccessDenied: 'Доступ к микрофону запрещен'
-    ,micNotFound: 'Микрофон не найден'
-    ,micBusy: 'Микрофон уже используется'
-    ,micUnsupported: 'Настройки микрофона не поддерживаются'
-    ,micAccessError: 'Ошибка доступа к микрофону'
-    ,speakTitle: 'Говорить'
-    ,sendTitle: 'Отправить'
-    ,closeWidgetTitle: 'Закрыть виджет'
-    ,statsTitle: 'Открыть меню'
-    ,cookieTitle: 'Cookies и телеметрия'
-    ,cookieBody: 'Мы используем cookies и собираем данные использования, чтобы улучшать продукт. Никакой сторонней рекламы и ретаргетинга. Настройки можно изменить в любое время.'
-    ,cookieStrict: 'Строго необходимые (всегда включены)'
-    ,cookiePerf: 'Производительность (тайминги, ошибки)'
-    ,cookieAnalytics: 'Аналитика (анонимное использование)'
-    ,cookieMarketing: 'Маркетинг (выключено — не используется)'
-    ,cookieAcceptAll: 'Принять все'
-    ,cookieRejectAll: 'Отклонить все'
-    ,cookieManage: 'Настроить'
-    ,cookieSave: 'Сохранить'
-    ,insightDefault: 'не указано'
-    ,stageWaiting: 'Ожидание'
-    ,stageIntro: 'Знакомство'
-    ,stageCore: 'Основные параметры'
-    ,stagePrimarySelection: 'Готов к первичному подбору'
-    ,stageDetails: 'Уточнение деталей'
-    ,stagePreciseSelection: 'Готов к точному подбору'
-    ,assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
+    sessionReset: 'Сессия сброшена',
+    micErrorDuringRecord: 'Произошла ошибка во время записи',
+    recordingCancelled: 'Запись отменена',
+    micAccessDenied: 'Доступ к микрофону запрещен',
+    micNotFound: 'Микрофон не найден',
+    micBusy: 'Микрофон уже используется',
+    micUnsupported: 'Настройки микрофона не поддерживаются',
+    micAccessError: 'Ошибка доступа к микрофону',
+    speakTitle: 'Говорить',
+    sendTitle: 'Отправить',
+    closeWidgetTitle: 'Закрыть виджет',
+    statsTitle: 'Открыть меню',
+    cookieTitle: 'Cookies и телеметрия',
+    cookieBody: 'Мы используем cookies и собираем данные использования, чтобы улучшать продукт. Никакой сторонней рекламы и ретаргетинга. Настройки можно изменить в любое время.',
+    cookieStrict: 'Строго необходимые (всегда включены)',
+    cookiePerf: 'Производительность (тайминги, ошибки)',
+    cookieAnalytics: 'Аналитика (анонимное использование)',
+    cookieMarketing: 'Маркетинг (выключено — не используется)',
+    cookieAcceptAll: 'Принять все',
+    cookieRejectAll: 'Отклонить все',
+    cookieManage: 'Настроить',
+    cookieSave: 'Сохранить',
+    insightDefault: 'не указано',
+    stageWaiting: 'Ожидание',
+    stageIntro: 'Знакомство',
+    stageCore: 'Основные параметры',
+    stagePrimarySelection: 'Готов к первичному подбору',
+    stageDetails: 'Уточнение деталей',
+    stagePreciseSelection: 'Готов к точному подбору',
+    assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
   },
-  EN: {
-    inputPlaceholder: 'Ask a question...',
-    recordingLabel: 'Recording',
-    loadingText: 'Processing request',
-    menuLanguage: 'Language',
-    menuThemeToLight: 'Light mode',
-    menuThemeToDark: 'Dark mode',
-    appHeaderContact: 'Contact',
+  UA: {
+    inputPlaceholder: 'Поставте запитання...',
+    recordingLabel: 'Йде запис',
+    loadingText: 'Обробляю запит',
+    menuLanguage: 'Обрати мову',
+    menuThemeToLight: 'Світла тема',
+    menuThemeToDark: 'Темна тема',
+    appHeaderContact: "Зв'язатися",
     appHeaderOnline: 'Online',
-    consentText: 'I consent to the processing of my data for managing this request and contacting me about properties.',
-    privacyPolicy: 'Privacy Policy',
-    send: 'Send',
-    cancel: 'Cancel',
-    close: 'Close',
-    continue: 'Continue',
-    understood: 'Understood',
-    thanksTitle: 'Thank you!',
-    thanksBody: "Your request has been received. We'll contact you soon.",
-    leaveRequest: 'Leave request',
-    namePlaceholder: 'Name',
-    phonePlaceholder: 'Phone',
+    consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
+    privacyPolicy: 'Політика конфіденційності',
+    send: 'Надіслати',
+    cancel: 'Скасувати',
+    close: 'Закрити',
+    continue: 'Продовжити',
+    understood: 'Зрозуміло',
+    thanksTitle: 'Дякуємо!',
+    thanksBody: 'Вашу заявку отримано. Ми скоро з вами зв’яжемося.',
+    leaveRequest: 'Залишити заявку',
+    namePlaceholder: "Ім'я",
+    phonePlaceholder: 'Телефон',
     emailPlaceholder: 'E-mail',
-    cardShow: 'Show',
-    cardCancel: 'Cancel',
-    cardSelect: 'Select',
-    cardNext: 'Another one',
-    handoffMessage: 'You selected a property. You can ask for details or cancel.',
-    handoffDetails: 'More details',
-    inDialogLeadTitle: 'Leave your contact details',
-    inDialogLeadNameLabel: 'Name',
-    inDialogLeadPhoneLabel: 'Phone',
+    cardShow: 'Показати',
+    cardCancel: 'Скасувати',
+    cardSelect: 'Обрати',
+    cardNext: 'Ще одну',
+    handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
+    handoffDetails: 'Детальніше',
+    inDialogLeadTitle: 'Залиште контакти',
+    inDialogLeadNameLabel: "Ім'я",
+    inDialogLeadPhoneLabel: 'Телефон',
     inDialogLeadEmailLabel: 'Email',
-    inDialogLeadContactError: 'Required: phone or email',
-    inDialogLeadConsentError: 'Please accept the Privacy Policy',
-    invalidPhone: 'Invalid phone number. Use 9-10 digits after country code.',
-    invalidEmail: 'Invalid email address. Example: name@domain.com',
-    submitFailed: 'Failed to submit request. Please try again later.',
-    networkError: 'Network error. Please check your connection and try again.',
-    parseError: 'Failed to parse server response',
-    responseMissing: 'No response was received from the server.',
-    sendTextError: 'An error occurred while sending the message. Please try again.',
-    shortRecording: 'Recording is too short',
-    voiceMessageLabel: 'Voice message ({seconds}s)',
-    processingCardsError: 'Error while processing card command',
-    noSavedSession: 'No saved session to restore',
-    snapshotCorrupted: 'Snapshot is corrupted',
-    restoreError: 'Restore failed',
-    sessionReset: 'Session has been reset'
-    ,micErrorDuringRecord: 'An error occurred while recording'
-    ,recordingCancelled: 'Recording canceled'
-    ,micAccessDenied: 'Microphone access denied'
-    ,micNotFound: 'Microphone not found'
-    ,micBusy: 'Microphone is already in use'
-    ,micUnsupported: 'Microphone settings are not supported'
-    ,micAccessError: 'Microphone access error'
-    ,speakTitle: 'Speak'
-    ,sendTitle: 'Send'
-    ,closeWidgetTitle: 'Close widget'
-    ,statsTitle: 'Open menu'
-    ,cookieTitle: 'Cookies & telemetry'
-    ,cookieBody: 'We use cookies and collect usage data to improve the product. No third-party ads or retargeting. You can change settings anytime.'
-    ,cookieStrict: 'Strictly necessary (always enabled)'
-    ,cookiePerf: 'Performance (timings, errors)'
-    ,cookieAnalytics: 'Analytics (anonymous usage)'
-    ,cookieMarketing: 'Marketing (off - not used)'
-    ,cookieAcceptAll: 'Accept all'
-    ,cookieRejectAll: 'Reject all'
-    ,cookieManage: 'Manage'
-    ,cookieSave: 'Save'
-    ,insightDefault: 'not specified'
-    ,stageWaiting: 'Waiting'
-    ,stageIntro: 'Discovery'
-    ,stageCore: 'Core parameters'
-    ,stagePrimarySelection: 'Ready for initial selection'
-    ,stageDetails: 'Refining details'
-    ,stagePreciseSelection: 'Ready for precise selection'
-    ,assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
-  },
-  ES: {
-    inputPlaceholder: 'Haz una pregunta...',
-    recordingLabel: 'Grabando',
-    loadingText: 'Procesando solicitud',
-    menuLanguage: 'Idioma',
-    menuThemeToLight: 'Modo claro',
-    menuThemeToDark: 'Modo oscuro',
-    appHeaderContact: 'Contactar',
-    appHeaderOnline: 'Online',
-    consentText: 'Acepto el tratamiento de mis datos para gestionar esta solicitud y contactarme sobre propiedades.',
-    privacyPolicy: 'Politica de Privacidad',
-    send: 'Enviar',
-    cancel: 'Cancelar',
-    close: 'Cerrar',
-    continue: 'Continuar',
-    understood: 'Entendido',
-    thanksTitle: 'Gracias!',
-    thanksBody: 'Hemos recibido tu solicitud. Te contactaremos pronto.',
-    leaveRequest: 'Dejar solicitud',
-    namePlaceholder: 'Nombre',
-    phonePlaceholder: 'Telefono',
-    emailPlaceholder: 'E-mail',
-    cardShow: 'Mostrar',
-    cardCancel: 'Cancelar',
-    cardSelect: 'Seleccionar',
-    cardNext: 'Otra más',
-    handoffMessage: 'Has elegido una propiedad. Puedes pedir mas detalles o cancelar.',
-    handoffDetails: 'Mas detalles',
-    inDialogLeadTitle: 'Deja tus datos de contacto',
-    inDialogLeadNameLabel: 'Nombre',
-    inDialogLeadPhoneLabel: 'Telefono',
-    inDialogLeadEmailLabel: 'Email',
-    inDialogLeadContactError: 'Obligatorio: telefono o email',
-    inDialogLeadConsentError: 'Acepta la Politica de Privacidad',
-    invalidPhone: 'Numero de telefono invalido. Usa 9-10 digitos despues del codigo de pais.',
-    invalidEmail: 'Email invalido. Ejemplo: name@domain.com',
-    submitFailed: 'No se pudo enviar la solicitud. Intentalo mas tarde.',
-    networkError: 'Error de red. Revisa tu conexion e intentalo de nuevo.',
-    parseError: 'No se pudo procesar la respuesta del servidor',
-    responseMissing: 'No se recibio respuesta del servidor.',
-    sendTextError: 'Ocurrio un error al enviar el mensaje. Intentalo de nuevo.',
-    shortRecording: 'La grabacion es demasiado corta',
-    voiceMessageLabel: 'Mensaje de voz ({seconds}s)',
-    processingCardsError: 'Error al procesar el comando de tarjetas',
-    noSavedSession: 'No hay una sesion guardada para restaurar',
-    snapshotCorrupted: 'La instantanea esta danada',
-    restoreError: 'Error al restaurar',
-    sessionReset: 'La sesion fue reiniciada'
-    ,micErrorDuringRecord: 'Se produjo un error durante la grabacion'
-    ,recordingCancelled: 'Grabacion cancelada'
-    ,micAccessDenied: 'Acceso al microfono denegado'
-    ,micNotFound: 'Microfono no encontrado'
-    ,micBusy: 'El microfono ya esta en uso'
-    ,micUnsupported: 'La configuracion del microfono no es compatible'
-    ,micAccessError: 'Error de acceso al microfono'
-    ,speakTitle: 'Hablar'
-    ,sendTitle: 'Enviar'
-    ,closeWidgetTitle: 'Cerrar widget'
-    ,statsTitle: 'Abrir menu'
-    ,cookieTitle: 'Cookies y telemetria'
-    ,cookieBody: 'Usamos cookies y recopilamos datos de uso para mejorar el producto. Sin anuncios de terceros ni retargeting. Puedes cambiar la configuracion en cualquier momento.'
-    ,cookieStrict: 'Estrictamente necesarias (siempre activadas)'
-    ,cookiePerf: 'Rendimiento (tiempos, errores)'
-    ,cookieAnalytics: 'Analitica (uso anonimo)'
-    ,cookieMarketing: 'Marketing (desactivado - no se usa)'
-    ,cookieAcceptAll: 'Aceptar todo'
-    ,cookieRejectAll: 'Rechazar todo'
-    ,cookieManage: 'Configurar'
-    ,cookieSave: 'Guardar'
-    ,insightDefault: 'no especificado'
-    ,stageWaiting: 'Esperando'
-    ,stageIntro: 'Descubrimiento'
-    ,stageCore: 'Parametros principales'
-    ,stagePrimarySelection: 'Listo para una primera seleccion'
-    ,stageDetails: 'Afinando detalles'
-    ,stagePreciseSelection: 'Listo para una seleccion precisa'
-    ,assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
+    inDialogLeadContactError: "Обов'язковий телефон або email",
+    inDialogLeadConsentError: 'Прийміть Політику конфіденційності',
+    invalidPhone: 'Некоректний номер телефону. Використайте 9-10 цифр після коду країни.',
+    invalidEmail: 'Некоректний email. Приклад: name@domain.com',
+    submitFailed: 'Не вдалося надіслати заявку. Спробуйте пізніше.',
+    networkError: 'Помилка мережі. Перевірте підключення і спробуйте ще раз.',
+    parseError: 'Не вдалося розібрати відповідь сервера',
+    responseMissing: 'Відповідь від сервера не отримана.',
+    sendTextError: 'Сталася помилка під час надсилання повідомлення. Спробуйте ще раз.',
+    shortRecording: 'Запис занадто короткий',
+    voiceMessageLabel: 'Голосове повідомлення ({seconds}с)',
+    processingCardsError: 'Помилка під час обробки команди карток',
+    noSavedSession: 'Немає збереженої сесії для відновлення',
+    snapshotCorrupted: 'Знімок стану пошкоджений',
+    restoreError: 'Помилка відновлення',
+    sessionReset: 'Сесію скинуто',
+    micErrorDuringRecord: 'Сталася помилка під час запису',
+    recordingCancelled: 'Запис скасовано',
+    micAccessDenied: 'Доступ до мікрофона заборонено',
+    micNotFound: 'Мікрофон не знайдено',
+    micBusy: 'Мікрофон уже використовується',
+    micUnsupported: 'Налаштування мікрофона не підтримуються',
+    micAccessError: 'Помилка доступу до мікрофона',
+    speakTitle: 'Говорити',
+    sendTitle: 'Надіслати',
+    closeWidgetTitle: 'Закрити віджет',
+    statsTitle: 'Відкрити меню',
+    cookieTitle: 'Cookies і телеметрія',
+    cookieBody: 'Ми використовуємо cookies та збираємо дані використання, щоб покращувати продукт. Жодної сторонньої реклами чи ретаргетингу. Налаштування можна змінити будь-коли.',
+    cookieStrict: "Суворо необхідні (завжди ввімкнені)",
+    cookiePerf: 'Продуктивність (таймінги, помилки)',
+    cookieAnalytics: 'Аналітика (анонімне використання)',
+    cookieMarketing: 'Маркетинг (вимкнено — не використовується)',
+    cookieAcceptAll: 'Прийняти все',
+    cookieRejectAll: 'Відхилити все',
+    cookieManage: 'Налаштувати',
+    cookieSave: 'Зберегти',
+    insightDefault: 'не вказано',
+    stageWaiting: 'Очікування',
+    stageIntro: 'Знайомство',
+    stageCore: 'Основні параметри',
+    stagePrimarySelection: 'Готовий до первинного підбору',
+    stageDetails: 'Уточнення деталей',
+    stagePreciseSelection: 'Готовий до точного підбору',
+    assistantGreeting: 'Привіт! Я підберу будь-які об’єкти під ваш запит. Чим детальніше розкажете, що шукаєте, тим точніший буде підбір. Готові почати? Поїхали!'
   }
 };
-
-// UA пока использует RU-копию интерфейса
-if (!LOCALES.UA) {
-  LOCALES.UA = { ...LOCALES.RU };
-}
 
 class VoiceWidget extends HTMLElement {
   constructor() {
@@ -2218,8 +2135,8 @@ class VoiceWidget extends HTMLElement {
     
     // 🆕 Sprint I: server-side role (read-only, обновляется из server responses)
     this.role = null;
-    this.supportedLanguages = ['RU', 'UA', 'EN', 'AR'];
-    this.defaultLanguage = 'EN';
+    this.supportedLanguages = ['UA', 'RU'];
+    this.defaultLanguage = 'UA';
     this.currentLang = this.defaultLanguage;
 
     // параметры
@@ -2593,7 +2510,6 @@ class VoiceWidget extends HTMLElement {
     const normalized = typeof lang === 'string' ? lang.trim().slice(0, 2).toUpperCase() : '';
     const nextLang = this.supportedLanguages.includes(normalized) ? normalized : this.defaultLanguage;
     this.currentLang = nextLang;
-    this._menuLanguageCode = nextLang;
     try {
       localStorage.setItem('vw_lang', nextLang);
     } catch {}
@@ -2608,7 +2524,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   getCurrentLocale() {
-    return LOCALES[this.currentLang] || LOCALES[this.defaultLanguage] || LOCALES.EN;
+    return LOCALES[this.currentLang] || LOCALES[this.defaultLanguage] || LOCALES.UA;
   }
 
   t(key, params = null) {
@@ -2764,7 +2680,6 @@ class VoiceWidget extends HTMLElement {
       this.removeAttribute('data-telegram');
     }
     this.currentLang = this.getInitialLanguage();
-    this._menuLanguageCode = this.currentLang;
     this.updateInterface();
     if (!this._uiInitializedOnce) {
       this.initializeUI();
@@ -2850,10 +2765,6 @@ class VoiceWidget extends HTMLElement {
 
   getContactIconByTheme() {
     return this.getThemeToken('--img-contact', 'Contactme.svg');
-  }
-
-  getLanguageIconByTheme() {
-    return this.getThemeToken('--img-language', 'Language.svg');
   }
 
   getInsightsIconByTheme() {
@@ -5260,7 +5171,7 @@ render() {
         preferredContactMethod,
         telegramUsername: telegramValid ? telegramNormalized : null,
         comment: telegramValid ? `telegram:${telegramNormalized}` : null,
-        language: (this.currentLang || this.defaultLanguage || 'en').toLowerCase(),
+        language: (this.currentLang || this.defaultLanguage || 'ua').toLowerCase(),
         propertyId: normalizedSource === 'tg_property_card' ? propertyId : null,
         consent: true
       };
@@ -5655,8 +5566,8 @@ render() {
 
   // ---------- УТИЛИТЫ ----------
   getLangCode() {
-    const code = String(this.currentLang || this.defaultLanguage || 'EN').trim().toLowerCase().slice(0, 2);
-    return ['en', 'es', 'ru'].includes(code) ? code : 'en';
+    const code = String(this.currentLang || this.defaultLanguage || 'UA').trim().toLowerCase().slice(0, 2);
+    return ['ua', 'ru'].includes(code) ? code : 'ua';
   }
 
  
@@ -5771,39 +5682,9 @@ render() {
     const overlay = this.getRoot().querySelector('.menu-overlay');
     if (!overlay) return;
     const locale = this.getCurrentLocale();
-    const languageCodes = ['RU', 'EN', 'AR'];
-    const languageFlags = { RU: '🇷🇺', EN: '🇬🇧', AR: '🇦🇪' };
-    const languageLabels = { RU: 'Русский', EN: 'English', AR: 'العربية' };
     const themeMode = this.getTheme();
     const themeActionLabel = themeMode === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
     const themeActionIcon = themeMode === 'light' ? 'dark-theme.svg' : 'light-theme.svg';
-    if (!this._menuLanguageCode || !languageFlags[this._menuLanguageCode]) this._menuLanguageCode = this.currentLang || this.defaultLanguage;
-    if (typeof this._menuLanguageDropdownOpen !== 'boolean') this._menuLanguageDropdownOpen = false;
-    const syncLanguageOutsideClick = () => {
-      const shouldListen = this._menuState === 'open' && this._menuLanguageDropdownOpen;
-      if (!shouldListen) {
-        if (this._menuLanguageOutsideClickBound && this._menuLanguageOutsideClickHandler) {
-          this.getRoot().removeEventListener('click', this._menuLanguageOutsideClickHandler, true);
-        }
-        this._menuLanguageOutsideClickBound = false;
-        return;
-      }
-      if (!this._menuLanguageOutsideClickHandler) {
-        this._menuLanguageOutsideClickHandler = (e) => {
-          if (!this._menuLanguageDropdownOpen || this._menuState !== 'open') return;
-          const picker = this.getRoot()?.querySelector('[data-language-picker]');
-          if (!picker) return;
-          const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
-          if (path.includes(picker)) return;
-          this._menuLanguageDropdownOpen = false;
-          this.updateMenuUI();
-        };
-      }
-      if (!this._menuLanguageOutsideClickBound) {
-        this.getRoot().addEventListener('click', this._menuLanguageOutsideClickHandler, true);
-        this._menuLanguageOutsideClickBound = true;
-      }
-    };
     if (this._menuState === 'closed' || !this._menuState) overlay.classList.remove('open'); else overlay.classList.add('open');
 
     // Toggle side header actions and logo on active screen
@@ -5824,16 +5705,7 @@ render() {
     if (this._menuState === 'open') {
       content.innerHTML = `
         <div class="menu-grid">
-          <div class="menu-col">
-            <div class="menu-language ${this._menuLanguageDropdownOpen ? 'open' : ''}" data-language-picker>
-              <button class="menu-btn menu-btn--language menu-language-trigger" type="button" data-action="language">
-                <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">${locale.menuLanguage}
-              </button>
-              <div class="menu-language-dropdown ${this._menuLanguageDropdownOpen ? 'open' : ''}">
-                ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${languageLabels[code] || code}</button>`).join('')}
-              </div>
-            </div>
-          </div>
+          <div class="menu-col"></div>
           <div class="menu-col menu-col--middle" style="width:80px; align-items:center; justify-content:center;">
             <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
           </div>
@@ -5842,44 +5714,23 @@ render() {
           </div>
         </div>`;
       const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this._menuLanguageDropdownOpen = false; this.updateMenuUI(); };
-      content.querySelectorAll('[data-language-code]').forEach(btn => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const nextCode = e.currentTarget.getAttribute('data-language-code');
-          if (!nextCode || !languageFlags[nextCode]) return;
-          this._menuLanguageDropdownOpen = false;
-          this.setLanguage(nextCode);
-        };
-      });
+      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
       content.querySelectorAll('.menu-btn').forEach(btn => {
         btn.onclick = (e) => {
           const action = e.currentTarget.getAttribute('data-action');
           if (!action) return;
-          if (action === 'language') {
-            e.preventDefault();
-            e.stopPropagation();
-            this._menuLanguageDropdownOpen = !this._menuLanguageDropdownOpen;
-            this.updateMenuUI();
-            return;
-          }
           if (action === 'theme') {
             e.preventDefault();
             e.stopPropagation();
-            this._menuLanguageDropdownOpen = false;
             this.toggleTheme();
             this.updateMenuUI();
             return;
           }
-          this._menuLanguageDropdownOpen = false;
           this.updateMenuUI();
         };
       });
-      syncLanguageOutsideClick();
     } else {
       content.innerHTML = '';
-      syncLanguageOutsideClick();
     }
   }
 
