@@ -4622,14 +4622,12 @@ render() {
       normalizeGridState();
     }
 
-    if (hiddenCount <= 0) return;
-
     const moreBtn = document.createElement('button');
     moreBtn.type = 'button';
     moreBtn.className = 'card-back-specs__more';
     moreBtn.setAttribute('data-action', 'show-hidden-specs');
-    moreBtn.textContent = `+${hiddenCount}`;
-    moreBtn.setAttribute('data-hidden-count', String(hiddenCount));
+    moreBtn.textContent = `+${Math.max(1, hiddenCount)}`;
+    moreBtn.setAttribute('data-hidden-count', String(Math.max(1, hiddenCount)));
     target.appendChild(moreBtn);
 
     while (target.scrollHeight > target.clientHeight) {
@@ -4638,8 +4636,8 @@ render() {
       nextVisible.classList.add('is-hidden');
       nextVisible.classList.remove('is-last-single');
       hiddenCount += 1;
-      moreBtn.textContent = `+${hiddenCount}`;
-      moreBtn.setAttribute('data-hidden-count', String(hiddenCount));
+      moreBtn.textContent = `+${Math.max(1, hiddenCount)}`;
+      moreBtn.setAttribute('data-hidden-count', String(Math.max(1, hiddenCount)));
       normalizeGridState();
     }
   }
