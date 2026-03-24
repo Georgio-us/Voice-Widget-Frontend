@@ -1405,6 +1405,59 @@ class APIClient {
     } catch {}
   }
 
+  getTelegramUserIdentity() {
+    try {
+      const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      if (!tgUser || tgUser.id == null) return null;
+      return {
+        id: String(tgUser.id).trim(),
+        username: tgUser.username ? String(tgUser.username).trim() : '',
+        firstName: tgUser.first_name ? String(tgUser.first_name).trim() : '',
+        lastName: tgUser.last_name ? String(tgUser.last_name).trim() : ''
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async resolveViewerAccessRole() {
+    const tgIdentity = this.getTelegramUserIdentity();
+    // Safety baseline for non-Telegram / local browser.
+    if (!tgIdentity?.id) {
+      this.widget.accessRole = 'user';
+      this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+      try { this.widget.updateAccessHeaderButton?.(); } catch {}
+      return { accessRole: 'user', isAdmin: false, isOwner: false, isSuperAdmin: false };
+    }
+
+    try {
+      const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/audio/access');
+      const url = new URL(base);
+      url.searchParams.set('tgUserId', tgIdentity.id);
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error(`access role fetch failed: ${res.status}`);
+      const data = await res.json().catch(() => ({}));
+      const accessRole = String(data?.accessRole || 'user').trim().toLowerCase();
+      this.widget.accessRole = ['super_admin', 'owner', 'user'].includes(accessRole) ? accessRole : 'user';
+      this.widget.accessFlags = {
+        isAdmin: data?.isAdmin === true || this.widget.accessRole !== 'user',
+        isOwner: data?.isOwner === true,
+        isSuperAdmin: data?.isSuperAdmin === true
+      };
+      try { this.widget.updateAccessHeaderButton?.(); } catch {}
+      return {
+        accessRole: this.widget.accessRole,
+        ...this.widget.accessFlags
+      };
+    } catch (error) {
+      console.warn('resolveViewerAccessRole failed:', error);
+      this.widget.accessRole = 'user';
+      this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+      try { this.widget.updateAccessHeaderButton?.(); } catch {}
+      return { accessRole: 'user', isAdmin: false, isOwner: false, isSuperAdmin: false };
+    }
+  }
+
   storeLastApiPayload(data, source = 'unknown') {
     try {
       this.widget._lastApiPayload = data && typeof data === 'object' ? JSON.parse(JSON.stringify(data)) : null;
@@ -1947,6 +2000,16 @@ const LOCALES = {
     menuThemeToDark: 'Тёмная тема',
     appHeaderContact: 'Связаться',
     appHeaderOnline: 'Online',
+    appHeaderAdminAria: 'Открыть админ-панель',
+    appHeaderWishlistAria: 'Открыть избранное',
+    accessAdminIcon: '👑',
+    accessUserIcon: '♡',
+    accessAdminGreeting: 'Добро пожаловать, {name} (@{username})! Вы в админ-панели',
+    accessUserGreeting: 'Добро пожаловать, {name} (@{username})! Это ваш список избранного',
+    accessAdminStats: 'Статистика',
+    accessAdminProperties: 'Мои объекты',
+    accessAdminSubscription: 'Управление подпиской',
+    accessUserEmpty: 'Здесь появятся объекты, которые вы добавите в избранное (Wishlist)',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
     privacyPolicy: 'Политика конфиденциальности',
     send: 'Отправить',
@@ -2055,6 +2118,16 @@ const LOCALES = {
     menuThemeToDark: 'Темна тема',
     appHeaderContact: "Зв'язатися",
     appHeaderOnline: 'Online',
+    appHeaderAdminAria: 'Відкрити адмін-панель',
+    appHeaderWishlistAria: 'Відкрити обране',
+    accessAdminIcon: '👑',
+    accessUserIcon: '♡',
+    accessAdminGreeting: 'Вітаємо, {name} (@{username})! Ви в адмін-панелі',
+    accessUserGreeting: 'Вітаємо, {name} (@{username})! Це ваш список обраного',
+    accessAdminStats: 'Статистика',
+    accessAdminProperties: "Мої об'єкти",
+    accessAdminSubscription: 'Керування підпискою',
+    accessUserEmpty: "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)",
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
     privacyPolicy: 'Політика конфіденційності',
     send: 'Надіслати',
@@ -2189,6 +2262,9 @@ class VoiceWidget extends HTMLElement {
     this._pillBaseCount = 0;
     this._pillCtaTimer = null;
     this._lastPillInsightsSnapshot = null;
+    this.accessRole = 'user';
+    this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+    this._accessOverlayOpen = false;
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -2632,7 +2708,7 @@ class VoiceWidget extends HTMLElement {
     setText('#appContactButton', locale.appHeaderContact || 'Связаться');
     setText('#appOnlineText', locale.appHeaderOnline || 'Online');
     setText('#appLangButton', ['UA', 'RU'].includes(this.currentLang) ? this.currentLang : 'UA');
-    setText('#appThemeButton', '⋯');
+    this.updateAccessHeaderButton();
     setTextAll('.recording-label', locale.recordingLabel);
     setText('.loading-text', locale.loadingText);
     setTitle('toggleButton', locale.speakTitle);
@@ -2670,6 +2746,166 @@ class VoiceWidget extends HTMLElement {
     // Keep pill label synchronized with current language even mid-conversation.
     this._refreshObjectsPillLocale({ animate: false });
     this.updateMenuUI();
+  }
+
+  getCurrentTelegramUser() {
+    try {
+      const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      if (!tgUser) return null;
+      return {
+        id: tgUser.id != null ? String(tgUser.id).trim() : null,
+        username: tgUser.username ? String(tgUser.username).trim() : '',
+        firstName: tgUser.first_name ? String(tgUser.first_name).trim() : '',
+        lastName: tgUser.last_name ? String(tgUser.last_name).trim() : ''
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  updateAccessHeaderButton() {
+    const btn = this.$byId('appThemeButton');
+    if (!btn) return;
+    const locale = this.getCurrentLocale();
+    const isAdmin = this.accessRole === 'owner' || this.accessRole === 'super_admin' || this.accessFlags?.isAdmin === true;
+    btn.disabled = false;
+    btn.classList.remove('app-theme-btn--placeholder');
+    btn.textContent = isAdmin ? (locale.accessAdminIcon || '👑') : (locale.accessUserIcon || '♡');
+    btn.setAttribute('title', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
+    btn.setAttribute('aria-label', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
+  }
+
+  closeAccessOverlay() {
+    try {
+      const overlay = this.getRoot().querySelector('#vwAccessOverlay');
+      if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
+      this._accessOverlayOpen = false;
+    } catch {}
+  }
+
+  ensureAccessOverlayStyles() {
+    if (document.getElementById('vw-access-overlay-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-access-overlay-styles';
+    style.textContent = `
+      .vw-access-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1300;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.56);
+        padding: 16px;
+      }
+      .vw-access-modal {
+        width: min(420px, 100%);
+        border-radius: 16px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 90%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        color: var(--text-primary, #fff);
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+      }
+      .vw-access-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .vw-access-title {
+        font-size: .9rem;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.75));
+      }
+      .vw-access-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        cursor: pointer;
+      }
+      .vw-access-greeting {
+        font-size: .92rem;
+        line-height: 1.45;
+        color: var(--text-primary, #fff);
+      }
+      .vw-access-list {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-access-item {
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        border-radius: 12px;
+        padding: 10px 12px;
+        text-align: left;
+        font-size: .86rem;
+        font-weight: 500;
+      }
+      .vw-access-hint {
+        font-size: .84rem;
+        line-height: 1.45;
+        color: var(--text-secondary, rgba(255,255,255,0.74));
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  openAccessOverlay() {
+    this.closeAccessOverlay();
+    this.ensureAccessOverlayStyles();
+    const locale = this.getCurrentLocale();
+    const tgUser = this.getCurrentTelegramUser();
+    const isAdmin = this.accessRole === 'owner' || this.accessRole === 'super_admin' || this.accessFlags?.isAdmin === true;
+    const name = String(tgUser?.firstName || tgUser?.username || 'User').trim();
+    const username = String(tgUser?.username || 'guest').trim().replace(/^@/, '');
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vwAccessOverlay';
+    overlay.className = 'vw-access-overlay';
+
+    const greeting = isAdmin
+      ? this.t('accessAdminGreeting', { name, username })
+      : this.t('accessUserGreeting', { name, username });
+
+    overlay.innerHTML = isAdmin
+      ? `
+        <div class="vw-access-modal" role="dialog" aria-modal="true" aria-label="${locale.appHeaderAdminAria || 'Admin panel'}">
+          <div class="vw-access-head">
+            <div class="vw-access-title">${locale.appHeaderAdminAria || 'Адмін-панель'}</div>
+            <button type="button" class="vw-access-close" data-role="close" aria-label="${locale.close || 'Закрыть'}">×</button>
+          </div>
+          <div class="vw-access-greeting">${greeting}</div>
+          <div class="vw-access-list">
+            <button type="button" class="vw-access-item">${locale.accessAdminStats || 'Статистика'}</button>
+            <button type="button" class="vw-access-item">${locale.accessAdminProperties || "Мої об'єкти"}</button>
+            <button type="button" class="vw-access-item">${locale.accessAdminSubscription || 'Керування підпискою'}</button>
+          </div>
+        </div>
+      `
+      : `
+        <div class="vw-access-modal" role="dialog" aria-modal="true" aria-label="${locale.appHeaderWishlistAria || 'Wishlist'}">
+          <div class="vw-access-head">
+            <div class="vw-access-title">${locale.appHeaderWishlistAria || 'Обране'}</div>
+            <button type="button" class="vw-access-close" data-role="close" aria-label="${locale.close || 'Закрыть'}">×</button>
+          </div>
+          <div class="vw-access-greeting">${greeting}</div>
+          <div class="vw-access-hint">${locale.accessUserEmpty || "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)"}</div>
+        </div>
+      `;
+
+    this.getRoot().appendChild(overlay);
+    this._accessOverlayOpen = true;
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeAccessOverlay());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeAccessOverlay();
+    });
   }
 
   getConsent() {
@@ -2734,6 +2970,7 @@ class VoiceWidget extends HTMLElement {
     // v2 menu overlay init (after DOM is ready)
     try { this.setupMenuOverlay(); } catch {}
     try { this.initializePropertiesCatalog(); } catch {}
+    try { this.api.resolveViewerAccessRole(); } catch {}
 
     
   }
@@ -2927,7 +3164,7 @@ render() {
         </div>
         <div class="app-header-actions">
           <button class="app-header-btn app-lang-btn" id="appLangButton" type="button">RU</button>
-          <button class="app-header-btn app-theme-btn app-theme-btn--placeholder" id="appThemeButton" type="button" aria-label="Soon" disabled>⋯</button>
+          <button class="app-header-btn app-theme-btn" id="appThemeButton" type="button" aria-label="Open panel">♡</button>
         </div>
       </header>
       <div class="app-body">
@@ -3043,6 +3280,9 @@ render() {
   // New top header actions
   this.$byId('appLangButton')?.addEventListener('click', () => {
     try { this.switchLanguage(); } catch {}
+  });
+  this.$byId('appThemeButton')?.addEventListener('click', () => {
+    try { this.openAccessOverlay(); } catch {}
   });
   // Reserved button slot (no action yet).
   this.$byId('appContactButton')?.addEventListener('click', () => {
