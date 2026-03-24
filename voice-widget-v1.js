@@ -4604,7 +4604,7 @@ render() {
     const backSpecsItems = [
       { icon: '🛏️', text: normalized.rooms ? `${normalized.rooms} rooms` : '— rooms' },
       { icon: '📐', text: normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²' },
-      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} AED/m²` : '— AED/m²' },
+      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} UAH/m²` : '— UAH/m²' },
       { icon: '🏢', text: normalized.floor ? `${normalized.floor} floor` : '— floor' },
       { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' },
       { icon: '🏠', text: locale.backSpecsExtraType || 'Тип: апартаменты' },
@@ -6018,7 +6018,7 @@ render() {
     if (image && !assetPool.includes(image)) assetPool.unshift(image);
     const assetImages = assetPool.slice(0, 4);
 
-    const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} AED` : (raw.price || raw.priceLabel || '');
+    const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} UAH` : (raw.price || raw.priceLabel || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
     const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
     const pricePerM2Label = formatNumberUS(pricePerM2Num != null ? pricePerM2Num : raw.price_per_m2);

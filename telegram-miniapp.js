@@ -45,7 +45,7 @@ export function mountTelegramMiniApp(root) {
     messages: [
       {
         role: 'assistant',
-        text: 'Welcome to Dubai Real Estate Mini App. Ask me anything and browse catalog cards on the left.'
+        text: 'Welcome to Odesa Real Estate Mini App. Ask me anything and browse catalog cards on the left.'
       }
     ],
     sending: false

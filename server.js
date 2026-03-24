@@ -153,7 +153,7 @@ function extractPrice(card) {
   const raw = card?.price ?? card?.priceEUR ?? card?.price_amount ?? card?.priceAmount ?? '';
   const num = Number(String(raw).replace(/[^0-9.]/g, ''));
   if (!Number.isFinite(num) || num <= 0) return String(raw || '').trim();
-  return `${Math.round(num).toLocaleString('en-US')} AED`;
+  return `${Math.round(num).toLocaleString('en-US')} UAH`;
 }
 
 function extractArea(card) {
@@ -178,7 +178,7 @@ function extractFloor(card) {
 }
 
 function extractCity(card) {
-  return String(card?.city || card?.location_city || card?.location?.city || 'Dubai').trim();
+  return String(card?.city || card?.location_city || card?.location?.city || 'Odesa').trim();
 }
 
 function extractType(card) {
@@ -186,7 +186,7 @@ function extractType(card) {
 }
 
 function extractDistrict(card) {
-  return String(card?.district || card?.neighborhood || card?.city || 'Dubai').trim();
+  return String(card?.district || card?.neighborhood || card?.city || 'Odesa').trim();
 }
 
 function buildShareOgMeta({ propId, card, req }) {
@@ -230,7 +230,7 @@ function renderShareLandingHtml({ propId, card, req }) {
   const rooms = extractRooms(card) || '— rooms';
   const floor = extractFloor(card) || '— floor';
   const district = extractDistrict(card) || '—';
-  const city = extractCity(card) || 'Dubai';
+  const city = extractCity(card) || 'Odesa';
   const type = extractType(card) || 'Property';
   const openButton = directLink
     ? `<a class="open-btn" href="${esc(directLink)}">Открыть объект в приложении</a>`
