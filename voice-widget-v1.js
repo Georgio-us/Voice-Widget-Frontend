@@ -6055,17 +6055,18 @@ render() {
     const matchTier = ['high', 'mid', 'low'].includes(normalizedTier) ? normalizedTier : 'low';
 
     const dynamicBackFeatureItems = [];
-    pushExtra(dynamicBackFeatureItems, '🏠', 'Type', propertyType || rawFeatures.type || rawFeatures.propertyType);
-    pushExtra(dynamicBackFeatureItems, '📈', 'Market', rawFeatures.market || rawFeatures.marketType || rawFeatures.segment);
-    pushExtra(dynamicBackFeatureItems, '🗓️', 'Handover', rawFeatures.handover || rawFeatures.handoverDate || rawFeatures.deliveryDate);
-    pushExtra(dynamicBackFeatureItems, '✨', 'Finish', rawFeatures.finish || rawFeatures.finishing || rawFeatures.renovation);
-    pushExtra(dynamicBackFeatureItems, '🚗', 'Parking', rawFeatures.parking || rawFeatures.parkingSpaces);
-    pushExtra(dynamicBackFeatureItems, '🌿', 'Terrace', rawFeatures.terrace ?? truthyLabel(rawFeatures.terrace));
-    pushExtra(dynamicBackFeatureItems, '🪑', 'Furnished', rawFeatures.furnished ?? truthyLabel(rawFeatures.furnished));
-    pushExtra(dynamicBackFeatureItems, '🏗️', 'Building floors', rawFeatures.buildingFloors);
-    pushExtra(dynamicBackFeatureItems, '🏛️', 'Building year', rawFeatures.buildingYear);
+    pushExtra(dynamicBackFeatureItems, '🏠', 'Тип', propertyType || rawFeatures.type || rawFeatures.propertyType || rawFeatures.buildingType);
+    pushExtra(dynamicBackFeatureItems, '🧱', 'Стіни', rawFeatures.wallMaterial || rawFeatures.materialWalls);
+    pushExtra(dynamicBackFeatureItems, '🛗', 'Ліфт', rawFeatures.elevator ?? truthyLabel(rawFeatures.elevator));
+    pushExtra(dynamicBackFeatureItems, '🌤️', 'Балкон', rawFeatures.balconyType || rawFeatures.balcony || truthyLabel(rawFeatures.balcony));
+    pushExtra(dynamicBackFeatureItems, '🛠️', 'Стан', rawFeatures.condition || rawFeatures.objectCondition || rawFeatures.renovation || rawFeatures.finish);
+    pushExtra(dynamicBackFeatureItems, '🚗', 'Паркінг', rawFeatures.parking || rawFeatures.parkingSpaces);
+    pushExtra(dynamicBackFeatureItems, '🌿', 'Тераса', rawFeatures.terrace ?? truthyLabel(rawFeatures.terrace));
+    pushExtra(dynamicBackFeatureItems, '🪑', 'Меблі', rawFeatures.furnished ?? truthyLabel(rawFeatures.furnished));
+    pushExtra(dynamicBackFeatureItems, '🏗️', 'Поверхів', rawFeatures.buildingFloors);
+    pushExtra(dynamicBackFeatureItems, '🏛️', 'Рік', rawFeatures.buildingYear);
     if (Array.isArray(rawFeatures.buildingInfrastructure) && rawFeatures.buildingInfrastructure.length) {
-      pushExtra(dynamicBackFeatureItems, '📌', 'Infrastructure', rawFeatures.buildingInfrastructure.join(', '));
+      pushExtra(dynamicBackFeatureItems, '📌', 'Інфраструктура', rawFeatures.buildingInfrastructure.join(', '));
     }
 
     return {
