@@ -14,6 +14,20 @@ const VW_SHARE_BASE_URL = process.env.VW_SHARE_BASE_URL || FRONTEND_APP_URL || '
 const SHARE_PREFIX = 'prop_';
 const INDEX_HTML_PATH = path.join(__dirname, 'index.html');
 
+const trim = (v) => String(v || '').trim();
+const stripSlash = (v) => trim(v).replace(/\/+$/, '');
+const EFFECTIVE_CARDS_API_BASE = stripSlash(CARDS_API_BASE);
+const EFFECTIVE_VW_API_URL = trim(VW_API_URL) || (
+  EFFECTIVE_CARDS_API_BASE
+    ? EFFECTIVE_CARDS_API_BASE.replace(/\/api\/cards$/i, '/api/audio/upload')
+    : ''
+);
+const EFFECTIVE_VW_CARDS_SEARCH_URL = trim(VW_CARDS_SEARCH_URL) || (
+  EFFECTIVE_CARDS_API_BASE
+    ? `${EFFECTIVE_CARDS_API_BASE}/search?limit=2000`
+    : ''
+);
+
 app.use(cors());
 app.use(express.static(__dirname, { index: false }));
 
@@ -270,8 +284,8 @@ function renderIndexWithOg({ propId, card, injectBaseHref = false, req = null })
     .replace(/\/+$/, '');
   const runtimeConfigScript = `
   <script>
-    window.__VW_API_URL__ = ${JSON.stringify(String(VW_API_URL || '').trim())};
-    window.__VW_CARDS_SEARCH_URL__ = ${JSON.stringify(String(VW_CARDS_SEARCH_URL || '').trim())};
+    window.__VW_API_URL__ = ${JSON.stringify(EFFECTIVE_VW_API_URL)};
+    window.__VW_CARDS_SEARCH_URL__ = ${JSON.stringify(EFFECTIVE_VW_CARDS_SEARCH_URL)};
     window.__VW_TELEGRAM_BOT_USERNAME__ = ${JSON.stringify(String(TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''))};
     window.__VW_SHARE_BASE_URL__ = ${JSON.stringify(shareBaseForClient)};
   </script>`;
