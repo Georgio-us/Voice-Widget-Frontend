@@ -2667,6 +2667,8 @@ class VoiceWidget extends HTMLElement {
       setText('#cookieSaveBtn', locale.cookieSave);
     }
 
+    // Keep pill label synchronized with current language even mid-conversation.
+    this._refreshObjectsPillLocale({ animate: false });
     this.updateMenuUI();
   }
 
@@ -3864,6 +3866,20 @@ render() {
     return this.t('pillFound', { count: formatted }) || `Найдено ${formatted} объектов`;
   }
 
+  _refreshObjectsPillLocale({ animate = false } = {}) {
+    const state = String(this._pillState || 'default');
+    const locale = this.getCurrentLocale();
+    if (state === 'insight') {
+      this._setObjectsPillText(locale.pillNewInsight || 'Новый инсайт', 'insight', { animate, pulse: true });
+      return;
+    }
+    if (state === 'cta') {
+      this._setObjectsPillText(locale.pillCta || 'Смотреть подборку', 'cta', { animate, pulse: false });
+      return;
+    }
+    this._setObjectsPillText(this._buildPillDefaultLabel(), 'default', { animate, pulse: false });
+  }
+
   _setObjectsPillText(text, state = 'default', { animate = true, pulse = false } = {}) {
     const pill = this.$byId('objectsCounterPill');
     if (!pill) return;
@@ -3926,12 +3942,11 @@ render() {
   }
 
   _runInsightPillSequence() {
-    const locale = this.getCurrentLocale();
     if (this._pillCtaTimer) {
       clearTimeout(this._pillCtaTimer);
       this._pillCtaTimer = null;
     }
-    this._setObjectsPillText(locale.pillNewInsight || 'Новый инсайт', 'insight', { animate: true, pulse: true });
+    this._setObjectsPillText((this.getCurrentLocale().pillNewInsight || 'Новый инсайт'), 'insight', { animate: true, pulse: true });
     try {
       const tg = window?.Telegram?.WebApp;
       if (tg?.HapticFeedback?.notificationOccurred) {
@@ -3941,7 +3956,7 @@ render() {
       }
     } catch {}
     this._pillCtaTimer = setTimeout(() => {
-      this._setObjectsPillText(locale.pillCta || 'Смотреть подборку', 'cta', { animate: true, pulse: false });
+      this._setObjectsPillText((this.getCurrentLocale().pillCta || 'Смотреть подборку'), 'cta', { animate: true, pulse: false });
       this._pillCtaTimer = null;
     }, 2000);
   }
