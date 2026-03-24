@@ -1984,10 +1984,27 @@ const ASSETS_BASE = (() => {
   }
 })();
 
-const VW_TELEGRAM_BOT_USERNAME = 'viaproperties_bot';
 const VW_DEEP_LINK_PARAM = 'propId';
 const VW_DEEP_LINK_PREFIX = 'prop_';
-const VW_SHARE_BASE_URL = 'https://voice-widget-frontend-tgdubai-split.up.railway.app';
+const VW_TELEGRAM_BOT_USERNAME = (() => {
+  try {
+    const fromWindow = typeof window !== 'undefined' ? window.__VW_TELEGRAM_BOT_USERNAME__ : '';
+    return String(fromWindow || '').trim().replace(/^@/, '');
+  } catch {
+    return '';
+  }
+})();
+const VW_SHARE_BASE_URL = (() => {
+  try {
+    const fromWindow = typeof window !== 'undefined' ? window.__VW_SHARE_BASE_URL__ : '';
+    const normalized = String(fromWindow || '').trim().replace(/\/+$/, '');
+    if (normalized) return normalized;
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return String(window.location.origin).replace(/\/+$/, '');
+    }
+  } catch {}
+  return '';
+})();
 
 
 const LOCALES = {
@@ -2276,7 +2293,7 @@ class VoiceWidget extends HTMLElement {
     this.currentLang = this.defaultLanguage;
 
     // параметры
-    const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload';
+    const attrApi = this.getAttribute('api-url') || '/api/audio/upload';
     const resolveApiUrl = (fallback) => {
       try {
         const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('vwApi') : null;
@@ -4241,9 +4258,12 @@ render() {
   }
 
   _getPropertiesEndpointCandidates() {
-    const defaults = [
-      'https://voice-widget-backend-tgdubai-split.up.railway.app/api/cards/search?limit=2000'
-    ];
+    const defaults = [];
+    try {
+      const fromWindow = typeof window !== 'undefined' ? window.__VW_CARDS_SEARCH_URL__ : '';
+      const cardsUrl = String(fromWindow || '').trim();
+      if (cardsUrl) defaults.push(cardsUrl);
+    } catch {}
     try {
       const u = new URL(String(this.apiUrl || ''));
       const base = `${u.protocol}//${u.host}`;
@@ -6210,7 +6230,14 @@ const autoMount = () => {
   let target = document.getElementById('root') || document.body;
   if (!target) return;
 
-  const backendUrl = 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/audio/upload';
+  const backendUrl = (() => {
+    try {
+      const fromWindow = typeof window !== 'undefined' ? window.__VW_API_URL__ : '';
+      const normalized = String(fromWindow || '').trim();
+      if (normalized) return normalized;
+    } catch {}
+    return '/api/audio/upload';
+  })();
   let el = target.querySelector('voice-widget');
   if (!el) {
     el = document.createElement('voice-widget');

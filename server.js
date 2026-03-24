@@ -4,10 +4,13 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const FRONTEND_APP_URL = process.env.FRONTEND_APP_URL || 'https://voice-widget-frontend-tgdubai-split.up.railway.app/';
-const CARDS_API_BASE = process.env.CARDS_API_BASE || 'https://voice-widget-backend-tgdubai-split.up.railway.app/api/cards';
-const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || 'viaproperties_bot';
+const FRONTEND_APP_URL = process.env.FRONTEND_APP_URL || '';
+const CARDS_API_BASE = process.env.CARDS_API_BASE || '';
+const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || '';
 const TELEGRAM_MINIAPP_PATH = process.env.TELEGRAM_MINIAPP_PATH || 'app';
+const VW_API_URL = process.env.VW_API_URL || '';
+const VW_CARDS_SEARCH_URL = process.env.VW_CARDS_SEARCH_URL || '';
+const VW_SHARE_BASE_URL = process.env.VW_SHARE_BASE_URL || FRONTEND_APP_URL || '';
 const SHARE_PREFIX = 'prop_';
 const INDEX_HTML_PATH = path.join(__dirname, 'index.html');
 
@@ -41,10 +44,21 @@ function buildPropToken(propId) {
   return normalized ? `${SHARE_PREFIX}${normalized}` : '';
 }
 
-function buildShareUrl(propId) {
+function getPublicBaseUrl(req) {
+  const configured = String(FRONTEND_APP_URL || '').trim().replace(/\/+$/, '');
+  if (configured) return configured;
+  try {
+    const host = String(req?.get?.('host') || '').trim();
+    if (host) return `${req.protocol || 'https'}://${host}`;
+  } catch {}
+  return '';
+}
+
+function buildShareUrl(propId, req) {
   const normalized = normalizePropId(propId);
-  if (!normalized) return FRONTEND_APP_URL;
-  const base = FRONTEND_APP_URL.replace(/\/+$/, '');
+  const base = getPublicBaseUrl(req);
+  if (!normalized) return base || '/';
+  if (!base) return `/share/prop/${encodeURIComponent(normalized)}`;
   return `${base}/share/prop/${encodeURIComponent(normalized)}`;
 }
 
@@ -73,6 +87,7 @@ function getPropIdFromAppRequest(req) {
 
 async function fetchPropertyById(propId) {
   if (!propId) return null;
+  if (!String(CARDS_API_BASE || '').trim()) return null;
   try {
     const directRes = await fetch(`${CARDS_API_BASE}/${encodeURIComponent(propId)}`);
     if (directRes.ok) {
@@ -114,7 +129,8 @@ function extractImage(card) {
   const source = String(raw || '').trim();
   if (!source) return '';
   if (/^https?:\/\//i.test(source)) return source;
-  const base = FRONTEND_APP_URL.replace(/\/+$/, '');
+  const base = String(FRONTEND_APP_URL || '').trim().replace(/\/+$/, '');
+  if (!base) return source;
   const path = source.startsWith('/') ? source : `/${source}`;
   return `${base}${path}`;
 }
@@ -159,7 +175,7 @@ function extractDistrict(card) {
   return String(card?.district || card?.neighborhood || card?.city || 'Dubai').trim();
 }
 
-function buildShareOgMeta({ propId, card }) {
+function buildShareOgMeta({ propId, card, req }) {
   const image = extractImage(card);
   const price = extractPrice(card) || '—';
   const area = extractArea(card) || '—';
@@ -170,7 +186,7 @@ function buildShareOgMeta({ propId, card }) {
   const propertyType = extractType(card);
   const title = `🏙 ${propertyType} in ${district}`;
   const description = `Цена: ${price} | Комнаты: ${rooms} | Площадь: ${area} | Этаж: ${floor} | Район: ${district}, ${city}. Посмотреть детали в приложении.`;
-  const shareUrl = buildShareUrl(propId);
+  const shareUrl = buildShareUrl(propId, req);
 
   const tags = [
     `<title>${esc(title)}</title>`,
@@ -192,9 +208,9 @@ function buildShareOgMeta({ propId, card }) {
   return { title, description, image, shareUrl, tags: tags.join('\n  ') };
 }
 
-function renderShareLandingHtml({ propId, card }) {
+function renderShareLandingHtml({ propId, card, req }) {
   const directLink = buildDirectMiniAppLink(propId);
-  const og = buildShareOgMeta({ propId, card: card || {} });
+  const og = buildShareOgMeta({ propId, card: card || {}, req });
   const price = extractPrice(card) || '—';
   const area = extractArea(card) || '—';
   const rooms = extractRooms(card) || '— rooms';
@@ -204,7 +220,7 @@ function renderShareLandingHtml({ propId, card }) {
   const type = extractType(card) || 'Property';
   const openButton = directLink
     ? `<a class="open-btn" href="${esc(directLink)}">Открыть объект в приложении</a>`
-    : `<a class="open-btn" href="${esc(FRONTEND_APP_URL)}">Открыть каталог</a>`;
+    : `<a class="open-btn" href="${esc(getPublicBaseUrl(req) || '/')}">Открыть каталог</a>`;
 
   return `<!doctype html>
 <html lang="en">
@@ -241,21 +257,31 @@ function renderShareLandingHtml({ propId, card }) {
 </html>`;
 }
 
-function renderIndexWithOg({ propId, card, injectBaseHref = false }) {
+function renderIndexWithOg({ propId, card, injectBaseHref = false, req = null }) {
   let html = INDEX_TEMPLATE;
   if (injectBaseHref && !/<base\s/i.test(html)) {
     html = html.replace('<head>', '<head>\n  <base href="/">');
   }
-  if (!propId || !card) return html;
-
-  const og = buildShareOgMeta({ propId, card });
-  return html.replace('</head>', `  ${og.tags}\n</head>`);
+  const ogMeta = (!propId || !card)
+    ? ''
+    : `\n  ${buildShareOgMeta({ propId, card, req }).tags}\n`;
+  const shareBaseForClient = String(VW_SHARE_BASE_URL || getPublicBaseUrl(req) || '')
+    .trim()
+    .replace(/\/+$/, '');
+  const runtimeConfigScript = `
+  <script>
+    window.__VW_API_URL__ = ${JSON.stringify(String(VW_API_URL || '').trim())};
+    window.__VW_CARDS_SEARCH_URL__ = ${JSON.stringify(String(VW_CARDS_SEARCH_URL || '').trim())};
+    window.__VW_TELEGRAM_BOT_USERNAME__ = ${JSON.stringify(String(TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''))};
+    window.__VW_SHARE_BASE_URL__ = ${JSON.stringify(shareBaseForClient)};
+  </script>`;
+  return html.replace('</head>', `${ogMeta}${runtimeConfigScript}\n</head>`);
 }
 
 async function renderShareRoute(req, res) {
   const propId = getPropIdFromShareRequest(req);
   const card = propId ? await fetchPropertyById(propId) : null;
-  const html = renderShareLandingHtml({ propId, card });
+  const html = renderShareLandingHtml({ propId, card, req });
   res.type('html').send(html);
 }
 
@@ -263,12 +289,12 @@ async function renderApp(req, res) {
   const propId = getPropIdFromAppRequest(req);
   const needsBaseHref = req.path !== '/';
   if (!propId) {
-    const html = renderIndexWithOg({ propId: '', card: null, injectBaseHref: needsBaseHref });
+    const html = renderIndexWithOg({ propId: '', card: null, injectBaseHref: needsBaseHref, req });
     res.type('html').send(html);
     return;
   }
   const card = await fetchPropertyById(propId);
-  const html = renderIndexWithOg({ propId, card, injectBaseHref: needsBaseHref });
+  const html = renderIndexWithOg({ propId, card, injectBaseHref: needsBaseHref, req });
   res.type('html').send(html);
 }
 
