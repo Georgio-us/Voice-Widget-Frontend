@@ -4601,12 +4601,15 @@ render() {
       `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
       `🏢 ${normalized.floor ? `${normalized.floor} floor` : '— floor'}`
     ];
-    const backSpecsItems = [
+    const backSpecsItemsBase = [
       { icon: '🛏️', text: normalized.rooms ? `${normalized.rooms} rooms` : '— rooms' },
       { icon: '📐', text: normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²' },
       { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} UAH/m²` : '— UAH/m²' },
       { icon: '🏢', text: normalized.floor ? `${normalized.floor} floor` : '— floor' },
-      { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' },
+      { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' }
+    ];
+    const dynamicExtras = Array.isArray(normalized.backFeatureItems) ? normalized.backFeatureItems : [];
+    const backSpecsItemsFallback = [
       { icon: '🏠', text: locale.backSpecsExtraType || 'Тип: апартаменты' },
       { icon: '📈', text: locale.backSpecsExtraMarket || 'Рынок: первичный' },
       { icon: '🗓️', text: locale.backSpecsExtraHandover || 'Сдача: Q4 2027' },
@@ -4614,6 +4617,7 @@ render() {
       { icon: '🚗', text: locale.backSpecsExtraParking || 'Паркинг: 1 место' },
       { icon: '🌿', text: locale.backSpecsExtraTerrace || 'Терраса: есть' }
     ];
+    const backSpecsItems = [...backSpecsItemsBase, ...(dynamicExtras.length ? dynamicExtras : backSpecsItemsFallback)];
     const backSpecsHtml = backSpecsItems
       .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
       .join('');
@@ -5975,6 +5979,28 @@ render() {
       const n = toInt(v);
       return n != null ? n.toLocaleString('en-US') : null;
     };
+    const parseObject = (v) => {
+      if (!v) return null;
+      if (typeof v === 'object' && !Array.isArray(v)) return v;
+      if (typeof v !== 'string') return null;
+      try {
+        const parsed = JSON.parse(v);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+      } catch {
+        return null;
+      }
+    };
+    const truthyLabel = (v) => {
+      if (v === true || v === 'true' || v === 1 || v === '1') return 'yes';
+      if (v === false || v === 'false' || v === 0 || v === '0') return 'no';
+      return null;
+    };
+    const pushExtra = (arr, icon, label, value) => {
+      if (value == null) return;
+      const text = String(value).trim();
+      if (!text) return;
+      arr.push({ icon, text: `${label}: ${text}` });
+    };
     const priceNum = toInt(raw.price ?? raw.priceEUR ?? raw.price_amount ?? raw.priceAmount);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
@@ -5985,6 +6011,7 @@ render() {
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
+    const rawFeatures = parseObject(raw.features) || {};
     const furnishedRaw = raw.furnished;
     const furnishedBool = furnishedRaw === true || furnishedRaw === 'true' || furnishedRaw === 1 || furnishedRaw === '1';
     const furnishedKnown = furnishedRaw !== null && furnishedRaw !== undefined && furnishedRaw !== '';
@@ -6027,6 +6054,20 @@ render() {
     const normalizedTier = String(raw.matchTier ?? raw._tier ?? '').trim().toLowerCase();
     const matchTier = ['high', 'mid', 'low'].includes(normalizedTier) ? normalizedTier : 'low';
 
+    const dynamicBackFeatureItems = [];
+    pushExtra(dynamicBackFeatureItems, '🏠', 'Type', propertyType || rawFeatures.type || rawFeatures.propertyType);
+    pushExtra(dynamicBackFeatureItems, '📈', 'Market', rawFeatures.market || rawFeatures.marketType || rawFeatures.segment);
+    pushExtra(dynamicBackFeatureItems, '🗓️', 'Handover', rawFeatures.handover || rawFeatures.handoverDate || rawFeatures.deliveryDate);
+    pushExtra(dynamicBackFeatureItems, '✨', 'Finish', rawFeatures.finish || rawFeatures.finishing || rawFeatures.renovation);
+    pushExtra(dynamicBackFeatureItems, '🚗', 'Parking', rawFeatures.parking || rawFeatures.parkingSpaces);
+    pushExtra(dynamicBackFeatureItems, '🌿', 'Terrace', rawFeatures.terrace ?? truthyLabel(rawFeatures.terrace));
+    pushExtra(dynamicBackFeatureItems, '🪑', 'Furnished', rawFeatures.furnished ?? truthyLabel(rawFeatures.furnished));
+    pushExtra(dynamicBackFeatureItems, '🏗️', 'Building floors', rawFeatures.buildingFloors);
+    pushExtra(dynamicBackFeatureItems, '🏛️', 'Building year', rawFeatures.buildingYear);
+    if (Array.isArray(rawFeatures.buildingInfrastructure) && rawFeatures.buildingInfrastructure.length) {
+      pushExtra(dynamicBackFeatureItems, '📌', 'Infrastructure', rawFeatures.buildingInfrastructure.join(', '));
+    }
+
     return {
       id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
       image,
@@ -6048,6 +6089,8 @@ render() {
       furnishedLabel: furnishedKnown ? (furnishedBool ? 'Furnished' : 'Unfurnished') : '',
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel,
+      features: rawFeatures,
+      backFeatureItems: dynamicBackFeatureItems,
       score: Number.isFinite(parsedScore) ? parsedScore : 0,
       strictScore: Number.isFinite(parsedStrictScore) ? parsedStrictScore : 0,
       matchTier
