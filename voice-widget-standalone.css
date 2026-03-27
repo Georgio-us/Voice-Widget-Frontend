@@ -2074,16 +2074,21 @@ voice-widget,
 
 .vw-app .pill-overlay-lane .pill-overlay-row{
   pointer-events: none;
+  position: relative;
+  z-index: 1;
   display:flex;
   align-items:center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 16px;
   width: min(360px, 100%);
   padding: 0 12px;
+  margin-top: 30px;
 }
 
 .vw-app .pill-overlay-lane .pill-action-btn{
   pointer-events: auto;
+  position: relative;
+  z-index: 1;
   width: 36px;
   height: 36px;
   display: inline-flex;
@@ -2113,6 +2118,7 @@ voice-widget,
 .vw-app .pill-overlay-lane::before {
   content: "";
   position: absolute;
+  z-index: 0;
   top: 0;
   left: 0;
   right: 0;
@@ -2133,7 +2139,7 @@ voice-widget,
 
 .vw-app .pill-overlay-lane .objects-counter-pill {
   pointer-events: auto;
-  margin: 16px auto 0;
+  margin: 0 auto;
   position: relative;
   z-index: 2;
   display: inline-flex;
@@ -2150,10 +2156,10 @@ voice-widget,
 }
 
 .vw-app .pill-overlay-row .objects-counter-pill{
-  margin: 16px 0 0;
+  margin: 0;
   min-width: 0;
   flex: 1 1 auto;
-  max-width: calc(100% - 2 * (36px + 10px));
+  max-width: calc(100% - 2 * (36px + 16px));
   overflow: hidden;
   text-overflow: ellipsis;
 }
