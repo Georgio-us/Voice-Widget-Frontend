@@ -2080,7 +2080,7 @@ voice-widget,
   align-items:center;
   justify-content: space-between;
   gap: 16px;
-  width: min(360px, 100%);
+  width: 100%;
   padding: 0 12px;
   margin-top: 30px;
 }
@@ -2111,8 +2111,34 @@ voice-widget,
   width: 18px;
   height: 18px;
   display:block;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--text-secondary) 65%, transparent);
+  color: var(--text-secondary);
+}
+
+.vw-app .pill-overlay-lane .pill-action-icon svg{
+  width: 18px;
+  height: 18px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn:hover .pill-action-icon{
+  color: var(--text-primary);
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn--view .icon-slider{
+  display: none;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn--view.is-slider-mode .icon-list{
+  display: none;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn--view.is-slider-mode .icon-slider{
+  display: block;
 }
 
 .vw-app .pill-overlay-lane::before {

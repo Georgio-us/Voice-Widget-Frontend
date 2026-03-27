@@ -3198,11 +3198,24 @@ render() {
           <div class="pill-overlay-lane" aria-hidden="false">
             <div class="pill-overlay-row">
               <button class="pill-action-btn" id="pillFiltersButton" type="button" aria-label="Фильтры">
-                <span class="pill-action-icon" aria-hidden="true"></span>
+                <span class="pill-action-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M4 6h16l-6.5 7.2v4.8l-3 1.8v-6.6L4 6z"></path>
+                  </svg>
+                </span>
               </button>
               <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Знайдено 2,345 обʼєктів</div>
-              <button class="pill-action-btn" id="pillViewButton" type="button" aria-label="Вид выдачи">
-                <span class="pill-action-icon" aria-hidden="true"></span>
+              <button class="pill-action-btn pill-action-btn--view" id="pillViewButton" type="button" aria-label="Вид выдачи" aria-pressed="false">
+                <span class="pill-action-icon" aria-hidden="true">
+                  <svg class="icon-list" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M4 6h2.5M9 6h11M4 12h2.5M9 12h11M4 18h2.5M9 18h11"></path>
+                  </svg>
+                  <svg class="icon-slider" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <rect x="3.5" y="6" width="7" height="12" rx="1.8"></rect>
+                    <rect x="13.5" y="6" width="7" height="12" rx="1.8"></rect>
+                    <path d="M11.8 12h0.4"></path>
+                  </svg>
+                </span>
               </button>
             </div>
           </div>
@@ -3331,6 +3344,11 @@ render() {
       ev.preventDefault();
       openPropertiesSlider();
     }
+  });
+  const pillViewButton = this.$byId('pillViewButton');
+  pillViewButton?.addEventListener('click', () => {
+    const isSliderMode = pillViewButton.classList.toggle('is-slider-mode');
+    pillViewButton.setAttribute('aria-pressed', isSliderMode ? 'true' : 'false');
   });
 
   // Outside tap-to-close (no overlay, no page blocking)
