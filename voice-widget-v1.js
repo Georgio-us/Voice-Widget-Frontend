@@ -2275,6 +2275,10 @@ class VoiceWidget extends HTMLElement {
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
     this._sliderCheckpointShown = { 10: false, 20: false };
+    /** @type {'slider'|'list'} */
+    this._catalogDisplayMode = 'slider';
+    this._catalogVisibleIds = [];
+    this._catalogListScrollBound = false;
     this._pillState = 'default';
     this._pillBaseCount = 0;
     this._pillCtaTimer = null;
@@ -3347,9 +3351,15 @@ render() {
   });
   const pillViewButton = this.$byId('pillViewButton');
   pillViewButton?.addEventListener('click', () => {
-    const isSliderMode = pillViewButton.classList.toggle('is-slider-mode');
-    pillViewButton.setAttribute('aria-pressed', isSliderMode ? 'true' : 'false');
+    const isListMode = pillViewButton.classList.toggle('is-slider-mode');
+    try {
+      this.setCatalogDisplayMode(isListMode ? 'list' : 'slider');
+    } catch {}
+    pillViewButton.setAttribute('aria-pressed', isListMode ? 'true' : 'false');
   });
+  try {
+    this.bindCatalogListScrollOnMessages();
+  } catch {}
 
   // Outside tap-to-close (no overlay, no page blocking)
   // Important: we do NOT preventDefault / stopPropagation, so the host page remains fully interactive.
@@ -3890,6 +3900,12 @@ render() {
       // Flip: визуальный тест — показываем back сторону карточки
       const selectBtn = e.target.closest('.card-btn[data-action="select"]');
       const slide = selectBtn?.closest('.card-slide') || e.target.closest('.card-slide');
+      const sliderHost = slide?.closest?.('.cards-slider-host');
+      if (sliderHost) {
+        sliderHost.querySelectorAll('.card-slide.flipped').forEach((s) => {
+          if (s !== slide) s.classList.remove('flipped', 'card-slide--form-open');
+        });
+      }
       if (slide) slide.classList.add('flipped');
       if (slide) {
         requestAnimationFrame(() => {
@@ -4437,12 +4453,122 @@ render() {
     } catch {}
     this._catalogOverflowQueue = [];
     this._catalogOverflowLoading = false;
+    this._catalogVisibleIds = [];
     this._sliderCheckpointShown = { 10: false, 20: false };
     try { this.closeSliderCheckpointPopup(); } catch {}
   }
 
+  findCatalogPropertyById(id) {
+    const sid = String(id ?? '').trim();
+    if (!sid) return null;
+    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    for (let i = 0; i < list.length; i += 1) {
+      const p = list[i];
+      if (!p || typeof p !== 'object') continue;
+      const pid = String(p.id ?? p.variantId ?? p._id ?? '').trim();
+      if (pid === sid) return p;
+    }
+    return null;
+  }
+
+  rebuildCatalogLayoutFromVisibleIds() {
+    const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+    if (!host) return;
+    const ids = [];
+    host.querySelectorAll('.card-slide').forEach((s) => {
+      const vid =
+        String(s.id || '').trim() ||
+        String(s.querySelector('.cs')?.getAttribute('data-variant-id') || '').trim();
+      if (vid) ids.push(vid);
+    });
+    if (!ids.length && Array.isArray(this._catalogVisibleIds) && this._catalogVisibleIds.length) {
+      ids.push(...this._catalogVisibleIds.map(String));
+    }
+    const queue = Array.isArray(this._catalogOverflowQueue) ? [...this._catalogOverflowQueue] : [];
+    const track = host.querySelector('.cards-track');
+    const listBody = host.querySelector('.cards-list-body');
+    if (track) track.innerHTML = '';
+    if (listBody) listBody.innerHTML = '';
+    this._catalogOverflowQueue = queue;
+    this._catalogVisibleIds = [];
+    this._catalogOverflowLoading = false;
+    ids.forEach((vid) => {
+      const property = this.findCatalogPropertyById(vid);
+      if (property) {
+        try {
+          this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
+        } catch {}
+      }
+    });
+    requestAnimationFrame(() => {
+      try {
+        if (this._catalogDisplayMode !== 'list') {
+          this.renderSliderDots();
+          this.updateActiveCardSlide();
+        }
+        this.scrollCardHostIntoView();
+      } catch {}
+    });
+  }
+
+  setCatalogDisplayMode(mode) {
+    const next = mode === 'list' ? 'list' : 'slider';
+    const prev = this._catalogDisplayMode;
+    this._catalogDisplayMode = next;
+    const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+    if (host) {
+      host.classList.toggle('catalog-layout-list', next === 'list');
+      if (prev !== next) this.rebuildCatalogLayoutFromVisibleIds();
+    }
+  }
+
+  bindCatalogListScrollOnMessages() {
+    if (this._catalogListScrollBound) return;
+    const messages = this.$byId('messagesContainer');
+    if (!messages) return;
+    this._catalogListScrollBound = true;
+    messages.addEventListener(
+      'scroll',
+      () => {
+        try {
+          this.onCatalogListMessagesScroll();
+        } catch {}
+      },
+      { passive: true }
+    );
+  }
+
+  onCatalogListMessagesScroll() {
+    if (this._catalogDisplayMode !== 'list') return;
+    const messages = this.$byId('messagesContainer');
+    if (!messages) return;
+    const threshold = 140;
+    if (messages.scrollTop + messages.clientHeight < messages.scrollHeight - threshold) return;
+    this.maybeAppendCatalogListOne();
+  }
+
+  maybeAppendCatalogListOne() {
+    try {
+      if (this._catalogDisplayMode !== 'list') return;
+      const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
+      if (!queue.length) return;
+      if (this._catalogOverflowLoading) return;
+      this._catalogOverflowLoading = true;
+      const nextChunk = queue.splice(0, 1);
+      nextChunk.forEach((property) => {
+        try {
+          this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
+        } catch {}
+      });
+      this._catalogOverflowLoading = false;
+    } catch {
+      this._catalogOverflowLoading = false;
+    }
+  }
+
   maybeAppendCatalogOverflow(activeIdx = 0, totalSlides = 0) {
     try {
+      if (this._catalogDisplayMode === 'list') return;
       const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
       if (!queue.length) return;
       if (this._catalogOverflowLoading) return;
@@ -4554,8 +4680,19 @@ render() {
     }
   }
 
-  // Ensure slider container exists in thread
-  ensureCardsSlider() {
+  ensureCatalogListRow(listBody) {
+    if (!listBody) return null;
+    let row = listBody.querySelector('.cards-list-row:last-child');
+    if (!row || row.querySelectorAll('.card-slide').length >= 3) {
+      row = document.createElement('div');
+      row.className = 'cards-list-row';
+      listBody.appendChild(row);
+    }
+    return row;
+  }
+
+  // Catalog host: horizontal slider + list grid (same data; layout toggled via catalog-layout-list).
+  ensureCatalogHost() {
     const thread = this.$byId('thread');
     const messages = this.$byId('messagesContainer');
     if (!thread || !messages) return null;
@@ -4568,10 +4705,12 @@ render() {
           <div class="cards-slider">
             <div class="cards-track"></div>
           </div>
+          <div class="cards-list">
+            <div class="cards-list-body"></div>
+          </div>
         </div>`;
       thread.appendChild(host);
-      
-      // 🆕 Sprint IV: отправляем ui_slider_started при создании slider host (вход в slider-режим)
+
       if (this.api) {
         requestAnimationFrame(() => {
           try {
@@ -4581,8 +4720,7 @@ render() {
           }
         });
       }
-      
-      // attach active slide updater
+
       const slider = host.querySelector('.cards-slider');
       const update = () => {
         try { this.updateActiveCardSlide(); } catch {}
@@ -4593,15 +4731,29 @@ render() {
         try { window.addEventListener('resize', update); } catch {}
         requestAnimationFrame(update);
       }
+    } else {
+      const cs = host.querySelector('.cs');
+      if (cs && !cs.querySelector('.cards-list')) {
+        const list = document.createElement('div');
+        list.className = 'cards-list';
+        list.innerHTML = '<div class="cards-list-body"></div>';
+        cs.appendChild(list);
+      }
     }
-    return host.querySelector('.cards-track');
+    host.classList.toggle('catalog-layout-list', this._catalogDisplayMode === 'list');
+    return host;
   }
 
   // Add single card as slide into slider
   addCardSlide(normalized, options = {}) {
     const { suppressAutoscroll = false } = options || {};
-    const track = this.ensureCardsSlider();
-    if (!track) return;
+    const host = this.ensureCatalogHost();
+    if (!host) return;
+    const isList = this._catalogDisplayMode === 'list';
+    const track = host.querySelector('.cards-track');
+    const listBody = host.querySelector('.cards-list-body');
+    if (isList && !listBody) return;
+    if (!isList && !track) return;
     const locale = this.getCurrentLocale();
     const slide = document.createElement('div');
     slide.className = 'card-slide';
@@ -4733,7 +4885,19 @@ render() {
         </div><div class="card-back-separator"></div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
-    track.appendChild(slide);
+    if (isList) {
+      const row = this.ensureCatalogListRow(listBody);
+      if (row) row.appendChild(slide);
+    } else if (track) {
+      track.appendChild(slide);
+    }
+    if (normalized?.id) {
+      const vid = String(normalized.id).trim();
+      if (vid) {
+        if (!Array.isArray(this._catalogVisibleIds)) this._catalogVisibleIds = [];
+        this._catalogVisibleIds.push(vid);
+      }
+    }
     try {
       slide.querySelectorAll('.card-back-asset.is-thumb').forEach((assetBtn) => {
         const thumbUrl = assetBtn.getAttribute('data-thumb-image');
@@ -4762,36 +4926,36 @@ render() {
       });
     }
     
-    // scroll to last slide
     requestAnimationFrame(() => {
-      // вычисляем целевую позицию именно нового слайда
-      const targetLeft = slide.offsetLeft;
-      if (!suppressAutoscroll) {
-        try {
-          const slider = this.getRoot().querySelector('.cards-slider');
-          if (slider) slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
-          else track.scrollTo({ left: targetLeft, behavior: 'smooth' });
-        } catch { track.scrollTo({ left: targetLeft, behavior: 'smooth' }); }
+      if (!isList) {
+        const tr = host.querySelector('.cards-track');
+        const targetLeft = slide.offsetLeft;
+        if (!suppressAutoscroll && tr) {
+          try {
+            const slider = host.querySelector('.cards-slider');
+            if (slider) slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
+            else tr.scrollTo({ left: targetLeft, behavior: 'smooth' });
+          } catch {
+            try { tr.scrollTo({ left: targetLeft, behavior: 'smooth' }); } catch {}
+          }
+        }
+        if (!suppressAutoscroll) {
+          try {
+            const slider = host.querySelector('.cards-slider');
+            const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
+            allSlides.forEach((s) => s.classList.remove('active'));
+            slide.classList.add('active');
+            const rows = slider ? slider.querySelectorAll('.cards-dots-row') : [];
+            const activeIdx = allSlides.length ? allSlides.length - 1 : 0;
+            rows.forEach((row) => {
+              const dots = row.querySelectorAll('.cards-dot');
+              dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+            });
+          } catch {}
+        }
+        try { this.renderSliderDots(); } catch {}
       }
-      // пометим новый слайд активным сразу только при авто-скролле
-      if (!suppressAutoscroll) {
-        try {
-          const slider = this.getRoot().querySelector('.cards-slider');
-          const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
-          allSlides.forEach(s => s.classList.remove('active'));
-          slide.classList.add('active');
-          // обновим dots: активная — последний индекс
-          const rows = slider ? slider.querySelectorAll('.cards-dots-row') : [];
-          const activeIdx = allSlides.length ? allSlides.length - 1 : 0;
-          rows.forEach(row => {
-            const dots = row.querySelectorAll('.cards-dot');
-            dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
-          });
-        } catch {}
-      }
-      // прокрутить именно контейнер сообщений до карточки
       try { this.scrollCardHostIntoView(); } catch {}
-      try { this.renderSliderDots(); } catch {}
     });
   }
 
@@ -4843,7 +5007,12 @@ render() {
     
     slides.forEach(s => s.classList.remove('active'));
     if (closest) closest.classList.add('active');
-    
+    slides.forEach((s) => {
+      if (s !== closest) {
+        s.classList.remove('flipped', 'card-slide--form-open');
+      }
+    });
+
     // 🆕 Sprint IV: отправляем ui_focus_changed только если фокус реально изменился
     if (closest) {
       const currentCardId = closest.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
@@ -4931,7 +5100,10 @@ render() {
 
   fitBackSpecsForAllSlides() {
     try {
-      const slides = this.getRoot().querySelectorAll('.cards-slider .card-slide');
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+      const slides = host
+        ? host.querySelectorAll('.card-slide')
+        : this.getRoot().querySelectorAll('.cards-slider .card-slide');
       slides.forEach((slide) => {
         try { this.fitBackSpecsInSlide(slide); } catch {}
       });
@@ -4981,6 +5153,7 @@ render() {
 
   scrollToSlideIndex(index = 0) {
     try {
+      if (this._catalogDisplayMode === 'list') return;
       const slider = this.getRoot().querySelector('.cards-slider');
       if (!slider) return;
       const slides = Array.from(slider.querySelectorAll('.card-slide'));
