@@ -2072,6 +2072,44 @@ voice-widget,
   z-index: 9;
 }
 
+.vw-app .pill-overlay-lane .pill-overlay-row{
+  pointer-events: none;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  width: min(360px, 100%);
+  padding: 0 12px;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn{
+  pointer-events: auto;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--border-light) 85%, transparent);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn:hover{
+  opacity: .82;
+}
+
+.vw-app .pill-overlay-lane .pill-action-icon{
+  width: 18px;
+  height: 18px;
+  display:block;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text-secondary) 65%, transparent);
+}
+
 .vw-app .pill-overlay-lane::before {
   content: "";
   position: absolute;
@@ -2109,6 +2147,15 @@ voice-widget,
   line-height: 1.15;
   font-weight: 600;
   transition: background-color .25s ease, border-color .25s ease, box-shadow .25s ease, color .25s ease;
+}
+
+.vw-app .pill-overlay-row .objects-counter-pill{
+  margin: 16px 0 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: calc(100% - 2 * (36px + 10px));
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vw-app .pill-overlay-lane .objects-counter-pill.is-state-insight {

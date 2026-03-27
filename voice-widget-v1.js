@@ -3196,7 +3196,15 @@ render() {
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
           </div>
           <div class="pill-overlay-lane" aria-hidden="false">
-            <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Знайдено 2,345 обʼєктів</div>
+            <div class="pill-overlay-row">
+              <button class="pill-action-btn" id="pillFiltersButton" type="button" aria-label="Фильтры">
+                <span class="pill-action-icon" aria-hidden="true"></span>
+              </button>
+              <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Знайдено 2,345 обʼєктів</div>
+              <button class="pill-action-btn" id="pillViewButton" type="button" aria-label="Вид выдачи">
+                <span class="pill-action-icon" aria-hidden="true"></span>
+              </button>
+            </div>
           </div>
           <div class="dialogue-container" id="messagesContainer">
               <div class="thread" id="thread"></div>
