@@ -111,7 +111,7 @@
     15%{ opacity:1; }
     100%{ transform: translateX(120%) rotate(45deg); opacity:0; }
   }
-  &(.open) .launcher{ display:none; }
+  &.open .launcher{ display:none; }
 
   /* (scroll-bottom-btn и scrim удалены как неиспользуемые) */
 
@@ -137,7 +137,7 @@
     content:none;
 }
 
-&(.open) .widget{
+&.open .widget{
     position:relative;
     width:auto;
     height:auto;
@@ -925,7 +925,7 @@
                     width: 60px;
                     height: 60px;
                 }
-                &(.open) {
+                &.open {
                     width: auto;
                     height: auto;
                 }
@@ -1054,7 +1054,7 @@
                   -webkit-text-size-adjust: 100%;
                   text-size-adjust: 100%;
                 }
-                &([data-telegram="1"]) {
+                &[data-telegram="1"] {
                     position: fixed;
                     inset: 0;
                     width: 100vw;
@@ -1062,10 +1062,10 @@
                     bottom: auto;
                     right: auto;
                 }
-                &([data-telegram="1"]) .launcher {
+                &[data-telegram="1"] .launcher {
                     display: none;
                 }
-                &([data-telegram="1"]) .widget {
+                &[data-telegram="1"] .widget {
                     position: fixed;
                     inset: 0;
                     width: 100vw;
@@ -1078,7 +1078,7 @@
                     opacity: 1;
                     pointer-events: auto;
                 }
-                &([data-telegram="1"]) .voice-widget-container {
+                &[data-telegram="1"] .voice-widget-container {
                     width: 100vw;
                     height: 100vh;
                     min-height: 100vh;
@@ -1087,7 +1087,7 @@
                     border-radius: 0;
                     box-shadow: none;
                 }
-                &([data-telegram="1"]) .dialog-screen .dialogue-container {
+                &[data-telegram="1"] .dialog-screen .dialogue-container {
                     max-width: none;
                 }
                 /* Base font normalization to ensure consistent typography across screens */
