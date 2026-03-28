@@ -2938,6 +2938,38 @@ class VoiceWidget extends HTMLElement {
     };
     const safeSection = String(section || '').trim().toLowerCase();
     const modalBody = (() => {
+      if (safeSection === 'add-property') {
+        return `
+          <form class="vw-access-add-form" data-role="add-form">
+            <input class="vw-access-add-input" type="text" name="title" placeholder="Заголовок" autocomplete="off">
+            <textarea class="vw-access-add-textarea" name="description" placeholder="Описание"></textarea>
+            <button type="button" class="vw-access-add-upload" data-role="image-upload">
+              <span>Загрузить изображение (до 5мб)</span>
+              <span aria-hidden="true">🖼️</span>
+            </button>
+            <div class="vw-access-add-grid">
+              <input class="vw-access-add-input" type="text" name="price" placeholder="Цена" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="area" placeholder="Метраж" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="kitchen" placeholder="Кухня" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="floor" placeholder="Этаж" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="floorsTotal" placeholder="Этажность" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="bathroom" placeholder="Сан-узел" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="district" placeholder="Район" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="complex" placeholder="ЖК" autocomplete="off">
+              <input class="vw-access-add-input" type="text" name="houseType" placeholder="Тип дома" autocomplete="off">
+            </div>
+            <div class="vw-access-add-check-row">
+              <label class="vw-access-add-check"><input type="checkbox" name="balcony"><span>Балкон</span></label>
+              <label class="vw-access-add-check"><input type="checkbox" name="smart"><span>Смарт</span></label>
+              <label class="vw-access-add-check"><input type="checkbox" name="parking"><span>Паркинг</span></label>
+            </div>
+            <div class="vw-access-add-actions">
+              <button type="submit" class="vw-access-sub-btn vw-access-sub-btn--primary">Сохранить</button>
+              <button type="button" class="vw-access-sub-btn" data-role="add-reset">Сбросить</button>
+            </div>
+          </form>
+        `;
+      }
       if (safeSection === 'properties') {
         const rows = list.map((id) => `
           <div class="vw-access-obj-row" data-id="${id}">
@@ -2978,6 +3010,8 @@ class VoiceWidget extends HTMLElement {
 
     const title = safeSection === 'properties'
       ? 'Мои объекты'
+      : safeSection === 'add-property'
+        ? 'Добавить новый объект'
       : safeSection === 'subscription'
         ? 'Управление подпиской'
         : 'Статистика';
@@ -3036,6 +3070,19 @@ class VoiceWidget extends HTMLElement {
         this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
       });
       this.updateAdminObjectsSelectionState(overlay);
+    }
+    if (safeSection === 'add-property') {
+      const form = overlay.querySelector('[data-role="add-form"]');
+      form?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        this.ui?.showNotification?.('Прототип сохранения готов. Подключим логику на следующем шаге.');
+      });
+      overlay.querySelector('[data-role="add-reset"]')?.addEventListener('click', () => {
+        form?.reset();
+      });
+      overlay.querySelector('[data-role="image-upload"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('Загрузка изображения будет подключена на следующем шаге.');
+      });
     }
   }
 
@@ -3589,6 +3636,78 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-btn:disabled {
         opacity: .45;
       }
+      .vw-access-add-form {
+        display: grid;
+        gap: 10px;
+      }
+      .vw-access-add-input,
+      .vw-access-add-textarea {
+        width: 100%;
+        min-height: 42px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.1));
+        color: var(--text-primary, #fff);
+        padding: 0 12px;
+        font-size: .9rem;
+      }
+      .vw-access-add-textarea {
+        min-height: 132px;
+        resize: vertical;
+        padding: 10px 12px;
+      }
+      .vw-access-add-input::placeholder,
+      .vw-access-add-textarea::placeholder {
+        color: var(--text-secondary, rgba(255,255,255,0.62));
+      }
+      .vw-access-add-upload {
+        width: 100%;
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 12px;
+        font-size: .88rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .vw-access-add-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .vw-access-add-grid .vw-access-add-input {
+        min-height: 40px;
+        font-size: .84rem;
+      }
+      .vw-access-add-check-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .vw-access-add-check {
+        min-height: 38px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.1));
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        font-size: .84rem;
+        color: var(--text-primary, #fff);
+      }
+      .vw-access-add-check input {
+        accent-color: var(--color-accent, #4ea0ff);
+      }
+      .vw-access-add-actions {
+        margin-top: 4px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
       .vw-access-obj-list {
         display: grid;
         gap: 8px;
@@ -3653,10 +3772,11 @@ class VoiceWidget extends HTMLElement {
           </div>
           <div class="vw-access-greeting">${greeting}</div>
           <div class="vw-access-list">
+            <button type="button" class="vw-access-item vw-access-item--primary" data-role="admin-add-property">Добавить объект</button>
             <button type="button" class="vw-access-item" data-role="admin-stats">${locale.accessAdminStats || 'Статистика'}</button>
             <button type="button" class="vw-access-item" data-role="admin-properties">${locale.accessAdminProperties || "Мої об'єкти"}</button>
             <button type="button" class="vw-access-item" data-role="admin-subscription">${locale.accessAdminSubscription || 'Керування підпискою'}</button>
-            <button type="button" class="vw-access-item vw-access-item--primary" data-role="olx-connect">${locale.accessAdminOlxConnect || 'Подключить OLX'}</button>
+            <button type="button" class="vw-access-item" data-role="olx-connect">${locale.accessAdminOlxConnect || 'Подключить OLX'}</button>
           </div>
         </div>
       `
@@ -3679,6 +3799,7 @@ class VoiceWidget extends HTMLElement {
       olxConnectBtn.addEventListener('click', () => this.openOlxConnectFlow());
       this.refreshOlxStatusButton(olxConnectBtn).catch(() => {});
     }
+    overlay.querySelector('[data-role="admin-add-property"]')?.addEventListener('click', () => this.openAccessSubOverlay('add-property'));
     overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
     overlay.querySelector('[data-role="admin-properties"]')?.addEventListener('click', () => this.openAccessSubOverlay('properties'));
     overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
