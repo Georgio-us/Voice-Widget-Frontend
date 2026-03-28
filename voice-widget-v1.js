@@ -2941,61 +2941,117 @@ class VoiceWidget extends HTMLElement {
     const modalBody = (() => {
       if (isAddProperty) {
         return `
-          <form class="vw-access-add-form" data-role="add-form" novalidate>
+          <div class="vw-access-add-wizard" data-role="add-wizard" data-step="1">
             <input type="hidden" data-role="photo-input-target" value="">
             <input class="vw-access-add-file" data-role="photo-input" type="file" accept="image/*">
-            <div class="vw-access-add-row2">
+            <div class="vw-access-add-step" data-step-panel="1">
+              <div class="vw-access-add-row2">
+                <label class="vw-access-add-field">
+                  <select class="vw-access-add-input" data-role="property-type" name="propertyType">
+                    <option value="">* Тип недвижимости</option>
+                    <option value="apartment">Квартира</option>
+                    <option value="house">Дом</option>
+                  </select>
+                </label>
+                <label class="vw-access-add-field">
+                  <input class="vw-access-add-input vw-access-add-input--id" data-role="property-id" name="propertyId" value="A0001" readonly>
+                </label>
+              </div>
               <label class="vw-access-add-field">
-                <select class="vw-access-add-input" data-role="property-type" name="propertyType">
-                  <option value="">* Тип недвижимости</option>
-                  <option value="apartment">Квартира</option>
-                  <option value="house">Дом</option>
-                </select>
+                <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="* Введите заголовок" autocomplete="off">
               </label>
-              <label class="vw-access-add-field">
-                <input class="vw-access-add-input vw-access-add-input--id" data-role="property-id" name="propertyId" value="A0001" readonly>
-              </label>
-            </div>
-            <label class="vw-access-add-field">
-              <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="* Введите заголовок" autocomplete="off">
-            </label>
-            <div class="vw-access-add-hint">Можно добавить до 5 фотографий до 10мб каждая</div>
-            <div class="vw-access-add-photo-layout">
-              <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span aria-hidden="true">🖼️</span></button>
-              <div class="vw-access-add-photo-grid">
-                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><span aria-hidden="true">🖼️</span></button>
-                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span aria-hidden="true">🖼️</span></button>
-                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span aria-hidden="true">🖼️</span></button>
-                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span aria-hidden="true">🖼️</span></button>
+              <div class="vw-access-add-hint">Можно добавить до 5 фотографий до 10мб каждая</div>
+              <div class="vw-access-add-photo-layout">
+                <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span aria-hidden="true">🖼️</span></button>
+                <div class="vw-access-add-photo-grid">
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><span aria-hidden="true">🖼️</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span aria-hidden="true">🖼️</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span aria-hidden="true">🖼️</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span aria-hidden="true">🖼️</span></button>
+                </div>
+              </div>
+              <div class="vw-access-add-row2">
+                <label class="vw-access-add-field">
+                  <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="* Укажите цену" autocomplete="off" inputmode="numeric">
+                </label>
+                <label class="vw-access-add-field">
+                  <input class="vw-access-add-input" type="text" name="rooms" data-role="rooms" placeholder="* Количество комнат" autocomplete="off" inputmode="numeric">
+                </label>
+              </div>
+              <div class="vw-access-add-row2">
+                <label class="vw-access-add-field">
+                  <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="* Укажите площадь" autocomplete="off" inputmode="numeric">
+                </label>
+                <label class="vw-access-add-field">
+                  <select class="vw-access-add-input" data-role="district" name="district">
+                    <option value="">* Укажите район</option>
+                    <option value="Приморский">Приморский</option>
+                    <option value="Суворовский">Суворовский</option>
+                    <option value="Киевский">Киевский</option>
+                    <option value="Малиновский">Малиновский</option>
+                  </select>
+                </label>
+              </div>
+              <div class="vw-access-add-actions">
+                <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-to-step-2">Продолжить</button>
               </div>
             </div>
-            <div class="vw-access-add-row2">
+
+            <div class="vw-access-add-step" data-step-panel="2">
+              <div class="vw-access-add-row2">
+                <label class="vw-access-add-field">
+                  <select class="vw-access-add-input" data-role="floor" name="floor">
+                    <option value="">Этаж</option>
+                  </select>
+                </label>
+                <label class="vw-access-add-field">
+                  <select class="vw-access-add-input" data-role="floors-total" name="floorsTotal">
+                    <option value="">Этажность</option>
+                  </select>
+                </label>
+              </div>
+              <div class="vw-access-add-row2">
+                <label class="vw-access-add-field">
+                  <select class="vw-access-add-input" data-role="complex" name="complex">
+                    <option value="">Название ЖК</option>
+                    <option value="ЖК Альтаир">ЖК Альтаир</option>
+                    <option value="ЖК Манхэттен">ЖК Манхэттен</option>
+                    <option value="ЖК Омега">ЖК Омега</option>
+                    <option value="ЖК Челси">ЖК Челси</option>
+                    <option value="ЖК Ривьера">ЖК Ривьера</option>
+                  </select>
+                </label>
+                <label class="vw-access-add-field">
+                  <select class="vw-access-add-input" data-role="microdistrict" name="microdistrict">
+                    <option value="">Микрорайон</option>
+                    <option value="Черемушки">Черемушки</option>
+                    <option value="Фонтан">Фонтан</option>
+                    <option value="Таирова">Таирова</option>
+                    <option value="Центр">Центр</option>
+                    <option value="Аркадия">Аркадия</option>
+                  </select>
+                </label>
+              </div>
+              <div class="vw-access-add-check-grid">
+                <label class="vw-access-add-check-item"><input type="checkbox" name="exclusive"><span>Эксклюзив</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="balcony"><span>Балкон</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="penthouse"><span>Пентхаус</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="loggia"><span>Лоджия</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="smartFlat"><span>Смарт-квартира</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>Терраса</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>Новострой</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>Паркоместо</span></label>
+              </div>
               <label class="vw-access-add-field">
-                <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="* Укажите цену" autocomplete="off" inputmode="numeric">
+                <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="Опишите квартиру"></textarea>
               </label>
-              <label class="vw-access-add-field">
-                <input class="vw-access-add-input" type="text" name="rooms" data-role="rooms" placeholder="* Количество комнат" autocomplete="off" inputmode="numeric">
-              </label>
+              <div class="vw-access-add-actions">
+                <button type="button" class="vw-access-sub-btn" data-role="add-preview">Предпросмотр</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish">Опубликовать</button>
+              </div>
             </div>
-            <div class="vw-access-add-row2">
-              <label class="vw-access-add-field">
-                <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="* Укажите площадь" autocomplete="off" inputmode="numeric">
-              </label>
-              <label class="vw-access-add-field">
-                <select class="vw-access-add-input" data-role="district" name="district">
-                  <option value="">* Укажите район</option>
-                  <option value="Приморский">Приморский</option>
-                  <option value="Суворовский">Суворовский</option>
-                  <option value="Киевский">Киевский</option>
-                  <option value="Малиновский">Малиновский</option>
-                </select>
-              </label>
-            </div>
-            <div class="vw-access-add-actions">
-              <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
-              <button type="submit" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-next">Продолжить</button>
-            </div>
-          </form>
+          </div>
         `;
       }
       if (safeSection === 'properties') {
@@ -3047,7 +3103,7 @@ class VoiceWidget extends HTMLElement {
       ? `
         <div class="vw-access-add-head">
           <button type="button" class="vw-access-sub-back" data-role="back">Назад</button>
-          <div class="vw-access-add-stage">Основные параметры</div>
+          <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
           <div class="vw-access-add-caption">Новый объект</div>
         </div>
       `
@@ -3069,7 +3125,17 @@ class VoiceWidget extends HTMLElement {
       </div>
     `;
     this.getRoot().appendChild(overlay);
-    overlay.querySelector('[data-role="back"]')?.addEventListener('click', () => this.closeAccessSubOverlay());
+    overlay.querySelector('[data-role="back"]')?.addEventListener('click', () => {
+      if (isAddProperty) {
+        const wizard = overlay.querySelector('[data-role="add-wizard"]');
+        if (wizard && String(wizard.getAttribute('data-step') || '1') !== '1') {
+          wizard.setAttribute('data-step', '1');
+          overlay.querySelector('[data-role="add-stage"]')?.textContent = 'Основные параметры';
+          return;
+        }
+      }
+      this.closeAccessSubOverlay();
+    });
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeAccessSubOverlay();
     });
@@ -3111,7 +3177,8 @@ class VoiceWidget extends HTMLElement {
       this.updateAdminObjectsSelectionState(overlay);
     }
     if (isAddProperty) {
-      const form = overlay.querySelector('[data-role="add-form"]');
+      const wizard = overlay.querySelector('[data-role="add-wizard"]');
+      const stageLabel = overlay.querySelector('[data-role="add-stage"]');
       const normalizeNumber = (value) => {
         const digits = String(value || '').replace(/[^\d]/g, '');
         if (!digits) return '';
@@ -3125,7 +3192,22 @@ class VoiceWidget extends HTMLElement {
       const typeInput = overlay.querySelector('[data-role="property-type"]');
       const fileInput = overlay.querySelector('[data-role="photo-input"]');
       const targetInput = overlay.querySelector('[data-role="photo-input-target"]');
+      const floorInput = overlay.querySelector('[data-role="floor"]');
+      const floorsTotalInput = overlay.querySelector('[data-role="floors-total"]');
       const photoSlots = Array.from(overlay.querySelectorAll('[data-role="photo-slot"]'));
+      const setStep = (step) => {
+        const safeStep = Number(step) === 2 ? 2 : 1;
+        wizard?.setAttribute('data-step', String(safeStep));
+        if (stageLabel) stageLabel.textContent = safeStep === 2 ? 'Дополнительно' : 'Основные параметры';
+      };
+      const appendFloorOptions = (selectEl, label) => {
+        if (!selectEl) return;
+        const opts = [`<option value="">${label}</option>`];
+        for (let i = 1; i <= 30; i += 1) opts.push(`<option value="${i}">${i}</option>`);
+        selectEl.innerHTML = opts.join('');
+      };
+      appendFloorOptions(floorInput, 'Этаж');
+      appendFloorOptions(floorsTotalInput, 'Этажность');
       if (priceInput) {
         priceInput.addEventListener('input', () => { priceInput.value = normalizeNumber(priceInput.value); });
       }
@@ -3169,8 +3251,7 @@ class VoiceWidget extends HTMLElement {
         updateSlot(photoSlots[index], file);
         fileInput.value = '';
       });
-      form?.addEventListener('submit', (event) => {
-        event.preventDefault();
+      overlay.querySelector('[data-role="add-to-step-2"]')?.addEventListener('click', () => {
         const hasRequired = !!String(typeInput?.value || '').trim()
           && !!String(titleInput?.value || '').trim()
           && !!String(priceInput?.value || '').trim()
@@ -3181,11 +3262,18 @@ class VoiceWidget extends HTMLElement {
           this.ui?.showNotification?.('Заполните обязательные поля первого шага');
           return;
         }
-        this.ui?.showNotification?.('Шаг 1 заполнен. Переход на следующий этап добавим следующим экраном.');
+        setStep(2);
       });
       overlay.querySelector('[data-role="add-draft"]')?.addEventListener('click', () => {
         this.ui?.showNotification?.('Черновик подключим на следующем этапе.');
       });
+      overlay.querySelector('[data-role="add-preview"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('Экран предпросмотра добавим на следующем шаге.');
+      });
+      overlay.querySelector('[data-role="add-publish"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('Публикацию подключим после финального шага.');
+      });
+      setStep(1);
     }
   }
 
@@ -3772,6 +3860,18 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         gap: 10px;
       }
+      .vw-access-add-wizard {
+        display: grid;
+        gap: 10px;
+      }
+      .vw-access-add-step {
+        display: none;
+        gap: 10px;
+      }
+      .vw-access-add-wizard[data-step="1"] [data-step-panel="1"],
+      .vw-access-add-wizard[data-step="2"] [data-step-panel="2"] {
+        display: grid;
+      }
       .vw-access-add-file {
         position: absolute;
         width: 1px;
@@ -3851,6 +3951,41 @@ class VoiceWidget extends HTMLElement {
       .vw-access-add-actions .vw-access-sub-btn {
         min-height: 50px;
         font-size: .95rem;
+      }
+      .vw-access-add-check-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 20px;
+        padding: 4px 4px 2px;
+      }
+      .vw-access-add-check-item {
+        min-height: 28px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text-secondary, rgba(255,255,255,0.75));
+        font-size: .9rem;
+      }
+      .vw-access-add-check-item input {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+        border-radius: 6px;
+        accent-color: var(--color-accent, #4ea0ff);
+      }
+      .vw-access-add-textarea {
+        width: 100%;
+        min-height: 152px;
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.16));
+        background: var(--bg-element, rgba(255,255,255,0.08));
+        color: var(--text-primary, #fff);
+        padding: 12px 14px;
+        font-size: .88rem;
+        resize: vertical;
+      }
+      .vw-access-add-textarea::placeholder {
+        color: var(--text-secondary, rgba(255,255,255,0.56));
       }
       .vw-access-obj-list {
         display: grid;
