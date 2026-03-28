@@ -3076,7 +3076,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-list {
         display: grid;
-        gap: 12px;
+        gap: 16px;
         --vw-filters-right-col: clamp(132px, 34%, 176px);
       }
       .vw-filters-picker-row {
@@ -3126,7 +3126,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-select {
         width: 100%;
-        min-height: 40px;
+        height: 100%;
         border-radius: 12px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
@@ -3159,9 +3159,9 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-actions {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
-        gap: 12px;
+        gap: 50px;
         margin-top: 4px;
       }
       .vw-filters-apply {
@@ -3184,6 +3184,7 @@ class VoiceWidget extends HTMLElement {
         font-size: .82rem;
         line-height: 1.45;
         color: var(--text-secondary, rgba(255,255,255,0.74));
+        text-align: center;
       }
     `;
     document.head.appendChild(style);
@@ -3201,6 +3202,7 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-filters-title">Фильтры подборки</div>
           <button type="button" class="vw-filters-close" data-role="close" aria-label="Закрыть">×</button>
         </div>
+        <hr class="vw-filters-divider">
         <div class="vw-filters-list">
           <div class="vw-filters-picker-row">
             <div class="vw-filters-picker-icon" aria-hidden="true">💵</div>
@@ -3235,6 +3237,7 @@ class VoiceWidget extends HTMLElement {
               <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="Этаж до"></select>
             </label>
           </div>
+          <hr class="vw-filters-divider">
           <div class="vw-filters-row">
             <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
               <option value="">Кол-во комнат</option>
@@ -3265,10 +3268,12 @@ class VoiceWidget extends HTMLElement {
             </select>
             <label class="vw-filters-check"><input type="checkbox" data-role="rcOnly"> <span>Только ЖК</span></label>
           </div>
+          <hr class="vw-filters-divider">
           <div class="vw-filters-actions">
             <button type="button" class="vw-filters-apply" data-role="apply">Применить</button>
             <button type="button" class="vw-filters-reset" data-role="reset">Сброс</button>
           </div>
+          <hr class="vw-filters-divider">
         </div>
         <div class="vw-filters-hint">Нажмите "применить" чтоб обновить подборку</div>
       </div>
