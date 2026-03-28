@@ -2312,11 +2312,11 @@ voice-widget,
 
 /* Catalog list mode: same card slides, grid rows of 3 compact cells */
 .vw-app .cards-slider-host:not(.catalog-layout-list) .cards-list {
-  display: none !important;
+  display: none;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-slider {
-  display: none !important;
+  display: none;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list {
@@ -2342,9 +2342,9 @@ voice-widget,
 
 /* Компактное превью: шире, чем выше (ландшафтная полоса) */
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide {
-  width: 100% !important;
+  width: 100%;
   min-width: 0;
-  max-width: none !important;
+  max-width: none;
   min-height: 108px;
   height: 108px;
   max-height: 108px;
@@ -2364,23 +2364,23 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-image {
   flex: 0 0 42%;
   width: 42%;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-image img {
-  max-height: none !important;
-  height: 100% !important;
+  max-height: none;
+  height: 100%;
   object-fit: cover;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-body {
   flex: 1 1 auto;
   min-width: 0;
-  height: 100% !important;
-  min-height: 0 !important;
-  max-height: none !important;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
   padding: 6px 8px;
   justify-content: space-between;
   gap: 4px;
@@ -2439,8 +2439,8 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.card-slide--form-open {
   grid-column: 1 / -1;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 100%;
+  max-width: 100%;
   min-height: 360px;
   height: 360px;
   max-height: 360px;
