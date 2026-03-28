@@ -3077,37 +3077,38 @@ class VoiceWidget extends HTMLElement {
       .vw-filters-list {
         display: grid;
         gap: 12px;
+        --vw-filters-right-col: clamp(132px, 34%, 176px);
       }
       .vw-filters-picker-row {
         display: grid;
-        grid-template-columns: 52px minmax(0, 1fr) minmax(0, .96fr);
-        gap: 10px;
+        grid-template-columns: 44px minmax(0, 1fr) var(--vw-filters-right-col);
+        gap: 8px;
         align-items: center;
       }
       .vw-filters-picker-icon {
-        width: 52px;
-        height: 52px;
+        width: 44px;
+        height: 44px;
         border-radius: 999px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 26px;
+        font-size: 22px;
       }
       .vw-filters-picker-field {
         position: relative;
         display: grid;
         align-items: center;
-        min-height: 48px;
-        padding: 0 14px;
+        min-height: 40px;
+        padding: 0 12px;
         border-radius: 14px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
       }
       .vw-filters-picker-label {
-        font-size: 1rem;
+        font-size: .93rem;
         color: var(--text-secondary, rgba(255,255,255,0.72));
       }
       .vw-filters-picker-select {
@@ -3119,30 +3120,33 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) var(--vw-filters-right-col);
+        gap: 8px;
         align-items: center;
       }
       .vw-filters-select {
         width: 100%;
-        min-height: 44px;
+        min-height: 40px;
         border-radius: 12px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
         padding: 0 12px;
-        font-size: 1rem;
+        font-size: .93rem;
       }
       .vw-filters-check {
         display: flex;
         align-items: center;
         gap: 8px;
+        width: 100%;
+        min-height: 40px;
+        box-sizing: border-box;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
         border-radius: 12px;
-        padding: 10px 10px;
-        font-size: 1rem;
+        padding: 0 10px;
+        font-size: .93rem;
         line-height: 1.3;
       }
       .vw-filters-check input {
@@ -3158,23 +3162,23 @@ class VoiceWidget extends HTMLElement {
         justify-content: space-between;
         align-items: center;
         gap: 12px;
-        margin-top: 2px;
+        margin-top: 4px;
       }
       .vw-filters-apply {
         min-width: 144px;
-        min-height: 46px;
+        min-height: 42px;
         border-radius: 14px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
-        font-size: 1rem;
+        font-size: .95rem;
       }
       .vw-filters-reset {
-        min-height: 44px;
+        min-height: 40px;
         border: 0;
         background: transparent;
         color: #ec4f55;
-        font-size: 1.1rem;
+        font-size: 1rem;
       }
       .vw-filters-hint {
         font-size: .82rem;
@@ -3205,7 +3209,7 @@ class VoiceWidget extends HTMLElement {
               <select class="vw-filters-picker-select" data-picker="priceMin" aria-label="Цена от"></select>
             </label>
             <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="priceMax">Макс</span>
+              <span class="vw-filters-picker-label" data-display="priceMax">До</span>
               <select class="vw-filters-picker-select" data-picker="priceMax" aria-label="Цена до"></select>
             </label>
           </div>
@@ -3216,7 +3220,7 @@ class VoiceWidget extends HTMLElement {
               <select class="vw-filters-picker-select" data-picker="areaMin" aria-label="Метраж от"></select>
             </label>
             <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="areaMax">Макс</span>
+              <span class="vw-filters-picker-label" data-display="areaMax">До</span>
               <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="Метраж до"></select>
             </label>
           </div>
@@ -3227,7 +3231,7 @@ class VoiceWidget extends HTMLElement {
               <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
             </label>
             <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="floorMax">Макс</span>
+              <span class="vw-filters-picker-label" data-display="floorMax">До</span>
               <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="Этаж до"></select>
             </label>
           </div>
@@ -3253,20 +3257,20 @@ class VoiceWidget extends HTMLElement {
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-row">
-            <label class="vw-filters-check"><input type="checkbox" data-role="rcOnly"> <span>ЖК</span></label>
             <select class="vw-filters-select" aria-label="Поиск по ЖК" data-role="rcSearch">
               <option value="">Поиск по ЖК</option>
               <option value="altair">ЖК Альтаир</option>
               <option value="gagarin">ЖК Гагарин Плаза</option>
               <option value="omega">ЖК Омега</option>
             </select>
+            <label class="vw-filters-check"><input type="checkbox" data-role="rcOnly"> <span>Только ЖК</span></label>
           </div>
           <div class="vw-filters-actions">
             <button type="button" class="vw-filters-apply" data-role="apply">Применить</button>
             <button type="button" class="vw-filters-reset" data-role="reset">Сброс</button>
           </div>
         </div>
-        <div class="vw-filters-hint">Для выбора значения нажмите на поле и используйте системный барабан выбора.</div>
+        <div class="vw-filters-hint">Нажмите "применить" чтоб обновить подборку</div>
       </div>
     `;
     this.getRoot().appendChild(overlay);
