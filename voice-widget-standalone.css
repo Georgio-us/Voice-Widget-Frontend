@@ -2331,6 +2331,35 @@ voice-widget,
   width: 100%;
 }
 
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg-main) 72%, transparent), transparent);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-element);
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-nav-btn:disabled {
+  opacity: .35;
+}
+
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row {
   display: block;
   width: 100%;

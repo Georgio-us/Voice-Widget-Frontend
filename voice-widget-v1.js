@@ -2278,6 +2278,8 @@ class VoiceWidget extends HTMLElement {
     /** @type {'slider'|'list'} */
     this._catalogDisplayMode = 'slider';
     this._catalogVisibleIds = [];
+    this._catalogActiveId = null;
+    this._catalogListWindowSize = 3;
     this._catalogListScrollBound = false;
     this._pillState = 'default';
     this._pillBaseCount = 0;
@@ -3862,6 +3864,18 @@ render() {
       });
       
       this.events.emit('next_option', { variantId });
+    } else if (e.target.closest('[data-action="catalog-list-prev"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      this.handleCatalogListPrev();
+    } else if (e.target.closest('[data-action="catalog-list-next"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      this.handleCatalogListNext();
     } else if (e.target.closest('[data-action="read-description"]')) {
       try {
         e.preventDefault();
@@ -4456,6 +4470,7 @@ render() {
     this._catalogVisibleIds = [];
     this._sliderCheckpointShown = { 10: false, 20: false };
     try { this.closeSliderCheckpointPopup(); } catch {}
+    this._catalogActiveId = null;
   }
 
   findCatalogPropertyById(id) {
@@ -4471,19 +4486,121 @@ render() {
     return null;
   }
 
-  rebuildCatalogLayoutFromVisibleIds() {
+  getCatalogLoadedIdsFromStateOrDom() {
     const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
-    if (!host) return;
-    const ids = [];
-    host.querySelectorAll('.card-slide').forEach((s) => {
+    const stateIds = Array.isArray(this._catalogVisibleIds) ? this._catalogVisibleIds.map(String).filter(Boolean) : [];
+    if (stateIds.length) return Array.from(new Set(stateIds));
+    if (!host) return [];
+    const domIds = [];
+    host.querySelectorAll('.cards-track .card-slide').forEach((s) => {
       const vid =
         String(s.id || '').trim() ||
         String(s.querySelector('.cs')?.getAttribute('data-variant-id') || '').trim();
-      if (vid) ids.push(vid);
+      if (vid) domIds.push(vid);
     });
-    if (!ids.length && Array.isArray(this._catalogVisibleIds) && this._catalogVisibleIds.length) {
-      ids.push(...this._catalogVisibleIds.map(String));
+    return Array.from(new Set(domIds));
+  }
+
+  renderCatalogListWindow(loadedIds = [], activeId = null) {
+    const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+    if (!host) return;
+    const listBody = host.querySelector('.cards-list-body');
+    if (!listBody) return;
+    listBody.innerHTML = '';
+    if (!Array.isArray(loadedIds) || !loadedIds.length) {
+      this.updateCatalogListNavState();
+      return;
     }
+    const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
+    let activeIdx = loadedIds.length - 1;
+    if (activeId) {
+      const idx = loadedIds.indexOf(String(activeId));
+      if (idx >= 0) activeIdx = idx;
+    }
+    activeIdx = Math.max(0, Math.min(loadedIds.length - 1, activeIdx));
+    let start = Math.max(0, activeIdx - (windowSize - 1));
+    const end = Math.min(loadedIds.length, start + windowSize);
+    start = Math.max(0, end - windowSize);
+    this._catalogActiveId = loadedIds[activeIdx] || null;
+    const windowIds = loadedIds.slice(start, end);
+    windowIds.forEach((vid) => {
+      const property = this.findCatalogPropertyById(vid);
+      if (!property) return;
+      try {
+        this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
+      } catch {}
+    });
+    this.updateCatalogListNavState();
+  }
+
+  updateCatalogListNavState() {
+    const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+    if (!host) return;
+    const prevBtn = host.querySelector('[data-action="catalog-list-prev"]');
+    const nextBtn = host.querySelector('[data-action="catalog-list-next"]');
+    if (!prevBtn || !nextBtn) return;
+    const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+    const activeIdx = loadedIds.length ? Math.max(0, loadedIds.indexOf(String(this._catalogActiveId || ''))) : -1;
+    const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
+    const canPrev = activeIdx > 0;
+    const canNext = activeIdx >= 0 && (activeIdx < loadedIds.length - 1 || queue.length > 0);
+    prevBtn.disabled = !canPrev;
+    nextBtn.disabled = !canNext;
+  }
+
+  handleCatalogListPrev() {
+    if (this._catalogDisplayMode !== 'list') return;
+    const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+    if (!loadedIds.length) return;
+    const currentIdx = loadedIds.indexOf(String(this._catalogActiveId || ''));
+    const activeIdx = currentIdx >= 0 ? currentIdx : loadedIds.length - 1;
+    if (activeIdx <= 0) {
+      this.updateCatalogListNavState();
+      return;
+    }
+    this._catalogActiveId = loadedIds[activeIdx - 1];
+    this.rebuildCatalogLayoutFromVisibleIds();
+  }
+
+  handleCatalogListNext() {
+    if (this._catalogDisplayMode !== 'list') return;
+    const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+    if (!loadedIds.length) return;
+    const currentIdx = loadedIds.indexOf(String(this._catalogActiveId || ''));
+    const activeIdx = currentIdx >= 0 ? currentIdx : loadedIds.length - 1;
+    if (activeIdx < loadedIds.length - 1) {
+      this._catalogActiveId = loadedIds[activeIdx + 1];
+      this.rebuildCatalogLayoutFromVisibleIds();
+      return;
+    }
+    const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
+    if (!queue.length) {
+      this.updateCatalogListNavState();
+      return;
+    }
+    const [nextProperty] = queue.splice(0, 1);
+    if (nextProperty) {
+      const normalized = this._toCardEngineShape(nextProperty);
+      const nextId = String(normalized?.id || '').trim();
+      if (nextId && !loadedIds.includes(nextId)) {
+        this._catalogVisibleIds = [...loadedIds, nextId];
+        this._catalogActiveId = nextId;
+      } else {
+        this._catalogActiveId = loadedIds[activeIdx] || null;
+      }
+    }
+    this.rebuildCatalogLayoutFromVisibleIds();
+  }
+
+  rebuildCatalogLayoutFromVisibleIds() {
+    const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+    if (!host) return;
+    const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+    this._catalogVisibleIds = [...loadedIds];
+    const activeId = this._catalogActiveId && loadedIds.includes(String(this._catalogActiveId))
+      ? String(this._catalogActiveId)
+      : (loadedIds.length ? loadedIds[loadedIds.length - 1] : null);
+    this._catalogActiveId = activeId;
     const queue = Array.isArray(this._catalogOverflowQueue) ? [...this._catalogOverflowQueue] : [];
     const track = host.querySelector('.cards-track');
     const listBody = host.querySelector('.cards-list-body');
@@ -4492,19 +4609,30 @@ render() {
     this._catalogOverflowQueue = queue;
     this._catalogVisibleIds = [];
     this._catalogOverflowLoading = false;
-    ids.forEach((vid) => {
-      const property = this.findCatalogPropertyById(vid);
-      if (property) {
-        try {
-          this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
-        } catch {}
-      }
-    });
+    if (this._catalogDisplayMode === 'list') {
+      this.renderCatalogListWindow(loadedIds, activeId);
+    } else {
+      loadedIds.forEach((vid) => {
+        const property = this.findCatalogPropertyById(vid);
+        if (property) {
+          try {
+            this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
+          } catch {}
+        }
+      });
+    }
     requestAnimationFrame(() => {
       try {
         if (this._catalogDisplayMode !== 'list') {
           this.renderSliderDots();
-          this.updateActiveCardSlide();
+          if (activeId) {
+            const activeIdx = loadedIds.indexOf(activeId);
+            if (activeIdx >= 0) this.scrollToSlideIndex(activeIdx);
+          } else {
+            this.updateActiveCardSlide();
+          }
+        } else {
+          this.updateCatalogListNavState();
         }
         this.scrollCardHostIntoView();
       } catch {}
@@ -4539,12 +4667,8 @@ render() {
   }
 
   onCatalogListMessagesScroll() {
-    if (this._catalogDisplayMode !== 'list') return;
-    const messages = this.$byId('messagesContainer');
-    if (!messages) return;
-    const threshold = 140;
-    if (messages.scrollTop + messages.clientHeight < messages.scrollHeight - threshold) return;
-    this.maybeAppendCatalogListOne();
+    // Intentionally no-op in list mode: navigation is button-driven
+    // to avoid auto-loading the full queue on programmatic/container scroll.
   }
 
   maybeAppendCatalogListOne() {
@@ -4619,6 +4743,8 @@ render() {
     this.clearPropertiesSlider();
     const initialBatch = list.slice(0, 3);
     this._catalogOverflowQueue = list.slice(3);
+    this._catalogVisibleIds = initialBatch.map((p) => String(this._toCardEngineShape(p)?.id || '').trim()).filter(Boolean);
+    this._catalogActiveId = this._catalogVisibleIds.length ? this._catalogVisibleIds[this._catalogVisibleIds.length - 1] : null;
     initialBatch.forEach((property, index) => {
       try { this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: index > 0 }); } catch {}
     });
@@ -4708,6 +4834,10 @@ render() {
           </div>
           <div class="cards-list">
             <div class="cards-list-body"></div>
+            <div class="cards-list-nav" aria-label="Навигация списка">
+              <button type="button" class="cards-list-nav-btn" data-action="catalog-list-prev" aria-label="Предыдущий объект">↑</button>
+              <button type="button" class="cards-list-nav-btn" data-action="catalog-list-next" aria-label="Следующий объект">↓</button>
+            </div>
           </div>
         </div>`;
       thread.appendChild(host);
@@ -4737,7 +4867,12 @@ render() {
       if (cs && !cs.querySelector('.cards-list')) {
         const list = document.createElement('div');
         list.className = 'cards-list';
-        list.innerHTML = '<div class="cards-list-body"></div>';
+        list.innerHTML = `
+          <div class="cards-list-body"></div>
+          <div class="cards-list-nav" aria-label="Навигация списка">
+            <button type="button" class="cards-list-nav-btn" data-action="catalog-list-prev" aria-label="Предыдущий объект">↑</button>
+            <button type="button" class="cards-list-nav-btn" data-action="catalog-list-next" aria-label="Следующий объект">↓</button>
+          </div>`;
         cs.appendChild(list);
       }
     }
@@ -4896,7 +5031,8 @@ render() {
       const vid = String(normalized.id).trim();
       if (vid) {
         if (!Array.isArray(this._catalogVisibleIds)) this._catalogVisibleIds = [];
-        this._catalogVisibleIds.push(vid);
+        if (!this._catalogVisibleIds.includes(vid)) this._catalogVisibleIds.push(vid);
+        this._catalogActiveId = vid;
       }
     }
     try {
@@ -5008,6 +5144,8 @@ render() {
     
     slides.forEach(s => s.classList.remove('active'));
     if (closest) closest.classList.add('active');
+    const activeId = closest?.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
+    if (activeId) this._catalogActiveId = String(activeId);
     slides.forEach((s) => {
       if (s !== closest) {
         s.classList.remove('flipped', 'card-slide--form-open');
