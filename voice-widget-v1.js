@@ -2892,6 +2892,151 @@ class VoiceWidget extends HTMLElement {
       if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
       this._accessOverlayOpen = false;
     } catch {}
+    try { this.closeAccessSubOverlay(); } catch {}
+  }
+
+  closeAccessSubOverlay() {
+    try {
+      const overlay = this.getRoot().querySelector('#vwAccessSubOverlay');
+      if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
+    } catch {}
+  }
+
+  getAdminObjectsMockList() {
+    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    const ids = list
+      .map((item) => String(item?.id || item?.variantId || item?._id || '').trim())
+      .filter(Boolean);
+    const uniq = Array.from(new Set(ids));
+    return uniq.length ? uniq : ['OD050', 'OD049', 'OD048', 'OD047', 'OD046', 'OD045'];
+  }
+
+  updateAdminObjectsSelectionState(overlay) {
+    if (!overlay) return;
+    const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-row'));
+    const checks = rows.map((row) => row.querySelector('[data-role="row-check"]')).filter(Boolean);
+    const selected = checks.filter((check) => check.checked).length;
+    const shareBtn = overlay.querySelector('[data-role="share"]');
+    const selectAllBtn = overlay.querySelector('[data-role="select-all"]');
+    if (shareBtn) {
+      shareBtn.disabled = selected <= 0;
+      shareBtn.textContent = selected > 0 ? `Поделиться (${selected})` : 'Поделиться';
+    }
+    if (selectAllBtn && checks.length) {
+      const allSelected = selected === checks.length;
+      selectAllBtn.textContent = allSelected ? 'Снять выбор' : 'Выбрать все';
+    }
+  }
+
+  openAccessSubOverlay(section = 'stats') {
+    this.closeAccessSubOverlay();
+    const list = this.getAdminObjectsMockList();
+    const now = new Date();
+    const nextMonth = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
+    const fmtDate = (d) => {
+      try { return d.toLocaleDateString('ru-RU'); } catch { return ''; }
+    };
+    const safeSection = String(section || '').trim().toLowerCase();
+    const modalBody = (() => {
+      if (safeSection === 'properties') {
+        const rows = list.map((id) => `
+          <div class="vw-access-obj-row" data-id="${id}">
+            <label class="vw-access-obj-check"><input type="checkbox" data-role="row-check"></label>
+            <div class="vw-access-obj-id">${id}</div>
+            <button type="button" class="vw-access-obj-btn" data-role="row-toggle">Выбрать</button>
+          </div>
+        `).join('');
+        return `
+          <div class="vw-access-sub-toolbar">
+            <button type="button" class="vw-access-sub-btn" data-role="select-all">Выбрать все</button>
+          </div>
+          <div class="vw-access-obj-list">${rows}</div>
+          <div class="vw-access-sub-toolbar">
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
+          </div>
+        `;
+      }
+      if (safeSection === 'subscription') {
+        return `
+          <div class="vw-access-sub-list">
+            <div class="vw-access-sub-item">Текущий план: <strong>PRO demo</strong></div>
+            <div class="vw-access-sub-item">Дата подписки: <strong>${fmtDate(now)}</strong></div>
+            <div class="vw-access-sub-item">Следующее списание: <strong>${fmtDate(nextMonth)}</strong></div>
+            <div class="vw-access-sub-item">Статус: <strong>Активна</strong></div>
+          </div>
+        `;
+      }
+      return `
+        <div class="vw-access-sub-list">
+          <div class="vw-access-sub-item">Дата регистрации: <strong>${fmtDate(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 42))}</strong></div>
+          <div class="vw-access-sub-item">Переходы в бота: <strong>173</strong></div>
+          <div class="vw-access-sub-item">Объектов в подборке: <strong>${list.length}</strong></div>
+          <div class="vw-access-sub-item">Активная подписка до: <strong>${fmtDate(nextMonth)}</strong></div>
+        </div>
+      `;
+    })();
+
+    const title = safeSection === 'properties'
+      ? 'Мои объекты'
+      : safeSection === 'subscription'
+        ? 'Управление подпиской'
+        : 'Статистика';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vwAccessSubOverlay';
+    overlay.className = 'vw-access-sub-overlay';
+    overlay.innerHTML = `
+      <div class="vw-access-sub-modal" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="vw-access-sub-head">
+          <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
+          <div class="vw-access-sub-title">${title}</div>
+          <span class="vw-access-sub-spacer" aria-hidden="true"></span>
+        </div>
+        ${modalBody}
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="back"]')?.addEventListener('click', () => this.closeAccessSubOverlay());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeAccessSubOverlay();
+    });
+
+    if (safeSection === 'properties') {
+      const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-row'));
+      rows.forEach((row) => {
+        const check = row.querySelector('[data-role="row-check"]');
+        const toggleBtn = row.querySelector('[data-role="row-toggle"]');
+        const sync = () => {
+          const selected = !!check?.checked;
+          row.classList.toggle('is-selected', selected);
+          if (toggleBtn) toggleBtn.textContent = selected ? 'Выбрано' : 'Выбрать';
+          this.updateAdminObjectsSelectionState(overlay);
+        };
+        check?.addEventListener('change', sync);
+        toggleBtn?.addEventListener('click', () => {
+          if (!check) return;
+          check.checked = !check.checked;
+          sync();
+        });
+      });
+      overlay.querySelector('[data-role="select-all"]')?.addEventListener('click', () => {
+        const checks = Array.from(overlay.querySelectorAll('[data-role="row-check"]'));
+        const allSelected = checks.length > 0 && checks.every((c) => c.checked);
+        checks.forEach((c) => { c.checked = !allSelected; });
+        rows.forEach((row) => {
+          const check = row.querySelector('[data-role="row-check"]');
+          const toggleBtn = row.querySelector('[data-role="row-toggle"]');
+          const selected = !!check?.checked;
+          row.classList.toggle('is-selected', selected);
+          if (toggleBtn) toggleBtn.textContent = selected ? 'Выбрано' : 'Выбрать';
+        });
+        this.updateAdminObjectsSelectionState(overlay);
+      });
+      overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
+      });
+      this.updateAdminObjectsSelectionState(overlay);
+    }
   }
 
   closeFiltersOverlay() {
@@ -3367,6 +3512,117 @@ class VoiceWidget extends HTMLElement {
         line-height: 1.45;
         color: var(--text-secondary, rgba(255,255,255,0.74));
       }
+      .vw-access-sub-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1310;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.56);
+        padding: 16px;
+      }
+      .vw-access-sub-modal {
+        width: min(420px, 100%);
+        max-height: min(82vh, 640px);
+        border-radius: 16px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 90%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        color: var(--text-primary, #fff);
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+        overflow: auto;
+      }
+      .vw-access-sub-head {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .vw-access-sub-title {
+        text-align: center;
+        font-size: .92rem;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.78));
+      }
+      .vw-access-sub-back {
+        min-height: 30px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 10px;
+      }
+      .vw-access-sub-spacer {
+        width: 1px;
+        height: 1px;
+      }
+      .vw-access-sub-list {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-access-sub-item {
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: .86rem;
+      }
+      .vw-access-sub-toolbar {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .vw-access-sub-btn {
+        min-height: 34px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 12px;
+      }
+      .vw-access-sub-btn--primary {
+        border-color: rgba(45, 143, 225, 0.65);
+        background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+      }
+      .vw-access-sub-btn:disabled {
+        opacity: .45;
+      }
+      .vw-access-obj-list {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-access-obj-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        border-radius: 12px;
+        padding: 8px 10px;
+      }
+      .vw-access-obj-row.is-selected {
+        border-color: rgba(45, 143, 225, 0.65);
+      }
+      .vw-access-obj-check input {
+        accent-color: var(--color-accent, #4ea0ff);
+      }
+      .vw-access-obj-id {
+        font-size: .84rem;
+        color: var(--text-primary, #fff);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+      .vw-access-obj-btn {
+        min-height: 30px;
+        border-radius: 9px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 10px;
+        font-size: .8rem;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -3397,9 +3653,9 @@ class VoiceWidget extends HTMLElement {
           </div>
           <div class="vw-access-greeting">${greeting}</div>
           <div class="vw-access-list">
-            <button type="button" class="vw-access-item">${locale.accessAdminStats || 'Статистика'}</button>
-            <button type="button" class="vw-access-item">${locale.accessAdminProperties || "Мої об'єкти"}</button>
-            <button type="button" class="vw-access-item">${locale.accessAdminSubscription || 'Керування підпискою'}</button>
+            <button type="button" class="vw-access-item" data-role="admin-stats">${locale.accessAdminStats || 'Статистика'}</button>
+            <button type="button" class="vw-access-item" data-role="admin-properties">${locale.accessAdminProperties || "Мої об'єкти"}</button>
+            <button type="button" class="vw-access-item" data-role="admin-subscription">${locale.accessAdminSubscription || 'Керування підпискою'}</button>
             <button type="button" class="vw-access-item vw-access-item--primary" data-role="olx-connect">${locale.accessAdminOlxConnect || 'Подключить OLX'}</button>
           </div>
         </div>
@@ -3423,6 +3679,9 @@ class VoiceWidget extends HTMLElement {
       olxConnectBtn.addEventListener('click', () => this.openOlxConnectFlow());
       this.refreshOlxStatusButton(olxConnectBtn).catch(() => {});
     }
+    overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
+    overlay.querySelector('[data-role="admin-properties"]')?.addEventListener('click', () => this.openAccessSubOverlay('properties'));
+    overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeAccessOverlay();
     });
