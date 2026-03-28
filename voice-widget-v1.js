@@ -2903,66 +2903,125 @@ class VoiceWidget extends HTMLElement {
     } catch {}
   }
 
-  getDefaultFilterChipsState() {
-    return {
-      budget: 'any',
-      area: 'any',
-      floor: 'any'
-    };
+  formatPickerNumber(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '0';
+    return num.toLocaleString('ru-RU');
   }
 
-  applyFilterChipSelection(overlay, group, value) {
-    if (!overlay || !group) return;
-    const chips = Array.from(overlay.querySelectorAll(`.vw-filters-chip[data-group="${group}"]`));
-    if (!chips.length) return;
-    const hasTarget = chips.some((chip) => String(chip.getAttribute('data-value') || '') === String(value || ''));
-    const safeValue = hasTarget ? String(value || '') : String(chips[0].getAttribute('data-value') || '');
-    chips.forEach((chip) => {
-      const isSelected = String(chip.getAttribute('data-value') || '') === safeValue;
-      chip.classList.toggle('is-selected', isSelected);
-      chip.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  buildFilterPickerOptions(type) {
+    const opts = [];
+    if (type === 'priceMin' || type === 'priceMax') {
+      if (type === 'priceMin') opts.push({ value: '', label: 'Цена от' });
+      if (type === 'priceMax') opts.push({ value: 'max', label: 'Макс' });
+      for (let v = 0; v <= 1000000; v += 1000) {
+        opts.push({ value: String(v), label: this.formatPickerNumber(v) });
+      }
+      return opts;
+    }
+    if (type === 'areaMin' || type === 'areaMax') {
+      if (type === 'areaMin') opts.push({ value: '', label: 'Метраж от' });
+      if (type === 'areaMax') opts.push({ value: 'max', label: 'Макс' });
+      for (let v = 0; v <= 350; v += 1) {
+        opts.push({ value: String(v), label: `${v} м²` });
+      }
+      return opts;
+    }
+    if (type === 'floorMin' || type === 'floorMax') {
+      if (type === 'floorMin') opts.push({ value: '', label: 'Этаж от' });
+      if (type === 'floorMax') opts.push({ value: 'max', label: 'Макс' });
+      for (let v = 0; v <= 30; v += 1) {
+        opts.push({ value: String(v), label: String(v) });
+      }
+      return opts;
+    }
+    return opts;
+  }
+
+  fillFilterPickerSelect(selectEl, type) {
+    if (!selectEl) return;
+    const options = this.buildFilterPickerOptions(type);
+    selectEl.innerHTML = options.map((opt) => `<option value="${String(opt.value).replace(/"/g, '&quot;')}">${String(opt.label)}</option>`).join('');
+  }
+
+  normalizeFilterRangePair(overlay, base, changed = '') {
+    const minSel = overlay.querySelector(`select[data-picker="${base}Min"]`);
+    const maxSel = overlay.querySelector(`select[data-picker="${base}Max"]`);
+    if (!minSel || !maxSel) return;
+    const minVal = minSel.value;
+    const maxVal = maxSel.value;
+    if (!minVal || !maxVal || maxVal === 'max') return;
+    const minNum = Number(minVal);
+    const maxNum = Number(maxVal);
+    if (!Number.isFinite(minNum) || !Number.isFinite(maxNum)) return;
+    if (minNum <= maxNum) return;
+    if (String(changed).toLowerCase().endsWith('min')) maxSel.value = minVal;
+    else minSel.value = maxVal;
+  }
+
+  syncFilterPickerLabels(overlay) {
+    if (!overlay) return;
+    overlay.querySelectorAll('[data-display]').forEach((labelEl) => {
+      const picker = String(labelEl.getAttribute('data-display') || '').trim();
+      const selectEl = overlay.querySelector(`select[data-picker="${picker}"]`);
+      if (!selectEl) return;
+      const selected = selectEl.options[selectEl.selectedIndex];
+      labelEl.textContent = selected ? selected.textContent : labelEl.textContent;
     });
-    overlay.setAttribute(`data-selected-${group}`, safeValue);
   }
 
-  collectFilterChipsPayload(overlay) {
-    const read = (group) => {
-      const selected = overlay.querySelector(`.vw-filters-chip[data-group="${group}"].is-selected`);
-      return {
-        value: String(selected?.getAttribute('data-value') || ''),
-        label: String(selected?.textContent || '').trim()
-      };
-    };
+  collectFiltersOverlayPayload(overlay) {
+    const read = (name) => String(overlay.querySelector(`select[data-picker="${name}"]`)?.value || '');
     return {
-      budget: read('budget'),
-      area: read('area'),
-      floor: read('floor')
+      priceFrom: read('priceMin'),
+      priceTo: read('priceMax'),
+      areaFrom: read('areaMin'),
+      areaTo: read('areaMax'),
+      floorFrom: read('floorMin'),
+      floorTo: read('floorMax'),
+      rooms: String(overlay.querySelector('[data-role="rooms"]')?.value || ''),
+      smart: !!overlay.querySelector('[data-role="smart"]')?.checked,
+      district: String(overlay.querySelector('[data-role="district"]')?.value || ''),
+      arcadia: !!overlay.querySelector('[data-role="arcadia"]')?.checked,
+      residentialComplexOnly: !!overlay.querySelector('[data-role="rcOnly"]')?.checked,
+      residentialComplex: String(overlay.querySelector('[data-role="rcSearch"]')?.value || '')
     };
   }
 
   resetFiltersOverlayForm(overlay) {
     if (!overlay) return;
-    const defaults = this.getDefaultFilterChipsState();
-    this.applyFilterChipSelection(overlay, 'budget', defaults.budget);
-    this.applyFilterChipSelection(overlay, 'area', defaults.area);
-    this.applyFilterChipSelection(overlay, 'floor', defaults.floor);
+    overlay.querySelectorAll('select[data-picker]').forEach((sel) => { sel.selectedIndex = 0; });
+    const rooms = overlay.querySelector('[data-role="rooms"]');
+    if (rooms) rooms.selectedIndex = 0;
+    const district = overlay.querySelector('[data-role="district"]');
+    if (district) district.selectedIndex = 0;
+    const rcSearch = overlay.querySelector('[data-role="rcSearch"]');
+    if (rcSearch) rcSearch.selectedIndex = 0;
+    const smart = overlay.querySelector('[data-role="smart"]');
+    const arcadia = overlay.querySelector('[data-role="arcadia"]');
+    const rcOnly = overlay.querySelector('[data-role="rcOnly"]');
+    if (smart) smart.checked = false;
+    if (arcadia) arcadia.checked = false;
+    if (rcOnly) rcOnly.checked = false;
+    this.syncFilterPickerLabels(overlay);
   }
 
   bindFiltersOverlayEvents(overlay) {
     if (!overlay) return;
-    overlay.querySelectorAll('.vw-filters-chip').forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const group = String(chip.getAttribute('data-group') || '').trim();
-        const value = String(chip.getAttribute('data-value') || '').trim();
-        if (!group || !value) return;
-        this.applyFilterChipSelection(overlay, group, value);
+    overlay.querySelectorAll('select[data-picker]').forEach((selectEl) => {
+      selectEl.addEventListener('change', () => {
+        const picker = String(selectEl.getAttribute('data-picker') || '');
+        if (picker.startsWith('price')) this.normalizeFilterRangePair(overlay, 'price', picker);
+        if (picker.startsWith('area')) this.normalizeFilterRangePair(overlay, 'area', picker);
+        if (picker.startsWith('floor')) this.normalizeFilterRangePair(overlay, 'floor', picker);
+        this.syncFilterPickerLabels(overlay);
       });
     });
     overlay.querySelector('[data-role="reset"]')?.addEventListener('click', () => {
       this.resetFiltersOverlayForm(overlay);
     });
     overlay.querySelector('[data-role="apply"]')?.addEventListener('click', () => {
-      const payload = this.collectFilterChipsPayload(overlay);
+      const payload = this.collectFiltersOverlayPayload(overlay);
       console.log('filters.apply', payload);
       this.ui?.showNotification?.('Фильтры применены (demo)');
       this.closeFiltersOverlay();
@@ -3017,49 +3076,82 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-list {
         display: grid;
-        gap: 14px;
+        gap: 12px;
       }
-      .vw-filters-strip {
+      .vw-filters-picker-row {
         display: grid;
-        gap: 8px;
+        grid-template-columns: 52px minmax(0, 1fr) minmax(0, .96fr);
+        gap: 10px;
+        align-items: center;
       }
-      .vw-filters-strip-title {
-        font-size: .95rem;
-        font-weight: 600;
-        color: var(--text-secondary, rgba(255,255,255,0.78));
-      }
-      .vw-filters-chip-row {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-bottom: 2px;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        -webkit-overflow-scrolling: touch;
-      }
-      .vw-filters-chip-row::-webkit-scrollbar {
-        display: none;
-      }
-      .vw-filters-chip {
-        flex: 0 0 auto;
-        min-height: 34px;
+      .vw-filters-picker-icon {
+        width: 52px;
+        height: 52px;
         border-radius: 999px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
-        color: var(--text-primary, #fff);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+      }
+      .vw-filters-picker-field {
+        position: relative;
+        display: grid;
+        align-items: center;
+        min-height: 48px;
         padding: 0 14px;
-        font-size: .88rem;
-        line-height: 1;
-        white-space: nowrap;
-        transition: transform .12s ease, background-color .2s ease, border-color .2s ease, opacity .2s ease;
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
       }
-      .vw-filters-chip:active {
-        transform: scale(.97);
+      .vw-filters-picker-label {
+        font-size: 1rem;
+        color: var(--text-secondary, rgba(255,255,255,0.72));
       }
-      .vw-filters-chip.is-selected {
-        border-color: color-mix(in srgb, var(--color-accent, #4ea0ff) 64%, var(--border-light, rgba(255,255,255,0.14)));
-        background: color-mix(in srgb, var(--color-accent, #4ea0ff) 28%, var(--bg-pill, rgba(255,255,255,0.12)));
+      .vw-filters-picker-select {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .vw-filters-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+      }
+      .vw-filters-select {
+        width: 100%;
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 12px;
+        font-size: 1rem;
+      }
+      .vw-filters-check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        border-radius: 12px;
+        padding: 10px 10px;
+        font-size: 1rem;
+        line-height: 1.3;
+      }
+      .vw-filters-check input {
+        accent-color: var(--color-accent, #4ea0ff);
+      }
+      .vw-filters-divider {
+        margin: 2px 0;
+        border: 0;
+        border-top: 1px solid color-mix(in srgb, var(--border-light, rgba(255,255,255,0.14)) 92%, transparent);
       }
       .vw-filters-actions {
         display: flex;
@@ -3106,50 +3198,84 @@ class VoiceWidget extends HTMLElement {
           <button type="button" class="vw-filters-close" data-role="close" aria-label="Закрыть">×</button>
         </div>
         <div class="vw-filters-list">
-          <div class="vw-filters-strip">
-            <div class="vw-filters-strip-title">Бюджет (до)</div>
-            <div class="vw-filters-chip-row">
-              <button type="button" class="vw-filters-chip is-selected" data-group="budget" data-value="any" aria-pressed="true">Любой</button>
-              <button type="button" class="vw-filters-chip" data-group="budget" data-value="30k" aria-pressed="false">$30k</button>
-              <button type="button" class="vw-filters-chip" data-group="budget" data-value="50k" aria-pressed="false">$50k</button>
-              <button type="button" class="vw-filters-chip" data-group="budget" data-value="70k" aria-pressed="false">$70k</button>
-              <button type="button" class="vw-filters-chip" data-group="budget" data-value="100k" aria-pressed="false">$100k</button>
-              <button type="button" class="vw-filters-chip" data-group="budget" data-value="150k" aria-pressed="false">$150k</button>
-              <button type="button" class="vw-filters-chip" data-group="budget" data-value="250kplus" aria-pressed="false">$250k+</button>
-            </div>
+          <div class="vw-filters-picker-row">
+            <div class="vw-filters-picker-icon" aria-hidden="true">💵</div>
+            <label class="vw-filters-picker-field">
+              <span class="vw-filters-picker-label" data-display="priceMin">Цена от</span>
+              <select class="vw-filters-picker-select" data-picker="priceMin" aria-label="Цена от"></select>
+            </label>
+            <label class="vw-filters-picker-field">
+              <span class="vw-filters-picker-label" data-display="priceMax">Макс</span>
+              <select class="vw-filters-picker-select" data-picker="priceMax" aria-label="Цена до"></select>
+            </label>
           </div>
-          <div class="vw-filters-strip">
-            <div class="vw-filters-strip-title">Метраж (от)</div>
-            <div class="vw-filters-chip-row">
-              <button type="button" class="vw-filters-chip is-selected" data-group="area" data-value="any" aria-pressed="true">Любой</button>
-              <button type="button" class="vw-filters-chip" data-group="area" data-value="30plus" aria-pressed="false">30+ м²</button>
-              <button type="button" class="vw-filters-chip" data-group="area" data-value="50plus" aria-pressed="false">50+ м²</button>
-              <button type="button" class="vw-filters-chip" data-group="area" data-value="70plus" aria-pressed="false">70+ м²</button>
-              <button type="button" class="vw-filters-chip" data-group="area" data-value="100plus" aria-pressed="false">100+ м²</button>
-              <button type="button" class="vw-filters-chip" data-group="area" data-value="150plus" aria-pressed="false">150+ м²</button>
-            </div>
+          <div class="vw-filters-picker-row">
+            <div class="vw-filters-picker-icon" aria-hidden="true">📏</div>
+            <label class="vw-filters-picker-field">
+              <span class="vw-filters-picker-label" data-display="areaMin">Метраж от</span>
+              <select class="vw-filters-picker-select" data-picker="areaMin" aria-label="Метраж от"></select>
+            </label>
+            <label class="vw-filters-picker-field">
+              <span class="vw-filters-picker-label" data-display="areaMax">Макс</span>
+              <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="Метраж до"></select>
+            </label>
           </div>
-          <div class="vw-filters-strip">
-            <div class="vw-filters-strip-title">Этаж (тип)</div>
-            <div class="vw-filters-chip-row">
-              <button type="button" class="vw-filters-chip is-selected" data-group="floor" data-value="any" aria-pressed="true">Любой</button>
-              <button type="button" class="vw-filters-chip" data-group="floor" data-value="middle" aria-pressed="false">Средние</button>
-              <button type="button" class="vw-filters-chip" data-group="floor" data-value="notfirst" aria-pressed="false">Не первый</button>
-              <button type="button" class="vw-filters-chip" data-group="floor" data-value="notlast" aria-pressed="false">Не последний</button>
-              <button type="button" class="vw-filters-chip" data-group="floor" data-value="high15" aria-pressed="false">Высокий (15+)</button>
-            </div>
+          <div class="vw-filters-picker-row">
+            <div class="vw-filters-picker-icon" aria-hidden="true">🏢</div>
+            <label class="vw-filters-picker-field">
+              <span class="vw-filters-picker-label" data-display="floorMin">Этаж от</span>
+              <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
+            </label>
+            <label class="vw-filters-picker-field">
+              <span class="vw-filters-picker-label" data-display="floorMax">Макс</span>
+              <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="Этаж до"></select>
+            </label>
+          </div>
+          <div class="vw-filters-row">
+            <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
+              <option value="">Кол-во комнат</option>
+              <option value="1">1 комната</option>
+              <option value="2">2 комнаты</option>
+              <option value="3">3 комнаты</option>
+              <option value="4plus">4+ комнат</option>
+            </select>
+            <label class="vw-filters-check"><input type="checkbox" data-role="smart"> <span>Смарт</span></label>
+          </div>
+          <div class="vw-filters-row">
+            <select class="vw-filters-select" aria-label="Район" data-role="district">
+              <option value="">Район</option>
+              <option value="primorsky">Приморский</option>
+              <option value="kievsky">Киевский</option>
+              <option value="malinovsky">Малиновский</option>
+              <option value="suvorovsky">Суворовский</option>
+            </select>
+            <label class="vw-filters-check"><input type="checkbox" data-role="arcadia"> <span>Аркадия</span></label>
+          </div>
+          <hr class="vw-filters-divider">
+          <div class="vw-filters-row">
+            <label class="vw-filters-check"><input type="checkbox" data-role="rcOnly"> <span>ЖК</span></label>
+            <select class="vw-filters-select" aria-label="Поиск по ЖК" data-role="rcSearch">
+              <option value="">Поиск по ЖК</option>
+              <option value="altair">ЖК Альтаир</option>
+              <option value="gagarin">ЖК Гагарин Плаза</option>
+              <option value="omega">ЖК Омега</option>
+            </select>
           </div>
           <div class="vw-filters-actions">
             <button type="button" class="vw-filters-apply" data-role="apply">Применить</button>
             <button type="button" class="vw-filters-reset" data-role="reset">Сброс</button>
           </div>
         </div>
-        <div class="vw-filters-hint">Минималистичный режим: 3 быстрых выбора и один тап на применение.</div>
+        <div class="vw-filters-hint">Для выбора значения нажмите на поле и используйте системный барабан выбора.</div>
       </div>
     `;
     this.getRoot().appendChild(overlay);
     this._filtersOverlayOpen = true;
     this.$byId('pillFiltersButton')?.setAttribute('aria-expanded', 'true');
+    overlay.querySelectorAll('select[data-picker]').forEach((sel) => {
+      const pickerType = String(sel.getAttribute('data-picker') || '');
+      this.fillFilterPickerSelect(sel, pickerType);
+    });
     this.resetFiltersOverlayForm(overlay);
     this.bindFiltersOverlayEvents(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
