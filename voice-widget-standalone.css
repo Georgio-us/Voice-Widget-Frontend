@@ -2331,33 +2331,105 @@ voice-widget,
   width: 100%;
 }
 
+/* Строго 3 колонки в ряд — без переноса третьего вниз (равная доля ширины) */
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
   width: 100%;
-  justify-content: flex-start;
   align-items: stretch;
 }
 
+/* Компактное превью: шире, чем выше (ландшафтная полоса) */
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide {
-  flex: 0 0 120px;
-  width: 120px !important;
-  min-width: 120px;
-  max-width: 120px !important;
-  min-height: 200px;
-  height: 200px;
-  max-height: 240px;
+  width: 100% !important;
+  min-width: 0;
+  max-width: none !important;
+  min-height: 108px;
+  height: 108px;
+  max-height: 108px;
   scroll-snap-align: unset;
   transform: none;
   opacity: 1;
 }
 
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide .cs {
-  min-height: 100%;
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs {
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 0;
   height: 100%;
   max-height: 100%;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-image {
+  flex: 0 0 42%;
+  width: 42%;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-image img {
+  max-height: none !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 6px 8px;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-row {
+  margin-bottom: 4px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-row--district {
+  margin-bottom: 6px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-description-btn {
+  display: none;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-row--specs {
+  display: none;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .card-front-assets {
+  display: none;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .card-actions-wrap {
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .card-more-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-title {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-inline-price--total {
+  font-size: 11px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-price-tag {
+  top: 4px;
+  right: 4px;
+  padding: 3px 6px;
+  font-size: 10px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cards-dots-row {
@@ -2366,7 +2438,7 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.card-slide--form-open {
-  flex: 1 1 100%;
+  grid-column: 1 / -1;
   width: 100% !important;
   max-width: 100% !important;
   min-height: 360px;
@@ -2376,9 +2448,41 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .cs,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.card-slide--form-open .cs {
+  flex-direction: column;
   min-height: 360px;
   height: 360px;
   max-height: 360px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .card-slide-front .cs-image,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .card-slide-front .cs-body {
+  /* вернуть вертикальную раскладку полной карточки */
+  flex: initial;
+  width: 100%;
+  height: auto;
+  min-height: 180px;
+  max-height: none;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .card-slide-front .cs-image {
+  min-height: 180px;
+  max-height: 180px;
+  height: 180px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .card-slide-front .cs-body {
+  min-height: 180px;
+  height: 180px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .cs-description-btn,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .cs-row--specs,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .card-front-assets {
+  display: flex;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .cs-description-btn {
+  display: inline-flex;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped .card-slide-front,
