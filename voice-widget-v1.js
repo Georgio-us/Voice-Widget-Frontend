@@ -2280,6 +2280,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogVisibleIds = [];
     this._catalogActiveId = null;
     this._catalogListWindowSize = 3;
+    this._catalogListWindowStart = 0;
     this._catalogListScrollBound = false;
     this._pillState = 'default';
     this._pillBaseCount = 0;
@@ -4471,6 +4472,7 @@ render() {
     this._sliderCheckpointShown = { 10: false, 20: false };
     try { this.closeSliderCheckpointPopup(); } catch {}
     this._catalogActiveId = null;
+    this._catalogListWindowStart = 0;
   }
 
   findCatalogPropertyById(id) {
@@ -4512,16 +4514,20 @@ render() {
       return;
     }
     const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
-    let activeIdx = loadedIds.length - 1;
-    if (activeId) {
-      const idx = loadedIds.indexOf(String(activeId));
-      if (idx >= 0) activeIdx = idx;
+    const maxStart = Math.max(0, loadedIds.length - windowSize);
+    let start;
+    if ((Number(this._catalogListWindowStart) || 0) < 0) {
+      let anchorIdx = loadedIds.length - 1;
+      if (activeId) {
+        const idx = loadedIds.indexOf(String(activeId));
+        if (idx >= 0) anchorIdx = idx;
+      }
+      start = Math.max(0, Math.min(maxStart, anchorIdx - (windowSize - 1)));
+    } else {
+      start = Math.max(0, Math.min(maxStart, Number(this._catalogListWindowStart) || 0));
     }
-    activeIdx = Math.max(0, Math.min(loadedIds.length - 1, activeIdx));
-    let start = Math.max(0, activeIdx - (windowSize - 1));
     const end = Math.min(loadedIds.length, start + windowSize);
-    start = Math.max(0, end - windowSize);
-    this._catalogActiveId = loadedIds[activeIdx] || null;
+    this._catalogListWindowStart = start;
     const windowIds = loadedIds.slice(start, end);
     windowIds.forEach((vid) => {
       const property = this.findCatalogPropertyById(vid);
@@ -4530,8 +4536,9 @@ render() {
         this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
       } catch {}
     });
-    // addCardSlide() updates active id on each append; restore target active after window render.
-    this._catalogActiveId = loadedIds[activeIdx] || null;
+    // Keep active id aligned with currently visible tail card in list mode.
+    this._catalogActiveId = windowIds.length ? windowIds[windowIds.length - 1] : null;
+    try { this.maybeTriggerSliderCheckpoint(Math.max(0, end - 1)); } catch {}
     this.updateCatalogListNavState();
   }
 
@@ -4542,10 +4549,12 @@ render() {
     const nextBtn = host.querySelector('[data-action="catalog-list-next"]');
     if (!prevBtn || !nextBtn) return;
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
-    const activeIdx = loadedIds.length ? Math.max(0, loadedIds.indexOf(String(this._catalogActiveId || ''))) : -1;
+    const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
+    const maxStart = Math.max(0, loadedIds.length - windowSize);
+    const start = Math.max(0, Math.min(maxStart, Number(this._catalogListWindowStart) || 0));
     const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
-    const canPrev = activeIdx > 0;
-    const canNext = activeIdx >= 0 && (activeIdx < loadedIds.length - 1 || queue.length > 0);
+    const canPrev = start > 0;
+    const canNext = start < maxStart || queue.length > 0;
     prevBtn.disabled = !canPrev;
     nextBtn.disabled = !canNext;
   }
@@ -4554,13 +4563,14 @@ render() {
     if (this._catalogDisplayMode !== 'list') return;
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
     if (!loadedIds.length) return;
-    const currentIdx = loadedIds.indexOf(String(this._catalogActiveId || ''));
-    const activeIdx = currentIdx >= 0 ? currentIdx : loadedIds.length - 1;
-    if (activeIdx <= 0) {
+    const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
+    const maxStart = Math.max(0, loadedIds.length - windowSize);
+    const start = Math.max(0, Math.min(maxStart, Number(this._catalogListWindowStart) || 0));
+    if (start <= 0) {
       this.updateCatalogListNavState();
       return;
     }
-    this._catalogActiveId = loadedIds[activeIdx - 1];
+    this._catalogListWindowStart = start - 1;
     this.rebuildCatalogLayoutFromVisibleIds();
   }
 
@@ -4568,10 +4578,11 @@ render() {
     if (this._catalogDisplayMode !== 'list') return;
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
     if (!loadedIds.length) return;
-    const currentIdx = loadedIds.indexOf(String(this._catalogActiveId || ''));
-    const activeIdx = currentIdx >= 0 ? currentIdx : loadedIds.length - 1;
-    if (activeIdx < loadedIds.length - 1) {
-      this._catalogActiveId = loadedIds[activeIdx + 1];
+    const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
+    const maxStart = Math.max(0, loadedIds.length - windowSize);
+    const start = Math.max(0, Math.min(maxStart, Number(this._catalogListWindowStart) || 0));
+    if (start < maxStart) {
+      this._catalogListWindowStart = start + 1;
       this.rebuildCatalogLayoutFromVisibleIds();
       return;
     }
@@ -4586,9 +4597,8 @@ render() {
       const nextId = String(normalized?.id || '').trim();
       if (nextId && !loadedIds.includes(nextId)) {
         this._catalogVisibleIds = [...loadedIds, nextId];
-        this._catalogActiveId = nextId;
-      } else {
-        this._catalogActiveId = loadedIds[activeIdx] || null;
+        const nextMaxStart = Math.max(0, this._catalogVisibleIds.length - windowSize);
+        this._catalogListWindowStart = nextMaxStart;
       }
     }
     this.rebuildCatalogLayoutFromVisibleIds();
@@ -4647,6 +4657,10 @@ render() {
     const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
     if (host) {
       host.classList.toggle('catalog-layout-list', next === 'list');
+      if (prev !== next && next === 'list') {
+        // Re-anchor list window around current active card from slider.
+        this._catalogListWindowStart = -1;
+      }
       if (prev !== next) this.rebuildCatalogLayoutFromVisibleIds();
     }
   }
@@ -4746,6 +4760,7 @@ render() {
     this._catalogOverflowQueue = list.slice(3);
     this._catalogVisibleIds = initialBatch.map((p) => String(this._toCardEngineShape(p)?.id || '').trim()).filter(Boolean);
     this._catalogActiveId = this._catalogVisibleIds.length ? this._catalogVisibleIds[this._catalogVisibleIds.length - 1] : null;
+    this._catalogListWindowStart = 0;
     initialBatch.forEach((property, index) => {
       try { this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: index > 0 }); } catch {}
     });
