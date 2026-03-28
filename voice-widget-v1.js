@@ -2026,6 +2026,12 @@ const LOCALES = {
     accessAdminStats: 'Статистика',
     accessAdminProperties: 'Мои объекты',
     accessAdminSubscription: 'Управление подпиской',
+    accessAdminOlxConnect: 'Подключить OLX',
+    accessAdminOlxConnected: 'OLX подключен (переподключить)',
+    accessAdminOlxChecking: 'Проверяю OLX...',
+    accessAdminOlxError: 'Не удалось проверить статус OLX',
+    accessAdminOlxSuccessToast: 'OLX успешно подключен',
+    accessAdminOlxFailedToast: 'Не удалось подключить OLX',
     accessUserEmpty: 'Здесь появятся объекты, которые вы добавите в избранное (Wishlist)',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
     privacyPolicy: 'Политика конфиденциальности',
@@ -2144,6 +2150,12 @@ const LOCALES = {
     accessAdminStats: 'Статистика',
     accessAdminProperties: "Мої об'єкти",
     accessAdminSubscription: 'Керування підпискою',
+    accessAdminOlxConnect: 'Підключити OLX',
+    accessAdminOlxConnected: 'OLX підключено (перепідключити)',
+    accessAdminOlxChecking: 'Перевіряю OLX...',
+    accessAdminOlxError: 'Не вдалося перевірити статус OLX',
+    accessAdminOlxSuccessToast: 'OLX успішно підключено',
+    accessAdminOlxFailedToast: 'Не вдалося підключити OLX',
     accessUserEmpty: "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)",
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
     privacyPolicy: 'Політика конфіденційності',
@@ -2788,6 +2800,80 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  getBackendBaseUrl() {
+    return String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '');
+  }
+
+  consumeOlxCallbackState() {
+    try {
+      const url = new URL(window.location.href);
+      const olxState = String(url.searchParams.get('olx') || '').trim().toLowerCase();
+      if (!olxState) return;
+      if (olxState === 'connected') {
+        this.ui?.showNotification?.(`✅ ${this.t('accessAdminOlxSuccessToast') || 'OLX successfully connected'}`);
+      } else {
+        this.ui?.showNotification?.(`⚠️ ${this.t('accessAdminOlxFailedToast') || 'OLX connection failed'}`);
+      }
+      url.searchParams.delete('olx');
+      url.searchParams.delete('olx_reason');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    } catch {}
+  }
+
+  buildOlxConnectUrl() {
+    const backendBase = this.getBackendBaseUrl();
+    if (!backendBase) return '';
+    const tgUser = this.getCurrentTelegramUser();
+    const url = new URL(`${backendBase}/api/olx/connect`);
+    if (tgUser?.id) {
+      url.searchParams.set('tgUserId', tgUser.id);
+    }
+    try {
+      url.searchParams.set('returnTo', window.location.href);
+    } catch {}
+    return url.toString();
+  }
+
+  async refreshOlxStatusButton(button) {
+    if (!button) return;
+    const locale = this.getCurrentLocale();
+    const tgUser = this.getCurrentTelegramUser();
+    const backendBase = this.getBackendBaseUrl();
+
+    if (!backendBase || !tgUser?.id) {
+      button.textContent = locale.accessAdminOlxConnect || 'Connect OLX';
+      button.disabled = false;
+      return;
+    }
+
+    button.textContent = locale.accessAdminOlxChecking || 'Checking OLX...';
+    button.disabled = true;
+    try {
+      const statusUrl = new URL(`${backendBase}/api/olx/status`);
+      statusUrl.searchParams.set('tgUserId', tgUser.id);
+      const response = await fetch(statusUrl.toString());
+      const payload = await response.json().catch(() => ({}));
+      const connected = Boolean(response.ok && payload?.ok && payload?.connected);
+      button.textContent = connected
+        ? (locale.accessAdminOlxConnected || 'OLX connected (reconnect)')
+        : (locale.accessAdminOlxConnect || 'Connect OLX');
+      button.disabled = false;
+    } catch {
+      button.textContent = locale.accessAdminOlxConnect || 'Connect OLX';
+      button.disabled = false;
+      this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxError || 'Failed to check OLX status'}`);
+    }
+  }
+
+  openOlxConnectFlow() {
+    const url = this.buildOlxConnectUrl();
+    if (!url) {
+      this.ui?.showNotification?.('⚠️ OLX URL is not configured');
+      return;
+    }
+    window.location.href = url;
+  }
+
   updateAccessHeaderButton() {
     const btn = this.$byId('appThemeButton');
     if (!btn) return;
@@ -2987,6 +3073,10 @@ class VoiceWidget extends HTMLElement {
         font-size: .86rem;
         font-weight: 500;
       }
+      .vw-access-item--primary {
+        border-color: rgba(45, 143, 225, 0.65);
+        background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+      }
       .vw-access-hint {
         font-size: .84rem;
         line-height: 1.45;
@@ -3025,6 +3115,7 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-access-item">${locale.accessAdminStats || 'Статистика'}</button>
             <button type="button" class="vw-access-item">${locale.accessAdminProperties || "Мої об'єкти"}</button>
             <button type="button" class="vw-access-item">${locale.accessAdminSubscription || 'Керування підпискою'}</button>
+            <button type="button" class="vw-access-item vw-access-item--primary" data-role="olx-connect">${locale.accessAdminOlxConnect || 'Подключить OLX'}</button>
           </div>
         </div>
       `
@@ -3042,6 +3133,11 @@ class VoiceWidget extends HTMLElement {
     this.getRoot().appendChild(overlay);
     this._accessOverlayOpen = true;
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeAccessOverlay());
+    const olxConnectBtn = overlay.querySelector('[data-role="olx-connect"]');
+    if (olxConnectBtn) {
+      olxConnectBtn.addEventListener('click', () => this.openOlxConnectFlow());
+      this.refreshOlxStatusButton(olxConnectBtn).catch(() => {});
+    }
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeAccessOverlay();
     });
@@ -3110,6 +3206,7 @@ class VoiceWidget extends HTMLElement {
     try { this.setupMenuOverlay(); } catch {}
     try { this.initializePropertiesCatalog(); } catch {}
     try { this.api.resolveViewerAccessRole(); } catch {}
+    try { this.consumeOlxCallbackState(); } catch {}
 
     
   }
