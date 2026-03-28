@@ -2344,7 +2344,7 @@ voice-widget,
   bottom: 0;
   z-index: 2;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 8px;
   padding-top: 8px;
   background: linear-gradient(to top, color-mix(in srgb, var(--bg-main) 72%, transparent), transparent);
