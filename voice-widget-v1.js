@@ -2937,35 +2937,63 @@ class VoiceWidget extends HTMLElement {
       try { return d.toLocaleDateString('ru-RU'); } catch { return ''; }
     };
     const safeSection = String(section || '').trim().toLowerCase();
+    const isAddProperty = safeSection === 'add-property';
     const modalBody = (() => {
-      if (safeSection === 'add-property') {
+      if (isAddProperty) {
         return `
-          <form class="vw-access-add-form" data-role="add-form">
-            <input class="vw-access-add-input" type="text" name="title" placeholder="Заголовок" autocomplete="off">
-            <textarea class="vw-access-add-textarea" name="description" placeholder="Описание"></textarea>
-            <button type="button" class="vw-access-add-upload" data-role="image-upload">
-              <span>Загрузить изображение (до 5мб)</span>
-              <span aria-hidden="true">🖼️</span>
-            </button>
-            <div class="vw-access-add-grid">
-              <input class="vw-access-add-input" type="text" name="price" placeholder="Цена" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="area" placeholder="Метраж" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="kitchen" placeholder="Кухня" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="floor" placeholder="Этаж" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="floorsTotal" placeholder="Этажность" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="bathroom" placeholder="Сан-узел" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="district" placeholder="Район" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="complex" placeholder="ЖК" autocomplete="off">
-              <input class="vw-access-add-input" type="text" name="houseType" placeholder="Тип дома" autocomplete="off">
+          <form class="vw-access-add-form" data-role="add-form" novalidate>
+            <input type="hidden" data-role="photo-input-target" value="">
+            <input class="vw-access-add-file" data-role="photo-input" type="file" accept="image/*">
+            <div class="vw-access-add-row2">
+              <label class="vw-access-add-field">
+                <select class="vw-access-add-input" data-role="property-type" name="propertyType">
+                  <option value="">* Тип недвижимости</option>
+                  <option value="apartment">Квартира</option>
+                  <option value="house">Дом</option>
+                </select>
+              </label>
+              <label class="vw-access-add-field">
+                <input class="vw-access-add-input vw-access-add-input--id" data-role="property-id" name="propertyId" value="A0001" readonly>
+              </label>
             </div>
-            <div class="vw-access-add-check-row">
-              <label class="vw-access-add-check"><input type="checkbox" name="balcony"><span>Балкон</span></label>
-              <label class="vw-access-add-check"><input type="checkbox" name="smart"><span>Смарт</span></label>
-              <label class="vw-access-add-check"><input type="checkbox" name="parking"><span>Паркинг</span></label>
+            <label class="vw-access-add-field">
+              <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="* Введите заголовок" autocomplete="off">
+            </label>
+            <div class="vw-access-add-hint">Можно добавить до 5 фотографий до 10мб каждая</div>
+            <div class="vw-access-add-photo-layout">
+              <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span aria-hidden="true">🖼️</span></button>
+              <div class="vw-access-add-photo-grid">
+                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><span aria-hidden="true">🖼️</span></button>
+                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span aria-hidden="true">🖼️</span></button>
+                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span aria-hidden="true">🖼️</span></button>
+                <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span aria-hidden="true">🖼️</span></button>
+              </div>
+            </div>
+            <div class="vw-access-add-row2">
+              <label class="vw-access-add-field">
+                <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="* Укажите цену" autocomplete="off" inputmode="numeric">
+              </label>
+              <label class="vw-access-add-field">
+                <input class="vw-access-add-input" type="text" name="rooms" data-role="rooms" placeholder="* Количество комнат" autocomplete="off" inputmode="numeric">
+              </label>
+            </div>
+            <div class="vw-access-add-row2">
+              <label class="vw-access-add-field">
+                <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="* Укажите площадь" autocomplete="off" inputmode="numeric">
+              </label>
+              <label class="vw-access-add-field">
+                <select class="vw-access-add-input" data-role="district" name="district">
+                  <option value="">* Укажите район</option>
+                  <option value="Приморский">Приморский</option>
+                  <option value="Суворовский">Суворовский</option>
+                  <option value="Киевский">Киевский</option>
+                  <option value="Малиновский">Малиновский</option>
+                </select>
+              </label>
             </div>
             <div class="vw-access-add-actions">
-              <button type="submit" class="vw-access-sub-btn vw-access-sub-btn--primary">Сохранить</button>
-              <button type="button" class="vw-access-sub-btn" data-role="add-reset">Сбросить</button>
+              <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
+              <button type="submit" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-next">Продолжить</button>
             </div>
           </form>
         `;
@@ -3010,22 +3038,33 @@ class VoiceWidget extends HTMLElement {
 
     const title = safeSection === 'properties'
       ? 'Мои объекты'
-      : safeSection === 'add-property'
-        ? 'Добавить новый объект'
+      : isAddProperty
+        ? 'Новый объект'
       : safeSection === 'subscription'
         ? 'Управление подпиской'
         : 'Статистика';
-
-    const overlay = document.createElement('div');
-    overlay.id = 'vwAccessSubOverlay';
-    overlay.className = 'vw-access-sub-overlay';
-    overlay.innerHTML = `
-      <div class="vw-access-sub-modal" role="dialog" aria-modal="true" aria-label="${title}">
+    const modalHead = isAddProperty
+      ? `
+        <div class="vw-access-add-head">
+          <button type="button" class="vw-access-sub-back" data-role="back">Назад</button>
+          <div class="vw-access-add-stage">Основные параметры</div>
+          <div class="vw-access-add-caption">Новый объект</div>
+        </div>
+      `
+      : `
         <div class="vw-access-sub-head">
           <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
           <div class="vw-access-sub-title">${title}</div>
           <span class="vw-access-sub-spacer" aria-hidden="true"></span>
         </div>
+      `;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'vwAccessSubOverlay';
+    overlay.className = 'vw-access-sub-overlay';
+    overlay.innerHTML = `
+      <div class="vw-access-sub-modal ${isAddProperty ? 'vw-access-sub-modal--add' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+        ${modalHead}
         ${modalBody}
       </div>
     `;
@@ -3071,17 +3110,81 @@ class VoiceWidget extends HTMLElement {
       });
       this.updateAdminObjectsSelectionState(overlay);
     }
-    if (safeSection === 'add-property') {
+    if (isAddProperty) {
       const form = overlay.querySelector('[data-role="add-form"]');
+      const normalizeNumber = (value) => {
+        const digits = String(value || '').replace(/[^\d]/g, '');
+        if (!digits) return '';
+        return Number(digits).toLocaleString('ru-RU');
+      };
+      const priceInput = overlay.querySelector('[data-role="price"]');
+      const areaInput = overlay.querySelector('[data-role="area"]');
+      const roomsInput = overlay.querySelector('[data-role="rooms"]');
+      const districtInput = overlay.querySelector('[data-role="district"]');
+      const titleInput = overlay.querySelector('[data-role="title"]');
+      const typeInput = overlay.querySelector('[data-role="property-type"]');
+      const fileInput = overlay.querySelector('[data-role="photo-input"]');
+      const targetInput = overlay.querySelector('[data-role="photo-input-target"]');
+      const photoSlots = Array.from(overlay.querySelectorAll('[data-role="photo-slot"]'));
+      if (priceInput) {
+        priceInput.addEventListener('input', () => { priceInput.value = normalizeNumber(priceInput.value); });
+      }
+      if (roomsInput) {
+        roomsInput.addEventListener('input', () => { roomsInput.value = String(roomsInput.value || '').replace(/[^\d]/g, ''); });
+      }
+      if (areaInput) {
+        areaInput.addEventListener('input', () => {
+          const digits = String(areaInput.value || '').replace(/[^\d]/g, '');
+          areaInput.value = digits ? Number(digits).toLocaleString('ru-RU') : '';
+        });
+        areaInput.addEventListener('focus', () => {
+          areaInput.value = String(areaInput.value || '').replace(/\s*м²$/i, '');
+        });
+        areaInput.addEventListener('blur', () => {
+          const digits = String(areaInput.value || '').replace(/[^\d]/g, '');
+          areaInput.value = digits ? `${Number(digits).toLocaleString('ru-RU')} м²` : '';
+        });
+      }
+      const updateSlot = (slot, file) => {
+        if (!slot) return;
+        if (!file) {
+          slot.classList.remove('is-filled');
+          slot.innerHTML = '<span aria-hidden="true">🖼️</span>';
+          return;
+        }
+        slot.classList.add('is-filled');
+        slot.innerHTML = `<span>${String(file.name || '').slice(0, 18)}</span>`;
+      };
+      photoSlots.forEach((slot) => {
+        slot.addEventListener('click', () => {
+          if (!fileInput || !targetInput) return;
+          targetInput.value = String(slot.getAttribute('data-slot') || '');
+          fileInput.click();
+        });
+      });
+      fileInput?.addEventListener('change', () => {
+        const index = Number(targetInput?.value || '-1');
+        const file = fileInput?.files?.[0];
+        if (!Number.isFinite(index) || index < 0 || !file) return;
+        updateSlot(photoSlots[index], file);
+        fileInput.value = '';
+      });
       form?.addEventListener('submit', (event) => {
         event.preventDefault();
-        this.ui?.showNotification?.('Прототип сохранения готов. Подключим логику на следующем шаге.');
+        const hasRequired = !!String(typeInput?.value || '').trim()
+          && !!String(titleInput?.value || '').trim()
+          && !!String(priceInput?.value || '').trim()
+          && !!String(roomsInput?.value || '').trim()
+          && !!String(areaInput?.value || '').trim()
+          && !!String(districtInput?.value || '').trim();
+        if (!hasRequired) {
+          this.ui?.showNotification?.('Заполните обязательные поля первого шага');
+          return;
+        }
+        this.ui?.showNotification?.('Шаг 1 заполнен. Переход на следующий этап добавим следующим экраном.');
       });
-      overlay.querySelector('[data-role="add-reset"]')?.addEventListener('click', () => {
-        form?.reset();
-      });
-      overlay.querySelector('[data-role="image-upload"]')?.addEventListener('click', () => {
-        this.ui?.showNotification?.('Загрузка изображения будет подключена на следующем шаге.');
+      overlay.querySelector('[data-role="add-draft"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('Черновик подключим на следующем этапе.');
       });
     }
   }
@@ -3636,77 +3739,118 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-btn:disabled {
         opacity: .45;
       }
+      .vw-access-sub-modal--add {
+        width: min(720px, 100%);
+        max-height: min(88vh, 760px);
+      }
+      .vw-access-add-head {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .vw-access-add-stage {
+        justify-self: start;
+        min-height: 30px;
+        border-radius: 999px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.1));
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        display: inline-flex;
+        align-items: center;
+        padding: 0 10px;
+        font-size: .83rem;
+      }
+      .vw-access-add-caption {
+        font-size: .9rem;
+        font-weight: 500;
+        color: var(--text-secondary, rgba(255,255,255,0.68));
+        justify-self: end;
+        white-space: nowrap;
+      }
       .vw-access-add-form {
         display: grid;
         gap: 10px;
       }
-      .vw-access-add-input,
-      .vw-access-add-textarea {
-        width: 100%;
-        min-height: 42px;
-        border-radius: 12px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.1));
-        color: var(--text-primary, #fff);
-        padding: 0 12px;
-        font-size: .9rem;
+      .vw-access-add-file {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
       }
-      .vw-access-add-textarea {
-        min-height: 132px;
-        resize: vertical;
-        padding: 10px 12px;
+      .vw-access-add-row2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
       }
-      .vw-access-add-input::placeholder,
-      .vw-access-add-textarea::placeholder {
-        color: var(--text-secondary, rgba(255,255,255,0.62));
+      .vw-access-add-field {
+        min-width: 0;
       }
-      .vw-access-add-upload {
+      .vw-access-add-input {
         width: 100%;
         min-height: 46px;
-        border-radius: 12px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.12));
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.16));
+        background: var(--bg-element, rgba(255,255,255,0.08));
         color: var(--text-primary, #fff);
-        padding: 0 12px;
+        padding: 0 14px;
         font-size: .88rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
       }
-      .vw-access-add-grid {
+      .vw-access-add-input::placeholder {
+        color: var(--text-secondary, rgba(255,255,255,0.56));
+      }
+      .vw-access-add-input:focus {
+        border-color: rgba(92, 150, 255, 0.75);
+        box-shadow: 0 0 0 1px rgba(92, 150, 255, 0.35) inset;
+      }
+      .vw-access-add-input--id {
+        border-color: rgba(92, 150, 255, 0.88);
+        color: rgba(255,255,255,0.9);
+      }
+      .vw-access-add-hint {
+        text-align: center;
+        font-size: .83rem;
+        color: var(--text-secondary, rgba(255,255,255,0.58));
+      }
+      .vw-access-add-photo-layout {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
       }
-      .vw-access-add-grid .vw-access-add-input {
-        min-height: 40px;
-        font-size: .84rem;
-      }
-      .vw-access-add-check-row {
+      .vw-access-add-photo-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
       }
-      .vw-access-add-check {
-        min-height: 38px;
-        border-radius: 10px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.1));
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 0 10px;
-        font-size: .84rem;
+      .vw-access-add-photo-slot {
+        min-height: 92px;
+        border-radius: 16px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.16));
+        background: var(--bg-element, rgba(255,255,255,0.08));
+        color: rgba(255,255,255,0.65);
+        display: grid;
+        place-items: center;
+        padding: 8px;
+        font-size: 1.35rem;
+      }
+      .vw-access-add-photo-slot.is-filled {
+        border-color: rgba(92, 150, 255, 0.6);
         color: var(--text-primary, #fff);
+        font-size: .78rem;
       }
-      .vw-access-add-check input {
-        accent-color: var(--color-accent, #4ea0ff);
+      .vw-access-add-photo-slot--main {
+        min-height: 194px;
       }
       .vw-access-add-actions {
-        margin-top: 4px;
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .vw-access-add-actions .vw-access-sub-btn {
+        min-height: 50px;
+        font-size: .95rem;
       }
       .vw-access-obj-list {
         display: grid;
