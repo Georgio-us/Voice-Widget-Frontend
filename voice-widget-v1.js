@@ -4683,7 +4683,8 @@ render() {
   ensureCatalogListRow(listBody) {
     if (!listBody) return null;
     let row = listBody.querySelector('.cards-list-row:last-child');
-    if (!row || row.querySelectorAll('.card-slide').length >= 3) {
+    // Mobile-only: list mode is strictly one card per row.
+    if (!row || row.querySelectorAll('.card-slide').length >= 1) {
       row = document.createElement('div');
       row.className = 'cards-list-row';
       listBody.appendChild(row);

@@ -2310,7 +2310,7 @@ voice-widget,
   padding-top: 0;
 }
 
-/* Catalog list mode: same card slides, grid rows of 3 compact cells */
+/* Catalog list mode: mobile-only stacked compact rows */
 .vw-app .cards-slider-host:not(.catalog-layout-list) .cards-list {
   display: none;
 }
@@ -2327,27 +2327,22 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
-/* Строго 3 колонки в ряд — без переноса третьего вниз (равная доля ширины) */
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  display: block;
   width: 100%;
-  align-items: stretch;
 }
 
-/* Компактное превью: шире, чем выше (ландшафтная полоса) */
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide {
   width: 100%;
   min-width: 0;
   max-width: none;
-  min-height: 108px;
-  height: 108px;
-  max-height: 108px;
+  min-height: 118px;
+  height: 118px;
+  max-height: 118px;
   scroll-snap-align: unset;
   transform: none;
   opacity: 1;
@@ -2362,8 +2357,8 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-image {
-  flex: 0 0 42%;
-  width: 42%;
+  flex: 0 0 36%;
+  width: 36%;
   height: 100%;
   min-height: 0;
   max-height: none;
@@ -2381,17 +2376,17 @@ voice-widget,
   height: 100%;
   min-height: 0;
   max-height: none;
-  padding: 6px 8px;
+  padding: 8px 10px;
   justify-content: space-between;
-  gap: 4px;
+  gap: 6px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-row {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-row--district {
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-description-btn {
@@ -2412,17 +2407,20 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .card-more-btn {
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: 5px 10px;
+  font-size: 12px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-title {
-  font-size: 12px;
-  line-height: 1.15;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-inline-price--total {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-price-tag {
@@ -2432,13 +2430,19 @@ voice-widget,
   font-size: 10px;
 }
 
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-district {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cards-dots-row {
   display: none;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.flipped,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.card-slide--form-open {
-  grid-column: 1 / -1;
   width: 100%;
   max-width: 100%;
   min-height: 360px;
