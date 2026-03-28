@@ -4530,6 +4530,8 @@ render() {
         this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
       } catch {}
     });
+    // addCardSlide() updates active id on each append; restore target active after window render.
+    this._catalogActiveId = loadedIds[activeIdx] || null;
     this.updateCatalogListNavState();
   }
 
@@ -4607,7 +4609,6 @@ render() {
     if (track) track.innerHTML = '';
     if (listBody) listBody.innerHTML = '';
     this._catalogOverflowQueue = queue;
-    this._catalogVisibleIds = [];
     this._catalogOverflowLoading = false;
     if (this._catalogDisplayMode === 'list') {
       this.renderCatalogListWindow(loadedIds, activeId);
