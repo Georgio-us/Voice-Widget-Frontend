@@ -2289,6 +2289,7 @@ class VoiceWidget extends HTMLElement {
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
+    this._filtersOverlayOpen = false;
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -2805,6 +2806,120 @@ class VoiceWidget extends HTMLElement {
       if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
       this._accessOverlayOpen = false;
     } catch {}
+  }
+
+  closeFiltersOverlay() {
+    try {
+      const overlay = this.getRoot().querySelector('#vwFiltersOverlay');
+      if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
+      this._filtersOverlayOpen = false;
+      this.$byId('pillFiltersButton')?.setAttribute('aria-expanded', 'false');
+    } catch {}
+  }
+
+  ensureFiltersOverlayStyles() {
+    if (document.getElementById('vw-filters-overlay-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-filters-overlay-styles';
+    style.textContent = `
+      .vw-filters-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1300;
+        display: grid;
+        place-items: center;
+        background: rgba(0, 0, 0, 0.56);
+        padding: 16px;
+      }
+      .vw-filters-modal {
+        width: min(420px, 100%);
+        border-radius: 16px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 90%, transparent);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        color: var(--text-primary, #fff);
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+      }
+      .vw-filters-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .vw-filters-title {
+        font-size: .9rem;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.75));
+      }
+      .vw-filters-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        cursor: pointer;
+      }
+      .vw-filters-list {
+        display: grid;
+        gap: 9px;
+      }
+      .vw-filters-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: .86rem;
+        line-height: 1.3;
+      }
+      .vw-filters-item input {
+        accent-color: var(--color-accent, #4ea0ff);
+      }
+      .vw-filters-hint {
+        font-size: .82rem;
+        line-height: 1.45;
+        color: var(--text-secondary, rgba(255,255,255,0.74));
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  openFiltersOverlay() {
+    this.closeFiltersOverlay();
+    this.ensureFiltersOverlayStyles();
+    const overlay = document.createElement('div');
+    overlay.id = 'vwFiltersOverlay';
+    overlay.className = 'vw-filters-overlay';
+    overlay.innerHTML = `
+      <div class="vw-filters-modal" role="dialog" aria-modal="true" aria-label="Фильтры">
+        <div class="vw-filters-head">
+          <div class="vw-filters-title">Фильтры подборки</div>
+          <button type="button" class="vw-filters-close" data-role="close" aria-label="Закрыть">×</button>
+        </div>
+        <div class="vw-filters-list">
+          <label class="vw-filters-item"><input type="checkbox" checked> <span>Только новые объекты</span></label>
+          <label class="vw-filters-item"><input type="checkbox"> <span>С мебелью</span></label>
+          <label class="vw-filters-item"><input type="checkbox"> <span>Балкон или терраса</span></label>
+          <label class="vw-filters-item"><input type="checkbox"> <span>Рядом с метро</span></label>
+          <label class="vw-filters-item"><input type="checkbox"> <span>Цена до заданного бюджета</span></label>
+        </div>
+        <div class="vw-filters-hint">Заглушка интерфейса фильтров. Логику привяжем на следующем шаге.</div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    this._filtersOverlayOpen = true;
+    this.$byId('pillFiltersButton')?.setAttribute('aria-expanded', 'true');
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeFiltersOverlay();
+    });
   }
 
   ensureAccessOverlayStyles() {
@@ -3351,6 +3466,11 @@ render() {
       ev.preventDefault();
       openPropertiesSlider();
     }
+  });
+  const pillFiltersButton = this.$byId('pillFiltersButton');
+  pillFiltersButton?.setAttribute('aria-expanded', 'false');
+  pillFiltersButton?.addEventListener('click', () => {
+    try { this.openFiltersOverlay(); } catch {}
   });
   const pillViewButton = this.$byId('pillViewButton');
   pillViewButton?.addEventListener('click', () => {
@@ -6521,6 +6641,7 @@ render() {
     this.audioRecorder?.cleanupRecording?.();
     this.ui?.clearRecordingState?.();
     this.events?.clear?.();
+    try { this.closeFiltersOverlay(); } catch {}
     try { document.removeEventListener('keydown', this._onGlobalKeydown, true); } catch {}
     try { this._disableOutsideClose?.(); } catch {}
     // Safety: if an older build locked the page and didn't restore, try to restore only if we know we locked it.

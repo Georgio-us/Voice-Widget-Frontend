@@ -2095,16 +2095,24 @@ voice-widget,
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: transparent;
-  border: 1px solid color-mix(in srgb, var(--border-light) 85%, transparent);
+  background: var(--bg-pill);
+  border: 1px solid var(--bg-element);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: var(--counter-pill-shadow);
   color: var(--text-primary);
   -webkit-tap-highlight-color: transparent;
   appearance: none;
   -webkit-appearance: none;
+  transition: transform .12s ease, opacity .12s ease, border-color .2s ease, background-color .2s ease;
 }
 
 .vw-app .pill-overlay-lane .pill-action-btn:hover{
   opacity: .82;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn:active{
+  transform: scale(.96);
 }
 
 .vw-app .pill-overlay-lane .pill-action-icon{
