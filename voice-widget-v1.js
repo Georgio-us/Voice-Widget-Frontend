@@ -3146,7 +3146,7 @@ class VoiceWidget extends HTMLElement {
                   </select>
                 </label>
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input vw-access-add-input--id" data-role="property-id" name="propertyId" value="A0001" readonly>
+                  <input class="vw-access-add-input vw-access-add-input--id" data-role="property-id" name="propertyId" value="A001" readonly>
                 </label>
               </div>
               <label class="vw-access-add-field">
@@ -3255,7 +3255,7 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-preview-card">
                 <div class="vw-access-preview-media">
                   <img class="is-empty" data-role="preview-main-image" alt="preview">
-                  <div class="vw-access-preview-id" data-role="preview-id">A0001</div>
+                  <div class="vw-access-preview-id" data-role="preview-id">A001</div>
                   <div class="vw-access-preview-thumbs">
                     <button type="button" class="vw-access-preview-thumb is-active" data-role="preview-thumb" data-thumb-index="0"></button>
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="1"></button>
@@ -3711,6 +3711,16 @@ class VoiceWidget extends HTMLElement {
         photoSlots.forEach((slot) => updateSlot(slot, '', ''));
         clearActiveDialogs();
         setStep(1);
+        if (!isEditProperty) {
+          (async () => {
+            try {
+              const nextId = await this.resolveNextManualExternalId();
+              if (idInput) idInput.value = nextId;
+              const previewId = overlay.querySelector('[data-role="preview-id"]');
+              if (previewId) previewId.textContent = nextId;
+            } catch {}
+          })();
+        }
       };
       const collectCurrentDraftState = () => {
         const values = {};
@@ -3832,7 +3842,7 @@ class VoiceWidget extends HTMLElement {
         const areaRaw = String(areaInput?.value || '').replace(/\s*м²$/i, '').trim();
         const pickCheck = (name) => !!overlay.querySelector(`.vw-access-add-check-grid input[name="${name}"]`)?.checked;
         return {
-          id: String(idInput?.value || 'A0001').trim() || 'A0001',
+          id: String(idInput?.value || 'A001').trim() || 'A001',
           title: String(titleInput?.value || '').trim() || 'Одеса, apartment',
           district: String(districtInput?.value || '').trim() || '—',
           price: String(priceInput?.value || '').trim() || '0',
@@ -4101,6 +4111,15 @@ class VoiceWidget extends HTMLElement {
         if (imageData) slot.style.backgroundImage = `url("${imageData}")`;
         slot.innerHTML = '';
       };
+      const applyAutoNextId = async () => {
+        if (isEditProperty) return;
+        try {
+          const nextId = await this.resolveNextManualExternalId();
+          if (idInput) idInput.value = nextId;
+          const previewId = overlay.querySelector('[data-role="preview-id"]');
+          if (previewId) previewId.textContent = nextId;
+        } catch {}
+      };
       let editTouched = false;
       const markEditTouched = () => { editTouched = true; };
       overlay.addEventListener('input', markEditTouched, true);
@@ -4126,6 +4145,9 @@ class VoiceWidget extends HTMLElement {
         })();
       } else {
         try { applyDraftState(this._addPropertyDraft); } catch {}
+        if (!this._addPropertyDraft) {
+          applyAutoNextId();
+        }
       }
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
@@ -4199,7 +4221,7 @@ class VoiceWidget extends HTMLElement {
             ...data.checks
           };
           const response = isEditProperty
-            ? await this.api?.updateManualProperty?.(data.id, payload, data.photoFiles)
+            ? await this.api?.updateManualProperty?.(String(editPropertyId || data.id || '').trim(), payload, data.photoFiles)
             : await this.api?.createManualProperty?.(payload, data.photoFiles);
           const saved = response?.property;
           if (saved) {
@@ -6982,6 +7004,28 @@ render() {
     const incoming = this._extractPropertiesList(properties);
     if (!window.appState) window.appState = {};
     window.appState.allProperties = incoming.map((item) => this._toCardEngineShape(item));
+  }
+
+  _computeNextManualExternalId(properties = []) {
+    const list = Array.isArray(properties) ? properties : [];
+    const max = list.reduce((acc, item) => {
+      const id = String(item?.external_id || item?.externalId || item?.id || '').trim().toUpperCase();
+      const m = id.match(/^A(\d+)$/);
+      if (!m) return acc;
+      const n = Number(m[1]);
+      return Number.isFinite(n) ? Math.max(acc, n) : acc;
+    }, 0);
+    return `A${String(max + 1).padStart(3, '0')}`;
+  }
+
+  async resolveNextManualExternalId() {
+    const cached = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    if (cached.length) return this._computeNextManualExternalId(cached);
+    try {
+      const all = await this.loadAllProperties();
+      if (Array.isArray(all) && all.length) return this._computeNextManualExternalId(all);
+    } catch {}
+    return 'A001';
   }
 
   async loadAllProperties() {
