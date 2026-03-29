@@ -3763,9 +3763,26 @@ class VoiceWidget extends HTMLElement {
         this._addPropertyDraft = null;
         this.closeAccessSubOverlay();
       };
+      let publishAction = null;
       overlay._showAddExitDialog = () => {
         if (!hasUnsavedChanges()) {
           this.closeAccessSubOverlay();
+          return;
+        }
+        if (isEditProperty) {
+          showActionDialog({
+            title: 'Изменения не опубликованы. Что сделать?',
+            buttons: [
+              {
+                label: 'Опубликовать изменения',
+                variant: 'primary',
+                onClick: () => {
+                  if (typeof publishAction === 'function') publishAction();
+                }
+              },
+              { label: 'Выйти без сохранения', variant: 'danger', onClick: clearDraftAndExit }
+            ]
+          });
           return;
         }
         showActionDialog({
@@ -4037,17 +4054,6 @@ class VoiceWidget extends HTMLElement {
       });
       appendFloorOptions(floorInput, 'Этаж');
       appendFloorOptions(floorsTotalInput, 'Этажность');
-      if (isEditProperty) {
-        try {
-          const editDraft = buildEditDraftFromProperty(editSourceProperty);
-          applyDraftState(editDraft);
-          overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
-            btn.style.display = 'none';
-          });
-        } catch {}
-      } else {
-        try { applyDraftState(this._addPropertyDraft); } catch {}
-      }
       const updateSlot = (slot, fileName, imageData) => {
         if (!slot) return;
         if (!fileName) {
@@ -4060,6 +4066,17 @@ class VoiceWidget extends HTMLElement {
         if (imageData) slot.style.backgroundImage = `url("${imageData}")`;
         slot.innerHTML = '';
       };
+      if (isEditProperty) {
+        try {
+          const editDraft = buildEditDraftFromProperty(editSourceProperty);
+          applyDraftState(editDraft);
+          overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
+            btn.style.display = 'none';
+          });
+        } catch {}
+      } else {
+        try { applyDraftState(this._addPropertyDraft); } catch {}
+      }
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
           if (!fileInput || !targetInput) return;
@@ -4161,7 +4178,10 @@ class VoiceWidget extends HTMLElement {
           }
         }
       };
-      overlay.querySelector('[data-role="add-publish-final"]')?.addEventListener('click', publish);
+      publishAction = publish;
+      overlay.querySelector('[data-role="add-publish-final"]')?.addEventListener('click', () => {
+        if (typeof publishAction === 'function') publishAction();
+      });
       overlay.querySelector('[data-role="add-more"]')?.addEventListener('click', () => {
         this._addPropertyDraft = null;
         resetForm();
