@@ -4059,7 +4059,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-add-hint {
         text-align: center;
-        font-size: .83rem;
+        font-size: calc(.83rem - 2px);
         color: var(--text-secondary, rgba(255,255,255,0.58));
       }
       .vw-access-add-photo-layout {
