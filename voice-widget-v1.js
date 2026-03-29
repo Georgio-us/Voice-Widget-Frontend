@@ -3373,6 +3373,9 @@ class VoiceWidget extends HTMLElement {
         host.appendChild(actions);
         const clearBtn = actions.querySelector('[data-role="field-clear"]');
         const applyBtn = actions.querySelector('[data-role="field-apply"]');
+        actions.addEventListener('mousedown', (event) => {
+          event.preventDefault();
+        });
         const sync = () => {
           const hasValue = String(fieldEl.value || '').trim().length > 0;
           const isFocused = document.activeElement === fieldEl;
@@ -3380,6 +3383,7 @@ class VoiceWidget extends HTMLElement {
         };
         clearBtn?.addEventListener('click', (event) => {
           event.preventDefault();
+          event.stopPropagation();
           fieldEl.value = '';
           clearFieldError(fieldEl);
           try { options.onClear?.(fieldEl); } catch {}
@@ -3390,6 +3394,7 @@ class VoiceWidget extends HTMLElement {
         });
         applyBtn?.addEventListener('click', (event) => {
           event.preventDefault();
+          event.stopPropagation();
           clearFieldError(fieldEl);
           let canApply = true;
           try { canApply = options.onApply ? options.onApply(fieldEl) !== false : true; } catch { canApply = false; }
@@ -4163,7 +4168,7 @@ class VoiceWidget extends HTMLElement {
         padding: 0 14px;
         font-size: .88rem;
       }
-      .vw-access-add-field--with-actions .vw-access-add-input {
+      .vw-access-add-field--with-actions.show-actions .vw-access-add-input {
         padding-right: 72px;
       }
       .vw-access-add-input::placeholder {
@@ -4263,7 +4268,7 @@ class VoiceWidget extends HTMLElement {
         font-size: .88rem;
         resize: vertical;
       }
-      .vw-access-add-field--with-actions.is-textarea .vw-access-add-textarea {
+      .vw-access-add-field--with-actions.is-textarea.show-actions .vw-access-add-textarea {
         padding-right: 76px;
       }
       .vw-access-add-textarea::placeholder {
