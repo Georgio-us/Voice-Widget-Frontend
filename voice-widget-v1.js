@@ -2983,12 +2983,12 @@ class VoiceWidget extends HTMLElement {
               </label>
               <div class="vw-access-add-hint">Можно добавить до 5 фотографий до 10мб каждая</div>
               <div class="vw-access-add-photo-layout">
-                <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span aria-hidden="true">🖼️</span></button>
+                <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                 <div class="vw-access-add-photo-grid">
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><span aria-hidden="true">🖼️</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span aria-hidden="true">🖼️</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span aria-hidden="true">🖼️</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span aria-hidden="true">🖼️</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                 </div>
               </div>
               <div class="vw-access-add-row2">
@@ -3272,6 +3272,7 @@ class VoiceWidget extends HTMLElement {
       const photoSlots = Array.from(overlay.querySelectorAll('[data-role="photo-slot"]'));
       const previewMainImage = overlay.querySelector('[data-role="preview-main-image"]');
       const previewThumbs = Array.from(overlay.querySelectorAll('[data-role="preview-thumb"]'));
+      const textFields = Array.from(overlay.querySelectorAll('input[type="text"]:not([readonly]), textarea'));
       const setStep = (step) => {
         const n = Number(step);
         const safeStep = n >= 1 && n <= 4 ? n : 1;
@@ -3330,6 +3331,50 @@ class VoiceWidget extends HTMLElement {
         });
         refreshMainImage(imageList[0] || '');
       };
+      const attachInlineFieldActions = (fieldEl) => {
+        if (!fieldEl || fieldEl.dataset.inlineActionsAttached === '1') return;
+        const host = fieldEl.parentElement;
+        if (!host) return;
+        host.classList.add('vw-access-add-field--with-actions');
+        const isTextarea = fieldEl.tagName === 'TEXTAREA';
+        if (isTextarea) host.classList.add('is-textarea');
+        const actions = document.createElement('div');
+        actions.className = 'vw-access-add-input-actions';
+        actions.innerHTML = `
+          <button type="button" class="vw-access-add-input-action" data-role="field-clear" aria-label="Сброс">×</button>
+          <button type="button" class="vw-access-add-input-action" data-role="field-apply" aria-label="Подтвердить">✓</button>
+        `;
+        host.appendChild(actions);
+        const clearBtn = actions.querySelector('[data-role="field-clear"]');
+        const applyBtn = actions.querySelector('[data-role="field-apply"]');
+        const sync = () => {
+          const hasValue = String(fieldEl.value || '').trim().length > 0;
+          const isFocused = document.activeElement === fieldEl;
+          host.classList.toggle('show-actions', hasValue || isFocused);
+        };
+        clearBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          fieldEl.value = '';
+          fieldEl.dispatchEvent(new Event('input', { bubbles: true }));
+          fieldEl.dispatchEvent(new Event('change', { bubbles: true }));
+          try { fieldEl.focus(); } catch {}
+          sync();
+        });
+        applyBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          fieldEl.dispatchEvent(new Event('change', { bubbles: true }));
+          try { fieldEl.blur(); } catch {}
+          host.classList.add('is-applied');
+          setTimeout(() => host.classList.remove('is-applied'), 260);
+          sync();
+        });
+        fieldEl.addEventListener('input', sync);
+        fieldEl.addEventListener('focus', sync);
+        fieldEl.addEventListener('blur', sync);
+        sync();
+        fieldEl.dataset.inlineActionsAttached = '1';
+      };
+      textFields.forEach((fieldEl) => attachInlineFieldActions(fieldEl));
       appendFloorOptions(floorInput, 'Этаж');
       appendFloorOptions(floorsTotalInput, 'Этажность');
       if (priceInput) {
@@ -3356,12 +3401,12 @@ class VoiceWidget extends HTMLElement {
         if (!fileName) {
           slot.classList.remove('is-filled');
           slot.style.backgroundImage = 'none';
-          slot.innerHTML = '<span aria-hidden="true">🖼️</span>';
+          slot.innerHTML = '<span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span>';
           return;
         }
         slot.classList.add('is-filled');
         if (imageData) slot.style.backgroundImage = `url("${imageData}")`;
-        slot.innerHTML = `<span>${String(fileName || '').slice(0, 18)}</span>`;
+        slot.innerHTML = '';
       };
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
@@ -4035,6 +4080,9 @@ class VoiceWidget extends HTMLElement {
       .vw-access-add-field {
         min-width: 0;
       }
+      .vw-access-add-field--with-actions {
+        position: relative;
+      }
       .vw-access-add-input {
         width: 100%;
         min-height: 36px;
@@ -4045,6 +4093,9 @@ class VoiceWidget extends HTMLElement {
         color: var(--text-primary, #fff);
         padding: 0 14px;
         font-size: .88rem;
+      }
+      .vw-access-add-field--with-actions .vw-access-add-input {
+        padding-right: 72px;
       }
       .vw-access-add-input::placeholder {
         color: var(--text-secondary, rgba(255,255,255,0.56));
@@ -4076,7 +4127,7 @@ class VoiceWidget extends HTMLElement {
         min-height: 0;
         aspect-ratio: 1 / 1;
         border-radius: 16px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.16));
+        border: 2px dotted rgba(92, 150, 255, 0.8);
         background: var(--bg-element, rgba(255,255,255,0.08));
         color: rgba(255,255,255,0.65);
         display: grid;
@@ -4085,7 +4136,7 @@ class VoiceWidget extends HTMLElement {
         font-size: 1.35rem;
       }
       .vw-access-add-photo-slot.is-filled {
-        border-color: rgba(92, 150, 255, 0.6);
+        border-color: rgba(92, 150, 255, 0.95);
         color: var(--text-primary, #fff);
         font-size: .78rem;
         background-size: cover;
@@ -4095,6 +4146,11 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-add-photo-slot--main {
         min-height: 0;
+      }
+      .vw-access-add-photo-placeholder {
+        font-weight: 700;
+        letter-spacing: .03em;
+        opacity: .7;
       }
       .vw-access-add-actions {
         margin-top: 8px;
@@ -4138,8 +4194,47 @@ class VoiceWidget extends HTMLElement {
         font-size: .88rem;
         resize: vertical;
       }
+      .vw-access-add-field--with-actions.is-textarea .vw-access-add-textarea {
+        padding-right: 76px;
+      }
       .vw-access-add-textarea::placeholder {
         color: var(--text-secondary, rgba(255,255,255,0.56));
+      }
+      .vw-access-add-input-actions {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity .16s ease;
+      }
+      .vw-access-add-field--with-actions.is-textarea .vw-access-add-input-actions {
+        top: 10px;
+        transform: none;
+      }
+      .vw-access-add-field--with-actions.show-actions .vw-access-add-input-actions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .vw-access-add-input-action {
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.24));
+        background: rgba(16, 22, 34, 0.74);
+        color: var(--text-primary, #fff);
+        font-size: .75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+      .vw-access-add-field--with-actions.is-applied .vw-access-add-input {
+        border-color: rgba(92, 150, 255, 0.8);
       }
       .vw-access-preview-card {
         border: 1px solid var(--border-light, rgba(255,255,255,0.16));
