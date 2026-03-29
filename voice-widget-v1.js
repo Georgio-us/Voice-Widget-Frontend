@@ -1298,6 +1298,34 @@ class APIClient {
     return await res.json().catch(() => null);
   }
 
+  async createManualProperty(payload = {}, imageFiles = []) {
+    const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/properties');
+    const formData = new FormData();
+    const source = payload && typeof payload === 'object' ? payload : {};
+    Object.entries(source).forEach(([key, value]) => {
+      if (value == null) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (item == null) return;
+          formData.append(key, String(item));
+        });
+        return;
+      }
+      formData.append(key, String(value));
+    });
+    this.appendTelegramUserToFormData(formData);
+    const files = Array.isArray(imageFiles) ? imageFiles : [];
+    files.forEach((file) => {
+      if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
+    });
+    const res = await fetch(base, { method: 'POST', body: formData });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `ADMIN_CREATE_FAILED_${res.status}`));
+    }
+    return data;
+  }
+
   _rememberProposed(cards) {
     if (Array.isArray(cards)) this.lastProposedCards = cards;
   }
@@ -3292,7 +3320,7 @@ class VoiceWidget extends HTMLElement {
         return Number(clean).toLocaleString('en-US');
       };
       const steps = { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
-      const draft = { photos: Array(5).fill('') };
+      const draft = { photos: Array(5).fill(''), photoFiles: Array(5).fill(null) };
       const priceInput = overlay.querySelector('[data-role="price"]');
       const areaInput = overlay.querySelector('[data-role="area"]');
       const roomsInput = overlay.querySelector('[data-role="rooms"]');
@@ -3439,6 +3467,7 @@ class VoiceWidget extends HTMLElement {
           else el.value = '';
         });
         draft.photos = Array(5).fill('');
+        draft.photoFiles = Array(5).fill(null);
         photoSlots.forEach((slot) => updateSlot(slot, '', ''));
         clearActiveDialogs();
         setStep(1);
@@ -3451,7 +3480,19 @@ class VoiceWidget extends HTMLElement {
           if (el.type === 'checkbox') values[role] = !!el.checked;
           else values[role] = String(el.value || '');
         });
-        return { values, photos: [...draft.photos], step: getStep() };
+        const checks = {};
+        overlay.querySelectorAll('.vw-access-add-check-grid input[type="checkbox"][name]').forEach((el) => {
+          const name = String(el.getAttribute('name') || '').trim();
+          if (!name) return;
+          checks[name] = !!el.checked;
+        });
+        return {
+          values,
+          checks,
+          photos: [...draft.photos],
+          photoFiles: [...draft.photoFiles],
+          step: getStep()
+        };
       };
       const applyDraftState = (saved) => {
         if (!saved || typeof saved !== 'object') return;
@@ -3470,6 +3511,17 @@ class VoiceWidget extends HTMLElement {
           photoSlots.forEach((slot, idx) => {
             const src = draft.photos[idx] || '';
             updateSlot(slot, src ? `photo_${idx + 1}` : '', src);
+          });
+        }
+        if (Array.isArray(saved.photoFiles)) {
+          draft.photoFiles = saved.photoFiles.slice(0, 5);
+          while (draft.photoFiles.length < 5) draft.photoFiles.push(null);
+        }
+        if (saved.checks && typeof saved.checks === 'object') {
+          overlay.querySelectorAll('.vw-access-add-check-grid input[type="checkbox"][name]').forEach((el) => {
+            const name = String(el.getAttribute('name') || '').trim();
+            if (!name || !(name in saved.checks)) return;
+            el.checked = !!saved.checks[name];
           });
         }
         const step = Number(saved.step || 1);
@@ -3521,6 +3573,7 @@ class VoiceWidget extends HTMLElement {
       };
       const getDraftData = () => {
         const areaRaw = String(areaInput?.value || '').replace(/\s*м²$/i, '').trim();
+        const pickCheck = (name) => !!overlay.querySelector(`.vw-access-add-check-grid input[name="${name}"]`)?.checked;
         return {
           id: String(idInput?.value || 'A0001').trim() || 'A0001',
           title: String(titleInput?.value || '').trim() || 'Одеса, apartment',
@@ -3529,9 +3582,23 @@ class VoiceWidget extends HTMLElement {
           rooms: String(roomsInput?.value || '').trim() || '0',
           area: areaRaw || '0',
           floor: String(floorInput?.value || '').trim() || '0',
+          floorsTotal: String(floorsTotalInput?.value || '').trim() || '',
+          complex: String(overlay.querySelector('[data-role="complex"]')?.value || '').trim() || '',
+          microdistrict: String(overlay.querySelector('[data-role="microdistrict"]')?.value || '').trim() || '',
           description: String(descriptionInput?.value || '').trim() || 'Описание не добавлено.',
           type: typeMap[String(typeInput?.value || '')] || 'apartment',
-          photos: draft.photos.filter(Boolean)
+          photos: draft.photos.filter(Boolean),
+          photoFiles: draft.photoFiles.filter((f) => f instanceof File),
+          checks: {
+            exclusive: pickCheck('exclusive'),
+            balcony: pickCheck('balcony'),
+            penthouse: pickCheck('penthouse'),
+            loggia: pickCheck('loggia'),
+            smartFlat: pickCheck('smartFlat'),
+            terrace: pickCheck('terrace'),
+            newbuilding: pickCheck('newbuilding'),
+            parking: pickCheck('parking')
+          }
         };
       };
       const refreshMainImage = (src = '') => {
@@ -3720,6 +3787,7 @@ class VoiceWidget extends HTMLElement {
         const index = Number(targetInput?.value || '-1');
         const file = fileInput?.files?.[0];
         if (!Number.isFinite(index) || index < 0 || !file) return;
+        draft.photoFiles[index] = file;
         const reader = new FileReader();
         reader.onload = () => {
           const imageData = typeof reader.result === 'string' ? reader.result : '';
@@ -3752,10 +3820,57 @@ class VoiceWidget extends HTMLElement {
         const text = getDraftData().description;
         this.ui?.showNotification?.(text.length > 90 ? `${text.slice(0, 90)}...` : text);
       });
-      const publish = () => {
-        this._addPropertyDraft = null;
-        clearActiveDialogs();
-        setStep(4);
+      const publish = async () => {
+        const publishBtn = overlay.querySelector('[data-role="add-publish-final"]');
+        const originalLabel = publishBtn?.textContent || 'Опубликовать';
+        try {
+          if (publishBtn) {
+            publishBtn.disabled = true;
+            publishBtn.textContent = 'Публикуем...';
+          }
+          const data = getDraftData();
+          const payload = {
+            mode: 'publish',
+            title: data.title,
+            description: data.description,
+            propertyType: data.type,
+            district: data.district === '—' ? '' : data.district,
+            microdistrict: data.microdistrict,
+            complex: data.complex,
+            price: String(data.price || '').replace(/[^\d]/g, ''),
+            rooms: data.rooms,
+            area: String(data.area || '').replace(/[^\d]/g, ''),
+            floor: data.floor,
+            floorsTotal: data.floorsTotal,
+            ...data.checks
+          };
+          const response = await this.api?.createManualProperty?.(payload, data.photoFiles);
+          const created = response?.property;
+          if (created) {
+            this.mergePropertiesToCatalog([created]);
+            try {
+              const all = await this.loadAllProperties();
+              if (Array.isArray(all) && all.length) this.replacePropertiesCatalog(all);
+            } catch {}
+          }
+          this._addPropertyDraft = null;
+          clearActiveDialogs();
+          setStep(4);
+          this.ui?.showNotification?.('Объект опубликован');
+        } catch (error) {
+          const msg = String(error?.message || '');
+          const hint = msg.includes('FORBIDDEN_ADMIN_ONLY')
+            ? 'Нет прав администратора для публикации'
+            : (msg.includes('IMAGE_TOO_LARGE_MAX_5MB')
+              ? 'Фото > 5MB. Уменьшите размер'
+              : 'Не удалось опубликовать объект');
+          this.ui?.showNotification?.(hint);
+        } finally {
+          if (publishBtn) {
+            publishBtn.disabled = false;
+            publishBtn.textContent = originalLabel;
+          }
+        }
       };
       overlay.querySelector('[data-role="add-publish-final"]')?.addEventListener('click', publish);
       overlay.querySelector('[data-role="add-more"]')?.addEventListener('click', () => {
