@@ -894,6 +894,9 @@ class UIManager {
   isResetCommand(text) {
     return String(text || '').trim().toLowerCase() === '//reset';
   }
+  isAdminCommand(text) {
+    return String(text || '').trim().toLowerCase() === '//admin';
+  }
   tryHandleResetCommand(text) {
     if (!this.isResetCommand(text)) return false;
     const { textInput } = this.elements;
@@ -902,11 +905,29 @@ class UIManager {
     this.widget.clearSession();
     return true;
   }
+  tryHandleAdminCommand(text) {
+    if (!this.isAdminCommand(text)) return false;
+    const { textInput } = this.elements;
+    if (textInput) textInput.value = '';
+    this.widget.accessRole = 'owner';
+    this.widget.accessFlags = {
+      ...(this.widget.accessFlags || {}),
+      isAdmin: true,
+      isOwner: true,
+      isSuperAdmin: this.widget.accessFlags?.isSuperAdmin === true
+    };
+    try { this.widget.updateAccessHeaderButton?.(); } catch {}
+    this.widget.updateSendButtonState('chat');
+    this.widget.openAccessOverlay?.();
+    this.widget.ui?.showNotification?.('Admin access enabled (dev)');
+    return true;
+  }
   handleSendText() {
     const { textInput } = this.elements;
     const text = textInput?.value?.trim();
     if (!text) return;
     if (this.tryHandleResetCommand(text)) return;
+    if (this.tryHandleAdminCommand(text)) return;
     this.widget.api.sendTextMessage();
   }
 
