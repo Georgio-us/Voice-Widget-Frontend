@@ -2997,11 +2997,42 @@ class VoiceWidget extends HTMLElement {
 
   getAdminObjectsMockList() {
     const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
-    const ids = list
-      .map((item) => String(item?.id || item?.variantId || item?._id || '').trim())
+    const usdRate = 41;
+    const objects = list
+      .map((item, idx) => {
+        const id = String(item?.id || item?.variantId || item?._id || '').trim();
+        if (!id) return null;
+        const title = String(item?.title || item?.description || `Объект ${idx + 1}`).trim();
+        const district = String(item?.district || item?.neighborhood || item?.city || '—').trim() || '—';
+        const roomsRaw = Number(item?.rooms);
+        const rooms = Number.isFinite(roomsRaw) && roomsRaw > 0 ? String(Math.round(roomsRaw)) : '—';
+        const areaRaw = Number(item?.area_m2 || item?.area || item?.specs_area_m2);
+        const area = Number.isFinite(areaRaw) && areaRaw > 0 ? `${Math.round(areaRaw)} м²` : '—';
+        const priceUsdRaw = Number(item?.priceUSD || item?.price_usd || item?.priceUsd);
+        const priceRaw = Number(item?.priceEUR || item?.price || item?.price_amount);
+        const normalizedUsd = Number.isFinite(priceUsdRaw) && priceUsdRaw > 0
+          ? Math.round(priceUsdRaw)
+          : (Number.isFinite(priceRaw) && priceRaw > 0 ? Math.round(priceRaw / usdRate) : null);
+        const price = Number.isFinite(normalizedUsd) && normalizedUsd > 0
+          ? `$${normalizedUsd.toLocaleString('en-US')}`
+          : '—';
+        return { id, title, district, rooms, area, price };
+      })
       .filter(Boolean);
-    const uniq = Array.from(new Set(ids));
-    return uniq.length ? uniq : ['OD050', 'OD049', 'OD048', 'OD047', 'OD046', 'OD045'];
+    const uniq = new Map();
+    objects.forEach((item) => {
+      if (!uniq.has(item.id)) uniq.set(item.id, item);
+    });
+    const normalized = Array.from(uniq.values());
+    return normalized.length
+      ? normalized
+      : [
+          { id: 'OD050', title: 'Одеса, 2к квартира', district: 'Приморский', rooms: '2', area: '56 м²', price: '$79,000' },
+          { id: 'OD049', title: 'Одеса, 1к квартира', district: 'Киевский', rooms: '1', area: '40 м²', price: '$51,000' },
+          { id: 'OD048', title: 'Одеса, 3к квартира', district: 'Суворовский', rooms: '3', area: '84 м²', price: '$97,000' },
+          { id: 'OD047', title: 'Одеса, пентхаус', district: 'Аркадия', rooms: '4', area: '130 м²', price: '$210,000' },
+          { id: 'OD046', title: 'Одеса, смарт-квартира', district: 'Таирова', rooms: '1', area: '28 м²', price: '$33,000' }
+        ];
   }
 
   updateAdminObjectsSelectionState(overlay) {
@@ -3207,21 +3238,32 @@ class VoiceWidget extends HTMLElement {
         `;
       }
       if (safeSection === 'properties') {
-        const rows = list.map((id) => `
-          <div class="vw-access-obj-row" data-id="${id}">
-            <label class="vw-access-obj-check"><input type="checkbox" data-role="row-check"></label>
-            <div class="vw-access-obj-id">${id}</div>
-            <button type="button" class="vw-access-obj-btn" data-role="row-toggle">Выбрать</button>
-          </div>
+        const rows = list.map((item) => `
+          <article class="vw-access-obj-card" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}">
+            <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
+            <div class="vw-access-obj-main">
+              <div class="vw-access-obj-headline">
+                <span class="vw-access-obj-id-badge">${item.id}</span>
+                <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
+              </div>
+              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} комн · ${item.district}</div>
+            </div>
+            <button type="button" class="vw-access-obj-edit" data-role="row-edit" aria-label="Редактировать объект">✎</button>
+          </article>
         `).join('');
         return `
-          <div class="vw-access-sub-toolbar">
-            <button type="button" class="vw-access-sub-btn" data-role="select-all">Выбрать все</button>
-          </div>
-          <div class="vw-access-obj-list">${rows}</div>
-          <div class="vw-access-sub-toolbar">
-            <button type="button" class="vw-access-sub-btn vw-access-add-dialog-btn is-danger" data-role="delete-selected" disabled>Удалить</button>
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
+          <div class="vw-access-objects-layout">
+            <div class="vw-access-objects-topbar">
+              <div class="vw-access-objects-total">Всего объектов: <strong>${list.length}</strong></div>
+              <button type="button" class="vw-access-sub-btn" data-role="sort-trigger">Сортировка</button>
+            </div>
+            <div class="vw-access-objects-scroll">
+              <div class="vw-access-obj-list">${rows}</div>
+            </div>
+            <div class="vw-access-objects-bottombar">
+              <button type="button" class="vw-access-sub-btn vw-access-add-dialog-btn is-danger" data-role="delete-selected" disabled>Удалить</button>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
+            </div>
           </div>
         `;
       }
@@ -3272,7 +3314,7 @@ class VoiceWidget extends HTMLElement {
     overlay.id = 'vwAccessSubOverlay';
     overlay.className = 'vw-access-sub-overlay';
     overlay.innerHTML = `
-      <div class="vw-access-sub-modal ${isAddProperty ? 'vw-access-sub-modal--add' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="vw-access-sub-modal ${isAddProperty ? 'vw-access-sub-modal--add' : ''} ${safeSection === 'properties' ? 'vw-access-sub-modal--properties' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
         ${modalHead}
         ${modalBody}
       </div>
@@ -3310,7 +3352,7 @@ class VoiceWidget extends HTMLElement {
     });
 
     if (safeSection === 'properties') {
-      const getRows = () => Array.from(overlay.querySelectorAll('.vw-access-obj-row'));
+      const getRows = () => Array.from(overlay.querySelectorAll('.vw-access-obj-card'));
       const getSelectedIds = () => getRows()
         .filter((row) => !!row.querySelector('[data-role="row-check"]')?.checked)
         .map((row) => String(row.getAttribute('data-id') || '').trim())
@@ -3340,32 +3382,35 @@ class VoiceWidget extends HTMLElement {
       };
       getRows().forEach((row) => {
         const check = row.querySelector('[data-role="row-check"]');
-        const toggleBtn = row.querySelector('[data-role="row-toggle"]');
+        const editBtn = row.querySelector('[data-role="row-edit"]');
+        const checkWrap = row.querySelector('[data-role="row-check-wrap"]');
         const sync = () => {
           const selected = !!check?.checked;
           row.classList.toggle('is-selected', selected);
-          if (toggleBtn) toggleBtn.textContent = selected ? 'Выбрано' : 'Выбрать';
           this.updateAdminObjectsSelectionState(overlay);
         };
         check?.addEventListener('change', sync);
-        toggleBtn?.addEventListener('click', () => {
+        checkWrap?.addEventListener('click', (event) => event.stopPropagation());
+        editBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          this.ui?.showNotification?.('Редактирование объекта скоро будет доступно');
+        });
+        row.addEventListener('click', () => {
+          if (!check) return;
+          check.checked = !check.checked;
+          sync();
+        });
+        row.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
           if (!check) return;
           check.checked = !check.checked;
           sync();
         });
       });
-      overlay.querySelector('[data-role="select-all"]')?.addEventListener('click', () => {
-        const checks = Array.from(overlay.querySelectorAll('[data-role="row-check"]'));
-        const allSelected = checks.length > 0 && checks.every((c) => c.checked);
-        checks.forEach((c) => { c.checked = !allSelected; });
-        getRows().forEach((row) => {
-          const check = row.querySelector('[data-role="row-check"]');
-          const toggleBtn = row.querySelector('[data-role="row-toggle"]');
-          const selected = !!check?.checked;
-          row.classList.toggle('is-selected', selected);
-          if (toggleBtn) toggleBtn.textContent = selected ? 'Выбрано' : 'Выбрать';
-        });
-        this.updateAdminObjectsSelectionState(overlay);
+      overlay.querySelector('[data-role="sort-trigger"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('Сортировка будет добавлена следующим шагом');
       });
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
         this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
@@ -4967,39 +5012,104 @@ class VoiceWidget extends HTMLElement {
         border-color: rgba(236, 96, 96, 0.82);
         background: rgba(236, 96, 96, 0.14);
       }
+      .vw-access-sub-modal--properties {
+        gap: 14px;
+        max-height: min(82vh, 720px);
+      }
+      .vw-access-objects-layout {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 10px;
+        min-height: 0;
+        flex: 1;
+      }
+      .vw-access-objects-topbar,
+      .vw-access-objects-bottombar {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 10px;
+      }
+      .vw-access-objects-total {
+        font-size: .83rem;
+        color: var(--text-secondary, rgba(255,255,255,0.75));
+      }
+      .vw-access-objects-scroll {
+        min-height: 0;
+        overflow: auto;
+        padding-right: 2px;
+        overscroll-behavior: contain;
+      }
       .vw-access-obj-list {
         display: grid;
-        gap: 8px;
+        gap: 10px;
       }
-      .vw-access-obj-row {
+      .vw-access-obj-card {
         display: grid;
-        grid-template-columns: auto 1fr auto;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         border-radius: 12px;
-        padding: 8px 10px;
+        padding: 10px;
+        min-height: 78px;
       }
-      .vw-access-obj-row.is-selected {
-        border-color: rgba(45, 143, 225, 0.65);
+      .vw-access-obj-card.is-selected {
+        border-color: rgba(45, 143, 225, 0.75);
+        box-shadow: 0 0 0 1px rgba(45, 143, 225, 0.35) inset;
       }
       .vw-access-obj-check input {
         accent-color: var(--color-accent, #4ea0ff);
       }
-      .vw-access-obj-id {
-        font-size: .84rem;
-        color: var(--text-primary, #fff);
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      .vw-access-obj-main {
+        min-width: 0;
       }
-      .vw-access-obj-btn {
-        min-height: 30px;
-        border-radius: 9px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.12));
+      .vw-access-obj-headline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .vw-access-obj-id-badge {
+        font-size: .72rem;
+        line-height: 1;
         color: var(--text-primary, #fff);
-        padding: 0 10px;
-        font-size: .8rem;
+        border: 1px solid rgba(92, 150, 255, 0.7);
+        background: rgba(92, 150, 255, 0.15);
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        white-space: nowrap;
+      }
+      .vw-access-obj-title {
+        margin: 0;
+        font-size: .86rem;
+        font-weight: 600;
+        color: var(--text-primary, #fff);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vw-access-obj-meta {
+        margin-top: 6px;
+        font-size: .78rem;
+        color: var(--text-secondary, rgba(255,255,255,0.76));
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vw-access-obj-edit {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.2));
+        background: rgba(255,255,255,0.08);
+        color: var(--text-primary, #fff);
+        font-size: .9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
     `;
     document.head.appendChild(style);
