@@ -1330,6 +1330,40 @@ class APIClient {
     return data;
   }
 
+  async updateManualProperty(externalId, payload = {}, imageFiles = []) {
+    const safeId = String(externalId || '').trim();
+    if (!safeId) throw new Error('EXTERNAL_ID_REQUIRED');
+    const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, `/api/admin/properties/${encodeURIComponent(safeId)}`);
+    const formData = new FormData();
+    const source = payload && typeof payload === 'object' ? payload : {};
+    Object.entries(source).forEach(([key, value]) => {
+      if (value == null) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (item == null) return;
+          formData.append(key, String(item));
+        });
+        return;
+      }
+      formData.append(key, String(value));
+    });
+    this.appendTelegramUserToFormData(formData);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) {
+      formData.append('devAdmin', '1');
+    }
+    const files = Array.isArray(imageFiles) ? imageFiles : [];
+    files.forEach((file) => {
+      if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
+    });
+    const res = await fetch(base, { method: 'PUT', body: formData });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `ADMIN_UPDATE_FAILED_${res.status}`));
+    }
+    return data;
+  }
+
   async deleteManualProperty(externalId, options = {}) {
     const safeId = String(externalId || '').trim();
     if (!safeId) throw new Error('EXTERNAL_ID_REQUIRED');
@@ -3052,7 +3086,7 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
-  openAccessSubOverlay(section = 'stats') {
+  openAccessSubOverlay(section = 'stats', options = {}) {
     this.closeAccessSubOverlay();
     const list = this.getAdminObjectsMockList();
     const now = new Date();
@@ -3062,6 +3096,10 @@ class VoiceWidget extends HTMLElement {
     };
     const safeSection = String(section || '').trim().toLowerCase();
     const isAddProperty = safeSection === 'add-property';
+    const safeOptions = options && typeof options === 'object' ? options : {};
+    const editPropertyId = isAddProperty ? String(safeOptions.propertyId || '').trim() : '';
+    const isEditProperty = isAddProperty && String(safeOptions.mode || '').trim().toLowerCase() === 'edit' && !!editPropertyId;
+    const editSourceProperty = isEditProperty ? this.findCatalogPropertyById(editPropertyId) : null;
     const modalBody = (() => {
       if (isAddProperty) {
         return `
@@ -3215,7 +3253,7 @@ class VoiceWidget extends HTMLElement {
               </div>
               <div class="vw-access-add-actions">
                 <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">Опубликовать</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">${isEditProperty ? 'Опубликовать изменения' : 'Опубликовать'}</button>
               </div>
             </div>
 
@@ -3369,10 +3407,23 @@ class VoiceWidget extends HTMLElement {
         layer.addEventListener('click', (event) => {
           if (event.target === layer) close();
         });
-        layer.querySelector('[data-role="cancel-delete"]')?.addEventListener('click', close);
-        layer.querySelector('[data-role="confirm-delete"]')?.addEventListener('click', async () => {
-          close();
-          try { await onConfirm?.(); } catch {}
+        const cancelBtn = layer.querySelector('[data-role="cancel-delete"]');
+        const confirmBtn = layer.querySelector('[data-role="confirm-delete"]');
+        cancelBtn?.addEventListener('click', close);
+        confirmBtn?.addEventListener('click', async () => {
+          if (!confirmBtn) return;
+          const original = confirmBtn.textContent || 'Удалить';
+          confirmBtn.disabled = true;
+          if (cancelBtn) cancelBtn.disabled = true;
+          confirmBtn.textContent = 'Удаляем...';
+          try {
+            await onConfirm?.();
+          } catch (error) {
+            this.ui?.showNotification?.('Не удалось выполнить удаление');
+          } finally {
+            close();
+            confirmBtn.textContent = original;
+          }
         });
       };
       getRows().forEach((row) => {
@@ -3389,7 +3440,9 @@ class VoiceWidget extends HTMLElement {
         editBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           event.stopPropagation();
-          this.ui?.showNotification?.('Редактирование объекта скоро будет доступно');
+          const propertyId = String(row.getAttribute('data-id') || '').trim();
+          if (!propertyId) return;
+          this.openAccessSubOverlay('add-property', { mode: 'edit', propertyId });
         });
         row.addEventListener('click', () => {
           if (!check) return;
@@ -3416,12 +3469,16 @@ class VoiceWidget extends HTMLElement {
         showDeleteDialog({
           count: selectedIds.length,
           onConfirm: async () => {
+            const deleteApi = this.api?.deleteManualProperty;
+            if (typeof deleteApi !== 'function') {
+              throw new Error('DELETE_API_UNAVAILABLE');
+            }
             const failed = [];
             const succeeded = [];
             for (let i = 0; i < selectedIds.length; i += 1) {
               const id = selectedIds[i];
               try {
-                await this.api?.deleteManualProperty?.(id);
+                await deleteApi.call(this.api, id);
                 succeeded.push(id);
               } catch (error) {
                 failed.push({ id, code: String(error?.message || 'UNKNOWN') });
@@ -3749,6 +3806,64 @@ class VoiceWidget extends HTMLElement {
           }
         };
       };
+      const buildEditDraftFromProperty = (property) => {
+        if (!property || typeof property !== 'object') return null;
+        const parsePrice = () => {
+          const fromPrice = Number(property.price);
+          const fromEur = Number(property.priceEUR);
+          const fromAmount = Number(property.price_amount);
+          const value = [fromPrice, fromEur, fromAmount].find((n) => Number.isFinite(n) && n > 0);
+          return Number.isFinite(value) ? String(Math.round(value)) : '';
+        };
+        const parseArea = () => {
+          const n = Number(property.area_m2 ?? property.area ?? property.specs_area_m2);
+          return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : '';
+        };
+        const parseRooms = () => {
+          const n = Number(property.rooms ?? property.specs_rooms);
+          if (!Number.isFinite(n) || n <= 0) return '';
+          if (n >= 5) return '5+';
+          return String(Math.round(n));
+        };
+        const parseFloor = () => {
+          const n = Number(property.floor ?? property.specs_floor);
+          return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : '';
+        };
+        const parseFloorsTotal = () => {
+          const n = Number(property.building_floors);
+          return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : '';
+        };
+        const features = property.features && typeof property.features === 'object' ? property.features : {};
+        return {
+          step: 1,
+          values: {
+            'property-type': String(property.property_type || '').trim() || 'apartment',
+            'property-id': String(property.id || editPropertyId || '').trim(),
+            title: String(property.title || property.description || '').trim(),
+            price: parsePrice(),
+            rooms: parseRooms(),
+            area: parseArea(),
+            district: String(property.district || '').trim(),
+            floor: parseFloor(),
+            'floors-total': parseFloorsTotal(),
+            complex: String(features.complex || '').trim(),
+            microdistrict: String(property.neighborhood || '').trim(),
+            description: String(property.description || '').trim()
+          },
+          checks: {
+            exclusive: !!features.exclusive,
+            balcony: !!(features.balcony ?? property.balcony),
+            penthouse: !!features.penthouse,
+            loggia: !!features.loggia,
+            smartFlat: !!features.smartFlat,
+            terrace: !!(features.terrace ?? property.terrace),
+            newbuilding: !!features.newbuilding,
+            parking: !!features.parking
+          },
+          photos: Array.isArray(property.images) ? property.images.slice(0, 5) : [],
+          photoFiles: []
+        };
+      };
       const refreshMainImage = (src = '') => {
         if (!previewMainImage) return;
         if (src) {
@@ -3911,7 +4026,17 @@ class VoiceWidget extends HTMLElement {
       });
       appendFloorOptions(floorInput, 'Этаж');
       appendFloorOptions(floorsTotalInput, 'Этажность');
-      try { applyDraftState(this._addPropertyDraft); } catch {}
+      if (isEditProperty) {
+        try {
+          const editDraft = buildEditDraftFromProperty(editSourceProperty);
+          applyDraftState(editDraft);
+          overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
+            btn.style.display = 'none';
+          });
+        } catch {}
+      } else {
+        try { applyDraftState(this._addPropertyDraft); } catch {}
+      }
       const updateSlot = (slot, fileName, imageData) => {
         if (!slot) return;
         if (!fileName) {
@@ -3970,13 +4095,15 @@ class VoiceWidget extends HTMLElement {
       });
       const publish = async () => {
         const publishBtn = overlay.querySelector('[data-role="add-publish-final"]');
-        const originalLabel = publishBtn?.textContent || 'Опубликовать';
+        const originalLabel = publishBtn?.textContent || (isEditProperty ? 'Опубликовать изменения' : 'Опубликовать');
         try {
           if (publishBtn) {
             publishBtn.disabled = true;
-            publishBtn.textContent = 'Публикуем...';
+            publishBtn.textContent = isEditProperty ? 'Сохраняем...' : 'Публикуем...';
           }
           const data = getDraftData();
+          const existingImages = (Array.isArray(data.photos) ? data.photos : [])
+            .filter((src) => /^https?:\/\//i.test(String(src || '')));
           const payload = {
             mode: 'publish',
             title: data.title,
@@ -3990,12 +4117,15 @@ class VoiceWidget extends HTMLElement {
             area: String(data.area || '').replace(/[^\d]/g, ''),
             floor: data.floor,
             floorsTotal: data.floorsTotal,
+            existingImages,
             ...data.checks
           };
-          const response = await this.api?.createManualProperty?.(payload, data.photoFiles);
-          const created = response?.property;
-          if (created) {
-            this.mergePropertiesToCatalog([created]);
+          const response = isEditProperty
+            ? await this.api?.updateManualProperty?.(data.id, payload, data.photoFiles)
+            : await this.api?.createManualProperty?.(payload, data.photoFiles);
+          const saved = response?.property;
+          if (saved) {
+            this.mergePropertiesToCatalog([saved]);
             try {
               const all = await this.loadAllProperties();
               if (Array.isArray(all) && all.length) this.replacePropertiesCatalog(all);
@@ -4004,7 +4134,7 @@ class VoiceWidget extends HTMLElement {
           this._addPropertyDraft = null;
           clearActiveDialogs();
           setStep(4);
-          this.ui?.showNotification?.('Объект опубликован');
+          this.ui?.showNotification?.(isEditProperty ? 'Изменения опубликованы' : 'Объект опубликован');
         } catch (error) {
           const msg = String(error?.message || '');
           const hint = msg.includes('FORBIDDEN_ADMIN_ONLY')
