@@ -3170,9 +3170,8 @@ class VoiceWidget extends HTMLElement {
     const modalHead = isAddProperty
       ? `
         <div class="vw-access-add-head">
-          <button type="button" class="vw-access-sub-back" data-role="back">Назад</button>
+          <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
           <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
-          <div class="vw-access-add-caption">Новый объект</div>
         </div>
       `
       : `
@@ -3946,7 +3945,8 @@ class VoiceWidget extends HTMLElement {
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
-        padding: 0 10px;
+        padding: 0 16px;
+        font-size: .875rem;
       }
       .vw-access-sub-spacer {
         width: 1px;
@@ -3987,10 +3987,9 @@ class VoiceWidget extends HTMLElement {
         max-height: min(88vh, 760px);
       }
       .vw-access-add-head {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
+        display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 20px;
       }
       .vw-access-add-stage {
         justify-self: start;
@@ -4000,13 +3999,6 @@ class VoiceWidget extends HTMLElement {
         align-items: center;
         padding: 0 10px;
         font-size: .83rem;
-      }
-      .vw-access-add-caption {
-        font-size: .9rem;
-        font-weight: 500;
-        color: var(--text-secondary, rgba(255,255,255,0.68));
-        justify-self: end;
-        white-space: nowrap;
       }
       .vw-access-add-form {
         display: grid;
