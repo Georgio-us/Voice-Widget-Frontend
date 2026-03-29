@@ -1466,18 +1466,26 @@ class APIClient {
 
   appendTelegramUserToFormData(fd) {
     try {
-      const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
-      if (!fd || !tgUser) return;
-      if (tgUser.id != null) fd.append('tgUserId', String(tgUser.id));
-      if (tgUser.username) fd.append('tgUsername', String(tgUser.username));
-      if (tgUser.first_name) fd.append('tgFirstName', String(tgUser.first_name));
-      if (tgUser.last_name) fd.append('tgLastName', String(tgUser.last_name));
+      if (!fd) return;
+      const identity = this.getTelegramUserIdentity();
+      if (!identity?.id) return;
+      fd.append('tgUserId', String(identity.id));
+      if (identity.username) fd.append('tgUsername', String(identity.username));
+      if (identity.firstName) fd.append('tgFirstName', String(identity.firstName));
+      if (identity.lastName) fd.append('tgLastName', String(identity.lastName));
     } catch {}
   }
 
   getTelegramUserIdentity() {
     try {
-      const tgUser = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      const fromUnsafe = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      const fromWidget = this.widget?.getCurrentTelegramUser?.() || null;
+      const tgUser = fromUnsafe || (fromWidget?.id ? {
+        id: fromWidget.id,
+        username: fromWidget.username,
+        first_name: fromWidget.firstName,
+        last_name: fromWidget.lastName
+      } : null);
       if (!tgUser || tgUser.id == null) return null;
       return {
         id: String(tgUser.id).trim(),
@@ -3369,28 +3377,41 @@ class VoiceWidget extends HTMLElement {
           count: selectedIds.length,
           onConfirm: async () => {
             const failed = [];
+            const succeeded = [];
             for (let i = 0; i < selectedIds.length; i += 1) {
               const id = selectedIds[i];
               try {
                 await this.api?.deleteManualProperty?.(id);
+                succeeded.push(id);
               } catch (error) {
-                failed.push(id);
+                failed.push({ id, code: String(error?.message || 'UNKNOWN') });
               }
             }
             const currentList = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
             window.appState.allProperties = currentList.filter((item) => {
               const id = String(item?.id || item?.variantId || item?._id || '').trim();
-              return !selectedIds.includes(id);
+              return !succeeded.includes(id);
             });
             getRows().forEach((row) => {
               const id = String(row.getAttribute('data-id') || '').trim();
-              if (selectedIds.includes(id) && !failed.includes(id)) row.remove();
+              if (succeeded.includes(id)) row.remove();
             });
+            if (succeeded.length) {
+              try {
+                const all = await this.loadAllProperties();
+                if (Array.isArray(all)) this.replacePropertiesCatalog(all);
+              } catch {}
+            }
             this.updateAdminObjectsSelectionState(overlay);
-            if (failed.length) {
-              this.ui?.showNotification?.(`Удаление частично выполнено: ${selectedIds.length - failed.length}/${selectedIds.length}`);
+            if (!failed.length) {
+              this.ui?.showNotification?.(`Удалено: ${succeeded.length}`);
+              return;
+            }
+            if (!succeeded.length) {
+              const hasForbidden = failed.some((x) => x.code.includes('FORBIDDEN_ADMIN_ONLY'));
+              this.ui?.showNotification?.(hasForbidden ? 'Нет прав на удаление объектов' : 'Удаление не выполнено');
             } else {
-              this.ui?.showNotification?.(`Удалено: ${selectedIds.length}`);
+              this.ui?.showNotification?.(`Удаление частично выполнено: ${succeeded.length}/${selectedIds.length}`);
             }
           }
         });
