@@ -3037,19 +3037,14 @@ class VoiceWidget extends HTMLElement {
 
   updateAdminObjectsSelectionState(overlay) {
     if (!overlay) return;
-    const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-row'));
+    const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-card'));
     const checks = rows.map((row) => row.querySelector('[data-role="row-check"]')).filter(Boolean);
     const selected = checks.filter((check) => check.checked).length;
     const shareBtn = overlay.querySelector('[data-role="share"]');
     const deleteBtn = overlay.querySelector('[data-role="delete-selected"]');
-    const selectAllBtn = overlay.querySelector('[data-role="select-all"]');
     if (shareBtn) {
       shareBtn.disabled = selected <= 0;
       shareBtn.textContent = selected > 0 ? `Поделиться (${selected})` : 'Поделиться';
-    }
-    if (selectAllBtn && checks.length) {
-      const allSelected = selected === checks.length;
-      selectAllBtn.textContent = allSelected ? 'Снять выбор' : 'Выбрать все';
     }
     if (deleteBtn) {
       deleteBtn.disabled = selected <= 0;
@@ -5015,6 +5010,8 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-modal--properties {
         gap: 14px;
         max-height: min(82vh, 720px);
+        overflow: hidden;
+        grid-template-rows: auto minmax(0, 1fr);
       }
       .vw-access-objects-layout {
         display: grid;
@@ -5054,6 +5051,7 @@ class VoiceWidget extends HTMLElement {
         border-radius: 12px;
         padding: 10px;
         min-height: 78px;
+        cursor: pointer;
       }
       .vw-access-obj-card.is-selected {
         border-color: rgba(45, 143, 225, 0.75);
@@ -5110,6 +5108,9 @@ class VoiceWidget extends HTMLElement {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        cursor: pointer;
+        position: relative;
+        z-index: 1;
       }
     `;
     document.head.appendChild(style);
