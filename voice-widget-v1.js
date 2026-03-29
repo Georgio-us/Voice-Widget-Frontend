@@ -4073,7 +4073,8 @@ class VoiceWidget extends HTMLElement {
         gap: 10px;
       }
       .vw-access-add-photo-slot {
-        min-height: 92px;
+        min-height: 0;
+        aspect-ratio: 1 / 1;
         border-radius: 16px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.16));
         background: var(--bg-element, rgba(255,255,255,0.08));
@@ -4093,7 +4094,7 @@ class VoiceWidget extends HTMLElement {
         box-shadow: inset 0 -40px 40px rgba(0,0,0,0.35);
       }
       .vw-access-add-photo-slot--main {
-        min-height: 194px;
+        min-height: 0;
       }
       .vw-access-add-actions {
         margin-top: 8px;
