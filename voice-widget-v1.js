@@ -4360,6 +4360,55 @@ class VoiceWidget extends HTMLElement {
     };
   }
 
+  applyFiltersOverlayPayload(overlay, payload = {}) {
+    if (!overlay || !payload || typeof payload !== 'object') return;
+    const setPicker = (picker, value) => {
+      const selectEl = overlay.querySelector(`select[data-picker="${picker}"]`);
+      if (!selectEl) return;
+      const safe = String(value || '').trim();
+      if (!safe) return;
+      const hasOption = Array.from(selectEl.options || []).some((opt) => String(opt.value) === safe);
+      if (!hasOption) {
+        const opt = document.createElement('option');
+        opt.value = safe;
+        opt.textContent = safe;
+        selectEl.appendChild(opt);
+      }
+      selectEl.value = safe;
+    };
+    const setSelect = (role, value) => {
+      const selectEl = overlay.querySelector(`[data-role="${role}"]`);
+      if (!selectEl) return;
+      const safe = String(value || '').trim();
+      if (!safe) return;
+      const hasOption = Array.from(selectEl.options || []).some((opt) => String(opt.value) === safe);
+      if (!hasOption) {
+        const opt = document.createElement('option');
+        opt.value = safe;
+        opt.textContent = safe;
+        selectEl.appendChild(opt);
+      }
+      selectEl.value = safe;
+    };
+    const setCheck = (role, checked) => {
+      const el = overlay.querySelector(`[data-role="${role}"]`);
+      if (el) el.checked = !!checked;
+    };
+    setPicker('priceMin', payload.priceFrom);
+    setPicker('priceMax', payload.priceTo);
+    setPicker('areaMin', payload.areaFrom);
+    setPicker('areaMax', payload.areaTo);
+    setPicker('floorMin', payload.floorFrom);
+    setPicker('floorMax', payload.floorTo);
+    setSelect('rooms', payload.rooms);
+    setSelect('district', payload.district);
+    setSelect('rcSearch', payload.residentialComplex);
+    setCheck('smart', payload.smart);
+    setCheck('arcadia', payload.arcadia);
+    setCheck('rcOnly', payload.residentialComplexOnly);
+    this.syncFilterPickerLabels(overlay);
+  }
+
   normalizeCatalogFilterOverrides(raw = {}) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const parseNum = (value) => {
@@ -4395,7 +4444,7 @@ class VoiceWidget extends HTMLElement {
     return out;
   }
 
-  getCatalogEffectiveSearchParams() {
+  getCatalogEffectiveSearchParams(insightsSource = null) {
     const parseNum = (value) => {
       if (value == null) return null;
       if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
@@ -4415,7 +4464,9 @@ class VoiceWidget extends HTMLElement {
       if (/малин|malin/.test(raw)) return 'malinovsky';
       return String(value || '').trim();
     };
-    const insights = this.understanding?.export?.() || {};
+    const insights = insightsSource && typeof insightsSource === 'object'
+      ? insightsSource
+      : (this.understanding?.export?.() || {});
     const base = {};
     const type = String(insights.type || '').trim();
     if (type) base.type = type;
@@ -4450,18 +4501,40 @@ class VoiceWidget extends HTMLElement {
     return merged;
   }
 
+  buildFiltersOverlayPayloadFromEffectiveQuery() {
+    const query = this.getCatalogEffectiveSearchParams();
+    return {
+      priceFrom: query.minPrice != null ? String(query.minPrice) : '',
+      priceTo: query.maxPrice != null ? String(query.maxPrice) : '',
+      areaFrom: query.minArea != null ? String(query.minArea) : '',
+      areaTo: query.maxArea != null ? String(query.maxArea) : '',
+      floorFrom: query.minFloor != null ? String(query.minFloor) : '',
+      floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
+      rooms: query.rooms != null ? String(query.rooms) : '',
+      smart: query.smart === true,
+      district: query.district != null ? String(query.district) : '',
+      arcadia: query.arcadia === true,
+      residentialComplexOnly: query.rcOnly === true,
+      residentialComplex: query.residentialComplex != null ? String(query.residentialComplex) : ''
+    };
+  }
+
+  async refreshCatalogByEffectiveQuery(insightsSource = null) {
+    const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 2000 };
+    const cards = await this.api?.fetchCardsSearch?.(query);
+    const list = Array.isArray(cards) ? cards : [];
+    this.replacePropertiesCatalog(list);
+    if (!window.appState) window.appState = {};
+    window.appState.lastTotalMatches = list.length;
+    this.updateObjectCount(list.length, { forceLabel: true });
+    return list;
+  }
+
   async applyCatalogFilters(payload = {}) {
     const normalized = this.normalizeCatalogFilterOverrides(payload);
     this._catalogManualFilterOverrides = Object.keys(normalized).length ? normalized : null;
-    const query = { ...this.getCatalogEffectiveSearchParams(), limit: 2000 };
     try {
-      const cards = await this.api?.fetchCardsSearch?.(query);
-      const list = Array.isArray(cards) ? cards : [];
-      this.replacePropertiesCatalog(list);
-      if (!window.appState) window.appState = {};
-      window.appState.lastTotalMatches = list.length;
-      this.updateObjectCount(list.length, { forceLabel: true });
-      this.renderCatalogFromCurrentState();
+      const list = await this.refreshCatalogByEffectiveQuery();
       this.ui?.showNotification?.(`Фильтры применены: ${list.length}`);
     } catch (error) {
       console.error('filters.apply failed:', error);
@@ -4766,7 +4839,7 @@ class VoiceWidget extends HTMLElement {
       const pickerType = String(sel.getAttribute('data-picker') || '');
       this.fillFilterPickerSelect(sel, pickerType);
     });
-    this.resetFiltersOverlayForm(overlay);
+    this.applyFiltersOverlayPayload(overlay, this.buildFiltersOverlayPayloadFromEffectiveQuery());
     this.bindFiltersOverlayEvents(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
     overlay.addEventListener('click', (event) => {
@@ -6900,10 +6973,12 @@ render() {
     if (Array.isArray(data.topCandidates)) cards.push(...data.topCandidates);
     if (Array.isArray(data.cards)) cards.push(...data.cards);
     if (data.card && typeof data.card === 'object') cards.push(data.card);
-
-    if (cards.length) {
-      this.mergePropertiesToCatalog(cards);
-      window.appState.lastBackendCandidatesAt = Date.now();
+    if (cards.length) window.appState.lastBackendCandidatesAt = Date.now();
+    if (data.insights && typeof data.insights === 'object') {
+      const migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
+      this.refreshCatalogByEffectiveQuery(migratedInsights).catch((error) => {
+        console.warn('refreshCatalogByEffectiveQuery failed:', error);
+      });
     }
     if (hasNewInsight) this._runInsightPillSequence();
   }
@@ -7380,20 +7455,7 @@ render() {
   }
 
   async renderPropertiesFromCatalog() {
-    await this.hydrateCatalogFromBackend(60);
     this._sliderCheckpointShown = { 10: false, 20: false };
-    let list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
-    if (!list.length) {
-      const all = await this.loadAllProperties();
-      if (Array.isArray(all) && all.length) {
-        this.replacePropertiesCatalog(all);
-        list = window.appState.allProperties || [];
-        if ((Number(window?.appState?.lastTotalMatches) || 0) <= 0) {
-          window.appState.lastTotalMatches = list.length;
-          this.updateObjectCount(window.appState.lastTotalMatches, { forceLabel: true });
-        }
-      }
-    }
     this.renderCatalogFromCurrentState();
   }
 
