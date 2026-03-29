@@ -1326,6 +1326,22 @@ class APIClient {
     return data;
   }
 
+  async deleteManualProperty(externalId, options = {}) {
+    const safeId = String(externalId || '').trim();
+    if (!safeId) throw new Error('EXTERNAL_ID_REQUIRED');
+    const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/properties');
+    const url = new URL(`${base}/${encodeURIComponent(safeId)}`);
+    if (options.clientId) url.searchParams.set('clientId', String(options.clientId));
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) url.searchParams.set('tgUserId', tgIdentity.id);
+    const res = await fetch(url.toString(), { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `ADMIN_DELETE_FAILED_${res.status}`));
+    }
+    return data;
+  }
+
   _rememberProposed(cards) {
     if (Array.isArray(cards)) this.lastProposedCards = cards;
   }
@@ -2981,6 +2997,7 @@ class VoiceWidget extends HTMLElement {
     const checks = rows.map((row) => row.querySelector('[data-role="row-check"]')).filter(Boolean);
     const selected = checks.filter((check) => check.checked).length;
     const shareBtn = overlay.querySelector('[data-role="share"]');
+    const deleteBtn = overlay.querySelector('[data-role="delete-selected"]');
     const selectAllBtn = overlay.querySelector('[data-role="select-all"]');
     if (shareBtn) {
       shareBtn.disabled = selected <= 0;
@@ -2989,6 +3006,10 @@ class VoiceWidget extends HTMLElement {
     if (selectAllBtn && checks.length) {
       const allSelected = selected === checks.length;
       selectAllBtn.textContent = allSelected ? 'Снять выбор' : 'Выбрать все';
+    }
+    if (deleteBtn) {
+      deleteBtn.disabled = selected <= 0;
+      deleteBtn.textContent = selected > 0 ? `Удалить (${selected})` : 'Удалить';
     }
   }
 
@@ -3186,6 +3207,7 @@ class VoiceWidget extends HTMLElement {
           </div>
           <div class="vw-access-obj-list">${rows}</div>
           <div class="vw-access-sub-toolbar">
+            <button type="button" class="vw-access-sub-btn vw-access-add-dialog-btn is-danger" data-role="delete-selected" disabled>Удалить</button>
             <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
           </div>
         `;
@@ -3275,8 +3297,35 @@ class VoiceWidget extends HTMLElement {
     });
 
     if (safeSection === 'properties') {
-      const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-row'));
-      rows.forEach((row) => {
+      const getRows = () => Array.from(overlay.querySelectorAll('.vw-access-obj-row'));
+      const getSelectedIds = () => getRows()
+        .filter((row) => !!row.querySelector('[data-role="row-check"]')?.checked)
+        .map((row) => String(row.getAttribute('data-id') || '').trim())
+        .filter(Boolean);
+      const showDeleteDialog = ({ count = 0, onConfirm = null } = {}) => {
+        const layer = document.createElement('div');
+        layer.className = 'vw-access-add-dialog-layer';
+        layer.innerHTML = `
+          <div class="vw-access-add-dialog">
+            <div class="vw-access-add-dialog-title">Удалить выбранные объекты (${count})?</div>
+            <div class="vw-access-add-dialog-actions">
+              <button type="button" class="vw-access-add-dialog-btn is-danger" data-role="confirm-delete">Удалить</button>
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="cancel-delete">Отмена</button>
+            </div>
+          </div>
+        `;
+        overlay.appendChild(layer);
+        const close = () => { try { layer.remove(); } catch {} };
+        layer.addEventListener('click', (event) => {
+          if (event.target === layer) close();
+        });
+        layer.querySelector('[data-role="cancel-delete"]')?.addEventListener('click', close);
+        layer.querySelector('[data-role="confirm-delete"]')?.addEventListener('click', async () => {
+          close();
+          try { await onConfirm?.(); } catch {}
+        });
+      };
+      getRows().forEach((row) => {
         const check = row.querySelector('[data-role="row-check"]');
         const toggleBtn = row.querySelector('[data-role="row-toggle"]');
         const sync = () => {
@@ -3296,7 +3345,7 @@ class VoiceWidget extends HTMLElement {
         const checks = Array.from(overlay.querySelectorAll('[data-role="row-check"]'));
         const allSelected = checks.length > 0 && checks.every((c) => c.checked);
         checks.forEach((c) => { c.checked = !allSelected; });
-        rows.forEach((row) => {
+        getRows().forEach((row) => {
           const check = row.querySelector('[data-role="row-check"]');
           const toggleBtn = row.querySelector('[data-role="row-toggle"]');
           const selected = !!check?.checked;
@@ -3307,6 +3356,39 @@ class VoiceWidget extends HTMLElement {
       });
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
         this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
+      });
+      overlay.querySelector('[data-role="delete-selected"]')?.addEventListener('click', () => {
+        const selectedIds = getSelectedIds();
+        if (!selectedIds.length) return;
+        showDeleteDialog({
+          count: selectedIds.length,
+          onConfirm: async () => {
+            const failed = [];
+            for (let i = 0; i < selectedIds.length; i += 1) {
+              const id = selectedIds[i];
+              try {
+                await this.api?.deleteManualProperty?.(id);
+              } catch (error) {
+                failed.push(id);
+              }
+            }
+            const currentList = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+            window.appState.allProperties = currentList.filter((item) => {
+              const id = String(item?.id || item?.variantId || item?._id || '').trim();
+              return !selectedIds.includes(id);
+            });
+            getRows().forEach((row) => {
+              const id = String(row.getAttribute('data-id') || '').trim();
+              if (selectedIds.includes(id) && !failed.includes(id)) row.remove();
+            });
+            this.updateAdminObjectsSelectionState(overlay);
+            if (failed.length) {
+              this.ui?.showNotification?.(`Удаление частично выполнено: ${selectedIds.length - failed.length}/${selectedIds.length}`);
+            } else {
+              this.ui?.showNotification?.(`Удалено: ${selectedIds.length}`);
+            }
+          }
+        });
       });
       this.updateAdminObjectsSelectionState(overlay);
     }
