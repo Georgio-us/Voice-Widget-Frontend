@@ -3506,7 +3506,12 @@ class VoiceWidget extends HTMLElement {
             }
             if (!succeeded.length) {
               const hasForbidden = failed.some((x) => x.code.includes('FORBIDDEN_ADMIN_ONLY'));
-              this.ui?.showNotification?.(hasForbidden ? 'Нет прав на удаление объектов' : 'Удаление не выполнено');
+              if (hasForbidden) {
+                this.ui?.showNotification?.('Нет прав на удаление объектов');
+              } else {
+                const code = String(failed?.[0]?.code || 'UNKNOWN');
+                this.ui?.showNotification?.(`Удаление не выполнено (${code})`);
+              }
             } else {
               this.ui?.showNotification?.(`Удаление частично выполнено: ${succeeded.length}/${selectedIds.length}`);
             }
