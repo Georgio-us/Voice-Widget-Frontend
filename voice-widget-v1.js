@@ -1314,6 +1314,10 @@ class APIClient {
       formData.append(key, String(value));
     });
     this.appendTelegramUserToFormData(formData);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) {
+      formData.append('devAdmin', '1');
+    }
     const files = Array.isArray(imageFiles) ? imageFiles : [];
     files.forEach((file) => {
       if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
@@ -1334,6 +1338,7 @@ class APIClient {
     if (options.clientId) url.searchParams.set('clientId', String(options.clientId));
     const tgIdentity = this.getTelegramUserIdentity();
     if (tgIdentity?.id) url.searchParams.set('tgUserId', tgIdentity.id);
+    else if (this.widget?.accessFlags?.isAdmin) url.searchParams.set('devAdmin', '1');
     const res = await fetch(url.toString(), { method: 'DELETE' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
