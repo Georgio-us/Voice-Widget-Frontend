@@ -2907,6 +2907,19 @@ class VoiceWidget extends HTMLElement {
     btn.setAttribute('aria-label', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
   }
 
+  setMobileViewportLock(enabled = false) {
+    try {
+      const meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) return;
+      if (enabled) {
+        if (this._viewportMetaOriginalContent == null) this._viewportMetaOriginalContent = meta.getAttribute('content') || '';
+        meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
+      } else if (this._viewportMetaOriginalContent != null) {
+        meta.setAttribute('content', this._viewportMetaOriginalContent || 'width=device-width, initial-scale=1');
+      }
+    } catch {}
+  }
+
   closeAccessOverlay() {
     try {
       const overlay = this.getRoot().querySelector('#vwAccessOverlay');
@@ -2919,8 +2932,10 @@ class VoiceWidget extends HTMLElement {
   closeAccessSubOverlay() {
     try {
       const overlay = this.getRoot().querySelector('#vwAccessSubOverlay');
+      try { overlay?._cleanupAddPropertyOverlay?.(); } catch {}
       if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
     } catch {}
+    try { this.setMobileViewportLock(false); } catch {}
   }
 
   getAdminObjectsMockList() {
@@ -3199,6 +3214,9 @@ class VoiceWidget extends HTMLElement {
       </div>
     `;
     this.getRoot().appendChild(overlay);
+    if (isAddProperty) {
+      try { this.setMobileViewportLock(true); } catch {}
+    }
     overlay.querySelector('[data-role="back"]')?.addEventListener('click', () => {
       if (isAddProperty) {
         const wizard = overlay.querySelector('[data-role="add-wizard"]');
@@ -3255,6 +3273,7 @@ class VoiceWidget extends HTMLElement {
       this.updateAdminObjectsSelectionState(overlay);
     }
     if (isAddProperty) {
+      const modal = overlay.querySelector('.vw-access-sub-modal--add') || overlay.querySelector('.vw-access-sub-modal');
       const wizard = overlay.querySelector('[data-role="add-wizard"]');
       const stageLabel = overlay.querySelector('[data-role="add-stage"]');
       const formatThousands = (digits) => {
@@ -3280,6 +3299,87 @@ class VoiceWidget extends HTMLElement {
       const previewMainImage = overlay.querySelector('[data-role="preview-main-image"]');
       const previewThumbs = Array.from(overlay.querySelectorAll('[data-role="preview-thumb"]'));
       const textFields = Array.from(overlay.querySelectorAll('input[type="text"]:not([readonly]), textarea'));
+      const focusableFields = Array.from(overlay.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([readonly]), textarea, select'));
+      let activeField = null;
+      const getKeyboardInset = () => {
+        try {
+          const vv = window.visualViewport;
+          if (!vv) return 0;
+          return Math.max(0, (window.innerHeight || 0) - (vv.height + vv.offsetTop));
+        } catch {
+          return 0;
+        }
+      };
+      const updateKeyboardInset = () => {
+        if (!modal) return;
+        modal.style.setProperty('--vw-add-kb-inset', `${getKeyboardInset()}px`);
+      };
+      const keepFieldVisible = (field, smooth = true) => {
+        if (!field || !modal) return;
+        const rect = field.getBoundingClientRect();
+        const vv = window.visualViewport;
+        const top = vv ? vv.offsetTop : 0;
+        const height = vv ? vv.height : window.innerHeight;
+        const safeTop = top + 10;
+        const safeBottom = top + height - 12;
+        if (rect.top >= safeTop && rect.bottom <= safeBottom) return;
+        const targetCenter = rect.top + (rect.height / 2);
+        const viewportCenter = safeTop + ((safeBottom - safeTop) * 0.42);
+        const delta = targetCenter - viewportCenter;
+        const nextTop = Math.max(0, modal.scrollTop + delta);
+        try { modal.scrollTo({ top: nextTop, behavior: smooth ? 'smooth' : 'auto' }); } catch { modal.scrollTop = nextTop; }
+      };
+      const onViewportChanged = () => {
+        updateKeyboardInset();
+        if (activeField) keepFieldVisible(activeField, false);
+      };
+      const vv = window.visualViewport;
+      if (vv) {
+        vv.addEventListener('resize', onViewportChanged);
+        vv.addEventListener('scroll', onViewportChanged);
+      }
+      let lastTapAt = 0;
+      const onModalTouchEnd = (event) => {
+        const target = event.target;
+        const isField = target?.closest?.('input, textarea, select, button, label');
+        if (isField) {
+          lastTapAt = Date.now();
+          return;
+        }
+        const now = Date.now();
+        if (now - lastTapAt < 300) event.preventDefault();
+        lastTapAt = now;
+      };
+      modal?.addEventListener('touchend', onModalTouchEnd, { passive: false });
+      const onFocusIn = (event) => {
+        const target = event.target;
+        if (!target || !focusableFields.includes(target)) return;
+        activeField = target;
+        updateKeyboardInset();
+        requestAnimationFrame(() => keepFieldVisible(target, true));
+        setTimeout(() => keepFieldVisible(target, true), 90);
+        setTimeout(() => keepFieldVisible(target, false), 280);
+      };
+      const onFocusOut = (event) => {
+        const target = event.target;
+        if (target && activeField === target) activeField = null;
+        setTimeout(() => updateKeyboardInset(), 60);
+      };
+      overlay.addEventListener('focusin', onFocusIn, true);
+      overlay.addEventListener('focusout', onFocusOut, true);
+      updateKeyboardInset();
+      overlay._cleanupAddPropertyOverlay = () => {
+        try { modal?.removeEventListener('touchend', onModalTouchEnd, { passive: false }); } catch {}
+        try { overlay.removeEventListener('focusin', onFocusIn, true); } catch {}
+        try { overlay.removeEventListener('focusout', onFocusOut, true); } catch {}
+        try {
+          const localVv = window.visualViewport;
+          if (localVv) {
+            localVv.removeEventListener('resize', onViewportChanged);
+            localVv.removeEventListener('scroll', onViewportChanged);
+          }
+        } catch {}
+      };
       const setStep = (step) => {
         const n = Number(step);
         const safeStep = n >= 1 && n <= 4 ? n : 1;
@@ -4104,6 +4204,9 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-modal--add {
         width: min(720px, 100%);
         max-height: min(88vh, 760px);
+        padding-bottom: calc(14px + var(--vw-add-kb-inset, 0px));
+        overscroll-behavior: contain;
+        touch-action: pan-y manipulation;
       }
       .vw-access-add-head {
         display: flex;
