@@ -1367,13 +1367,19 @@ class APIClient {
   async deleteManualProperty(externalId, options = {}) {
     const safeId = String(externalId || '').trim();
     if (!safeId) throw new Error('EXTERNAL_ID_REQUIRED');
-    const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/properties');
-    const url = new URL(`${base}/${encodeURIComponent(safeId)}`);
-    if (options.clientId) url.searchParams.set('clientId', String(options.clientId));
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/properties/delete');
     const tgIdentity = this.getTelegramUserIdentity();
-    if (tgIdentity?.id) url.searchParams.set('tgUserId', tgIdentity.id);
-    else if (this.widget?.accessFlags?.isAdmin) url.searchParams.set('devAdmin', '1');
-    const res = await fetch(url.toString(), { method: 'DELETE' });
+    const payload = {
+      externalId: safeId
+    };
+    if (tgIdentity?.id) payload.tgUserId = tgIdentity.id;
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) payload.devAdmin = '1';
+    if (options.clientId) payload.clientId = String(options.clientId);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
       throw new Error(String(data?.error || `ADMIN_DELETE_FAILED_${res.status}`));
