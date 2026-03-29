@@ -3925,7 +3925,7 @@ class VoiceWidget extends HTMLElement {
         color: var(--text-primary, #fff);
         padding: 14px;
         display: grid;
-        gap: 10px;
+        gap: 40px;
         overflow: auto;
       }
       .vw-access-sub-head {
@@ -3995,9 +3995,6 @@ class VoiceWidget extends HTMLElement {
       .vw-access-add-stage {
         justify-self: start;
         min-height: 30px;
-        border-radius: 999px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.1));
         color: var(--text-secondary, rgba(255,255,255,0.7));
         display: inline-flex;
         align-items: center;
@@ -4021,7 +4018,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-add-step {
         display: none;
-        gap: 10px;
+        gap: 20px;
       }
       .vw-access-add-wizard[data-step="1"] [data-step-panel="1"],
       .vw-access-add-wizard[data-step="2"] [data-step-panel="2"],
@@ -4040,13 +4037,16 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
+        min-height: 36px;
+        height: 100%;
       }
       .vw-access-add-field {
         min-width: 0;
       }
       .vw-access-add-input {
         width: 100%;
-        min-height: 46px;
+        min-height: 36px;
+        height: 100%;
         border-radius: 14px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.16));
         background: var(--bg-element, rgba(255,255,255,0.08));
