@@ -1276,7 +1276,14 @@ class APIClient {
     const base = this._deriveCardsBaseUrl();
     const url = new URL(base + '/search');
 
-    const allowed = ['city', 'district', 'rooms', 'type', 'minPrice', 'maxPrice', 'limit'];
+    const allowed = [
+      'city', 'district', 'rooms', 'type',
+      'minPrice', 'maxPrice',
+      'minArea', 'maxArea',
+      'minFloor', 'maxFloor',
+      'smart', 'arcadia', 'rcOnly', 'residentialComplex',
+      'limit'
+    ];
     for (const k of allowed) {
       const v = params[k];
       if (v !== undefined && v !== null && String(v).trim() !== '') {
@@ -2432,6 +2439,7 @@ class VoiceWidget extends HTMLElement {
     this._pillBaseCount = 0;
     this._pillCtaTimer = null;
     this._lastPillInsightsSnapshot = null;
+    this._catalogManualFilterOverrides = null;
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
@@ -4330,6 +4338,115 @@ class VoiceWidget extends HTMLElement {
     };
   }
 
+  normalizeCatalogFilterOverrides(raw = {}) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const parseNum = (value) => {
+      const text = String(value ?? '').trim();
+      if (!text || text.toLowerCase() === 'max') return null;
+      const digits = text.replace(/[^\d-]/g, '');
+      if (!digits) return null;
+      const n = Number(digits);
+      return Number.isFinite(n) ? Math.round(n) : null;
+    };
+    const out = {};
+    const minPrice = parseNum(source.priceFrom);
+    const maxPrice = parseNum(source.priceTo);
+    const minArea = parseNum(source.areaFrom);
+    const maxArea = parseNum(source.areaTo);
+    const minFloor = parseNum(source.floorFrom);
+    const maxFloor = parseNum(source.floorTo);
+    if (minPrice != null) out.minPrice = minPrice;
+    if (maxPrice != null) out.maxPrice = maxPrice;
+    if (minArea != null) out.minArea = minArea;
+    if (maxArea != null) out.maxArea = maxArea;
+    if (minFloor != null) out.minFloor = minFloor;
+    if (maxFloor != null) out.maxFloor = maxFloor;
+    const rooms = String(source.rooms || '').trim();
+    if (rooms) out.rooms = rooms;
+    const district = String(source.district || '').trim();
+    if (district) out.district = district;
+    const rc = String(source.residentialComplex || '').trim();
+    if (rc) out.residentialComplex = rc;
+    if (source.smart === true) out.smart = true;
+    if (source.arcadia === true) out.arcadia = true;
+    if (source.residentialComplexOnly === true) out.rcOnly = true;
+    return out;
+  }
+
+  getCatalogEffectiveSearchParams() {
+    const parseNum = (value) => {
+      if (value == null) return null;
+      if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+      const text = String(value).trim();
+      if (!text) return null;
+      const digits = text.replace(/[^\d-]/g, '');
+      if (!digits) return null;
+      const n = Number(digits);
+      return Number.isFinite(n) ? Math.round(n) : null;
+    };
+    const normalizeDistrict = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/примор|primor/.test(raw)) return 'primorsky';
+      if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
+      if (/сувор|suvor/.test(raw)) return 'suvorovsky';
+      if (/малин|malin/.test(raw)) return 'malinovsky';
+      return String(value || '').trim();
+    };
+    const insights = this.understanding?.export?.() || {};
+    const base = {};
+    const type = String(insights.type || '').trim();
+    if (type) base.type = type;
+    const roomsNum = parseNum(insights.rooms);
+    if (roomsNum != null) base.rooms = roomsNum >= 4 ? '4plus' : String(roomsNum);
+    const budgetMax = parseNum(insights.budgetMax ?? insights.budget);
+    if (budgetMax != null) base.maxPrice = budgetMax;
+    const areaMin = parseNum(insights.areaMin ?? insights.area);
+    const areaMax = parseNum(insights.areaMax);
+    if (areaMin != null) base.minArea = areaMin;
+    if (areaMax != null) base.maxArea = areaMax;
+    const floor = parseNum(insights.floor);
+    if (floor != null) {
+      base.minFloor = floor;
+      base.maxFloor = floor;
+    }
+    const district = normalizeDistrict(insights.location);
+    if (district) base.district = district;
+    const manual = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
+      ? this._catalogManualFilterOverrides
+      : {};
+    const merged = { ...base, ...manual };
+    if (merged.minPrice != null && merged.maxPrice != null && Number(merged.minPrice) > Number(merged.maxPrice)) {
+      merged.maxPrice = merged.minPrice;
+    }
+    if (merged.minArea != null && merged.maxArea != null && Number(merged.minArea) > Number(merged.maxArea)) {
+      merged.maxArea = merged.minArea;
+    }
+    if (merged.minFloor != null && merged.maxFloor != null && Number(merged.minFloor) > Number(merged.maxFloor)) {
+      merged.maxFloor = merged.minFloor;
+    }
+    return merged;
+  }
+
+  async applyCatalogFilters(payload = {}) {
+    const normalized = this.normalizeCatalogFilterOverrides(payload);
+    this._catalogManualFilterOverrides = Object.keys(normalized).length ? normalized : null;
+    const query = { ...this.getCatalogEffectiveSearchParams(), limit: 2000 };
+    try {
+      const cards = await this.api?.fetchCardsSearch?.(query);
+      const list = Array.isArray(cards) ? cards : [];
+      this.replacePropertiesCatalog(list);
+      if (!window.appState) window.appState = {};
+      window.appState.lastTotalMatches = list.length;
+      this.updateObjectCount(list.length, { forceLabel: true });
+      this.renderCatalogFromCurrentState();
+      this.ui?.showNotification?.(`Фильтры применены: ${list.length}`);
+    } catch (error) {
+      console.error('filters.apply failed:', error);
+      this.ui?.showNotification?.('Не удалось применить фильтры');
+    }
+  }
+
   resetFiltersOverlayForm(overlay) {
     if (!overlay) return;
     overlay.querySelectorAll('select[data-picker]').forEach((sel) => { sel.selectedIndex = 0; });
@@ -4362,10 +4479,10 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelector('[data-role="reset"]')?.addEventListener('click', () => {
       this.resetFiltersOverlayForm(overlay);
     });
-    overlay.querySelector('[data-role="apply"]')?.addEventListener('click', () => {
+    overlay.querySelector('[data-role="apply"]')?.addEventListener('click', async () => {
       const payload = this.collectFiltersOverlayPayload(overlay);
       console.log('filters.apply', payload);
-      this.ui?.showNotification?.('Фильтры применены (demo)');
+      await this.applyCatalogFilters(payload);
       this.closeFiltersOverlay();
     });
   }
@@ -7191,21 +7308,9 @@ render() {
     }
   }
 
-  async renderPropertiesFromCatalog() {
-    await this.hydrateCatalogFromBackend(60);
-    this._sliderCheckpointShown = { 10: false, 20: false };
+  renderCatalogFromCurrentState() {
     let list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
-    if (!list.length) {
-      const all = await this.loadAllProperties();
-      if (Array.isArray(all) && all.length) {
-        this.replacePropertiesCatalog(all);
-        list = window.appState.allProperties || [];
-        if ((Number(window?.appState?.lastTotalMatches) || 0) <= 0) {
-          window.appState.lastTotalMatches = list.length;
-          this.updateObjectCount(window.appState.lastTotalMatches, { forceLabel: true });
-        }
-      }
-    }
+    this._sliderCheckpointShown = { 10: false, 20: false };
     if (!list.length) {
       this.updateObjectCount(Number(window?.appState?.lastTotalMatches) || 0);
       return;
@@ -7228,6 +7333,24 @@ render() {
         messages.scrollTo({ top: targetTop, behavior: 'smooth' });
       } catch {}
     });
+  }
+
+  async renderPropertiesFromCatalog() {
+    await this.hydrateCatalogFromBackend(60);
+    this._sliderCheckpointShown = { 10: false, 20: false };
+    let list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    if (!list.length) {
+      const all = await this.loadAllProperties();
+      if (Array.isArray(all) && all.length) {
+        this.replacePropertiesCatalog(all);
+        list = window.appState.allProperties || [];
+        if ((Number(window?.appState?.lastTotalMatches) || 0) <= 0) {
+          window.appState.lastTotalMatches = list.length;
+          this.updateObjectCount(window.appState.lastTotalMatches, { forceLabel: true });
+        }
+      }
+    }
+    this.renderCatalogFromCurrentState();
   }
 
   // Update toggle button state
