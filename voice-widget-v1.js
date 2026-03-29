@@ -2993,15 +2993,22 @@ class VoiceWidget extends HTMLElement {
               </div>
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="* Укажите цену" autocomplete="off" inputmode="numeric">
+                  <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="* Укажите цену" autocomplete="off">
                 </label>
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input" type="text" name="rooms" data-role="rooms" placeholder="* Количество комнат" autocomplete="off" inputmode="numeric">
+                  <select class="vw-access-add-input" data-role="rooms" name="rooms">
+                    <option value="">* Количество комнат</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5+">5+</option>
+                  </select>
                 </label>
               </div>
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="* Укажите площадь" autocomplete="off" inputmode="numeric">
+                  <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="* Укажите площадь" autocomplete="off">
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="district" name="district">
@@ -3250,10 +3257,10 @@ class VoiceWidget extends HTMLElement {
     if (isAddProperty) {
       const wizard = overlay.querySelector('[data-role="add-wizard"]');
       const stageLabel = overlay.querySelector('[data-role="add-stage"]');
-      const normalizeNumber = (value) => {
-        const digits = String(value || '').replace(/[^\d]/g, '');
-        if (!digits) return '';
-        return Number(digits).toLocaleString('ru-RU');
+      const formatThousands = (digits) => {
+        const clean = String(digits || '').replace(/[^\d]/g, '');
+        if (!clean) return '';
+        return Number(clean).toLocaleString('en-US');
       };
       const steps = { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
       const draft = { photos: Array(5).fill('') };
@@ -3331,7 +3338,26 @@ class VoiceWidget extends HTMLElement {
         });
         refreshMainImage(imageList[0] || '');
       };
-      const attachInlineFieldActions = (fieldEl) => {
+      const setFieldError = (fieldEl, message) => {
+        if (!fieldEl) return;
+        const host = fieldEl.parentElement;
+        if (!host) return;
+        if (!fieldEl.dataset.defaultPlaceholder) {
+          fieldEl.dataset.defaultPlaceholder = String(fieldEl.getAttribute('placeholder') || '');
+        }
+        host.classList.add('is-invalid');
+        fieldEl.setAttribute('placeholder', message || 'Введите цифры');
+      };
+      const clearFieldError = (fieldEl) => {
+        if (!fieldEl) return;
+        const host = fieldEl.parentElement;
+        if (!host) return;
+        host.classList.remove('is-invalid');
+        if (fieldEl.dataset.defaultPlaceholder != null) {
+          fieldEl.setAttribute('placeholder', fieldEl.dataset.defaultPlaceholder);
+        }
+      };
+      const attachInlineFieldActions = (fieldEl, options = {}) => {
         if (!fieldEl || fieldEl.dataset.inlineActionsAttached === '1') return;
         const host = fieldEl.parentElement;
         if (!host) return;
@@ -3350,52 +3376,95 @@ class VoiceWidget extends HTMLElement {
         const sync = () => {
           const hasValue = String(fieldEl.value || '').trim().length > 0;
           const isFocused = document.activeElement === fieldEl;
-          host.classList.toggle('show-actions', hasValue || isFocused);
+          host.classList.toggle('show-actions', isFocused && hasValue);
         };
         clearBtn?.addEventListener('click', (event) => {
           event.preventDefault();
           fieldEl.value = '';
+          clearFieldError(fieldEl);
+          try { options.onClear?.(fieldEl); } catch {}
           fieldEl.dispatchEvent(new Event('input', { bubbles: true }));
           fieldEl.dispatchEvent(new Event('change', { bubbles: true }));
-          try { fieldEl.focus(); } catch {}
+          try { fieldEl.blur(); } catch {}
           sync();
         });
         applyBtn?.addEventListener('click', (event) => {
           event.preventDefault();
+          clearFieldError(fieldEl);
+          let canApply = true;
+          try { canApply = options.onApply ? options.onApply(fieldEl) !== false : true; } catch { canApply = false; }
+          if (!canApply) {
+            try { fieldEl.focus(); } catch {}
+            sync();
+            return;
+          }
           fieldEl.dispatchEvent(new Event('change', { bubbles: true }));
           try { fieldEl.blur(); } catch {}
           host.classList.add('is-applied');
           setTimeout(() => host.classList.remove('is-applied'), 260);
           sync();
         });
-        fieldEl.addEventListener('input', sync);
+        fieldEl.addEventListener('input', () => {
+          clearFieldError(fieldEl);
+          try { options.onInput?.(fieldEl); } catch {}
+          sync();
+        });
         fieldEl.addEventListener('focus', sync);
         fieldEl.addEventListener('blur', sync);
         sync();
         fieldEl.dataset.inlineActionsAttached = '1';
       };
-      textFields.forEach((fieldEl) => attachInlineFieldActions(fieldEl));
+      textFields.forEach((fieldEl) => {
+        if (fieldEl === priceInput) {
+          attachInlineFieldActions(fieldEl, {
+            onApply: (el) => {
+              const raw = String(el.value || '').trim();
+              if (!raw) return true;
+              if (/[^\d\s,.\u00A0]/.test(raw)) {
+                setFieldError(el, 'Введите цифры');
+                return false;
+              }
+              const digits = raw.replace(/[^\d]/g, '');
+              if (!digits) {
+                setFieldError(el, 'Введите цифры');
+                return false;
+              }
+              el.value = formatThousands(digits);
+              return true;
+            }
+          });
+          return;
+        }
+        if (fieldEl === areaInput) {
+          attachInlineFieldActions(fieldEl, {
+            onInput: (el) => {
+              el.value = String(el.value || '').replace(/\s*м²$/i, '');
+            },
+            onApply: (el) => {
+              const raw = String(el.value || '').replace(/\s*м²$/i, '').trim();
+              if (!raw) return true;
+              if (/[^\d\s,.\u00A0]/.test(raw)) {
+                setFieldError(el, 'Введите цифры');
+                return false;
+              }
+              const digits = raw.replace(/[^\d]/g, '');
+              if (!digits) {
+                setFieldError(el, 'Введите цифры');
+                return false;
+              }
+              el.value = `${formatThousands(digits)} м²`;
+              return true;
+            }
+          });
+          fieldEl.addEventListener('focus', () => {
+            fieldEl.value = String(fieldEl.value || '').replace(/\s*м²$/i, '');
+          });
+          return;
+        }
+        attachInlineFieldActions(fieldEl);
+      });
       appendFloorOptions(floorInput, 'Этаж');
       appendFloorOptions(floorsTotalInput, 'Этажность');
-      if (priceInput) {
-        priceInput.addEventListener('input', () => { priceInput.value = normalizeNumber(priceInput.value); });
-      }
-      if (roomsInput) {
-        roomsInput.addEventListener('input', () => { roomsInput.value = String(roomsInput.value || '').replace(/[^\d]/g, ''); });
-      }
-      if (areaInput) {
-        areaInput.addEventListener('input', () => {
-          const digits = String(areaInput.value || '').replace(/[^\d]/g, '');
-          areaInput.value = digits ? Number(digits).toLocaleString('ru-RU') : '';
-        });
-        areaInput.addEventListener('focus', () => {
-          areaInput.value = String(areaInput.value || '').replace(/\s*м²$/i, '');
-        });
-        areaInput.addEventListener('blur', () => {
-          const digits = String(areaInput.value || '').replace(/[^\d]/g, '');
-          areaInput.value = digits ? `${Number(digits).toLocaleString('ru-RU')} м²` : '';
-        });
-      }
       const updateSlot = (slot, fileName, imageData) => {
         if (!slot) return;
         if (!fileName) {
@@ -4202,12 +4271,12 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-add-input-actions {
         position: absolute;
-        right: 8px;
+        right: 10px;
         top: 50%;
         transform: translateY(-50%);
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 10px;
         opacity: 0;
         pointer-events: none;
         transition: opacity .16s ease;
@@ -4221,17 +4290,29 @@ class VoiceWidget extends HTMLElement {
         pointer-events: auto;
       }
       .vw-access-add-input-action {
-        width: 22px;
-        height: 22px;
-        border-radius: 999px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.24));
-        background: rgba(16, 22, 34, 0.74);
-        color: var(--text-primary, #fff);
-        font-size: .75rem;
+        min-width: 20px;
+        min-height: 20px;
+        border: 0;
+        background: transparent;
+        color: var(--text-secondary, rgba(255,255,255,0.78));
+        font-size: 1rem;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         line-height: 1;
+        padding: 0;
+      }
+      .vw-access-add-input-action:active {
+        transform: scale(.94);
+      }
+      .vw-access-add-field--with-actions.is-invalid .vw-access-add-input,
+      .vw-access-add-field--with-actions.is-invalid .vw-access-add-textarea {
+        border-color: rgba(236, 96, 96, 0.88);
+      }
+      .vw-access-add-field--with-actions.is-invalid .vw-access-add-input::placeholder,
+      .vw-access-add-field--with-actions.is-invalid .vw-access-add-textarea::placeholder {
+        color: rgba(236, 96, 96, 0.95);
       }
       .vw-access-add-field--with-actions.is-applied .vw-access-add-input {
         border-color: rgba(92, 150, 255, 0.8);
