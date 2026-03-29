@@ -1387,6 +1387,22 @@ class APIClient {
     return data;
   }
 
+  async fetchManualPropertyById(externalId) {
+    const safeId = String(externalId || '').trim();
+    if (!safeId) throw new Error('EXTERNAL_ID_REQUIRED');
+    const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, `/api/admin/properties/${encodeURIComponent(safeId)}`);
+    const url = new URL(base, window.location.origin);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) url.searchParams.set('tgUserId', String(tgIdentity.id));
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) url.searchParams.set('devAdmin', '1');
+    const res = await fetch(url.toString(), { method: 'GET' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `ADMIN_GET_FAILED_${res.status}`));
+    }
+    return data;
+  }
+
   _rememberProposed(cards) {
     if (Array.isArray(cards)) this.lastProposedCards = cards;
   }
@@ -3836,6 +3852,17 @@ class VoiceWidget extends HTMLElement {
       };
       const buildEditDraftFromProperty = (property) => {
         if (!property || typeof property !== 'object') return null;
+        const parseMaybeJson = (value) => {
+          if (value && typeof value === 'object') return value;
+          const raw = String(value || '').trim();
+          if (!raw) return {};
+          try {
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' ? parsed : {};
+          } catch {
+            return {};
+          }
+        };
         const parsePrice = () => {
           const fromPrice = Number(property.price);
           const fromEur = Number(property.priceEUR);
@@ -3861,21 +3888,21 @@ class VoiceWidget extends HTMLElement {
           const n = Number(property.building_floors);
           return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : '';
         };
-        const features = property.features && typeof property.features === 'object' ? property.features : {};
+        const features = parseMaybeJson(property.features);
         return {
           step: 1,
           values: {
-            'property-type': String(property.property_type || '').trim() || 'apartment',
-            'property-id': String(property.id || editPropertyId || '').trim(),
+            'property-type': String(property.property_type || property.propertyType || '').trim() || 'apartment',
+            'property-id': String(property.external_id || property.externalId || property.id || editPropertyId || '').trim(),
             title: String(property.title || property.description || '').trim(),
             price: parsePrice(),
             rooms: parseRooms(),
             area: parseArea(),
-            district: String(property.district || '').trim(),
+            district: String(property.district || property.location_district || '').trim(),
             floor: parseFloor(),
             'floors-total': parseFloorsTotal(),
             complex: String(features.complex || '').trim(),
-            microdistrict: String(property.neighborhood || '').trim(),
+            microdistrict: String(property.neighborhood || property.location_neighborhood || '').trim(),
             description: String(property.description || '').trim()
           },
           checks: {
@@ -4066,14 +4093,29 @@ class VoiceWidget extends HTMLElement {
         if (imageData) slot.style.backgroundImage = `url("${imageData}")`;
         slot.innerHTML = '';
       };
+      let editTouched = false;
+      const markEditTouched = () => { editTouched = true; };
+      overlay.addEventListener('input', markEditTouched, true);
+      overlay.addEventListener('change', markEditTouched, true);
       if (isEditProperty) {
+        overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
+          btn.style.display = 'none';
+        });
         try {
-          const editDraft = buildEditDraftFromProperty(editSourceProperty);
-          applyDraftState(editDraft);
-          overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
-            btn.style.display = 'none';
-          });
+          const fallbackDraft = buildEditDraftFromProperty(editSourceProperty);
+          if (fallbackDraft) applyDraftState(fallbackDraft);
         } catch {}
+        (async () => {
+          try {
+            const response = await this.api?.fetchManualPropertyById?.(editPropertyId);
+            const fullProperty = response?.property && typeof response.property === 'object'
+              ? response.property
+              : null;
+            if (!fullProperty || editTouched) return;
+            const fullDraft = buildEditDraftFromProperty(fullProperty);
+            if (fullDraft) applyDraftState(fullDraft);
+          } catch {}
+        })();
       } else {
         try { applyDraftState(this._addPropertyDraft); } catch {}
       }
