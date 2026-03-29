@@ -3372,16 +3372,6 @@ class VoiceWidget extends HTMLElement {
         });
       });
       overlay.querySelector('[data-role="add-to-step-2"]')?.addEventListener('click', () => {
-        const hasRequired = !!String(typeInput?.value || '').trim()
-          && !!String(titleInput?.value || '').trim()
-          && !!String(priceInput?.value || '').trim()
-          && !!String(roomsInput?.value || '').trim()
-          && !!String(areaInput?.value || '').trim()
-          && !!String(districtInput?.value || '').trim();
-        if (!hasRequired) {
-          this.ui?.showNotification?.('Заполните обязательные поля первого шага');
-          return;
-        }
         setStep(2);
       });
       overlay.querySelector('[data-role="add-draft"]')?.addEventListener('click', () => {
