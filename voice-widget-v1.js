@@ -3090,8 +3090,8 @@ class VoiceWidget extends HTMLElement {
                 <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="Опишите квартиру"></textarea>
               </label>
               <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-preview">Предпросмотр</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish">Опубликовать</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-preview">Предпросмотр</button>
               </div>
             </div>
 
@@ -3126,7 +3126,7 @@ class VoiceWidget extends HTMLElement {
                 </div>
               </div>
               <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-edit">Редактировать</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">Опубликовать</button>
               </div>
             </div>
@@ -3194,6 +3194,7 @@ class VoiceWidget extends HTMLElement {
         <div class="vw-access-add-head">
           <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
           <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
+          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">↺</button>
         </div>
       `
       : `
@@ -3229,11 +3230,20 @@ class VoiceWidget extends HTMLElement {
           if (stageLabel) stageLabel.textContent = labels[prevStep] || labels[1];
           return;
         }
+        if (typeof overlay._showAddExitDialog === 'function') {
+          overlay._showAddExitDialog();
+          return;
+        }
       }
       this.closeAccessSubOverlay();
     });
     overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) this.closeAccessSubOverlay();
+      if (event.target !== overlay) return;
+      if (isAddProperty && typeof overlay._showAddExitDialog === 'function') {
+        overlay._showAddExitDialog();
+        return;
+      }
+      this.closeAccessSubOverlay();
     });
 
     if (safeSection === 'properties') {
@@ -3386,6 +3396,34 @@ class VoiceWidget extends HTMLElement {
         wizard?.setAttribute('data-step', String(safeStep));
         if (stageLabel) stageLabel.textContent = steps[safeStep] || steps[1];
       };
+      const getStep = () => Number(wizard?.getAttribute('data-step') || '1');
+      const clearActiveDialogs = () => {
+        overlay.querySelectorAll('.vw-access-add-dialog-layer').forEach((node) => node.remove());
+      };
+      const showActionDialog = ({ title = '', buttons = [] } = {}) => {
+        clearActiveDialogs();
+        const layer = document.createElement('div');
+        layer.className = 'vw-access-add-dialog-layer';
+        const buttonsHtml = buttons.map((btn, idx) => `
+          <button type="button" class="vw-access-add-dialog-btn ${btn.variant ? `is-${btn.variant}` : ''}" data-action="${idx}">${btn.label}</button>
+        `).join('');
+        layer.innerHTML = `
+          <div class="vw-access-add-dialog">
+            <div class="vw-access-add-dialog-title">${title}</div>
+            <div class="vw-access-add-dialog-actions">${buttonsHtml}</div>
+          </div>
+        `;
+        overlay.appendChild(layer);
+        layer.addEventListener('click', (event) => {
+          if (event.target === layer) layer.remove();
+        });
+        buttons.forEach((btn, idx) => {
+          layer.querySelector(`[data-action="${idx}"]`)?.addEventListener('click', () => {
+            layer.remove();
+            try { btn.onClick?.(); } catch {}
+          });
+        });
+      };
       const appendFloorOptions = (selectEl, label) => {
         if (!selectEl) return;
         const opts = [`<option value="">${label}</option>`];
@@ -3393,6 +3431,94 @@ class VoiceWidget extends HTMLElement {
         selectEl.innerHTML = opts.join('');
       };
       const typeMap = { apartment: 'apartment', house: 'house' };
+      const resetForm = () => {
+        overlay.querySelectorAll('input, textarea, select').forEach((el) => {
+          if (el.matches('[readonly]') || el.getAttribute('data-role') === 'property-id') return;
+          if (el.type === 'checkbox') el.checked = false;
+          else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+          else el.value = '';
+        });
+        draft.photos = Array(5).fill('');
+        photoSlots.forEach((slot) => updateSlot(slot, '', ''));
+        clearActiveDialogs();
+        setStep(1);
+      };
+      const collectCurrentDraftState = () => {
+        const values = {};
+        overlay.querySelectorAll('input, textarea, select').forEach((el) => {
+          const role = String(el.getAttribute('data-role') || '').trim();
+          if (!role || role === 'photo-input' || role === 'photo-input-target') return;
+          if (el.type === 'checkbox') values[role] = !!el.checked;
+          else values[role] = String(el.value || '');
+        });
+        return { values, photos: [...draft.photos], step: getStep() };
+      };
+      const applyDraftState = (saved) => {
+        if (!saved || typeof saved !== 'object') return;
+        const values = saved.values && typeof saved.values === 'object' ? saved.values : {};
+        overlay.querySelectorAll('input, textarea, select').forEach((el) => {
+          const role = String(el.getAttribute('data-role') || '').trim();
+          if (!role || role === 'photo-input' || role === 'photo-input-target') return;
+          if (!(role in values)) return;
+          if (el.matches('[readonly]')) return;
+          if (el.type === 'checkbox') el.checked = !!values[role];
+          else el.value = String(values[role] || '');
+        });
+        if (Array.isArray(saved.photos)) {
+          draft.photos = saved.photos.slice(0, 5);
+          while (draft.photos.length < 5) draft.photos.push('');
+          photoSlots.forEach((slot, idx) => {
+            const src = draft.photos[idx] || '';
+            updateSlot(slot, src ? `photo_${idx + 1}` : '', src);
+          });
+        }
+        const step = Number(saved.step || 1);
+        setStep(step >= 1 && step <= 3 ? step : 1);
+      };
+      const hasUnsavedChanges = () => {
+        if (draft.photos.some(Boolean)) return true;
+        const inputs = Array.from(overlay.querySelectorAll('input, textarea, select'));
+        return inputs.some((el) => {
+          if (el.matches('[readonly]')) return false;
+          if (el.type === 'hidden' || el.type === 'file') return false;
+          if (el.type === 'checkbox') return !!el.checked;
+          if (el.tagName === 'SELECT') return el.selectedIndex > 0 && String(el.value || '').trim().length > 0;
+          return String(el.value || '').trim().length > 0;
+        });
+      };
+      const saveDraftAndExit = () => {
+        this._addPropertyDraft = collectCurrentDraftState();
+        this.ui?.showNotification?.('Черновик сохранен');
+        this.closeAccessSubOverlay();
+      };
+      const clearDraftAndExit = () => {
+        this._addPropertyDraft = null;
+        this.closeAccessSubOverlay();
+      };
+      overlay._showAddExitDialog = () => {
+        if (!hasUnsavedChanges()) {
+          this.closeAccessSubOverlay();
+          return;
+        }
+        showActionDialog({
+          title: 'Объявление не опубликовано. Что сделать?',
+          buttons: [
+            { label: 'Продолжить редактирование', variant: 'primary', onClick: () => {} },
+            { label: 'Сохранить в черновик', variant: 'neutral', onClick: saveDraftAndExit },
+            { label: 'Выйти без сохранения', variant: 'danger', onClick: clearDraftAndExit }
+          ]
+        });
+      };
+      const showResetDialog = () => {
+        if (!hasUnsavedChanges()) return;
+        showActionDialog({
+          title: 'Сбросить все изменения?',
+          buttons: [
+            { label: 'Сбросить изменения', variant: 'danger', onClick: resetForm },
+            { label: 'Продолжить редактирование', variant: 'primary', onClick: () => {} }
+          ]
+        });
+      };
       const getDraftData = () => {
         const areaRaw = String(areaInput?.value || '').replace(/\s*м²$/i, '').trim();
         return {
@@ -3570,6 +3696,7 @@ class VoiceWidget extends HTMLElement {
       });
       appendFloorOptions(floorInput, 'Этаж');
       appendFloorOptions(floorsTotalInput, 'Этажность');
+      try { applyDraftState(this._addPropertyDraft); } catch {}
       const updateSlot = (slot, fileName, imageData) => {
         if (!slot) return;
         if (!fileName) {
@@ -3613,40 +3740,33 @@ class VoiceWidget extends HTMLElement {
       overlay.querySelector('[data-role="add-to-step-2"]')?.addEventListener('click', () => {
         setStep(2);
       });
-      overlay.querySelector('[data-role="add-draft"]')?.addEventListener('click', () => {
-        this.ui?.showNotification?.('Черновик подключим на следующем этапе.');
+      overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
+        btn.addEventListener('click', () => saveDraftAndExit());
       });
       overlay.querySelector('[data-role="add-preview"]')?.addEventListener('click', () => {
         renderPreview();
         setStep(3);
       });
-      overlay.querySelector('[data-role="add-edit"]')?.addEventListener('click', () => {
-        setStep(2);
-      });
+      overlay.querySelector('[data-role="add-reset-head"]')?.addEventListener('click', () => showResetDialog());
       overlay.querySelector('[data-role="preview-description-btn"]')?.addEventListener('click', () => {
         const text = getDraftData().description;
         this.ui?.showNotification?.(text.length > 90 ? `${text.slice(0, 90)}...` : text);
       });
       const publish = () => {
+        this._addPropertyDraft = null;
+        clearActiveDialogs();
         setStep(4);
       };
-      overlay.querySelector('[data-role="add-publish"]')?.addEventListener('click', publish);
       overlay.querySelector('[data-role="add-publish-final"]')?.addEventListener('click', publish);
       overlay.querySelector('[data-role="add-more"]')?.addEventListener('click', () => {
-        overlay.querySelectorAll('input, textarea, select').forEach((el) => {
-          if (el.matches('[readonly]') || el.getAttribute('data-role') === 'property-id') return;
-          if (el.type === 'checkbox') el.checked = false;
-          else if (el.tagName === 'SELECT') el.selectedIndex = 0;
-          else el.value = '';
-        });
-        draft.photos = Array(5).fill('');
-        photoSlots.forEach((slot) => updateSlot(slot, '', ''));
-        setStep(1);
+        this._addPropertyDraft = null;
+        resetForm();
       });
       overlay.querySelector('[data-role="add-continue"]')?.addEventListener('click', () => {
+        this._addPropertyDraft = null;
         this.closeAccessSubOverlay();
       });
-      setStep(1);
+      if (!this._addPropertyDraft) setStep(1);
     }
   }
 
@@ -4209,18 +4329,28 @@ class VoiceWidget extends HTMLElement {
         touch-action: pan-y manipulation;
       }
       .vw-access-add-head {
-        display: flex;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 20px;
       }
       .vw-access-add-stage {
-        justify-self: start;
+        justify-self: center;
         min-height: 30px;
         color: var(--text-secondary, rgba(255,255,255,0.7));
         display: inline-flex;
         align-items: center;
         padding: 0 10px;
         font-size: .83rem;
+      }
+      .vw-access-add-reset-head {
+        min-height: 30px;
+        border-radius: 10px;
+        border: 1px solid rgba(236, 96, 96, 0.78);
+        background: rgba(236, 96, 96, 0.12);
+        color: rgba(255,255,255,0.88);
+        padding: 0 12px;
+        font-size: .95rem;
       }
       .vw-access-add-form {
         display: grid;
@@ -4564,6 +4694,55 @@ class VoiceWidget extends HTMLElement {
       .vw-access-add-success-text {
         color: var(--text-secondary, rgba(255,255,255,0.78));
         line-height: 1.45;
+      }
+      .vw-access-add-dialog-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 1410;
+        background: rgba(0, 0, 0, 0.56);
+        display: grid;
+        place-items: center;
+        padding: 16px;
+      }
+      .vw-access-add-dialog {
+        width: min(360px, 100%);
+        border-radius: 16px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 92%, transparent);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+      }
+      .vw-access-add-dialog-title {
+        color: var(--text-secondary, rgba(255,255,255,0.78));
+        font-size: .9rem;
+        line-height: 1.4;
+      }
+      .vw-access-add-dialog-actions {
+        display: grid;
+        gap: 10px;
+      }
+      .vw-access-add-dialog-btn {
+        min-height: 40px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 12px;
+        font-size: .9rem;
+      }
+      .vw-access-add-dialog-btn.is-primary {
+        border-color: rgba(92, 150, 255, 0.72);
+        background: rgba(92, 150, 255, 0.2);
+      }
+      .vw-access-add-dialog-btn.is-neutral {
+        border-color: var(--border-light, rgba(255,255,255,0.22));
+      }
+      .vw-access-add-dialog-btn.is-danger {
+        border-color: rgba(236, 96, 96, 0.82);
+        background: rgba(236, 96, 96, 0.14);
       }
       .vw-access-obj-list {
         display: grid;
