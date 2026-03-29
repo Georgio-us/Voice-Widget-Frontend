@@ -2440,7 +2440,6 @@ class VoiceWidget extends HTMLElement {
     this._pillCtaTimer = null;
     this._lastPillInsightsSnapshot = null;
     this._catalogManualFilterOverrides = null;
-    this._allPropertiesUnfilteredCache = [];
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
@@ -3061,10 +3060,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   getAdminObjectsMockList() {
-    const cached = Array.isArray(this._allPropertiesUnfilteredCache) ? this._allPropertiesUnfilteredCache : [];
-    const list = cached.length
-      ? cached
-      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
+    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
     const usdRate = 41;
     const objects = list
       .map((item, idx) => {
@@ -4364,76 +4360,6 @@ class VoiceWidget extends HTMLElement {
     };
   }
 
-  applyFiltersOverlayPayload(overlay, payload = {}) {
-    if (!overlay || !payload || typeof payload !== 'object') return;
-    const setPicker = (picker, value) => {
-      const selectEl = overlay.querySelector(`select[data-picker="${picker}"]`);
-      if (!selectEl) return;
-      const safe = String(value || '').trim();
-      if (!safe) return;
-      const hasOption = Array.from(selectEl.options || []).some((opt) => String(opt.value) === safe);
-      if (!hasOption) {
-        const opt = document.createElement('option');
-        opt.value = safe;
-        opt.textContent = safe;
-        selectEl.appendChild(opt);
-      }
-      selectEl.value = safe;
-    };
-    const setSelect = (role, value) => {
-      const selectEl = overlay.querySelector(`[data-role="${role}"]`);
-      if (!selectEl) return;
-      const safe = String(value || '').trim();
-      if (!safe) return;
-      const hasOption = Array.from(selectEl.options || []).some((opt) => String(opt.value) === safe);
-      if (!hasOption) {
-        const opt = document.createElement('option');
-        opt.value = safe;
-        opt.textContent = safe;
-        selectEl.appendChild(opt);
-      }
-      selectEl.value = safe;
-    };
-    const setCheck = (role, checked) => {
-      const el = overlay.querySelector(`[data-role="${role}"]`);
-      if (el) el.checked = !!checked;
-    };
-    setPicker('priceMin', payload.priceFrom);
-    setPicker('priceMax', payload.priceTo);
-    setPicker('areaMin', payload.areaFrom);
-    setPicker('areaMax', payload.areaTo);
-    setPicker('floorMin', payload.floorFrom);
-    setPicker('floorMax', payload.floorTo);
-    setSelect('rooms', payload.rooms);
-    setSelect('district', payload.district);
-    setSelect('rcSearch', payload.residentialComplex);
-    setCheck('smart', payload.smart);
-    setCheck('arcadia', payload.arcadia);
-    setCheck('rcOnly', payload.residentialComplexOnly);
-    this.syncFilterPickerLabels(overlay);
-  }
-
-  buildFiltersOverlayPayloadFromOverrides() {
-    const o = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
-      ? this._catalogManualFilterOverrides
-      : null;
-    if (!o) return null;
-    return {
-      priceFrom: o.minPrice != null ? String(o.minPrice) : '',
-      priceTo: o.maxPrice != null ? String(o.maxPrice) : '',
-      areaFrom: o.minArea != null ? String(o.minArea) : '',
-      areaTo: o.maxArea != null ? String(o.maxArea) : '',
-      floorFrom: o.minFloor != null ? String(o.minFloor) : '',
-      floorTo: o.maxFloor != null ? String(o.maxFloor) : '',
-      rooms: o.rooms != null ? String(o.rooms) : '',
-      smart: o.smart === true,
-      district: o.district != null ? String(o.district) : '',
-      arcadia: o.arcadia === true,
-      residentialComplexOnly: o.rcOnly === true,
-      residentialComplex: o.residentialComplex != null ? String(o.residentialComplex) : ''
-    };
-  }
-
   normalizeCatalogFilterOverrides(raw = {}) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const parseNum = (value) => {
@@ -4840,9 +4766,7 @@ class VoiceWidget extends HTMLElement {
       const pickerType = String(sel.getAttribute('data-picker') || '');
       this.fillFilterPickerSelect(sel, pickerType);
     });
-    const persisted = this.buildFiltersOverlayPayloadFromOverrides();
-    if (persisted) this.applyFiltersOverlayPayload(overlay, persisted);
-    else this.resetFiltersOverlayForm(overlay);
+    this.resetFiltersOverlayForm(overlay);
     this.bindFiltersOverlayEvents(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
     overlay.addEventListener('click', (event) => {
@@ -7117,7 +7041,6 @@ render() {
         const data = await response.json().catch(() => ({}));
         const list = this._extractPropertiesList(data);
         if (Array.isArray(list) && list.length) {
-          this._allPropertiesUnfilteredCache = list.map((item) => this._toCardEngineShape(item));
           console.log('Properties loaded from:', endpoint, 'count:', list.length);
           return list;
         }
