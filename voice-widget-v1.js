@@ -2168,6 +2168,7 @@ const LOCALES = {
     accessAdminProperties: 'Мои объекты',
     accessAdminSubscription: 'Управление подпиской',
     accessAdminOlxConnect: 'Подключить OLX',
+    accessAdminOlxConnectOpening: 'Открываю OLX...',
     accessAdminOlxConnected: 'OLX подключен (переподключить)',
     accessAdminOlxChecking: 'Проверяю OLX...',
     accessAdminOlxError: 'Не удалось проверить статус OLX',
@@ -2297,6 +2298,7 @@ const LOCALES = {
     accessAdminProperties: "Мої об'єкти",
     accessAdminSubscription: 'Керування підпискою',
     accessAdminOlxConnect: 'Підключити OLX',
+    accessAdminOlxConnectOpening: 'Відкриваю OLX...',
     accessAdminOlxConnected: 'OLX підключено (перепідключити)',
     accessAdminOlxChecking: 'Перевіряю OLX...',
     accessAdminOlxError: 'Не вдалося перевірити статус OLX',
@@ -2990,6 +2992,18 @@ class VoiceWidget extends HTMLElement {
     return url.toString();
   }
 
+  setAccessButtonLabel(button, text) {
+    if (!button) return;
+    const labelEl = button.querySelector('.vw-access-item__label');
+    if (labelEl) labelEl.textContent = String(text || '');
+    else button.textContent = String(text || '');
+  }
+
+  setAccessButtonBusy(button, busy = false) {
+    if (!button) return;
+    button.classList.toggle('is-busy', !!busy);
+  }
+
   async refreshOlxStatusButton(button, syncButton = null) {
     if (!button) return false;
     const locale = this.getCurrentLocale();
@@ -2997,16 +3011,16 @@ class VoiceWidget extends HTMLElement {
     const backendBase = this.getBackendBaseUrl();
 
     if (!backendBase || !tgUser?.id) {
-      button.textContent = locale.accessAdminOlxConnect || 'Connect OLX';
+      this.setAccessButtonLabel(button, locale.accessAdminOlxConnect || 'Connect OLX');
       button.disabled = false;
       if (syncButton) {
-        syncButton.disabled = true;
-        syncButton.textContent = locale.accessAdminOlxSyncLocked || 'Connect OLX first';
+        syncButton.disabled = false;
+        this.setAccessButtonLabel(syncButton, locale.accessAdminOlxSync || 'Import OLX adverts');
       }
       return false;
     }
 
-    button.textContent = locale.accessAdminOlxChecking || 'Checking OLX...';
+    this.setAccessButtonLabel(button, locale.accessAdminOlxChecking || 'Checking OLX...');
     button.disabled = true;
     try {
       const statusUrl = new URL(`${backendBase}/api/olx/status`);
@@ -3014,39 +3028,39 @@ class VoiceWidget extends HTMLElement {
       const response = await fetch(statusUrl.toString());
       const payload = await response.json().catch(() => ({}));
       const connected = Boolean(response.ok && payload?.ok && payload?.connected);
-      button.textContent = connected
+      this.setAccessButtonLabel(button, connected
         ? (locale.accessAdminOlxConnected || 'OLX connected (reconnect)')
-        : (locale.accessAdminOlxConnect || 'Connect OLX');
+        : (locale.accessAdminOlxConnect || 'Connect OLX'));
       button.disabled = false;
       if (syncButton) {
-        syncButton.disabled = !connected;
-        syncButton.textContent = connected
-          ? (locale.accessAdminOlxSync || 'Import OLX adverts')
-          : (locale.accessAdminOlxSyncLocked || 'Connect OLX first');
+        syncButton.disabled = false;
+        this.setAccessButtonLabel(syncButton, locale.accessAdminOlxSync || 'Import OLX adverts');
       }
       return connected;
     } catch {
-      button.textContent = locale.accessAdminOlxConnect || 'Connect OLX';
+      this.setAccessButtonLabel(button, locale.accessAdminOlxConnect || 'Connect OLX');
       button.disabled = false;
       if (syncButton) {
-        syncButton.disabled = true;
-        syncButton.textContent = locale.accessAdminOlxSyncLocked || 'Connect OLX first';
+        syncButton.disabled = false;
+        this.setAccessButtonLabel(syncButton, locale.accessAdminOlxSync || 'Import OLX adverts');
       }
       this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxError || 'Failed to check OLX status'}`);
       return false;
     }
   }
 
-  openOlxConnectFlow() {
+  openOlxConnectFlow(button = null) {
     const url = this.buildOlxConnectUrl();
     if (!url) {
       this.ui?.showNotification?.('⚠️ OLX URL is not configured');
       return;
     }
+    this.setAccessButtonBusy(button, true);
+    this.setAccessButtonLabel(button, this.t('accessAdminOlxConnectOpening') || 'Opening OLX...');
     window.location.href = url;
   }
 
-  async syncOlxAdverts() {
+  async syncOlxAdverts(button = null) {
     const locale = this.getCurrentLocale();
     const tgUser = this.getCurrentTelegramUser();
     const backendBase = this.getBackendBaseUrl();
@@ -3055,6 +3069,8 @@ class VoiceWidget extends HTMLElement {
       return;
     }
 
+    this.setAccessButtonBusy(button, true);
+    this.setAccessButtonLabel(button, locale.accessAdminOlxSyncing || 'Syncing OLX adverts...');
     this.ui?.showNotification?.(`⏳ ${locale.accessAdminOlxSyncing || 'Syncing OLX adverts...'}`);
     try {
       const url = new URL(`${backendBase}/api/olx/sync`);
@@ -3073,7 +3089,15 @@ class VoiceWidget extends HTMLElement {
       } catch {}
     } catch (error) {
       console.warn('syncOlxAdverts failed:', error);
+      const message = String(error?.message || '');
+      if (message.includes('OLX_NOT_CONNECTED')) {
+        this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxSyncLocked || 'Connect OLX first'}`);
+        return;
+      }
       this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxSyncFailed || 'Failed to sync OLX adverts'}`);
+    } finally {
+      this.setAccessButtonBusy(button, false);
+      this.setAccessButtonLabel(button, locale.accessAdminOlxSync || 'Import OLX adverts');
     }
   }
 
@@ -4989,8 +5013,41 @@ class VoiceWidget extends HTMLElement {
         border-radius: 12px;
         padding: 10px 12px;
         text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         font-size: .86rem;
         font-weight: 500;
+        cursor: pointer;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        transition: transform .08s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease;
+      }
+      .vw-access-item:hover {
+        border-color: rgba(255,255,255,0.28);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.24);
+      }
+      .vw-access-item:active {
+        transform: translateY(1px) scale(0.995);
+      }
+      .vw-access-item:focus-visible {
+        outline: none;
+        border-color: rgba(92, 150, 255, 0.88);
+        box-shadow: 0 0 0 2px rgba(92, 150, 255, 0.28);
+      }
+      .vw-access-item.is-busy {
+        opacity: .72;
+        pointer-events: none;
+      }
+      .vw-access-item__icon {
+        width: 1.2em;
+        min-width: 1.2em;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .vw-access-item__label {
+        flex: 1;
       }
       .vw-access-item--primary {
         border-color: rgba(45, 143, 225, 0.65);
@@ -5637,12 +5694,12 @@ class VoiceWidget extends HTMLElement {
           </div>
           <div class="vw-access-greeting">${greeting}</div>
           <div class="vw-access-list">
-            <button type="button" class="vw-access-item vw-access-item--primary" data-role="admin-add-property">Добавить объект</button>
-            <button type="button" class="vw-access-item" data-role="admin-stats">${locale.accessAdminStats || 'Статистика'}</button>
-            <button type="button" class="vw-access-item" data-role="admin-properties">${locale.accessAdminProperties || "Мої об'єкти"}</button>
-            <button type="button" class="vw-access-item" data-role="admin-subscription">${locale.accessAdminSubscription || 'Керування підпискою'}</button>
-            <button type="button" class="vw-access-item" data-role="olx-connect">${locale.accessAdminOlxConnect || 'Подключить OLX'}</button>
-            <button type="button" class="vw-access-item" data-role="olx-sync">${locale.accessAdminOlxSync || 'Импортировать объекты OLX'}</button>
+            <button type="button" class="vw-access-item vw-access-item--primary" data-role="admin-add-property"><span class="vw-access-item__icon" aria-hidden="true">➕</span><span class="vw-access-item__label">Добавить объект</span></button>
+            <button type="button" class="vw-access-item" data-role="admin-stats"><span class="vw-access-item__icon" aria-hidden="true">📊</span><span class="vw-access-item__label">${locale.accessAdminStats || 'Статистика'}</span></button>
+            <button type="button" class="vw-access-item" data-role="admin-properties"><span class="vw-access-item__icon" aria-hidden="true">🏠</span><span class="vw-access-item__label">${locale.accessAdminProperties || "Мої об'єкти"}</span></button>
+            <button type="button" class="vw-access-item" data-role="admin-subscription"><span class="vw-access-item__icon" aria-hidden="true">💳</span><span class="vw-access-item__label">${locale.accessAdminSubscription || 'Керування підпискою'}</span></button>
+            <button type="button" class="vw-access-item" data-role="olx-connect"><span class="vw-access-item__icon" aria-hidden="true">🔗</span><span class="vw-access-item__label">${locale.accessAdminOlxConnect || 'Подключить OLX'}</span></button>
+            <button type="button" class="vw-access-item" data-role="olx-sync"><span class="vw-access-item__icon" aria-hidden="true">⬇️</span><span class="vw-access-item__label">${locale.accessAdminOlxSync || 'Импортировать объекты OLX'}</span></button>
           </div>
         </div>
       `
@@ -5663,13 +5720,13 @@ class VoiceWidget extends HTMLElement {
     const olxConnectBtn = overlay.querySelector('[data-role="olx-connect"]');
     const olxSyncBtn = overlay.querySelector('[data-role="olx-sync"]');
     if (olxConnectBtn) {
-      olxConnectBtn.addEventListener('click', () => this.openOlxConnectFlow());
+      olxConnectBtn.addEventListener('click', () => this.openOlxConnectFlow(olxConnectBtn));
       this.refreshOlxStatusButton(olxConnectBtn, olxSyncBtn || null).catch(() => {});
     }
     if (olxSyncBtn) {
-      olxSyncBtn.disabled = true;
-      olxSyncBtn.textContent = locale.accessAdminOlxSyncLocked || 'Connect OLX first';
-      olxSyncBtn.addEventListener('click', () => this.syncOlxAdverts());
+      olxSyncBtn.disabled = false;
+      this.setAccessButtonLabel(olxSyncBtn, locale.accessAdminOlxSync || 'Import OLX adverts');
+      olxSyncBtn.addEventListener('click', () => this.syncOlxAdverts(olxSyncBtn));
     }
     overlay.querySelector('[data-role="admin-add-property"]')?.addEventListener('click', () => this.openAccessSubOverlay('add-property'));
     overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
