@@ -4221,6 +4221,19 @@ class VoiceWidget extends HTMLElement {
         const index = Number(targetInput?.value || '-1');
         const file = fileInput?.files?.[0];
         if (!Number.isFinite(index) || index < 0 || !file) return;
+        const fileSizeMb = Number(file.size || 0) / (1024 * 1024);
+        const warnLimitMb = 5;
+        if (fileSizeMb > warnLimitMb) {
+          const readableSize = fileSizeMb.toFixed(2);
+          const proceed = window.confirm(
+            `Фото "${file.name}" весит ${readableSize} MB.\nЭто больше рекомендуемых ${warnLimitMb} MB.\n\nПродолжить и добавить фото?`
+          );
+          if (!proceed) {
+            fileInput.value = '';
+            return;
+          }
+          this.ui?.showNotification?.(`⚠️ Добавлено большое фото: ${readableSize}MB`);
+        }
         draft.photoFiles[index] = file;
         const reader = new FileReader();
         reader.onload = () => {
@@ -4298,11 +4311,17 @@ class VoiceWidget extends HTMLElement {
           this.ui?.showNotification?.(isEditProperty ? 'Изменения опубликованы' : 'Объект опубликован');
         } catch (error) {
           const msg = String(error?.message || '');
+          const imageTooLargeMatch = msg.match(/IMAGE_TOO_LARGE_MAX_(\d+)MB/i);
+          const maxImageMb = imageTooLargeMatch?.[1] ? Number(imageTooLargeMatch[1]) : null;
           const hint = msg.includes('FORBIDDEN_ADMIN_ONLY')
             ? 'Нет прав администратора для публикации'
-            : (msg.includes('IMAGE_TOO_LARGE_MAX_5MB')
-              ? 'Фото > 5MB. Уменьшите размер'
-              : 'Не удалось опубликовать объект');
+            : (imageTooLargeMatch
+              ? `Фото > ${Number.isFinite(maxImageMb) ? maxImageMb : 5}MB. Уменьшите размер`
+              : (msg.includes('_413')
+                ? 'Слишком большой общий размер загрузки. Уменьшите количество/размер фото'
+                : 'Не удалось опубликовать объект'
+              )
+            );
           this.ui?.showNotification?.(hint);
         } finally {
           if (publishBtn) {
