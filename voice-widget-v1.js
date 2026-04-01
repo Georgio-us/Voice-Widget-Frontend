@@ -2681,7 +2681,7 @@ class VoiceWidget extends HTMLElement {
     if (!propId) return false;
     const source = this.getCatalogPropertyById(propId);
     const normalized = this.normalizeCardData(source || { id: propId });
-    const titleLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || 'Property';
+    const titleLeft = this._cardFrontHeadline(normalized) || propId || 'Property';
     const title = normalized.priceLabel ? `${titleLeft} — ${normalized.priceLabel}` : titleLeft;
     const shareUrl = this.buildTelegramPropertyLink(propId);
     if (!shareUrl) return false;
@@ -3330,7 +3330,7 @@ class VoiceWidget extends HTMLElement {
                 <label class="vw-access-add-check-item"><input type="checkbox" name="smartFlat"><span>Смарт-квартира</span></label>
                 <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>Терраса</span></label>
                 <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>Новострой</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>Паркоместо</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>Есть паркинг</span></label>
               </div>
               <label class="vw-access-add-field">
                 <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="Опишите квартиру"></textarea>
@@ -3356,7 +3356,7 @@ class VoiceWidget extends HTMLElement {
                 </div>
                 <div class="vw-access-preview-body">
                   <div class="vw-access-preview-row">
-                    <div class="vw-access-preview-title" data-role="preview-title">Одеса, apartment</div>
+                    <div class="vw-access-preview-title" data-role="preview-title">—</div>
                     <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
                   </div>
                   <div class="vw-access-preview-row">
@@ -3936,14 +3936,15 @@ class VoiceWidget extends HTMLElement {
       };
       const getDraftData = () => {
         const areaRaw = String(areaInput?.value || '').replace(/\s*м²$/i, '').trim();
+        const priceRaw = String(priceInput?.value || '').replace(/\s*USD\s*$/i, '').trim();
         const pickCheck = (name) => !!overlay.querySelector(`.vw-access-add-check-grid input[name="${name}"]`)?.checked;
         const opRaw = String(overlay.querySelector('[data-role="listing-operation"]')?.value || '').trim().toLowerCase();
         return {
           id: String(reservedIdInput?.value || (isEditProperty ? editPropertyId : '') || '').trim() || '—',
           operation: opRaw === 'rent' ? 'rent' : 'sale',
-          title: String(titleInput?.value || '').trim() || 'Одеса, apartment',
+          title: String(titleInput?.value || '').trim(),
           district: String(districtInput?.value || '').trim() || '—',
-          price: String(priceInput?.value || '').trim() || '0',
+          price: priceRaw || '0',
           rooms: String(roomsInput?.value || '').trim() || '0',
           area: areaRaw || '0',
           floor: String(floorInput?.value || '').trim() || '0',
@@ -4053,7 +4054,8 @@ class VoiceWidget extends HTMLElement {
           .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         const imageList = data.photos.length ? data.photos : [''];
         overlay.querySelector('[data-role="preview-id"]') && (overlay.querySelector('[data-role="preview-id"]').textContent = data.id);
-        overlay.querySelector('[data-role="preview-title"]') && (overlay.querySelector('[data-role="preview-title"]').textContent = `Одеса, ${data.type}`);
+        const previewHeadline = String(titleInput?.value || '').trim() || '—';
+        overlay.querySelector('[data-role="preview-title"]') && (overlay.querySelector('[data-role="preview-title"]').textContent = previewHeadline);
         overlay.querySelector('[data-role="preview-price"]') && (overlay.querySelector('[data-role="preview-price"]').textContent = `${fmtPrice} USD`);
         overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = data.district);
         overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
@@ -4150,22 +4152,40 @@ class VoiceWidget extends HTMLElement {
       };
       textFields.forEach((fieldEl) => {
         if (fieldEl === priceInput) {
-          attachInlineFieldActions(fieldEl, {
-            onApply: (el) => {
-              const raw = String(el.value || '').trim();
-              if (!raw) return true;
-              if (/[^\d\s,.\u00A0]/.test(raw)) {
-                setFieldError(el, 'Введите цифры');
-                return false;
-              }
-              const digits = raw.replace(/[^\d]/g, '');
-              if (!digits) {
-                setFieldError(el, 'Введите цифры');
-                return false;
-              }
-              el.value = formatThousands(digits);
+          const stripPriceSuffix = (el) => {
+            el.value = String(el.value || '').replace(/\s*USD\s*$/i, '').trim();
+          };
+          const applyPriceFormatting = (el) => {
+            const raw = String(el.value || '').replace(/\s*USD\s*$/i, '').trim();
+            if (!raw) {
+              el.value = '';
               return true;
             }
+            if (/[^\d\s,.\u00A0]/.test(raw)) {
+              setFieldError(el, 'Введите цифры');
+              return false;
+            }
+            const digits = raw.replace(/[^\d]/g, '');
+            if (!digits) {
+              setFieldError(el, 'Введите цифры');
+              return false;
+            }
+            el.value = `${formatThousands(digits)} USD`;
+            return true;
+          };
+          attachInlineFieldActions(fieldEl, {
+            onInput: (el) => {
+              el.value = String(el.value || '').replace(/\s*USD\s*$/i, '');
+            },
+            onApply: (el) => applyPriceFormatting(el)
+          });
+          fieldEl.addEventListener('focus', () => {
+            stripPriceSuffix(fieldEl);
+          });
+          fieldEl.addEventListener('blur', () => {
+            const raw = String(fieldEl.value || '').replace(/\s*USD\s*$/i, '').trim();
+            if (!raw) return;
+            applyPriceFormatting(fieldEl);
           });
           return;
         }
@@ -7740,6 +7760,10 @@ render() {
     return host;
   }
 
+  _cardFrontHeadline(normalized = {}) {
+    return String(normalized.title ?? '').trim();
+  }
+
   // Add single card as slide into slider
   addCardSlide(normalized, options = {}) {
     const { suppressAutoscroll = false } = options || {};
@@ -7757,7 +7781,9 @@ render() {
     const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
     const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
     while (assetSlots.length < 4) assetSlots.push('');
-    const headerLeft = [normalized.city, normalized.propertyType].filter(Boolean).join(', ') || normalized.city || normalized.propertyType || '';
+    const escCardText = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escCardAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const headlineTitle = this._cardFrontHeadline(normalized);
     const districtLine = normalized.district || normalized.neighborhood || '';
     const scoreValue = (() => {
       const raw = Number(normalized.score);
@@ -7818,13 +7844,13 @@ render() {
               -->
             </div>
             <div class="cs-image-click-area">
-              <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+              <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">` : 'Put image here'}</div>
             </div>
             <div class="card-front-assets">${assetTilesHtml}</div>
           </div>
           <div class="cs-body">
             <div class="cs-row cs-row--top">
-              <div class="cs-title">${headerLeft}</div>
+              <div class="cs-title">${escCardText(headlineTitle || '—')}</div>
               <div class="cs-price-badges">
                 <div class="cs-inline-price cs-inline-price--total">${normalized.priceLabel || ''}</div>
               </div>
@@ -9209,6 +9235,7 @@ render() {
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
+    const title = String(raw.title ?? '').trim();
     const rawFeatures = parseObject(raw.features) || {};
     const furnishedRaw = raw.furnished;
     const furnishedBool = furnishedRaw === true || furnishedRaw === 'true' || furnishedRaw === 1 || furnishedRaw === '1';
@@ -9274,6 +9301,7 @@ render() {
       city,
       district,
       neighborhood,
+      title,
       description: raw.description || '',
       rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || ''),
       roomsLabel,
