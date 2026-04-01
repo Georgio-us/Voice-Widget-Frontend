@@ -1464,6 +1464,21 @@ class APIClient {
     return data;
   }
 
+  async deleteResidentialComplex(id) {
+    const safeId = String(id ?? '').trim();
+    if (!safeId) throw new Error('RC_ID_REQUIRED');
+    const base = this._deriveAdminApiBase();
+    const u = this._appendAdminAuthToUrl(
+      new URL(`${base}/residential-complexes/${encodeURIComponent(safeId)}`)
+    );
+    const res = await fetch(u.toString(), { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `RC_DELETE_${res.status}`));
+    }
+    return data;
+  }
+
   _rememberProposed(cards) {
     if (Array.isArray(cards)) this.lastProposedCards = cards;
   }
@@ -4366,24 +4381,48 @@ class VoiceWidget extends HTMLElement {
             border: 1px solid var(--border-light, rgba(255,255,255,0.12));
             background: var(--bg-element, rgba(255,255,255,0.06));
           }
-          .vw-access-rc-row {
-            width: 100%;
-            display: block;
-            text-align: left;
-            padding: 12px 14px;
-            border: 0;
+          .vw-access-rc-row-wrap {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
             border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.08));
+          }
+          .vw-access-rc-row-wrap:last-child {
+            border-bottom: none;
+          }
+          .vw-access-rc-row--main {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+            padding: 12px 4px 12px 14px;
+            border: 0;
             background: transparent;
             color: var(--text-primary, #fff);
             font: inherit;
             font-size: .95rem;
             cursor: pointer;
           }
-          .vw-access-rc-row:last-child {
-            border-bottom: none;
-          }
-          .vw-access-rc-row:active {
+          .vw-access-rc-row--main:active {
             background: rgba(92, 150, 255, 0.12);
+          }
+          .vw-access-rc-row-delete {
+            flex: 0 0 auto;
+            align-self: center;
+            margin-right: 10px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(220, 100, 100, 0.45);
+            background: rgba(180, 45, 45, 0.35);
+            color: #ffb4b4;
+            font: inherit;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            cursor: pointer;
+            white-space: nowrap;
+          }
+          .vw-access-rc-row-delete:active {
+            background: rgba(200, 55, 55, 0.5);
           }
           .vw-access-rc-empty {
             padding: 14px;
@@ -4459,12 +4498,41 @@ class VoiceWidget extends HTMLElement {
               return;
             }
             listEl.innerHTML = arr.map((row) => {
-              const n = String(row?.name || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-              const safe = String(row?.name || '').replace(/"/g, '&quot;');
-              return '<button type="button" class="vw-access-rc-row" data-name="' + safe + '">' + n + '</button>';
+              const id = String(row?.id ?? '').trim();
+              const nameRaw = String(row?.name || '');
+              const nameHtml = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+              return (
+                '<div class="vw-access-rc-row-wrap" role="presentation">' +
+                `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}">${nameHtml}</button>` +
+                `<button type="button" class="vw-access-rc-row-delete" data-rc-id="${id.replace(/"/g, '&quot;')}" aria-label="Удалить из справочника">Удалить</button>` +
+                '</div>'
+              );
             }).join('');
-            listEl.querySelectorAll('.vw-access-rc-row').forEach((btn) => {
-              btn.addEventListener('click', () => bindRow(btn.getAttribute('data-name')));
+            listEl.querySelectorAll('.vw-access-rc-row--main').forEach((btn) => {
+              btn.addEventListener('click', () => bindRow(btn.textContent));
+            });
+            listEl.querySelectorAll('.vw-access-rc-row-delete').forEach((delBtn) => {
+              delBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const rid = String(delBtn.getAttribute('data-rc-id') || '').trim();
+                const row = arr.find((r) => String(r?.id ?? '') === rid);
+                const nm = String(row?.name || delBtn.closest('.vw-access-rc-row-wrap')?.querySelector('.vw-access-rc-row--main')?.textContent || '').trim();
+                if (!rid) return;
+                if (!window.confirm(`Удалить «${nm || 'этот ЖК'}» из справочника?`)) return;
+                try {
+                  await this.api?.deleteResidentialComplex?.(rid);
+                  const cur = String(complexHidden?.value || '').trim();
+                  if (cur && nm && cur === nm) {
+                    if (complexHidden) complexHidden.value = '';
+                    updateComplexLabel();
+                  }
+                  this.ui?.showNotification?.('ЖК удалён из списка');
+                  await loadList(String(searchEl?.value || '').trim());
+                } catch (err) {
+                  console.warn('rc.delete', err);
+                  this.ui?.showNotification?.('Не удалось удалить ЖК');
+                }
+              });
             });
           };
           const loadList = async (q = '') => {
