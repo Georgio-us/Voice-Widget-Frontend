@@ -1410,6 +1410,60 @@ class APIClient {
     return data;
   }
 
+  _deriveAdminApiBase() {
+    try {
+      const u = new URL(String(this.apiUrl));
+      u.pathname = u.pathname.replace(/\/api\/audio\/upload\/?$/i, '/api/admin');
+      return u.toString().replace(/\/$/, '');
+    } catch {
+      return String(this.apiUrl)
+        .replace(/\/api\/audio\/upload\/?$/i, '/api/admin')
+        .replace(/\/$/, '');
+    }
+  }
+
+  _appendAdminAuthToUrl(url) {
+    const u = url instanceof URL ? url : new URL(String(url), window.location.origin);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) u.searchParams.set('tgUserId', String(tgIdentity.id));
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) u.searchParams.set('devAdmin', '1');
+    return u;
+  }
+
+  async fetchResidentialComplexes(params = {}) {
+    const base = this._deriveAdminApiBase();
+    const u = new URL(`${base}/residential-complexes`);
+    const q = String(params.q || '').trim();
+    if (q) u.searchParams.set('q', q);
+    if (params.limit != null) u.searchParams.set('limit', String(params.limit));
+    this._appendAdminAuthToUrl(u);
+    const res = await fetch(u.toString());
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `RC_LIST_${res.status}`));
+    }
+    return Array.isArray(data.items) ? data.items : [];
+  }
+
+  async createResidentialComplex(name) {
+    const base = this._deriveAdminApiBase();
+    const u = this._appendAdminAuthToUrl(new URL(`${base}/residential-complexes`));
+    const tgIdentity = this.getTelegramUserIdentity();
+    const payload = { name: String(name || '').trim() };
+    if (tgIdentity?.id) payload.tgUserId = tgIdentity.id;
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) payload.devAdmin = '1';
+    const res = await fetch(u.toString(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      throw new Error(String(data?.error || `RC_CREATE_${res.status}`));
+    }
+    return data;
+  }
+
   _rememberProposed(cards) {
     if (Array.isArray(cards)) this.lastProposedCards = cards;
   }
@@ -3302,14 +3356,10 @@ class VoiceWidget extends HTMLElement {
               </div>
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
-                  <select class="vw-access-add-input" data-role="complex" name="complex">
-                    <option value="">Название ЖК</option>
-                    <option value="ЖК Альтаир">ЖК Альтаир</option>
-                    <option value="ЖК Манхэттен">ЖК Манхэттен</option>
-                    <option value="ЖК Омега">ЖК Омега</option>
-                    <option value="ЖК Челси">ЖК Челси</option>
-                    <option value="ЖК Ривьера">ЖК Ривьера</option>
-                  </select>
+                  <input type="hidden" data-role="complex" name="complex" value="">
+                  <button type="button" class="vw-access-add-input vw-access-add-complex-trigger" data-role="complex-trigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span class="vw-access-add-complex-trigger__label" data-role="complex-trigger-label">Название ЖК</span>
+                  </button>
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="microdistrict" name="microdistrict">
@@ -3811,6 +3861,7 @@ class VoiceWidget extends HTMLElement {
             } catch {}
           })();
         }
+        try { updateComplexLabel(); } catch {}
       };
       const collectCurrentDraftState = () => {
         const values = {};
@@ -3872,13 +3923,19 @@ class VoiceWidget extends HTMLElement {
           const rid = String(reservedSync.value || '').trim();
           if (rid) previewIdSync.textContent = rid;
         }
+        try { updateComplexLabel(); } catch {}
       };
       const hasUnsavedChanges = () => {
         if (draft.photos.some(Boolean)) return true;
         const inputs = Array.from(overlay.querySelectorAll('input, textarea, select'));
         return inputs.some((el) => {
           if (el.matches('[readonly]')) return false;
-          if (el.type === 'hidden' || el.type === 'file') return false;
+          if (el.type === 'file') return false;
+          if (el.type === 'hidden') {
+            const role = String(el.getAttribute('data-role') || '').trim();
+            if (role === 'complex') return String(el.value || '').trim().length > 0;
+            return false;
+          }
           if (el.type === 'checkbox') return !!el.checked;
           if (el.tagName === 'SELECT') return el.selectedIndex > 0 && String(el.value || '').trim().length > 0;
           return String(el.value || '').trim().length > 0;
@@ -4219,6 +4276,270 @@ class VoiceWidget extends HTMLElement {
       });
       appendFloorOptions(floorInput, 'Этаж');
       appendFloorOptions(floorsTotalInput, 'Этажность');
+      const complexHidden = overlay.querySelector('[data-role="complex"]');
+      const complexTrigger = overlay.querySelector('[data-role="complex-trigger"]');
+      const complexLabelEl = overlay.querySelector('[data-role="complex-trigger-label"]');
+      const updateComplexLabel = () => {
+        if (!complexLabelEl || !complexHidden) return;
+        const v = String(complexHidden.value || '').trim();
+        complexLabelEl.textContent = v || 'Название ЖК';
+        complexLabelEl.style.opacity = v ? '1' : '';
+      };
+      const ensureRcPickerStyles = () => {
+        if (document.getElementById('vw-rc-picker-styles')) return;
+        const st = document.createElement('style');
+        st.id = 'vw-rc-picker-styles';
+        st.textContent = `
+          .vw-access-add-complex-trigger {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            cursor: pointer;
+            text-align: left;
+            font: inherit;
+            color: var(--text-primary, #fff);
+            -webkit-tap-highlight-color: transparent;
+          }
+          .vw-access-add-complex-trigger__label {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .vw-access-rc-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 1420;
+            background: rgba(0,0,0,0.56);
+            display: none;
+            place-items: end center;
+            padding: 0;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+          }
+          .vw-access-rc-layer.is-open {
+            display: grid;
+          }
+          .vw-access-rc-panel {
+            width: min(100%, 440px);
+            max-height: min(78vh, 520px);
+            border-radius: 16px 16px 0 0;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            border-bottom: none;
+            background: color-mix(in srgb, var(--bg-card, #1e1d20) 94%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: grid;
+            grid-template-rows: auto auto minmax(0, 1fr) auto;
+            gap: 10px;
+            padding: 12px 14px calc(12px + var(--vw-add-kb-inset, 0px));
+            box-sizing: border-box;
+          }
+          .vw-access-rc-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+          }
+          .vw-access-rc-title {
+            font-size: .9rem;
+            font-weight: 600;
+            color: var(--text-secondary, rgba(255,255,255,0.78));
+          }
+          .vw-access-rc-close {
+            min-width: 36px;
+            min-height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            background: var(--bg-element, rgba(255,255,255,0.12));
+            color: var(--text-primary, #fff);
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+          }
+          .vw-access-rc-list {
+            min-height: 120px;
+            max-height: 36vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.12));
+            background: var(--bg-element, rgba(255,255,255,0.06));
+          }
+          .vw-access-rc-row {
+            width: 100%;
+            display: block;
+            text-align: left;
+            padding: 12px 14px;
+            border: 0;
+            border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.08));
+            background: transparent;
+            color: var(--text-primary, #fff);
+            font: inherit;
+            font-size: .95rem;
+            cursor: pointer;
+          }
+          .vw-access-rc-row:last-child {
+            border-bottom: none;
+          }
+          .vw-access-rc-row:active {
+            background: rgba(92, 150, 255, 0.12);
+          }
+          .vw-access-rc-empty {
+            padding: 14px;
+            font-size: .88rem;
+            color: var(--text-secondary, rgba(255,255,255,0.65));
+            text-align: center;
+          }
+          .vw-access-rc-add-block {
+            display: grid;
+            gap: 8px;
+          }
+          .vw-access-rc-add-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+        `;
+        document.head.appendChild(st);
+      };
+      let rcSearchTimer = null;
+      const closeRcLayer = (layer) => {
+        if (!layer) return;
+        layer.classList.remove('is-open');
+        if (complexTrigger) complexTrigger.setAttribute('aria-expanded', 'false');
+      };
+      const openRcPicker = () => {
+        ensureRcPickerStyles();
+        let layer = overlay.querySelector('[data-role="rc-layer"]');
+        if (!layer) {
+          layer = document.createElement('div');
+          layer.className = 'vw-access-rc-layer';
+          layer.setAttribute('data-role', 'rc-layer');
+          layer.innerHTML = `
+            <div class="vw-access-rc-panel" role="dialog" aria-modal="true" aria-label="Выбор ЖК">
+              <div class="vw-access-rc-head">
+                <div class="vw-access-rc-title">Жилой комплекс</div>
+                <button type="button" class="vw-access-rc-close" data-role="rc-close" aria-label="Закрыть">×</button>
+              </div>
+              <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск ЖК" enterkeyhint="search" autocomplete="off">
+              <div class="vw-access-rc-list" data-role="rc-list" role="listbox"></div>
+              <div class="vw-access-rc-add-block" data-role="rc-add-wrap">
+                <button type="button" class="vw-access-sub-btn" data-role="rc-add-open">Нет в списке — добавить</button>
+                <div class="vw-access-rc-add-block" data-role="rc-add-panel" hidden>
+                  <input type="text" class="vw-access-add-input" data-role="rc-add-input" placeholder="Название ЖК" maxlength="200" autocomplete="off">
+                  <div class="vw-access-rc-add-actions">
+                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="rc-add-save">Сохранить</button>
+                    <button type="button" class="vw-access-sub-btn" data-role="rc-add-cancel">Отмена</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          overlay.appendChild(layer);
+          const stop = (e) => e.stopPropagation();
+          layer.querySelector('.vw-access-rc-panel')?.addEventListener('click', stop);
+          layer.addEventListener('click', () => closeRcLayer(layer));
+          layer.querySelector('[data-role="rc-close"]')?.addEventListener('click', () => closeRcLayer(layer));
+          const listEl = layer.querySelector('[data-role="rc-list"]');
+          const searchEl = layer.querySelector('[data-role="rc-search"]');
+          const addPanel = layer.querySelector('[data-role="rc-add-panel"]');
+          const addInput = layer.querySelector('[data-role="rc-add-input"]');
+          const bindRow = (name) => {
+            if (!complexHidden) return;
+            complexHidden.value = String(name || '').trim();
+            updateComplexLabel();
+            closeRcLayer(layer);
+            try { complexTrigger?.focus?.(); } catch {}
+          };
+          const renderList = (items) => {
+            if (!listEl) return;
+            const arr = Array.isArray(items) ? items : [];
+            if (!arr.length) {
+              listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Ничего не найдено. Добавьте ЖК ниже.</div>';
+              return;
+            }
+            listEl.innerHTML = arr.map((row) => {
+              const n = String(row?.name || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+              const safe = String(row?.name || '').replace(/"/g, '&quot;');
+              return '<button type="button" class="vw-access-rc-row" data-name="' + safe + '">' + n + '</button>';
+            }).join('');
+            listEl.querySelectorAll('.vw-access-rc-row').forEach((btn) => {
+              btn.addEventListener('click', () => bindRow(btn.getAttribute('data-name')));
+            });
+          };
+          const loadList = async (q = '') => {
+            try {
+              const list = await this.api?.fetchResidentialComplexes?.({ q, limit: 80 });
+              renderList(list);
+            } catch (err) {
+              console.warn('rc.list', err);
+              if (listEl) {
+                listEl.innerHTML = '<div class="vw-access-rc-empty">Не удалось загрузить список</div>';
+              }
+            }
+          };
+          searchEl?.addEventListener('input', () => {
+            clearTimeout(rcSearchTimer);
+            rcSearchTimer = setTimeout(() => {
+              loadList(String(searchEl.value || '').trim());
+            }, 280);
+          });
+          layer.querySelector('[data-role="rc-add-open"]')?.addEventListener('click', () => {
+            if (addPanel) addPanel.hidden = false;
+            if (addInput) {
+              addInput.value = String(searchEl?.value || '').trim();
+              try { addInput.focus(); } catch {}
+            }
+          });
+          layer.querySelector('[data-role="rc-add-cancel"]')?.addEventListener('click', () => {
+            if (addPanel) addPanel.hidden = true;
+            if (addInput) addInput.value = '';
+          });
+          layer.querySelector('[data-role="rc-add-save"]')?.addEventListener('click', async () => {
+            const raw = String(addInput?.value || '').trim();
+            if (!raw) {
+              this.ui?.showNotification?.('Введите название ЖК');
+              return;
+            }
+            try {
+              const data = await this.api?.createResidentialComplex?.(raw);
+              const item = data?.item;
+              if (item?.name) bindRow(item.name);
+              else {
+                await loadList(String(searchEl?.value || '').trim());
+                bindRow(raw);
+              }
+              if (addPanel) addPanel.hidden = true;
+              if (addInput) addInput.value = '';
+              this.ui?.showNotification?.('ЖК добавлен');
+            } catch (err) {
+              console.warn('rc.create', err);
+              this.ui?.showNotification?.('Не удалось добавить ЖК');
+            }
+          });
+          overlay._rcLoadList = loadList;
+        }
+        const layerRef = overlay.querySelector('[data-role="rc-layer"]');
+        if (layerRef) {
+          layerRef.classList.add('is-open');
+          if (complexTrigger) complexTrigger.setAttribute('aria-expanded', 'true');
+          const se = layerRef.querySelector('[data-role="rc-search"]');
+          if (se) se.value = '';
+          overlay._rcLoadList?.('');
+          setTimeout(() => {
+            try { se?.focus?.(); } catch {}
+          }, 50);
+        }
+      };
+      complexTrigger?.addEventListener('click', () => openRcPicker());
+      updateComplexLabel();
+      const _prevAddPropertyCleanup = overlay._cleanupAddPropertyOverlay;
+      overlay._cleanupAddPropertyOverlay = () => {
+        try { clearTimeout(rcSearchTimer); rcSearchTimer = null; } catch {}
+        try { overlay.querySelector('[data-role="rc-layer"]')?.remove(); } catch {}
+        try { delete overlay._rcLoadList; } catch {}
+        try { _prevAddPropertyCleanup?.(); } catch {}
+      };
       const updateSlot = (slot, fileName, imageData) => {
         if (!slot) return;
         if (!fileName) {
