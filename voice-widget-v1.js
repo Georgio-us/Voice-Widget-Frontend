@@ -3146,7 +3146,6 @@ class VoiceWidget extends HTMLElement {
 
   getAdminObjectsMockList() {
     const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
-    const usdRate = 41;
     const objects = list
       .map((item, idx) => {
         const id = String(item?.id || item?.variantId || item?._id || '').trim();
@@ -3161,7 +3160,7 @@ class VoiceWidget extends HTMLElement {
         const priceRaw = Number(item?.priceEUR || item?.price || item?.price_amount);
         const normalizedUsd = Number.isFinite(priceUsdRaw) && priceUsdRaw > 0
           ? Math.round(priceUsdRaw)
-          : (Number.isFinite(priceRaw) && priceRaw > 0 ? Math.round(priceRaw / usdRate) : null);
+          : (Number.isFinite(priceRaw) && priceRaw > 0 ? Math.round(priceRaw) : null);
         const price = Number.isFinite(normalizedUsd) && normalizedUsd > 0
           ? `$${normalizedUsd.toLocaleString('en-US')}`
           : '—';
@@ -3219,6 +3218,7 @@ class VoiceWidget extends HTMLElement {
       if (isAddProperty) {
         return `
           <div class="vw-access-add-wizard" data-role="add-wizard" data-step="1">
+            <input type="hidden" data-role="reserved-external-id" value="">
             <input type="hidden" data-role="photo-input-target" value="">
             <input class="vw-access-add-file" data-role="photo-input" type="file" accept="image/*">
             <div class="vw-access-add-step" data-step-panel="1">
@@ -3228,10 +3228,15 @@ class VoiceWidget extends HTMLElement {
                     <option value="">* Тип недвижимости</option>
                     <option value="apartment">Квартира</option>
                     <option value="house">Дом</option>
+                    <option value="commercial">Коммерция</option>
                   </select>
                 </label>
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input vw-access-add-input--id" data-role="property-id" name="propertyId" value="A001" readonly>
+                  <select class="vw-access-add-input vw-access-add-input--id" data-role="listing-operation" name="listingOperation">
+                    <option value="">Продажа/Аренда</option>
+                    <option value="sale">Продаж</option>
+                    <option value="rent">Аренда</option>
+                  </select>
                 </label>
               </div>
               <label class="vw-access-add-field">
@@ -3340,7 +3345,7 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-preview-card">
                 <div class="vw-access-preview-media">
                   <img class="is-empty" data-role="preview-main-image" alt="preview">
-                  <div class="vw-access-preview-id" data-role="preview-id">A001</div>
+                  <div class="vw-access-preview-id" data-role="preview-id">—</div>
                   <div class="vw-access-preview-thumbs">
                     <button type="button" class="vw-access-preview-thumb is-active" data-role="preview-thumb" data-thumb-index="0"></button>
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="1"></button>
@@ -3352,7 +3357,7 @@ class VoiceWidget extends HTMLElement {
                 <div class="vw-access-preview-body">
                   <div class="vw-access-preview-row">
                     <div class="vw-access-preview-title" data-role="preview-title">Одеса, apartment</div>
-                    <div class="vw-access-preview-price" data-role="preview-price">0 UAH</div>
+                    <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
                   </div>
                   <div class="vw-access-preview-row">
                     <div class="vw-access-preview-district" data-role="preview-district">—</div>
@@ -3652,7 +3657,7 @@ class VoiceWidget extends HTMLElement {
       const districtInput = overlay.querySelector('[data-role="district"]');
       const titleInput = overlay.querySelector('[data-role="title"]');
       const typeInput = overlay.querySelector('[data-role="property-type"]');
-      const idInput = overlay.querySelector('[data-role="property-id"]');
+      const reservedIdInput = overlay.querySelector('[data-role="reserved-external-id"]');
       const fileInput = overlay.querySelector('[data-role="photo-input"]');
       const targetInput = overlay.querySelector('[data-role="photo-input-target"]');
       const floorInput = overlay.querySelector('[data-role="floor"]');
@@ -3783,10 +3788,10 @@ class VoiceWidget extends HTMLElement {
         for (let i = 1; i <= 30; i += 1) opts.push(`<option value="${i}">${i}</option>`);
         selectEl.innerHTML = opts.join('');
       };
-      const typeMap = { apartment: 'apartment', house: 'house' };
+      const typeMap = { apartment: 'apartment', house: 'house', commercial: 'commercial' };
       const resetForm = () => {
         overlay.querySelectorAll('input, textarea, select').forEach((el) => {
-          if (el.matches('[readonly]') || el.getAttribute('data-role') === 'property-id') return;
+          if (el.matches('[readonly]')) return;
           if (el.type === 'checkbox') el.checked = false;
           else if (el.tagName === 'SELECT') el.selectedIndex = 0;
           else el.value = '';
@@ -3800,7 +3805,7 @@ class VoiceWidget extends HTMLElement {
           (async () => {
             try {
               const nextId = await this.resolveNextManualExternalId();
-              if (idInput) idInput.value = nextId;
+              if (reservedIdInput) reservedIdInput.value = nextId;
               const previewId = overlay.querySelector('[data-role="preview-id"]');
               if (previewId) previewId.textContent = nextId;
             } catch {}
@@ -3861,6 +3866,12 @@ class VoiceWidget extends HTMLElement {
         }
         const step = Number(saved.step || 1);
         setStep(step >= 1 && step <= 3 ? step : 1);
+        const reservedSync = overlay.querySelector('[data-role="reserved-external-id"]');
+        const previewIdSync = overlay.querySelector('[data-role="preview-id"]');
+        if (reservedSync && previewIdSync) {
+          const rid = String(reservedSync.value || '').trim();
+          if (rid) previewIdSync.textContent = rid;
+        }
       };
       const hasUnsavedChanges = () => {
         if (draft.photos.some(Boolean)) return true;
@@ -3926,8 +3937,10 @@ class VoiceWidget extends HTMLElement {
       const getDraftData = () => {
         const areaRaw = String(areaInput?.value || '').replace(/\s*м²$/i, '').trim();
         const pickCheck = (name) => !!overlay.querySelector(`.vw-access-add-check-grid input[name="${name}"]`)?.checked;
+        const opRaw = String(overlay.querySelector('[data-role="listing-operation"]')?.value || '').trim().toLowerCase();
         return {
-          id: String(idInput?.value || 'A001').trim() || 'A001',
+          id: String(reservedIdInput?.value || (isEditProperty ? editPropertyId : '') || '').trim() || '—',
+          operation: opRaw === 'rent' ? 'rent' : 'sale',
           title: String(titleInput?.value || '').trim() || 'Одеса, apartment',
           district: String(districtInput?.value || '').trim() || '—',
           price: String(priceInput?.value || '').trim() || '0',
@@ -3992,11 +4005,13 @@ class VoiceWidget extends HTMLElement {
           return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : '';
         };
         const features = parseMaybeJson(property.features);
+        const op = String(property.operation || '').trim().toLowerCase();
         return {
           step: 1,
           values: {
             'property-type': String(property.property_type || property.propertyType || '').trim() || 'apartment',
-            'property-id': String(property.external_id || property.externalId || property.id || editPropertyId || '').trim(),
+            'listing-operation': op === 'rent' ? 'rent' : (op === 'sale' ? 'sale' : ''),
+            'reserved-external-id': String(property.external_id || property.externalId || property.id || editPropertyId || '').trim(),
             title: String(property.title || property.description || '').trim(),
             price: parsePrice(),
             rooms: parseRooms(),
@@ -4039,7 +4054,7 @@ class VoiceWidget extends HTMLElement {
         const imageList = data.photos.length ? data.photos : [''];
         overlay.querySelector('[data-role="preview-id"]') && (overlay.querySelector('[data-role="preview-id"]').textContent = data.id);
         overlay.querySelector('[data-role="preview-title"]') && (overlay.querySelector('[data-role="preview-title"]').textContent = `Одеса, ${data.type}`);
-        overlay.querySelector('[data-role="preview-price"]') && (overlay.querySelector('[data-role="preview-price"]').textContent = `${fmtPrice} UAH`);
+        overlay.querySelector('[data-role="preview-price"]') && (overlay.querySelector('[data-role="preview-price"]').textContent = `${fmtPrice} USD`);
         overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = data.district);
         overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
         overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = `📐 ${data.area} m²`);
@@ -4200,7 +4215,7 @@ class VoiceWidget extends HTMLElement {
         if (isEditProperty) return;
         try {
           const nextId = await this.resolveNextManualExternalId();
-          if (idInput) idInput.value = nextId;
+          if (reservedIdInput) reservedIdInput.value = nextId;
           const previewId = overlay.querySelector('[data-role="preview-id"]');
           if (previewId) previewId.textContent = nextId;
         } catch {}
@@ -4304,6 +4319,7 @@ class VoiceWidget extends HTMLElement {
             .filter((src) => /^https?:\/\//i.test(String(src || '')));
           const payload = {
             mode: 'publish',
+            operation: data.operation,
             title: data.title,
             description: data.description,
             propertyType: data.type,
@@ -7762,7 +7778,7 @@ render() {
     const backSpecsItemsBase = [
       { icon: '🛏️', text: normalized.rooms ? `${normalized.rooms} rooms` : '— rooms' },
       { icon: '📐', text: normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²' },
-      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} UAH/m²` : '— UAH/m²' },
+      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} USD/m²` : '— USD/m²' },
       { icon: '🏢', text: normalized.floor ? `${normalized.floor} floor` : '— floor' },
       { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' }
     ];
@@ -9227,7 +9243,7 @@ render() {
     if (image && !assetPool.includes(image)) assetPool.unshift(image);
     const assetImages = assetPool.slice(0, 4);
 
-    const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} UAH` : (raw.price || raw.priceLabel || '');
+    const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} USD` : (raw.price || raw.priceLabel || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
     const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
     const pricePerM2Label = formatNumberUS(pricePerM2Num != null ? pricePerM2Num : raw.price_per_m2);

@@ -153,7 +153,7 @@ function extractPrice(card) {
   const raw = card?.price ?? card?.priceEUR ?? card?.price_amount ?? card?.priceAmount ?? '';
   const num = Number(String(raw).replace(/[^0-9.]/g, ''));
   if (!Number.isFinite(num) || num <= 0) return String(raw || '').trim();
-  return `${Math.round(num).toLocaleString('en-US')} UAH`;
+  return `${Math.round(num).toLocaleString('en-US')} USD`;
 }
 
 function extractArea(card) {
