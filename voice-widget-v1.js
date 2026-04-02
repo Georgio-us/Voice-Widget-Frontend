@@ -4323,15 +4323,29 @@ class VoiceWidget extends HTMLElement {
                 <div class="vw-access-rc-title">Жилой комплекс</div>
                 <button type="button" class="vw-access-rc-close" data-role="rc-close" aria-label="Закрыть">×</button>
               </div>
-              <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск ЖК" enterkeyhint="search" autocomplete="off">
+              <div class="vw-access-rc-search-wrap">
+                <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск по ЖК" enterkeyhint="search" autocomplete="off">
+                <span class="vw-access-rc-search-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                </span>
+              </div>
               <div class="vw-access-rc-list" data-role="rc-list" role="listbox"></div>
               <div class="vw-access-rc-add-block" data-role="rc-add-wrap">
-                <button type="button" class="vw-access-sub-btn" data-role="rc-add-open">Нет в списке — добавить</button>
+                <div class="vw-access-rc-footer" data-role="rc-footer-list">
+                  <span class="vw-access-rc-footer-hint">Нет в списке?</span>
+                  <button type="button" class="vw-access-rc-add-btn" data-role="rc-add-open">
+                    <span class="vw-access-rc-add-btn__icon" aria-hidden="true">+</span>
+                    Добавить
+                  </button>
+                </div>
                 <div class="vw-access-rc-add-block" data-role="rc-add-panel" hidden>
-                  <input type="text" class="vw-access-add-input" data-role="rc-add-input" placeholder="Название ЖК" maxlength="200" autocomplete="off">
+                  <div class="vw-access-rc-add-inline" data-role="rc-add-inline">
+                    <input type="text" class="vw-access-add-input" data-role="rc-add-input" placeholder="Введите название ЖК" maxlength="200" autocomplete="off">
+                    <button type="button" class="vw-access-rc-add-confirm" data-role="rc-add-confirm" aria-label="Подтвердить">✓</button>
+                  </div>
                   <div class="vw-access-rc-add-actions">
-                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="rc-add-save">Сохранить</button>
                     <button type="button" class="vw-access-sub-btn" data-role="rc-add-cancel">Отмена</button>
+                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="rc-add-save">Сохранить</button>
                   </div>
                 </div>
               </div>
@@ -4343,8 +4357,10 @@ class VoiceWidget extends HTMLElement {
           layer.querySelector('[data-role="rc-close"]')?.addEventListener('click', () => closeRcLayer(layer));
           const listEl = layer.querySelector('[data-role="rc-list"]');
           const searchEl = layer.querySelector('[data-role="rc-search"]');
+          const footerList = layer.querySelector('[data-role="rc-footer-list"]');
           const addPanel = layer.querySelector('[data-role="rc-add-panel"]');
           const addInput = layer.querySelector('[data-role="rc-add-input"]');
+          const addInline = layer.querySelector('[data-role="rc-add-inline"]');
           const bindRow = (name) => {
             if (!complexHidden) return;
             complexHidden.value = String(name || '').trim();
@@ -4356,7 +4372,7 @@ class VoiceWidget extends HTMLElement {
             if (!listEl) return;
             const arr = Array.isArray(items) ? items : [];
             if (!arr.length) {
-              listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Ничего не найдено. Добавьте ЖК ниже.</div>';
+              listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Список пуст</div>';
               return;
             }
             listEl.innerHTML = arr.map((row) => {
@@ -4408,27 +4424,54 @@ class VoiceWidget extends HTMLElement {
               }
             }
           };
+          const resetAddForm = () => {
+            layer._vwConfirmedRcName = '';
+            if (addInline) addInline.classList.remove('is-confirmed');
+            if (addInput) addInput.value = '';
+          };
+          const exitAddMode = () => {
+            if (addPanel) addPanel.hidden = true;
+            if (footerList) footerList.hidden = false;
+            resetAddForm();
+          };
           searchEl?.addEventListener('input', () => {
             clearTimeout(rcSearchTimer);
             rcSearchTimer = setTimeout(() => {
               loadList(String(searchEl.value || '').trim());
             }, 280);
           });
+          addInput?.addEventListener('input', () => {
+            layer._vwConfirmedRcName = '';
+            if (addInline) addInline.classList.remove('is-confirmed');
+          });
           layer.querySelector('[data-role="rc-add-open"]')?.addEventListener('click', () => {
             if (addPanel) addPanel.hidden = false;
+            if (footerList) footerList.hidden = true;
+            resetAddForm();
             if (addInput) {
               addInput.value = String(searchEl?.value || '').trim();
               try { addInput.focus(); } catch {}
             }
           });
-          layer.querySelector('[data-role="rc-add-cancel"]')?.addEventListener('click', () => {
-            if (addPanel) addPanel.hidden = true;
-            if (addInput) addInput.value = '';
-          });
-          layer.querySelector('[data-role="rc-add-save"]')?.addEventListener('click', async () => {
+          layer.querySelector('[data-role="rc-add-confirm"]')?.addEventListener('click', () => {
             const raw = String(addInput?.value || '').trim();
             if (!raw) {
               this.ui?.showNotification?.('Введите название ЖК');
+              return;
+            }
+            layer._vwConfirmedRcName = raw;
+            if (addInline) addInline.classList.add('is-confirmed');
+            try { addInput?.blur(); } catch {}
+          });
+          layer.querySelector('[data-role="rc-add-cancel"]')?.addEventListener('click', () => {
+            exitAddMode();
+          });
+          layer.querySelector('[data-role="rc-add-save"]')?.addEventListener('click', async () => {
+            const raw = String(layer._vwConfirmedRcName || '').trim();
+            if (!raw) {
+              const draft = String(addInput?.value || '').trim();
+              if (!draft) this.ui?.showNotification?.('Введите название ЖК');
+              else this.ui?.showNotification?.('Подтвердите название галочкой');
               return;
             }
             try {
@@ -4439,8 +4482,7 @@ class VoiceWidget extends HTMLElement {
                 await loadList(String(searchEl?.value || '').trim());
                 bindRow(raw);
               }
-              if (addPanel) addPanel.hidden = true;
-              if (addInput) addInput.value = '';
+              exitAddMode();
               this.ui?.showNotification?.('ЖК добавлен');
             } catch (err) {
               console.warn('rc.create', err);
@@ -4451,6 +4493,15 @@ class VoiceWidget extends HTMLElement {
         }
         const layerRef = overlay.querySelector('[data-role="rc-layer"]');
         if (layerRef) {
+          layerRef._vwConfirmedRcName = '';
+          const ap = layerRef.querySelector('[data-role="rc-add-panel"]');
+          const fl = layerRef.querySelector('[data-role="rc-footer-list"]');
+          const il = layerRef.querySelector('[data-role="rc-add-inline"]');
+          const inp = layerRef.querySelector('[data-role="rc-add-input"]');
+          if (ap) ap.hidden = true;
+          if (fl) fl.hidden = false;
+          if (il) il.classList.remove('is-confirmed');
+          if (inp) inp.value = '';
           layerRef.classList.add('is-open');
           if (complexTrigger) complexTrigger.setAttribute('aria-expanded', 'true');
           const se = layerRef.querySelector('[data-role="rc-search"]');
@@ -4658,9 +4709,12 @@ class VoiceWidget extends HTMLElement {
   }
 
   ensureResidentialComplexPickerStyles() {
-    if (document.getElementById('vw-rc-picker-styles')) return;
-    const st = document.createElement('style');
-    st.id = 'vw-rc-picker-styles';
+    let st = document.getElementById('vw-rc-picker-styles');
+    if (!st) {
+      st = document.createElement('style');
+      st.id = 'vw-rc-picker-styles';
+      document.head.appendChild(st);
+    }
     st.textContent = `
           .vw-access-add-complex-trigger {
             width: 100%;
@@ -4824,8 +4878,97 @@ class VoiceWidget extends HTMLElement {
             border-color: rgba(45, 143, 225, 0.65);
             background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
           }
+          .vw-access-rc-search-wrap {
+            position: relative;
+            display: block;
+          }
+          .vw-access-rc-search-wrap .vw-access-add-input {
+            padding-right: 40px;
+          }
+          .vw-access-rc-search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            opacity: 0.55;
+            pointer-events: none;
+            color: var(--text-secondary, rgba(255,255,255,0.65));
+          }
+          .vw-access-rc-search-icon svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+          }
+          .vw-access-rc-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-top: 2px;
+          }
+          .vw-access-rc-footer-hint {
+            font-size: .8rem;
+            color: var(--text-secondary, rgba(255,255,255,0.72));
+          }
+          .vw-access-rc-add-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 34px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            background: var(--bg-element, rgba(255,255,255,0.12));
+            color: var(--text-primary, #fff);
+            font: inherit;
+            font-size: .8rem;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+          }
+          .vw-access-rc-add-btn__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.2em;
+            height: 1.2em;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.35);
+            font-size: 1rem;
+            line-height: 1;
+            font-weight: 500;
+          }
+          .vw-access-rc-add-inline {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+          }
+          .vw-access-rc-add-inline .vw-access-add-input {
+            flex: 1;
+            min-width: 0;
+          }
+          .vw-access-rc-add-confirm {
+            flex: 0 0 40px;
+            min-height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            background: var(--bg-element, rgba(255,255,255,0.12));
+            color: var(--color-accent, #7eb8ff);
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+          }
+          .vw-access-rc-add-inline.is-confirmed .vw-access-add-input {
+            border-color: rgba(92, 150, 255, 0.55);
+          }
+          .vw-access-rc-panel .vw-access-rc-add-actions {
+            justify-content: space-between;
+            flex-wrap: nowrap;
+          }
         `;
-    document.head.appendChild(st);
   }
 
   closeFiltersOverlay() {
