@@ -23,6 +23,7 @@ export class UnderstandingManager {
       area: null,        // 11%
       details: null,     // 11% (детали локации)
       preferences: null, // 11%
+      residentialComplex: null,
 
       progress: 0
     };
@@ -196,6 +197,7 @@ export class UnderstandingManager {
       area: pick('area'),
       details: pick('details', 'locationDetails'),
       preferences: pick('preferences', 'additional'),
+      residentialComplex: pick('residentialComplex'),
 
       // Прогресс
       progress: oldInsights.progress ?? src?.progress ?? 0

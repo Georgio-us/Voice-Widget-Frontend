@@ -469,6 +469,7 @@ class UnderstandingManager {
       features: null,
       details: null,
       preferences: null,
+      residentialComplex: null,
       progress: 0
     };
   }
@@ -628,6 +629,7 @@ class UnderstandingManager {
       features: pick('features'),
       details: pick('details', 'locationDetails'),
       preferences: pick('preferences', 'additional'),
+      residentialComplex: pick('residentialComplex'),
       progress: oldInsights.progress ?? src?.progress ?? 0
     };
 
@@ -5174,8 +5176,13 @@ class VoiceWidget extends HTMLElement {
         selectEl.selectedIndex = 0;
         return;
       }
+      const enumOnlyRoles = new Set(['district', 'propertyType', 'rooms']);
       const hasOption = Array.from(selectEl.options || []).some((opt) => String(opt.value) === safe);
       if (!hasOption) {
+        if (enumOnlyRoles.has(role)) {
+          selectEl.selectedIndex = 0;
+          return;
+        }
         const opt = document.createElement('option');
         opt.value = safe;
         opt.textContent = safe;
@@ -5274,14 +5281,24 @@ class VoiceWidget extends HTMLElement {
       const n = Number(digits);
       return Number.isFinite(n) ? Math.round(n) : null;
     };
-    const normalizeDistrict = (value) => {
+    const normalizeDistrictSlug = (value) => {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
       if (/примор|primor/.test(raw)) return 'primorsky';
       if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
-      return String(value || '').trim();
+      return '';
+    };
+    const stripRcPrefixes = (text) => {
+      let s = String(text || '').trim();
+      if (!s) return '';
+      return s.replace(/^(?:жк|жилой\s+комплекс|жилкомплекс)\s*[«"']?/i, '').replace(/[»"']$/g, '').trim() || s;
+    };
+    const isGenericCityLocation = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return true;
+      return /^(одесса|одеса|odesa|odessa|украина|україна|ukraine)\b/.test(t);
     };
     const insights = insightsSource && typeof insightsSource === 'object'
       ? insightsSource
@@ -5302,8 +5319,15 @@ class VoiceWidget extends HTMLElement {
       base.minFloor = floor;
       base.maxFloor = floor;
     }
-    const district = normalizeDistrict(insights.location);
-    if (district) base.district = district;
+    const locRaw = String(insights.location || '').trim();
+    const districtSlug = normalizeDistrictSlug(locRaw);
+    if (districtSlug) base.district = districtSlug;
+    const rcInsight = String(insights.residentialComplex || '').trim();
+    if (rcInsight) {
+      base.residentialComplex = rcInsight;
+    } else if (locRaw && !districtSlug && !isGenericCityLocation(locRaw)) {
+      base.residentialComplex = stripRcPrefixes(locRaw);
+    }
     const manual = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
       ? this._catalogManualFilterOverrides
       : {};
