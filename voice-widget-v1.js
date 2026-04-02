@@ -4330,15 +4330,17 @@ class VoiceWidget extends HTMLElement {
                 </span>
               </div>
               <div class="vw-access-rc-list" data-role="rc-list" role="listbox"></div>
-              <div class="vw-access-rc-add-block" data-role="rc-add-wrap">
+              <div class="vw-access-rc-add-wrap" data-role="rc-add-wrap">
                 <div class="vw-access-rc-footer" data-role="rc-footer-list">
                   <span class="vw-access-rc-footer-hint">Нет в списке?</span>
                   <button type="button" class="vw-access-rc-add-btn" data-role="rc-add-open">
-                    <span class="vw-access-rc-add-btn__icon" aria-hidden="true">+</span>
+                    <span class="vw-access-rc-add-btn__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 7v10M7 12h10"></path></svg>
+                    </span>
                     Добавить
                   </button>
                 </div>
-                <div class="vw-access-rc-add-block" data-role="rc-add-panel" hidden>
+                <div class="vw-access-rc-add-panel" data-role="rc-add-panel" hidden>
                   <div class="vw-access-rc-add-inline" data-role="rc-add-inline">
                     <input type="text" class="vw-access-add-input" data-role="rc-add-input" placeholder="Введите название ЖК" maxlength="200" autocomplete="off">
                     <button type="button" class="vw-access-rc-add-confirm" data-role="rc-add-confirm" aria-label="Подтвердить">✓</button>
@@ -4382,7 +4384,7 @@ class VoiceWidget extends HTMLElement {
               return (
                 '<div class="vw-access-rc-row-wrap" role="presentation">' +
                 `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}">${nameHtml}</button>` +
-                `<button type="button" class="vw-access-rc-row-delete" data-rc-id="${id.replace(/"/g, '&quot;')}" aria-label="Удалить из справочника">Удалить</button>` +
+                `<button type="button" class="vw-access-rc-row-delete" data-rc-id="${id.replace(/"/g, '&quot;')}" aria-label="Удалить из справочника">удалить</button>` +
                 '</div>'
               );
             }).join('');
@@ -4845,6 +4847,19 @@ class VoiceWidget extends HTMLElement {
             display: grid;
             gap: 8px;
           }
+          .vw-access-rc-add-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          .vw-access-rc-add-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          .vw-access-rc-panel [data-role="rc-add-panel"][hidden] {
+            display: none;
+          }
           .vw-access-rc-add-actions {
             display: flex;
             gap: 8px;
@@ -4879,21 +4894,36 @@ class VoiceWidget extends HTMLElement {
             background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
           }
           .vw-access-rc-search-wrap {
-            position: relative;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-sizing: border-box;
+            min-height: 36px;
+            padding: 0 10px 0 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.16));
+            background: var(--bg-element, rgba(255,255,255,0.08));
           }
           .vw-access-rc-search-wrap .vw-access-add-input {
-            padding-right: 40px;
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            background: transparent;
+            padding: 0;
+            min-height: 32px;
+            box-shadow: none;
+          }
+          .vw-access-rc-search-wrap .vw-access-add-input:focus {
+            outline: none;
+          }
+          .vw-access-rc-search-wrap:focus-within {
+            border-color: rgba(92, 150, 255, 0.55);
           }
           .vw-access-rc-search-icon {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
+            flex-shrink: 0;
             width: 18px;
             height: 18px;
             opacity: 0.55;
-            pointer-events: none;
             color: var(--text-secondary, rgba(255,255,255,0.65));
           }
           .vw-access-rc-search-icon svg {
@@ -4932,13 +4962,15 @@ class VoiceWidget extends HTMLElement {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 1.2em;
-            height: 1.2em;
+            width: 22px;
+            height: 22px;
             border-radius: 999px;
             border: 1px solid rgba(255,255,255,0.35);
-            font-size: 1rem;
-            line-height: 1;
-            font-weight: 500;
+          }
+          .vw-access-rc-add-btn__icon svg {
+            width: 12px;
+            height: 12px;
+            display: block;
           }
           .vw-access-rc-add-inline {
             display: flex;
@@ -4965,8 +4997,10 @@ class VoiceWidget extends HTMLElement {
             border-color: rgba(92, 150, 255, 0.55);
           }
           .vw-access-rc-panel .vw-access-rc-add-actions {
-            justify-content: space-between;
+            justify-content: center;
+            align-items: center;
             flex-wrap: nowrap;
+            gap: 16px;
           }
         `;
   }
