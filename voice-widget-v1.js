@@ -4791,8 +4791,8 @@ class VoiceWidget extends HTMLElement {
             -webkit-backdrop-filter: blur(12px);
             display: grid;
             grid-template-rows: auto auto minmax(0, 1fr) auto;
-            gap: 10px;
-            padding: 12px 14px calc(12px + var(--vw-rc-kb-inset, 0px));
+            gap: 12px;
+            padding: 14px 14px calc(20px + var(--vw-rc-kb-inset, 0px));
             box-sizing: border-box;
             overflow: hidden;
             min-height: 0;
@@ -4805,7 +4805,7 @@ class VoiceWidget extends HTMLElement {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
           }
           .vw-access-rc-title {
             font-size: .9rem;
@@ -4882,17 +4882,17 @@ class VoiceWidget extends HTMLElement {
           }
           .vw-access-rc-add-block {
             display: grid;
-            gap: 8px;
+            gap: 10px;
           }
           .vw-access-rc-add-wrap {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
           }
           .vw-access-rc-add-panel {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
           }
           .vw-access-rc-panel [data-role="rc-add-panel"][hidden] {
             display: none;
@@ -4902,7 +4902,7 @@ class VoiceWidget extends HTMLElement {
           }
           .vw-access-rc-add-actions {
             display: flex;
-            gap: 8px;
+            gap: 10px;
             flex-wrap: wrap;
           }
           .vw-access-rc-panel .vw-access-add-input {
@@ -4976,7 +4976,7 @@ class VoiceWidget extends HTMLElement {
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding-top: 2px;
+            padding-top: 4px;
           }
           .vw-access-rc-footer-hint {
             font-size: .8rem;
@@ -5015,7 +5015,7 @@ class VoiceWidget extends HTMLElement {
           .vw-access-rc-add-inline {
             display: flex;
             align-items: stretch;
-            gap: 8px;
+            gap: 10px;
           }
           .vw-access-rc-add-inline .vw-access-add-input {
             flex: 1;
