@@ -5479,7 +5479,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-select {
         width: 100%;
-        min-height: 36px;
+        height: 36px;
         box-sizing: border-box;
         border-radius: 6px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
@@ -5590,7 +5590,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-actions {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         gap: 12px;
         margin-top: 2px;
@@ -5614,12 +5614,6 @@ class VoiceWidget extends HTMLElement {
         font-size: .8125rem;
         font-weight: 600;
         cursor: pointer;
-      }
-      .vw-filters-hint {
-        font-size: .7rem;
-        line-height: 1.45;
-        color: var(--text-secondary, rgba(255,255,255,0.64));
-        text-align: center;
       }
     `;
   }
@@ -5735,7 +5729,6 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-filters-reset" data-role="reset">Сбросить</button>
           </div>
         </div>
-        <div class="vw-filters-hint">Нажмите «Применить», чтобы обновить подборку</div>
       </div>
     `;
     this.getRoot().appendChild(overlay);
