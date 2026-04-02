@@ -1277,11 +1277,12 @@ class APIClient {
     const url = new URL(base + '/search');
 
     const allowed = [
-      'city', 'district', 'rooms', 'type',
+      'city', 'district', 'rooms', 'type', 'operation',
       'minPrice', 'maxPrice',
       'minArea', 'maxArea',
       'minFloor', 'maxFloor',
       'smart', 'arcadia', 'rcOnly', 'residentialComplex',
+      'exclusive', 'center', 'parking', 'balconyLoggia',
       'limit'
     ];
     for (const k of allowed) {
@@ -4301,146 +4302,7 @@ class VoiceWidget extends HTMLElement {
         complexLabelEl.style.opacity = v ? '1' : '';
       };
       const ensureRcPickerStyles = () => {
-        if (document.getElementById('vw-rc-picker-styles')) return;
-        const st = document.createElement('style');
-        st.id = 'vw-rc-picker-styles';
-        st.textContent = `
-          .vw-access-add-complex-trigger {
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-            margin: 0;
-            cursor: pointer;
-            text-align: left;
-            font: inherit;
-            color: var(--text-primary, #fff);
-            -webkit-tap-highlight-color: transparent;
-          }
-          .vw-access-add-complex-trigger__label {
-            display: block;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-          .vw-access-rc-layer {
-            position: fixed;
-            inset: 0;
-            z-index: 1420;
-            background: rgba(0,0,0,0.56);
-            display: none;
-            place-items: end center;
-            padding: 0;
-            padding-bottom: env(safe-area-inset-bottom, 0);
-          }
-          .vw-access-rc-layer.is-open {
-            display: grid;
-          }
-          .vw-access-rc-panel {
-            width: min(100%, 440px);
-            max-height: min(78vh, 520px);
-            border-radius: 16px 16px 0 0;
-            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-            border-bottom: none;
-            background: color-mix(in srgb, var(--bg-card, #1e1d20) 94%, transparent);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            display: grid;
-            grid-template-rows: auto auto minmax(0, 1fr) auto;
-            gap: 10px;
-            padding: 12px 14px calc(12px + var(--vw-add-kb-inset, 0px));
-            box-sizing: border-box;
-          }
-          .vw-access-rc-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-          }
-          .vw-access-rc-title {
-            font-size: .9rem;
-            font-weight: 600;
-            color: var(--text-secondary, rgba(255,255,255,0.78));
-          }
-          .vw-access-rc-close {
-            min-width: 36px;
-            min-height: 36px;
-            border-radius: 10px;
-            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-            background: var(--bg-element, rgba(255,255,255,0.12));
-            color: var(--text-primary, #fff);
-            font-size: 1.1rem;
-            line-height: 1;
-            cursor: pointer;
-          }
-          .vw-access-rc-list {
-            min-height: 120px;
-            max-height: 36vh;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            border-radius: 12px;
-            border: 1px solid var(--border-light, rgba(255,255,255,0.12));
-            background: var(--bg-element, rgba(255,255,255,0.06));
-          }
-          .vw-access-rc-row-wrap {
-            display: flex;
-            align-items: stretch;
-            gap: 8px;
-            border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.08));
-          }
-          .vw-access-rc-row-wrap:last-child {
-            border-bottom: none;
-          }
-          .vw-access-rc-row--main {
-            flex: 1;
-            min-width: 0;
-            text-align: left;
-            padding: 12px 4px 12px 14px;
-            border: 0;
-            background: transparent;
-            color: var(--text-primary, #fff);
-            font: inherit;
-            font-size: .95rem;
-            cursor: pointer;
-          }
-          .vw-access-rc-row--main:active {
-            background: rgba(92, 150, 255, 0.12);
-          }
-          .vw-access-rc-row-delete {
-            flex: 0 0 auto;
-            align-self: center;
-            margin-right: 10px;
-            padding: 6px 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(220, 100, 100, 0.45);
-            background: rgba(180, 45, 45, 0.35);
-            color: #ffb4b4;
-            font: inherit;
-            font-size: .78rem;
-            font-weight: 600;
-            letter-spacing: .02em;
-            cursor: pointer;
-            white-space: nowrap;
-          }
-          .vw-access-rc-row-delete:active {
-            background: rgba(200, 55, 55, 0.5);
-          }
-          .vw-access-rc-empty {
-            padding: 14px;
-            font-size: .88rem;
-            color: var(--text-secondary, rgba(255,255,255,0.65));
-            text-align: center;
-          }
-          .vw-access-rc-add-block {
-            display: grid;
-            gap: 8px;
-          }
-          .vw-access-rc-add-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-          }
-        `;
-        document.head.appendChild(st);
+        try { this.ensureResidentialComplexPickerStyles(); } catch {}
       };
       let rcSearchTimer = null;
       const closeRcLayer = (layer) => {
@@ -4795,9 +4657,181 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  ensureResidentialComplexPickerStyles() {
+    if (document.getElementById('vw-rc-picker-styles')) return;
+    const st = document.createElement('style');
+    st.id = 'vw-rc-picker-styles';
+    st.textContent = `
+          .vw-access-add-complex-trigger {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            margin: 0;
+            cursor: pointer;
+            text-align: left;
+            font: inherit;
+            color: var(--text-primary, #fff);
+            -webkit-tap-highlight-color: transparent;
+          }
+          .vw-access-add-complex-trigger__label {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .vw-access-rc-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 1420;
+            background: rgba(0,0,0,0.56);
+            display: none;
+            place-items: end center;
+            padding: 0;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+          }
+          .vw-access-rc-layer.is-open {
+            display: grid;
+          }
+          .vw-access-rc-panel {
+            width: min(100%, 440px);
+            max-height: min(78vh, 520px);
+            border-radius: 16px 16px 0 0;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            border-bottom: none;
+            background: color-mix(in srgb, var(--bg-card, #1e1d20) 94%, transparent);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: grid;
+            grid-template-rows: auto auto minmax(0, 1fr) auto;
+            gap: 10px;
+            padding: 12px 14px calc(12px + var(--vw-add-kb-inset, 0px));
+            box-sizing: border-box;
+          }
+          .vw-access-rc-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+          }
+          .vw-access-rc-title {
+            font-size: .9rem;
+            font-weight: 600;
+            color: var(--text-secondary, rgba(255,255,255,0.78));
+          }
+          .vw-access-rc-close {
+            min-width: 36px;
+            min-height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            background: var(--bg-element, rgba(255,255,255,0.12));
+            color: var(--text-primary, #fff);
+            font-size: 1.1rem;
+            line-height: 1;
+            cursor: pointer;
+          }
+          .vw-access-rc-list {
+            min-height: 120px;
+            max-height: 36vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.12));
+            background: var(--bg-element, rgba(255,255,255,0.06));
+          }
+          .vw-access-rc-row-wrap {
+            display: flex;
+            align-items: stretch;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.08));
+          }
+          .vw-access-rc-row-wrap:last-child {
+            border-bottom: none;
+          }
+          .vw-access-rc-row--main {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+            padding: 12px 4px 12px 14px;
+            border: 0;
+            background: transparent;
+            color: var(--text-primary, #fff);
+            font: inherit;
+            font-size: .95rem;
+            cursor: pointer;
+          }
+          .vw-access-rc-row--main:active {
+            background: rgba(92, 150, 255, 0.12);
+          }
+          .vw-access-rc-row-delete {
+            flex: 0 0 auto;
+            align-self: center;
+            margin-right: 10px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(220, 100, 100, 0.45);
+            background: rgba(180, 45, 45, 0.35);
+            color: #ffb4b4;
+            font: inherit;
+            font-size: .78rem;
+            font-weight: 600;
+            letter-spacing: .02em;
+            cursor: pointer;
+            white-space: nowrap;
+          }
+          .vw-access-rc-row-delete:active {
+            background: rgba(200, 55, 55, 0.5);
+          }
+          .vw-access-rc-empty {
+            padding: 14px;
+            font-size: .88rem;
+            color: var(--text-secondary, rgba(255,255,255,0.65));
+            text-align: center;
+          }
+          .vw-access-rc-add-block {
+            display: grid;
+            gap: 8px;
+          }
+          .vw-access-rc-add-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+          .vw-access-rc-panel .vw-access-add-input {
+            width: 100%;
+            min-height: 36px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.16));
+            background: var(--bg-element, rgba(255,255,255,0.08));
+            color: var(--text-primary, #fff);
+            padding: 0 12px;
+            font-size: .75rem;
+          }
+          .vw-access-rc-panel .vw-access-add-input::placeholder {
+            color: var(--text-secondary, rgba(255,255,255,0.56));
+          }
+          .vw-access-rc-panel .vw-access-sub-btn {
+            min-height: 34px;
+            border-radius: 6px;
+            border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+            background: var(--bg-element, rgba(255,255,255,0.12));
+            color: var(--text-primary, #fff);
+            padding: 0 12px;
+            font-size: .75rem;
+            cursor: pointer;
+          }
+          .vw-access-rc-panel .vw-access-sub-btn--primary {
+            border-color: rgba(45, 143, 225, 0.65);
+            background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+          }
+        `;
+    document.head.appendChild(st);
+  }
+
   closeFiltersOverlay() {
     try {
       const overlay = this.getRoot().querySelector('#vwFiltersOverlay');
+      try { overlay?._filtersRcCleanup?.(); } catch {}
       if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
       this._filtersOverlayOpen = false;
       this.$byId('pillFiltersButton')?.setAttribute('aria-expanded', 'false');
@@ -4813,24 +4847,24 @@ class VoiceWidget extends HTMLElement {
   buildFilterPickerOptions(type) {
     const opts = [];
     if (type === 'priceMin' || type === 'priceMax') {
-      if (type === 'priceMin') opts.push({ value: '', label: 'Цена от' });
-      if (type === 'priceMax') opts.push({ value: 'max', label: 'Макс' });
+      if (type === 'priceMin') opts.push({ value: '', label: 'От min' });
+      if (type === 'priceMax') opts.push({ value: 'max', label: 'До max' });
       for (let v = 0; v <= 1000000; v += 1000) {
         opts.push({ value: String(v), label: this.formatPickerNumber(v) });
       }
       return opts;
     }
     if (type === 'areaMin' || type === 'areaMax') {
-      if (type === 'areaMin') opts.push({ value: '', label: 'Метраж от' });
-      if (type === 'areaMax') opts.push({ value: 'max', label: 'Макс' });
+      if (type === 'areaMin') opts.push({ value: '', label: 'От min' });
+      if (type === 'areaMax') opts.push({ value: 'max', label: 'До max' });
       for (let v = 0; v <= 350; v += 1) {
         opts.push({ value: String(v), label: `${v} м²` });
       }
       return opts;
     }
     if (type === 'floorMin' || type === 'floorMax') {
-      if (type === 'floorMin') opts.push({ value: '', label: 'Этаж от' });
-      if (type === 'floorMax') opts.push({ value: 'max', label: 'Макс' });
+      if (type === 'floorMin') opts.push({ value: '', label: 'От min' });
+      if (type === 'floorMax') opts.push({ value: 'max', label: 'До max' });
       for (let v = 0; v <= 30; v += 1) {
         opts.push({ value: String(v), label: String(v) });
       }
@@ -4873,19 +4907,29 @@ class VoiceWidget extends HTMLElement {
 
   collectFiltersOverlayPayload(overlay) {
     const read = (name) => String(overlay.querySelector(`select[data-picker="${name}"]`)?.value || '');
+    const listingMode = String(overlay.querySelector('[data-role="listingMode"].is-active')?.getAttribute('data-value') || 'sale')
+      .toLowerCase();
+    const roomsVal = String(overlay.querySelector('[data-role="rooms"]')?.value || '');
+    const smartRoom = roomsVal === 'smart';
     return {
+      listingMode: listingMode === 'rent' ? 'rent' : 'sale',
+      propertyType: String(overlay.querySelector('[data-role="propertyType"]')?.value || ''),
       priceFrom: read('priceMin'),
       priceTo: read('priceMax'),
       areaFrom: read('areaMin'),
       areaTo: read('areaMax'),
       floorFrom: read('floorMin'),
       floorTo: read('floorMax'),
-      rooms: String(overlay.querySelector('[data-role="rooms"]')?.value || ''),
-      smart: !!overlay.querySelector('[data-role="smart"]')?.checked,
+      rooms: smartRoom ? '' : roomsVal,
+      smart: smartRoom,
       district: String(overlay.querySelector('[data-role="district"]')?.value || ''),
       arcadia: !!overlay.querySelector('[data-role="arcadia"]')?.checked,
+      exclusive: !!overlay.querySelector('[data-role="exclusive"]')?.checked,
+      center: !!overlay.querySelector('[data-role="center"]')?.checked,
+      parking: !!overlay.querySelector('[data-role="parking"]')?.checked,
+      balconyLoggia: !!overlay.querySelector('[data-role="balconyLoggia"]')?.checked,
       residentialComplexOnly: !!overlay.querySelector('[data-role="rcOnly"]')?.checked,
-      residentialComplex: String(overlay.querySelector('[data-role="rcSearch"]')?.value || '')
+      residentialComplex: String(overlay.querySelector('[data-role="filters-rc-hidden"]')?.value || '').trim()
     };
   }
 
@@ -4909,7 +4953,10 @@ class VoiceWidget extends HTMLElement {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       const safe = String(value || '').trim();
-      if (!safe) return;
+      if (!safe) {
+        selectEl.selectedIndex = 0;
+        return;
+      }
       const hasOption = Array.from(selectEl.options || []).some((opt) => String(opt.value) === safe);
       if (!hasOption) {
         const opt = document.createElement('option');
@@ -4923,18 +4970,33 @@ class VoiceWidget extends HTMLElement {
       const el = overlay.querySelector(`[data-role="${role}"]`);
       if (el) el.checked = !!checked;
     };
+    const mode = String(payload.listingMode || payload.operation || 'sale').toLowerCase() === 'rent' ? 'rent' : 'sale';
+    overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
+      const v = String(btn.getAttribute('data-value') || '');
+      btn.classList.toggle('is-active', v === mode);
+    });
     setPicker('priceMin', payload.priceFrom);
     setPicker('priceMax', payload.priceTo);
     setPicker('areaMin', payload.areaFrom);
     setPicker('areaMax', payload.areaTo);
     setPicker('floorMin', payload.floorFrom);
     setPicker('floorMax', payload.floorTo);
-    setSelect('rooms', payload.rooms);
+    if (payload.smart === true) {
+      setSelect('rooms', 'smart');
+    } else {
+      setSelect('rooms', payload.rooms);
+    }
     setSelect('district', payload.district);
-    setSelect('rcSearch', payload.residentialComplex);
-    setCheck('smart', payload.smart);
+    setSelect('propertyType', payload.propertyType || payload.type);
     setCheck('arcadia', payload.arcadia);
+    setCheck('exclusive', payload.exclusive);
+    setCheck('center', payload.center);
+    setCheck('parking', payload.parking);
+    setCheck('balconyLoggia', payload.balconyLoggia);
     setCheck('rcOnly', payload.residentialComplexOnly);
+    const rcHid = overlay.querySelector('[data-role="filters-rc-hidden"]');
+    if (rcHid) rcHid.value = String(payload.residentialComplex || '').trim();
+    try { overlay._syncFiltersRcLabel?.(); } catch {}
     this.syncFilterPickerLabels(overlay);
   }
 
@@ -4961,15 +5023,26 @@ class VoiceWidget extends HTMLElement {
     if (maxArea != null) out.maxArea = maxArea;
     if (minFloor != null) out.minFloor = minFloor;
     if (maxFloor != null) out.maxFloor = maxFloor;
-    const rooms = String(source.rooms || '').trim();
-    if (rooms) out.rooms = rooms;
+    const roomsRaw = String(source.rooms || '').trim();
+    if (roomsRaw === 'smart' || source.smart === true) {
+      out.smart = true;
+    } else if (roomsRaw) {
+      out.rooms = roomsRaw;
+    }
     const district = String(source.district || '').trim();
     if (district) out.district = district;
     const rc = String(source.residentialComplex || '').trim();
     if (rc) out.residentialComplex = rc;
-    if (source.smart === true) out.smart = true;
+    const op = String(source.listingMode || source.operation || '').trim().toLowerCase();
+    if (op === 'sale' || op === 'rent') out.operation = op;
+    const ptype = String(source.propertyType || source.type || '').trim();
+    if (ptype) out.type = ptype;
     if (source.arcadia === true) out.arcadia = true;
     if (source.residentialComplexOnly === true) out.rcOnly = true;
+    if (source.exclusive === true) out.exclusive = true;
+    if (source.center === true) out.center = true;
+    if (source.parking === true) out.parking = true;
+    if (source.balconyLoggia === true) out.balconyLoggia = true;
     return out;
   }
 
@@ -5032,17 +5105,24 @@ class VoiceWidget extends HTMLElement {
 
   buildFiltersOverlayPayloadFromEffectiveQuery() {
     const query = this.getCatalogEffectiveSearchParams();
+    const op = String(query.operation || 'sale').toLowerCase();
     return {
+      listingMode: op === 'rent' ? 'rent' : 'sale',
+      propertyType: query.type != null ? String(query.type) : '',
       priceFrom: query.minPrice != null ? String(query.minPrice) : '',
       priceTo: query.maxPrice != null ? String(query.maxPrice) : '',
       areaFrom: query.minArea != null ? String(query.minArea) : '',
       areaTo: query.maxArea != null ? String(query.maxArea) : '',
       floorFrom: query.minFloor != null ? String(query.minFloor) : '',
       floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
-      rooms: query.rooms != null ? String(query.rooms) : '',
+      rooms: query.smart === true ? '' : (query.rooms != null ? String(query.rooms) : ''),
       smart: query.smart === true,
       district: query.district != null ? String(query.district) : '',
       arcadia: query.arcadia === true,
+      exclusive: query.exclusive === true,
+      center: query.center === true,
+      parking: query.parking === true,
+      balconyLoggia: query.balconyLoggia === true,
       residentialComplexOnly: query.rcOnly === true,
       residentialComplex: query.residentialComplex != null ? String(query.residentialComplex) : ''
     };
@@ -5073,24 +5153,37 @@ class VoiceWidget extends HTMLElement {
 
   resetFiltersOverlayForm(overlay) {
     if (!overlay) return;
+    overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
+      const v = String(btn.getAttribute('data-value') || '');
+      btn.classList.toggle('is-active', v === 'sale');
+    });
     overlay.querySelectorAll('select[data-picker]').forEach((sel) => { sel.selectedIndex = 0; });
     const rooms = overlay.querySelector('[data-role="rooms"]');
     if (rooms) rooms.selectedIndex = 0;
     const district = overlay.querySelector('[data-role="district"]');
     if (district) district.selectedIndex = 0;
-    const rcSearch = overlay.querySelector('[data-role="rcSearch"]');
-    if (rcSearch) rcSearch.selectedIndex = 0;
-    const smart = overlay.querySelector('[data-role="smart"]');
-    const arcadia = overlay.querySelector('[data-role="arcadia"]');
-    const rcOnly = overlay.querySelector('[data-role="rcOnly"]');
-    if (smart) smart.checked = false;
-    if (arcadia) arcadia.checked = false;
-    if (rcOnly) rcOnly.checked = false;
+    const propertyType = overlay.querySelector('[data-role="propertyType"]');
+    if (propertyType) propertyType.selectedIndex = 0;
+    ['rcOnly', 'arcadia', 'exclusive', 'center', 'parking', 'balconyLoggia'].forEach((role) => {
+      const el = overlay.querySelector(`[data-role="${role}"]`);
+      if (el) el.checked = false;
+    });
+    const rcHid = overlay.querySelector('[data-role="filters-rc-hidden"]');
+    if (rcHid) rcHid.value = '';
+    try { overlay._syncFiltersRcLabel?.(); } catch {}
     this.syncFilterPickerLabels(overlay);
   }
 
   bindFiltersOverlayEvents(overlay) {
     if (!overlay) return;
+    overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const v = String(btn.getAttribute('data-value') || '');
+        overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => {
+          b.classList.toggle('is-active', String(b.getAttribute('data-value') || '') === v);
+        });
+      });
+    });
     overlay.querySelectorAll('select[data-picker]').forEach((selectEl) => {
       selectEl.addEventListener('change', () => {
         const picker = String(selectEl.getAttribute('data-picker') || '');
@@ -5111,10 +5204,193 @@ class VoiceWidget extends HTMLElement {
     });
   }
 
+  bindFiltersResidentialComplexPicker(overlay) {
+    if (!overlay) return;
+    try { this.ensureResidentialComplexPickerStyles(); } catch {}
+    const rcHidden = overlay.querySelector('[data-role="filters-rc-hidden"]');
+    const rcTrigger = overlay.querySelector('[data-role="filters-rc-trigger"]');
+    const rcLabel = overlay.querySelector('[data-role="filters-rc-label"]');
+    const syncLabel = () => {
+      if (!rcLabel) return;
+      const v = String(rcHidden?.value || '').trim();
+      rcLabel.textContent = v || 'Поиск по ЖК';
+      rcLabel.style.opacity = v ? '1' : '0.62';
+    };
+    overlay._syncFiltersRcLabel = syncLabel;
+    syncLabel();
+    let rcSearchTimer = null;
+    const closeRcLayer = (layer) => {
+      if (!layer) return;
+      layer.classList.remove('is-open');
+      if (rcTrigger) rcTrigger.setAttribute('aria-expanded', 'false');
+    };
+    const openRcPicker = () => {
+      let layer = overlay.querySelector('[data-role="filters-rc-layer"]');
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.className = 'vw-access-rc-layer';
+        layer.setAttribute('data-role', 'filters-rc-layer');
+        layer.innerHTML = `
+            <div class="vw-access-rc-panel" role="dialog" aria-modal="true" aria-label="Выбор ЖК">
+              <div class="vw-access-rc-head">
+                <div class="vw-access-rc-title">Жилой комплекс</div>
+                <button type="button" class="vw-access-rc-close" data-role="rc-close" aria-label="Закрыть">×</button>
+              </div>
+              <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск ЖК" enterkeyhint="search" autocomplete="off">
+              <div class="vw-access-rc-list" data-role="rc-list" role="listbox"></div>
+              <div class="vw-access-rc-add-block" data-role="rc-add-wrap">
+                <button type="button" class="vw-access-sub-btn" data-role="rc-add-open">Нет в списке — добавить</button>
+                <div class="vw-access-rc-add-block" data-role="rc-add-panel" hidden>
+                  <input type="text" class="vw-access-add-input" data-role="rc-add-input" placeholder="Название ЖК" maxlength="200" autocomplete="off">
+                  <div class="vw-access-rc-add-actions">
+                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="rc-add-save">Сохранить</button>
+                    <button type="button" class="vw-access-sub-btn" data-role="rc-add-cancel">Отмена</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        overlay.appendChild(layer);
+        const stop = (e) => e.stopPropagation();
+        layer.querySelector('.vw-access-rc-panel')?.addEventListener('click', stop);
+        layer.addEventListener('click', () => closeRcLayer(layer));
+        layer.querySelector('[data-role="rc-close"]')?.addEventListener('click', () => closeRcLayer(layer));
+        const listEl = layer.querySelector('[data-role="rc-list"]');
+        const searchEl = layer.querySelector('[data-role="rc-search"]');
+        const addPanel = layer.querySelector('[data-role="rc-add-panel"]');
+        const addInput = layer.querySelector('[data-role="rc-add-input"]');
+        const bindRow = (name) => {
+          if (!rcHidden) return;
+          rcHidden.value = String(name || '').trim();
+          syncLabel();
+          closeRcLayer(layer);
+          try { rcTrigger?.focus?.(); } catch {}
+        };
+        const renderList = (items) => {
+          if (!listEl) return;
+          const arr = Array.isArray(items) ? items : [];
+          if (!arr.length) {
+            listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Ничего не найдено. Добавьте ЖК ниже.</div>';
+            return;
+          }
+          listEl.innerHTML = arr.map((row) => {
+            const id = String(row?.id ?? '').trim();
+            const nameRaw = String(row?.name || '');
+            const nameHtml = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            return (
+              '<div class="vw-access-rc-row-wrap" role="presentation">' +
+              `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}">${nameHtml}</button>` +
+              `<button type="button" class="vw-access-rc-row-delete" data-rc-id="${id.replace(/"/g, '&quot;')}" aria-label="Удалить из справочника">Удалить</button>` +
+              '</div>'
+            );
+          }).join('');
+          listEl.querySelectorAll('.vw-access-rc-row--main').forEach((btn) => {
+            btn.addEventListener('click', () => bindRow(btn.textContent));
+          });
+          listEl.querySelectorAll('.vw-access-rc-row-delete').forEach((delBtn) => {
+            delBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              const rid = String(delBtn.getAttribute('data-rc-id') || '').trim();
+              const row = arr.find((r) => String(r?.id ?? '') === rid);
+              const nm = String(row?.name || delBtn.closest('.vw-access-rc-row-wrap')?.querySelector('.vw-access-rc-row--main')?.textContent || '').trim();
+              if (!rid) return;
+              if (!window.confirm(`Удалить «${nm || 'этот ЖК'}» из справочника?`)) return;
+              try {
+                await this.api?.deleteResidentialComplex?.(rid);
+                const cur = String(rcHidden?.value || '').trim();
+                if (cur && nm && cur === nm) {
+                  if (rcHidden) rcHidden.value = '';
+                  syncLabel();
+                }
+                this.ui?.showNotification?.('ЖК удалён из списка');
+                await loadList(String(searchEl?.value || '').trim());
+              } catch (err) {
+                console.warn('rc.delete', err);
+                this.ui?.showNotification?.('Не удалось удалить ЖК');
+              }
+            });
+          });
+        };
+        const loadList = async (q = '') => {
+          try {
+            const list = await this.api?.fetchResidentialComplexes?.({ q, limit: 80 });
+            renderList(list);
+          } catch (err) {
+            console.warn('rc.list', err);
+            if (listEl) {
+              listEl.innerHTML = '<div class="vw-access-rc-empty">Не удалось загрузить список</div>';
+            }
+          }
+        };
+        searchEl?.addEventListener('input', () => {
+          clearTimeout(rcSearchTimer);
+          rcSearchTimer = setTimeout(() => {
+            loadList(String(searchEl.value || '').trim());
+          }, 280);
+        });
+        layer.querySelector('[data-role="rc-add-open"]')?.addEventListener('click', () => {
+          if (addPanel) addPanel.hidden = false;
+          if (addInput) {
+            addInput.value = String(searchEl?.value || '').trim();
+            try { addInput.focus(); } catch {}
+          }
+        });
+        layer.querySelector('[data-role="rc-add-cancel"]')?.addEventListener('click', () => {
+          if (addPanel) addPanel.hidden = true;
+          if (addInput) addInput.value = '';
+        });
+        layer.querySelector('[data-role="rc-add-save"]')?.addEventListener('click', async () => {
+          const raw = String(addInput?.value || '').trim();
+          if (!raw) {
+            this.ui?.showNotification?.('Введите название ЖК');
+            return;
+          }
+          try {
+            const data = await this.api?.createResidentialComplex?.(raw);
+            const item = data?.item;
+            if (item?.name) bindRow(item.name);
+            else {
+              await loadList(String(searchEl?.value || '').trim());
+              bindRow(raw);
+            }
+            if (addPanel) addPanel.hidden = true;
+            if (addInput) addInput.value = '';
+            this.ui?.showNotification?.('ЖК добавлен');
+          } catch (err) {
+            console.warn('rc.create', err);
+            this.ui?.showNotification?.('Не удалось добавить ЖК');
+          }
+        });
+        overlay._filtersRcLoadList = loadList;
+      }
+      const layerRef = overlay.querySelector('[data-role="filters-rc-layer"]');
+      if (layerRef) {
+        layerRef.classList.add('is-open');
+        if (rcTrigger) rcTrigger.setAttribute('aria-expanded', 'true');
+        const se = layerRef.querySelector('[data-role="rc-search"]');
+        if (se) se.value = '';
+        overlay._filtersRcLoadList?.('');
+        setTimeout(() => {
+          try { se?.focus?.(); } catch {}
+        }, 50);
+      }
+    };
+    rcTrigger?.addEventListener('click', () => openRcPicker());
+    overlay._filtersRcCleanup = () => {
+      try { clearTimeout(rcSearchTimer); rcSearchTimer = null; } catch {}
+      try { overlay.querySelector('[data-role="filters-rc-layer"]')?.remove(); } catch {}
+      try { delete overlay._filtersRcLoadList; } catch {}
+      try { delete overlay._syncFiltersRcLabel; } catch {}
+      try { delete overlay._filtersRcCleanup; } catch {}
+    };
+  }
+
   ensureFiltersOverlayStyles() {
-    if (document.getElementById('vw-filters-overlay-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'vw-filters-overlay-styles';
+    let style = document.getElementById('vw-filters-overlay-styles');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'vw-filters-overlay-styles';
+      document.head.appendChild(style);
+    }
     style.textContent = `
       .vw-filters-overlay {
         position: fixed;
@@ -5127,7 +5403,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-modal {
         width: min(420px, 100%);
-        border-radius: 16px;
+        border-radius: 12px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: color-mix(in srgb, var(--bg-card, #1e1d20) 90%, transparent);
         backdrop-filter: blur(14px);
@@ -5135,7 +5411,7 @@ class VoiceWidget extends HTMLElement {
         color: var(--text-primary, #fff);
         padding: 14px;
         display: grid;
-        gap: 12px;
+        gap: 10px;
       }
       .vw-filters-head {
         display: flex;
@@ -5144,55 +5420,117 @@ class VoiceWidget extends HTMLElement {
         gap: 10px;
       }
       .vw-filters-title {
-        font-size: .9rem;
+        font-size: .8125rem;
         font-weight: 600;
-        color: var(--text-secondary, rgba(255,255,255,0.75));
+        color: var(--text-secondary, rgba(255,255,255,0.78));
       }
       .vw-filters-close {
         width: 30px;
         height: 30px;
-        border-radius: 10px;
+        border-radius: 6px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
         cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
       }
       .vw-filters-list {
         display: grid;
-        gap: 16px;
-        --vw-filters-right-col: clamp(132px, 34%, 176px);
+        gap: 12px;
       }
-      .vw-filters-picker-row {
+      .vw-filters-block-top {
         display: grid;
-        grid-template-columns: 44px minmax(0, 1fr) var(--vw-filters-right-col);
         gap: 8px;
-        align-items: center;
       }
-      .vw-filters-picker-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 999px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.12));
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-      }
-      .vw-filters-picker-field {
-        position: relative;
+      .vw-filters-top-grid {
         display: grid;
-        align-items: center;
-        min-height: 40px;
-        padding: 0 12px;
-        border-radius: 14px;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        align-items: stretch;
+      }
+      .vw-filters-segmented {
+        display: flex;
+        border-radius: 6px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: rgba(0,0,0,0.18);
+        padding: 2px;
+        gap: 2px;
+        box-sizing: border-box;
+        min-height: 36px;
+      }
+      .vw-filters-segment {
+        flex: 1;
+        border: 0;
+        border-radius: 4px;
+        margin: 0;
+        padding: 6px 8px;
+        font-size: .75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--text-secondary, rgba(255,255,255,0.72));
+        background: transparent;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .vw-filters-segment.is-active {
+        background: var(--bg-element, rgba(255,255,255,0.14));
+        color: var(--text-primary, #fff);
+      }
+      .vw-filters-select {
+        width: 100%;
+        min-height: 36px;
+        box-sizing: border-box;
+        border-radius: 6px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
+        padding: 0 10px;
+        font-size: .75rem;
+      }
+      .vw-filters-range-block {
+        display: grid;
+        grid-template-columns: minmax(72px, 32%) minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+      }
+      .vw-filters-range-name {
+        font-size: .75rem;
+        font-weight: 500;
+        color: var(--text-secondary, rgba(255,255,255,0.78));
+      }
+      .vw-filters-range-dual {
+        display: flex;
+        align-items: stretch;
+        min-height: 36px;
+        border-radius: 6px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.08));
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+      .vw-filters-picker-field--in-dual {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+        display: grid;
+        align-items: center;
+        padding: 0 10px;
+        min-height: 36px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        margin: 0;
+      }
+      .vw-filters-range-dual-divider {
+        flex: 0 0 1px;
+        background: color-mix(in srgb, var(--border-light, rgba(255,255,255,0.14)) 88%, transparent);
+        align-self: stretch;
       }
       .vw-filters-picker-label {
-        font-size: .93rem;
+        font-size: .75rem;
         color: var(--text-secondary, rgba(255,255,255,0.72));
+        pointer-events: none;
       }
       .vw-filters-picker-select {
         position: absolute;
@@ -5200,40 +5538,50 @@ class VoiceWidget extends HTMLElement {
         opacity: 0;
         width: 100%;
         height: 100%;
+        cursor: pointer;
       }
-      .vw-filters-row {
+      .vw-filters-check-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) var(--vw-filters-right-col);
-        gap: 8px;
-        align-items: center;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
       }
-      .vw-filters-select {
-        width: 100%;
-        height: 100%;
-        border-radius: 12px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.12));
-        color: var(--text-primary, #fff);
-        padding: 0 12px;
-        font-size: .93rem;
-      }
-      .vw-filters-check {
+      .vw-filters-check-item {
         display: flex;
         align-items: center;
         gap: 8px;
+        font-size: .75rem;
+        line-height: 1.25;
+        color: var(--text-primary, #fff);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .vw-filters-check-item input {
+        flex-shrink: 0;
+        accent-color: var(--color-accent, #4ea0ff);
+      }
+      .vw-filters-rc-wrap {
+        display: grid;
+        gap: 6px;
+      }
+      .vw-filters-rc-trigger {
         width: 100%;
-        min-height: 40px;
+        min-height: 36px;
         box-sizing: border-box;
+        border-radius: 6px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
-        border-radius: 12px;
         padding: 0 10px;
-        font-size: .93rem;
-        line-height: 1.3;
+        text-align: left;
+        font-size: .75rem;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
       }
-      .vw-filters-check input {
-        accent-color: var(--color-accent, #4ea0ff);
+      .vw-filters-rc-trigger__label {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .vw-filters-divider {
         margin: 2px 0;
@@ -5242,35 +5590,38 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-actions {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
         align-items: center;
-        gap: 50px;
-        margin-top: 4px;
+        gap: 12px;
+        margin-top: 2px;
       }
       .vw-filters-apply {
-        min-width: 144px;
-        min-height: 42px;
-        border-radius: 14px;
+        min-width: 120px;
+        min-height: 36px;
+        border-radius: 6px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.12));
+        background: var(--bg-element, rgba(255,255,255,0.14));
         color: var(--text-primary, #fff);
-        font-size: .95rem;
+        font-size: .8125rem;
+        font-weight: 600;
+        cursor: pointer;
       }
       .vw-filters-reset {
-        min-height: 40px;
+        min-height: 36px;
         border: 0;
         background: transparent;
         color: #ec4f55;
-        font-size: 1rem;
+        font-size: .8125rem;
+        font-weight: 600;
+        cursor: pointer;
       }
       .vw-filters-hint {
-        font-size: .82rem;
+        font-size: .7rem;
         line-height: 1.45;
-        color: var(--text-secondary, rgba(255,255,255,0.74));
+        color: var(--text-secondary, rgba(255,255,255,0.64));
         text-align: center;
       }
     `;
-    document.head.appendChild(style);
   }
 
   openFiltersOverlay() {
@@ -5287,78 +5638,104 @@ class VoiceWidget extends HTMLElement {
         </div>
         <hr class="vw-filters-divider">
         <div class="vw-filters-list">
-          <div class="vw-filters-picker-row">
-            <div class="vw-filters-picker-icon" aria-hidden="true">💵</div>
-            <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="priceMin">Цена от</span>
-              <select class="vw-filters-picker-select" data-picker="priceMin" aria-label="Цена от"></select>
-            </label>
-            <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="priceMax">До</span>
-              <select class="vw-filters-picker-select" data-picker="priceMax" aria-label="Цена до"></select>
-            </label>
-          </div>
-          <div class="vw-filters-picker-row">
-            <div class="vw-filters-picker-icon" aria-hidden="true">📏</div>
-            <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="areaMin">Метраж от</span>
-              <select class="vw-filters-picker-select" data-picker="areaMin" aria-label="Метраж от"></select>
-            </label>
-            <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="areaMax">До</span>
-              <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="Метраж до"></select>
-            </label>
-          </div>
-          <div class="vw-filters-picker-row">
-            <div class="vw-filters-picker-icon" aria-hidden="true">🏢</div>
-            <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="floorMin">Этаж от</span>
-              <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
-            </label>
-            <label class="vw-filters-picker-field">
-              <span class="vw-filters-picker-label" data-display="floorMax">До</span>
-              <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="Этаж до"></select>
-            </label>
-          </div>
-          <hr class="vw-filters-divider">
-          <div class="vw-filters-row">
-            <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
-              <option value="">Кол-во комнат</option>
-              <option value="1">1 комната</option>
-              <option value="2">2 комнаты</option>
-              <option value="3">3 комнаты</option>
-              <option value="4plus">4+ комнат</option>
-            </select>
-            <label class="vw-filters-check"><input type="checkbox" data-role="smart"> <span>Смарт</span></label>
-          </div>
-          <div class="vw-filters-row">
-            <select class="vw-filters-select" aria-label="Район" data-role="district">
-              <option value="">Район</option>
-              <option value="primorsky">Приморский</option>
-              <option value="kievsky">Киевский</option>
-              <option value="malinovsky">Малиновский</option>
-              <option value="suvorovsky">Суворовский</option>
-            </select>
-            <label class="vw-filters-check"><input type="checkbox" data-role="arcadia"> <span>Аркадия</span></label>
+          <div class="vw-filters-block-top">
+            <div class="vw-filters-top-grid">
+              <div class="vw-filters-segmented" role="group" aria-label="Сделка">
+                <button type="button" class="vw-filters-segment is-active" data-role="listingMode" data-value="sale">Продажа</button>
+                <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="rent">Аренда</button>
+              </div>
+              <select class="vw-filters-select" data-role="propertyType" aria-label="Тип недвижимости">
+                <option value="">Тип недвижимости</option>
+                <option value="apartment">Квартира</option>
+                <option value="house">Дом</option>
+                <option value="commercial">Коммерческая</option>
+              </select>
+            </div>
+            <div class="vw-filters-top-grid">
+              <select class="vw-filters-select" aria-label="Район" data-role="district">
+                <option value="">Район</option>
+                <option value="primorsky">Приморский</option>
+                <option value="kievsky">Киевский</option>
+                <option value="malinovsky">Малиновский</option>
+                <option value="suvorovsky">Суворовский</option>
+              </select>
+              <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
+                <option value="">Кол-во комнат</option>
+                <option value="smart">Смарт-квартира</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5plus">5+</option>
+              </select>
+            </div>
           </div>
           <hr class="vw-filters-divider">
-          <div class="vw-filters-row">
-            <select class="vw-filters-select" aria-label="Поиск по ЖК" data-role="rcSearch">
-              <option value="">Поиск по ЖК</option>
-              <option value="altair">ЖК Альтаир</option>
-              <option value="gagarin">ЖК Гагарин Плаза</option>
-              <option value="omega">ЖК Омега</option>
-            </select>
-            <label class="vw-filters-check"><input type="checkbox" data-role="rcOnly"> <span>Только ЖК</span></label>
+          <div class="vw-filters-range-block">
+            <span class="vw-filters-range-name">Стоимость</span>
+            <div class="vw-filters-range-dual">
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="priceMin">От min</span>
+                <select class="vw-filters-picker-select" data-picker="priceMin" aria-label="Цена от"></select>
+              </label>
+              <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="priceMax">До max</span>
+                <select class="vw-filters-picker-select" data-picker="priceMax" aria-label="Цена до"></select>
+              </label>
+            </div>
+          </div>
+          <div class="vw-filters-range-block">
+            <span class="vw-filters-range-name">Площадь</span>
+            <div class="vw-filters-range-dual">
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="areaMin">От min</span>
+                <select class="vw-filters-picker-select" data-picker="areaMin" aria-label="Площадь от"></select>
+              </label>
+              <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="areaMax">До max</span>
+                <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="Площадь до"></select>
+              </label>
+            </div>
+          </div>
+          <div class="vw-filters-range-block">
+            <span class="vw-filters-range-name">Этаж</span>
+            <div class="vw-filters-range-dual">
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="floorMin">От min</span>
+                <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
+              </label>
+              <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="floorMax">До max</span>
+                <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="Этаж до"></select>
+              </label>
+            </div>
+          </div>
+          <hr class="vw-filters-divider">
+          <div class="vw-filters-check-grid">
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="rcOnly"> Только ЖК</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="exclusive"> Эксклюзивы</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="parking"> Есть паркинг</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="arcadia"> Аркадия</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="balconyLoggia"> Балкон/лоджия</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="center"> Центр</label>
+          </div>
+          <hr class="vw-filters-divider">
+          <div class="vw-filters-rc-wrap">
+            <input type="hidden" value="" data-role="filters-rc-hidden" autocomplete="off">
+            <button type="button" class="vw-filters-rc-trigger" data-role="filters-rc-trigger" aria-haspopup="listbox" aria-expanded="false">
+              <span class="vw-filters-rc-trigger__label" data-role="filters-rc-label">Поиск по ЖК</span>
+            </button>
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-actions">
             <button type="button" class="vw-filters-apply" data-role="apply">Применить</button>
-            <button type="button" class="vw-filters-reset" data-role="reset">Сброс</button>
+            <button type="button" class="vw-filters-reset" data-role="reset">Сбросить</button>
           </div>
-          <hr class="vw-filters-divider">
         </div>
-        <div class="vw-filters-hint">Нажмите "применить" чтоб обновить подборку</div>
+        <div class="vw-filters-hint">Нажмите «Применить», чтобы обновить подборку</div>
       </div>
     `;
     this.getRoot().appendChild(overlay);
@@ -5370,6 +5747,7 @@ class VoiceWidget extends HTMLElement {
     });
     this.applyFiltersOverlayPayload(overlay, this.buildFiltersOverlayPayloadFromEffectiveQuery());
     this.bindFiltersOverlayEvents(overlay);
+    this.bindFiltersResidentialComplexPicker(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeFiltersOverlay();

@@ -48,7 +48,15 @@ export class APIClient {
     const base = this._deriveCardsBaseUrl();
     const url = new URL(base + '/search');
 
-    const allowed = ['city', 'district', 'rooms', 'type', 'minPrice', 'maxPrice', 'limit'];
+    const allowed = [
+      'city', 'district', 'rooms', 'type', 'operation',
+      'minPrice', 'maxPrice',
+      'minArea', 'maxArea',
+      'minFloor', 'maxFloor',
+      'smart', 'arcadia', 'rcOnly', 'residentialComplex',
+      'exclusive', 'center', 'parking', 'balconyLoggia',
+      'limit'
+    ];
     for (const k of allowed) {
       const v = params[k];
       if (v !== undefined && v !== null && String(v).trim() !== '') {
