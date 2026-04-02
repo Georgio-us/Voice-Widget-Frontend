@@ -5442,39 +5442,54 @@ class VoiceWidget extends HTMLElement {
       if (rcTrigger) rcTrigger.setAttribute('aria-expanded', 'false');
     };
     const openRcPicker = () => {
+      const syncFiltersRcKbInsetFor = (lyr) => {
+        try {
+          const vv = window.visualViewport;
+          const inset = !vv ? 0 : Math.max(0, (window.innerHeight || 0) - (vv.height + vv.offsetTop));
+          lyr.style.setProperty('--vw-rc-kb-inset', `${inset}px`);
+        } catch {
+          try { lyr.style.removeProperty('--vw-rc-kb-inset'); } catch {}
+        }
+      };
       let layer = overlay.querySelector('[data-role="filters-rc-layer"]');
       if (!layer) {
         layer = document.createElement('div');
         layer.className = 'vw-access-rc-layer';
         layer.setAttribute('data-role', 'filters-rc-layer');
         layer.innerHTML = `
-            <div class="vw-access-rc-panel" role="dialog" aria-modal="true" aria-label="Выбор ЖК">
+            <div class="vw-access-rc-panel vw-filters-rc-panel" role="dialog" aria-modal="true" aria-label="Выбор ЖК">
               <div class="vw-access-rc-head">
                 <div class="vw-access-rc-title">Жилой комплекс</div>
                 <button type="button" class="vw-access-rc-close" data-role="rc-close" aria-label="Закрыть">×</button>
               </div>
-              <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск ЖК" enterkeyhint="search" autocomplete="off">
-              <div class="vw-access-rc-list" data-role="rc-list" role="listbox"></div>
-              <div class="vw-access-rc-add-block" data-role="rc-add-wrap">
-                <button type="button" class="vw-access-sub-btn" data-role="rc-add-open">Нет в списке — добавить</button>
-                <div class="vw-access-rc-add-block" data-role="rc-add-panel" hidden>
-                  <input type="text" class="vw-access-add-input" data-role="rc-add-input" placeholder="Название ЖК" maxlength="200" autocomplete="off">
-                  <div class="vw-access-rc-add-actions">
-                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="rc-add-save">Сохранить</button>
-                    <button type="button" class="vw-access-sub-btn" data-role="rc-add-cancel">Отмена</button>
-                  </div>
-                </div>
+              <div class="vw-access-rc-search-wrap">
+                <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск по ЖК" enterkeyhint="search" autocomplete="off">
+                <span class="vw-access-rc-search-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+                </span>
               </div>
+              <div class="vw-access-rc-list" data-role="rc-list" role="listbox"></div>
             </div>`;
         overlay.appendChild(layer);
+        const onFiltersRcVvChange = () => syncFiltersRcKbInsetFor(layer);
+        const vvFr = window.visualViewport;
+        if (vvFr) {
+          vvFr.addEventListener('resize', onFiltersRcVvChange);
+          vvFr.addEventListener('scroll', onFiltersRcVvChange);
+          layer._vwFiltersRcVvCleanup = () => {
+            try {
+              vvFr.removeEventListener('resize', onFiltersRcVvChange);
+              vvFr.removeEventListener('scroll', onFiltersRcVvChange);
+            } catch {}
+            try { layer.style.removeProperty('--vw-rc-kb-inset'); } catch {}
+          };
+        }
         const stop = (e) => e.stopPropagation();
         layer.querySelector('.vw-access-rc-panel')?.addEventListener('click', stop);
         layer.addEventListener('click', () => closeRcLayer(layer));
         layer.querySelector('[data-role="rc-close"]')?.addEventListener('click', () => closeRcLayer(layer));
         const listEl = layer.querySelector('[data-role="rc-list"]');
         const searchEl = layer.querySelector('[data-role="rc-search"]');
-        const addPanel = layer.querySelector('[data-role="rc-add-panel"]');
-        const addInput = layer.querySelector('[data-role="rc-add-input"]');
         const bindRow = (name) => {
           if (!rcHidden) return;
           rcHidden.value = String(name || '').trim();
@@ -5486,7 +5501,7 @@ class VoiceWidget extends HTMLElement {
           if (!listEl) return;
           const arr = Array.isArray(items) ? items : [];
           if (!arr.length) {
-            listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Ничего не найдено. Добавьте ЖК ниже.</div>';
+            listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Ничего не найдено</div>';
             return;
           }
           listEl.innerHTML = arr.map((row) => {
@@ -5494,37 +5509,13 @@ class VoiceWidget extends HTMLElement {
             const nameRaw = String(row?.name || '');
             const nameHtml = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
             return (
-              '<div class="vw-access-rc-row-wrap" role="presentation">' +
+              '<div class="vw-access-rc-row-wrap vw-filters-rc-row" role="presentation">' +
               `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}">${nameHtml}</button>` +
-              `<button type="button" class="vw-access-rc-row-delete" data-rc-id="${id.replace(/"/g, '&quot;')}" aria-label="Удалить из справочника">Удалить</button>` +
               '</div>'
             );
           }).join('');
           listEl.querySelectorAll('.vw-access-rc-row--main').forEach((btn) => {
             btn.addEventListener('click', () => bindRow(btn.textContent));
-          });
-          listEl.querySelectorAll('.vw-access-rc-row-delete').forEach((delBtn) => {
-            delBtn.addEventListener('click', async (e) => {
-              e.stopPropagation();
-              const rid = String(delBtn.getAttribute('data-rc-id') || '').trim();
-              const row = arr.find((r) => String(r?.id ?? '') === rid);
-              const nm = String(row?.name || delBtn.closest('.vw-access-rc-row-wrap')?.querySelector('.vw-access-rc-row--main')?.textContent || '').trim();
-              if (!rid) return;
-              if (!window.confirm(`Удалить «${nm || 'этот ЖК'}» из справочника?`)) return;
-              try {
-                await this.api?.deleteResidentialComplex?.(rid);
-                const cur = String(rcHidden?.value || '').trim();
-                if (cur && nm && cur === nm) {
-                  if (rcHidden) rcHidden.value = '';
-                  syncLabel();
-                }
-                this.ui?.showNotification?.('ЖК удалён из списка');
-                await loadList(String(searchEl?.value || '').trim());
-              } catch (err) {
-                console.warn('rc.delete', err);
-                this.ui?.showNotification?.('Не удалось удалить ЖК');
-              }
-            });
           });
         };
         const loadList = async (q = '') => {
@@ -5544,44 +5535,12 @@ class VoiceWidget extends HTMLElement {
             loadList(String(searchEl.value || '').trim());
           }, 280);
         });
-        layer.querySelector('[data-role="rc-add-open"]')?.addEventListener('click', () => {
-          if (addPanel) addPanel.hidden = false;
-          if (addInput) {
-            addInput.value = String(searchEl?.value || '').trim();
-            try { addInput.focus(); } catch {}
-          }
-        });
-        layer.querySelector('[data-role="rc-add-cancel"]')?.addEventListener('click', () => {
-          if (addPanel) addPanel.hidden = true;
-          if (addInput) addInput.value = '';
-        });
-        layer.querySelector('[data-role="rc-add-save"]')?.addEventListener('click', async () => {
-          const raw = String(addInput?.value || '').trim();
-          if (!raw) {
-            this.ui?.showNotification?.('Введите название ЖК');
-            return;
-          }
-          try {
-            const data = await this.api?.createResidentialComplex?.(raw);
-            const item = data?.item;
-            if (item?.name) bindRow(item.name);
-            else {
-              await loadList(String(searchEl?.value || '').trim());
-              bindRow(raw);
-            }
-            if (addPanel) addPanel.hidden = true;
-            if (addInput) addInput.value = '';
-            this.ui?.showNotification?.('ЖК добавлен');
-          } catch (err) {
-            console.warn('rc.create', err);
-            this.ui?.showNotification?.('Не удалось добавить ЖК');
-          }
-        });
         overlay._filtersRcLoadList = loadList;
       }
       const layerRef = overlay.querySelector('[data-role="filters-rc-layer"]');
       if (layerRef) {
         layerRef.classList.add('is-open');
+        syncFiltersRcKbInsetFor(layerRef);
         if (rcTrigger) rcTrigger.setAttribute('aria-expanded', 'true');
         const se = layerRef.querySelector('[data-role="rc-search"]');
         if (se) se.value = '';
@@ -5594,6 +5553,10 @@ class VoiceWidget extends HTMLElement {
     rcTrigger?.addEventListener('click', () => openRcPicker());
     overlay._filtersRcCleanup = () => {
       try { clearTimeout(rcSearchTimer); rcSearchTimer = null; } catch {}
+      try {
+        const fl = overlay.querySelector('[data-role="filters-rc-layer"]');
+        fl?._vwFiltersRcVvCleanup?.();
+      } catch {}
       try { overlay.querySelector('[data-role="filters-rc-layer"]')?.remove(); } catch {}
       try { delete overlay._filtersRcLoadList; } catch {}
       try { delete overlay._syncFiltersRcLabel; } catch {}
@@ -5799,6 +5762,13 @@ class VoiceWidget extends HTMLElement {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .vw-access-rc-panel.vw-filters-rc-panel {
+        grid-template-rows: auto auto minmax(0, 1fr);
+        padding-bottom: calc(40px + var(--vw-rc-kb-inset, 0px));
+      }
+      .vw-filters-rc-panel .vw-filters-rc-row .vw-access-rc-row--main {
+        padding: 12px 14px;
       }
       .vw-filters-divider {
         margin: 2px 0;
