@@ -4307,11 +4307,21 @@ class VoiceWidget extends HTMLElement {
       let rcSearchTimer = null;
       const closeRcLayer = (layer) => {
         if (!layer) return;
+        layer.querySelector('.vw-access-rc-panel')?.classList.remove('is-rc-add-open');
         layer.classList.remove('is-open');
         if (complexTrigger) complexTrigger.setAttribute('aria-expanded', 'false');
       };
       const openRcPicker = () => {
         ensureRcPickerStyles();
+        const syncRcLayerKbInsetFor = (lyr) => {
+          try {
+            const vv = window.visualViewport;
+            const inset = !vv ? 0 : Math.max(0, (window.innerHeight || 0) - (vv.height + vv.offsetTop));
+            lyr.style.setProperty('--vw-rc-kb-inset', `${inset}px`);
+          } catch {
+            try { lyr.style.removeProperty('--vw-rc-kb-inset'); } catch {}
+          }
+        };
         let layer = overlay.querySelector('[data-role="rc-layer"]');
         if (!layer) {
           layer = document.createElement('div');
@@ -4353,6 +4363,19 @@ class VoiceWidget extends HTMLElement {
               </div>
             </div>`;
           overlay.appendChild(layer);
+          const onRcVvChange = () => syncRcLayerKbInsetFor(layer);
+          const vvRc = window.visualViewport;
+          if (vvRc) {
+            vvRc.addEventListener('resize', onRcVvChange);
+            vvRc.addEventListener('scroll', onRcVvChange);
+            layer._vwRcVvCleanup = () => {
+              try {
+                vvRc.removeEventListener('resize', onRcVvChange);
+                vvRc.removeEventListener('scroll', onRcVvChange);
+              } catch {}
+              try { layer.style.removeProperty('--vw-rc-kb-inset'); } catch {}
+            };
+          }
           const stop = (e) => e.stopPropagation();
           layer.querySelector('.vw-access-rc-panel')?.addEventListener('click', stop);
           layer.addEventListener('click', () => closeRcLayer(layer));
@@ -4432,6 +4455,7 @@ class VoiceWidget extends HTMLElement {
             if (addInput) addInput.value = '';
           };
           const exitAddMode = () => {
+            layer.querySelector('.vw-access-rc-panel')?.classList.remove('is-rc-add-open');
             if (addPanel) addPanel.hidden = true;
             if (footerList) footerList.hidden = false;
             resetAddForm();
@@ -4447,6 +4471,7 @@ class VoiceWidget extends HTMLElement {
             if (addInline) addInline.classList.remove('is-confirmed');
           });
           layer.querySelector('[data-role="rc-add-open"]')?.addEventListener('click', () => {
+            layer.querySelector('.vw-access-rc-panel')?.classList.add('is-rc-add-open');
             if (addPanel) addPanel.hidden = false;
             if (footerList) footerList.hidden = true;
             resetAddForm();
@@ -4500,11 +4525,13 @@ class VoiceWidget extends HTMLElement {
           const fl = layerRef.querySelector('[data-role="rc-footer-list"]');
           const il = layerRef.querySelector('[data-role="rc-add-inline"]');
           const inp = layerRef.querySelector('[data-role="rc-add-input"]');
+          layerRef.querySelector('.vw-access-rc-panel')?.classList.remove('is-rc-add-open');
           if (ap) ap.hidden = true;
           if (fl) fl.hidden = false;
           if (il) il.classList.remove('is-confirmed');
           if (inp) inp.value = '';
           layerRef.classList.add('is-open');
+          syncRcLayerKbInsetFor(layerRef);
           if (complexTrigger) complexTrigger.setAttribute('aria-expanded', 'true');
           const se = layerRef.querySelector('[data-role="rc-search"]');
           if (se) se.value = '';
@@ -4519,6 +4546,10 @@ class VoiceWidget extends HTMLElement {
       const _prevAddPropertyCleanup = overlay._cleanupAddPropertyOverlay;
       overlay._cleanupAddPropertyOverlay = () => {
         try { clearTimeout(rcSearchTimer); rcSearchTimer = null; } catch {}
+        try {
+          const rcL = overlay.querySelector('[data-role="rc-layer"]');
+          rcL?._vwRcVvCleanup?.();
+        } catch {}
         try { overlay.querySelector('[data-role="rc-layer"]')?.remove(); } catch {}
         try { delete overlay._rcLoadList; } catch {}
         try { _prevAddPropertyCleanup?.(); } catch {}
@@ -4750,7 +4781,8 @@ class VoiceWidget extends HTMLElement {
           }
           .vw-access-rc-panel {
             width: min(100%, 440px);
-            max-height: min(78vh, 520px);
+            max-height: min(85vh, 520px);
+            max-height: min(85dvh, 520px);
             border-radius: 16px 16px 0 0;
             border: 1px solid var(--border-light, rgba(255,255,255,0.14));
             border-bottom: none;
@@ -4760,8 +4792,14 @@ class VoiceWidget extends HTMLElement {
             display: grid;
             grid-template-rows: auto auto minmax(0, 1fr) auto;
             gap: 10px;
-            padding: 12px 14px calc(12px + var(--vw-add-kb-inset, 0px));
+            padding: 12px 14px calc(12px + var(--vw-rc-kb-inset, 0px));
             box-sizing: border-box;
+            overflow: hidden;
+            min-height: 0;
+          }
+          .vw-access-rc-panel.is-rc-add-open {
+            max-height: min(92vh, 720px);
+            max-height: min(92dvh, 720px);
           }
           .vw-access-rc-head {
             display: flex;
@@ -4786,8 +4824,7 @@ class VoiceWidget extends HTMLElement {
             cursor: pointer;
           }
           .vw-access-rc-list {
-            min-height: 120px;
-            max-height: 36vh;
+            min-height: 0;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             border-radius: 12px;
@@ -4858,6 +4895,9 @@ class VoiceWidget extends HTMLElement {
             gap: 8px;
           }
           .vw-access-rc-panel [data-role="rc-add-panel"][hidden] {
+            display: none;
+          }
+          .vw-access-rc-panel .vw-access-rc-footer[data-role="rc-footer-list"][hidden] {
             display: none;
           }
           .vw-access-rc-add-actions {
