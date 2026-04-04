@@ -187,9 +187,7 @@
     pointer-events:none;
   }
   .card-screen .cs-image .cs-price-tag{
-    position:absolute;
-    top:10px;
-    right:10px;
+    position:static;
     margin:0;
     display:inline-flex;
     align-items:center;
@@ -202,6 +200,39 @@
     font-size:13px;
     font-weight:600;
     line-height:1;
+  }
+  .card-screen .cs-image .cs-badge-stack{
+    position:absolute;
+    top:10px;
+    right:10px;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:6px;
+    pointer-events:none;
+  }
+  .card-screen .cs-image .cs-meta-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:22px;
+    padding:4px 9px;
+    border-radius:999px;
+    border:1px solid var(--border-light);
+    background:var(--shadow-strong);
+    color:var(--text-on-photo);
+    font-size:11px;
+    font-weight:600;
+    line-height:1;
+    white-space:nowrap;
+  }
+  .card-screen .cs-image .cs-meta-badge--operation{
+    background:color-mix(in srgb, var(--color-accent) 56%, rgba(0,0,0,0.5));
+    border-color:color-mix(in srgb, var(--color-accent) 60%, var(--border-light));
+    color:var(--text-on-accent);
+  }
+  .card-screen .cs-image .cs-meta-badge--type{
+    background:var(--shadow-strong);
   }
   .card-screen .cs-image .card-btn.like[data-action="like"]{
     display:inline-flex;
@@ -2461,10 +2492,20 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-price-tag {
-  top: 4px;
-  right: 4px;
   padding: 3px 6px;
   font-size: 10px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-badge-stack {
+  top: 4px;
+  right: 4px;
+  gap: 4px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-meta-badge {
+  min-height: 18px;
+  padding: 2px 6px;
+  font-size: 9px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-district {

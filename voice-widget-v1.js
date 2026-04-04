@@ -8805,7 +8805,11 @@ render() {
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
             <div class="cs-image-overlay">
-              <div class="cs-price-tag">${normalized.id || ''}</div>
+              <div class="cs-badge-stack">
+                <div class="cs-price-tag">${normalized.id || ''}</div>
+                ${normalized.operationBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--operation">${escCardText(normalized.operationBadgeLabel)}</div>` : ''}
+                ${normalized.propertyTypeBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--type">${escCardText(normalized.propertyTypeBadgeLabel)}</div>` : ''}
+              </div>
               <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
               <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -10206,6 +10210,20 @@ render() {
     const district = raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
+    const operationRaw = String(raw.operation || raw.listingMode || '').trim().toLowerCase();
+    const operationBadgeLabel = operationRaw === 'rent'
+      ? 'Аренда'
+      : (operationRaw === 'sale' ? 'Продажа' : '');
+    const propertyTypeRaw = String(propertyType || '').trim().toLowerCase();
+    const propertyTypeBadgeLabel = (() => {
+      if (!propertyTypeRaw) return '';
+      if (['apartment', 'flat'].includes(propertyTypeRaw)) return 'Квартира';
+      if (propertyTypeRaw === 'house') return 'Дом';
+      if (propertyTypeRaw === 'commercial') return 'Коммерция';
+      if (propertyTypeRaw === 'land') return 'Земля';
+      if (propertyTypeRaw === 'parking') return 'Паркинг';
+      return propertyType;
+    })();
     const title = String(raw.title ?? '').trim();
     const rawFeatures = parseObject(raw.features) || {};
     const displaySpecs = parseObject(raw.display_specs) || parseObject(rawFeatures.display_specs) || null;
@@ -10296,6 +10314,9 @@ render() {
       pricePerM2Label,
       bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
       propertyType,
+      operation: operationRaw || '',
+      operationBadgeLabel,
+      propertyTypeBadgeLabel,
       furnished: furnishedKnown ? furnishedBool : null,
       furnishedLabel: furnishedKnown ? (furnishedBool ? 'Furnished' : 'Unfurnished') : '',
       priceEUR: priceNum != null ? priceNum : null,
