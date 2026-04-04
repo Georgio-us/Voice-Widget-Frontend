@@ -10208,6 +10208,7 @@ render() {
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
     const title = String(raw.title ?? '').trim();
     const rawFeatures = parseObject(raw.features) || {};
+    const displaySpecs = parseObject(raw.display_specs) || parseObject(rawFeatures.display_specs) || null;
     const furnishedRaw = raw.furnished;
     const furnishedBool = furnishedRaw === true || furnishedRaw === 'true' || furnishedRaw === 1 || furnishedRaw === '1';
     const furnishedKnown = furnishedRaw !== null && furnishedRaw !== undefined && furnishedRaw !== '';
@@ -10264,6 +10265,18 @@ render() {
     if (Array.isArray(rawFeatures.buildingInfrastructure) && rawFeatures.buildingInfrastructure.length) {
       pushExtra(dynamicBackFeatureItems, '📌', 'Інфраструктура', rawFeatures.buildingInfrastructure.join(', '));
     }
+    // Phase-2 prep: consume normalized Group-2 payload from backend (features.display_specs).
+    // Old/manual cards may not have this object; in that case the existing fallback logic is used.
+    if (displaySpecs) {
+      pushExtra(dynamicBackFeatureItems, '📍', 'Улица', displaySpecs.street);
+      pushExtra(dynamicBackFeatureItems, '🏘️', 'Жилой комплекс', displaySpecs.complex);
+      pushExtra(dynamicBackFeatureItems, '🍳', 'Кухня', displaySpecs.kitchen_area != null ? `${displaySpecs.kitchen_area} м²` : null);
+      pushExtra(dynamicBackFeatureItems, '🏗️', 'Этажность дома', displaySpecs.total_floors);
+      pushExtra(dynamicBackFeatureItems, '🔥', 'Отопление', displaySpecs.heating);
+      pushExtra(dynamicBackFeatureItems, '🛠️', 'Ремонт', displaySpecs.repair);
+      pushExtra(dynamicBackFeatureItems, '🏙️', 'Инфраструктура', displaySpecs.infrastructure);
+      pushExtra(dynamicBackFeatureItems, '🌳', 'Ландшафт', displaySpecs.landscape);
+    }
 
     return {
       id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
@@ -10288,6 +10301,7 @@ render() {
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel,
       features: rawFeatures,
+      display_specs: displaySpecs,
       backFeatureItems: dynamicBackFeatureItems,
       score: Number.isFinite(parsedScore) ? parsedScore : 0,
       strictScore: Number.isFinite(parsedStrictScore) ? parsedStrictScore : 0,
