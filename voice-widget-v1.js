@@ -10380,16 +10380,20 @@ render() {
       }
       return [];
     };
+    const normalizeAssetKey = (v) => String(v || '').trim();
+    const mainImageKey = normalizeAssetKey(image);
     const assetPool = [
       ...readList(raw.images),
       ...readList(raw.assets),
       ...readList(raw.gallery),
       ...readList(raw.photos)
     ]
-      .map(v => String(v || '').trim())
+      .map((v) => normalizeAssetKey(v))
       .filter(Boolean);
-    if (image && !assetPool.includes(image)) assetPool.unshift(image);
-    const assetImages = assetPool.slice(0, 4);
+    const uniqueAssetPool = [...new Set(assetPool)];
+    const assetImages = uniqueAssetPool
+      .filter((url) => normalizeAssetKey(url) !== mainImageKey)
+      .slice(0, 4);
 
     const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} USD` : (raw.price || raw.priceLabel || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
