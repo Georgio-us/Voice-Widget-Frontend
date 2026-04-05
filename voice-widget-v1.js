@@ -4028,6 +4028,7 @@ class VoiceWidget extends HTMLElement {
             </div>
           </article>
         `).join('');
+        const isEmptyWishlist = !rows;
         return `
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
@@ -4044,7 +4045,7 @@ class VoiceWidget extends HTMLElement {
               </div>
             </div>
             <div class="vw-access-objects-scroll">
-              <div class="vw-access-obj-list">
+              <div class="vw-access-obj-list${isEmptyWishlist ? ' vw-access-obj-list--empty' : ''}">
                 ${rows || `<div class="vw-access-sub-item">${locale.accessUserEmpty || "Здесь появятся объекты, которые вы добавите в избранное (Wishlist)"}</div>`}
               </div>
             </div>
@@ -4104,7 +4105,7 @@ class VoiceWidget extends HTMLElement {
     overlay.id = 'vwAccessSubOverlay';
     overlay.className = 'vw-access-sub-overlay';
     overlay.innerHTML = `
-      <div class="vw-access-sub-modal ${isAddProperty ? 'vw-access-sub-modal--add' : ''} ${safeSection === 'properties' ? 'vw-access-sub-modal--properties' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="vw-access-sub-modal ${isAddProperty ? 'vw-access-sub-modal--add' : ''} ${(safeSection === 'properties' || safeSection === 'wishlist') ? 'vw-access-sub-modal--properties' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
         ${modalHead}
         ${modalBody}
       </div>
@@ -6951,12 +6952,24 @@ class VoiceWidget extends HTMLElement {
         padding: 0 8px;
         gap: 6px;
         font-size: .95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: auto;
+        max-width: 100%;
+        white-space: nowrap;
+        line-height: 1;
       }
       .vw-access-sub-btn--text-action svg {
         width: 14px;
         height: 14px;
-        display: inline-block;
+        display: block;
+        flex: 0 0 14px;
         opacity: .9;
+      }
+      .vw-access-sub-btn--text-action span {
+        display: inline-block;
+        min-width: 0;
       }
       .vw-access-sub-btn--danger {
         border-color: rgba(236, 96, 96, 0.82);
@@ -7482,6 +7495,10 @@ class VoiceWidget extends HTMLElement {
       .vw-access-obj-list {
         display: grid;
         gap: 10px;
+      }
+      .vw-access-obj-list--empty {
+        min-height: 200px;
+        align-content: start;
       }
       .vw-access-obj-card {
         display: grid;
