@@ -8941,12 +8941,12 @@ render() {
           <div class="cs-body">
             <div class="cs-row cs-row--top">
               <div class="cs-title">${escCardText(headlineTitle || '—')}</div>
-              <div class="cs-price-badges">
-                <div class="cs-inline-price cs-inline-price--total">${normalized.priceLabel || ''}</div>
-              </div>
             </div>
             <div class="cs-row cs-row--district">
               <div class="cs-district">${districtLine}</div>
+              <div class="cs-price-badges">
+                <div class="cs-inline-price cs-inline-price--total">${normalized.priceLabel || ''}</div>
+              </div>
             </div>
             <div class="cs-row cs-row--specs">
               <div class="cs-features cs-features--main-specs">${(specsPills.length ? specsPills : ['📐 —']).map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
