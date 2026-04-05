@@ -2951,7 +2951,7 @@ class VoiceWidget extends HTMLElement {
     if (!shareUrl) return false;
     const payload = {
       title,
-      text: 'Посмотри этот объект в моем боте:',
+      text: 'Здравствуйте! Делюсь объектом, который может быть вам интересен.',
       url: shareUrl
     };
     try {
@@ -2982,6 +2982,56 @@ class VoiceWidget extends HTMLElement {
       )
     );
     if (!normalized.length) return false;
+    const tg = window?.Telegram?.WebApp;
+    const initDataPresent = Boolean(String(tg?.initData || '').trim());
+    if (tg && initDataPresent) {
+      try {
+        if (normalized.length === 1) {
+          const inlineQuery = `share_prop_${normalized[0]}`;
+          if (typeof tg?.switchInlineQuery === 'function') {
+            try {
+              tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+              return true;
+            } catch {
+              tg.switchInlineQuery(inlineQuery);
+              return true;
+            }
+          }
+          if (typeof tg?.switchInlineQueryChosenChat === 'function') {
+            tg.switchInlineQueryChosenChat(inlineQuery, {
+              allow_user_chats: true,
+              allow_group_chats: true,
+              allow_channel_chats: true
+            });
+            return true;
+          }
+        } else {
+          const token = this.encodeDeepLinkSelectionIds(normalized);
+          if (token) {
+            const inlineQuery = `share_sel_${token}`;
+            if (typeof tg?.switchInlineQuery === 'function') {
+              try {
+                tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+                return true;
+              } catch {
+                tg.switchInlineQuery(inlineQuery);
+                return true;
+              }
+            }
+            if (typeof tg?.switchInlineQueryChosenChat === 'function') {
+              tg.switchInlineQueryChosenChat(inlineQuery, {
+                allow_user_chats: true,
+                allow_group_chats: true,
+                allow_channel_chats: true
+              });
+              return true;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('[TG Inline] selection share failed, fallback to native share:', error);
+      }
+    }
     const shareUrl = normalized.length === 1
       ? this.buildTelegramPropertyLink(normalized[0])
       : this.buildTelegramSelectionLink(normalized);
@@ -2989,8 +3039,8 @@ class VoiceWidget extends HTMLElement {
     const payload = {
       title: normalized.length === 1 ? 'Объект недвижимости' : `Подборка объектов (${normalized.length})`,
       text: normalized.length === 1
-        ? 'Посмотри этот объект в моем боте:'
-        : `Посмотри подборку из ${normalized.length} объектов в моем боте:`,
+        ? 'Здравствуйте! Делюсь объектом, который может быть вам интересен.'
+        : `Здравствуйте! Делюсь подборкой из ${normalized.length} объектов, которая может быть вам интересна:`,
       url: shareUrl
     };
     try {
