@@ -3103,6 +3103,11 @@ class VoiceWidget extends HTMLElement {
     return all.filter((item) => selectedIds.has(String(item?.id || '').trim()));
   }
 
+  getWishlistCount() {
+    if (!(this._wishlistIds instanceof Set)) this._wishlistIds = this.loadWishlistIds();
+    return this._wishlistIds.size;
+  }
+
   getBackendBaseUrl() {
     return String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '');
   }
@@ -3250,14 +3255,32 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
-  updateAccessHeaderButton() {
+  updateAccessHeaderButton({ pulse = false } = {}) {
     const btn = this.$byId('appThemeButton');
     if (!btn) return;
     const locale = this.getCurrentLocale();
     const isAdmin = this.accessRole === 'owner' || this.accessRole === 'super_admin' || this.accessFlags?.isAdmin === true;
+    const wishlistCount = this.getWishlistCount();
     btn.disabled = false;
     btn.classList.remove('app-theme-btn--placeholder');
-    btn.textContent = isAdmin ? (locale.accessAdminIcon || '👑') : (locale.accessUserIcon || '♡');
+    btn.classList.toggle('app-theme-btn--has-wishlist', !isAdmin && wishlistCount > 0);
+    if (!isAdmin && wishlistCount > 0) {
+      btn.dataset.count = String(wishlistCount);
+      btn.textContent = '♥';
+    } else {
+      delete btn.dataset.count;
+      btn.textContent = isAdmin ? (locale.accessAdminIcon || '👑') : (locale.accessUserIcon || '♡');
+    }
+    if (!isAdmin && pulse && wishlistCount > 0) {
+      btn.classList.remove('is-insight-pulse');
+      void btn.offsetWidth;
+      btn.classList.add('is-insight-pulse');
+      setTimeout(() => {
+        try { btn.classList.remove('is-insight-pulse'); } catch {}
+      }, 1200);
+    } else if (!pulse) {
+      btn.classList.remove('is-insight-pulse');
+    }
     btn.setAttribute('title', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
     btn.setAttribute('aria-label', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
   }
@@ -7965,6 +7988,7 @@ render() {
       } catch {}
       const variantId = likeBtn.getAttribute('data-variant-id');
       this.toggleWishlistSelection(variantId, isLiked);
+      try { this.updateAccessHeaderButton({ pulse: isLiked }); } catch {}
       if (!isLiked) return;
       
       // Логируем card_like
