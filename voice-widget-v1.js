@@ -8887,28 +8887,24 @@ render() {
     const safeDescription = String(normalized.description || locale.cardDescriptionEmpty || 'Description unavailable')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    const specsPills = [
-      `🛏️ ${normalized.rooms ? `${normalized.rooms} rooms` : '— rooms'}`,
-      `📐 ${normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²'}`,
-      `🏢 ${normalized.floor ? `${normalized.floor} floor` : '— floor'}`
-    ];
-    const backSpecsItemsBase = [
-      { icon: '🛏️', text: normalized.rooms ? `${normalized.rooms} rooms` : '— rooms' },
-      { icon: '📐', text: normalized.area_m2 != null && normalized.area_m2 !== '' ? `${normalized.area_m2} m²` : '— m²' },
-      { icon: '💰', text: normalized.pricePerM2Label ? `${normalized.pricePerM2Label} USD/m²` : '— USD/m²' },
-      { icon: '🏢', text: normalized.floor ? `${normalized.floor} floor` : '— floor' },
-      { icon: '🛁', text: normalized.bathrooms ? `${normalized.bathrooms} bathrooms` : '— bathrooms' }
-    ];
+    const isUa = this.getLangCode() === 'ua';
+    const specsPills = [];
+    if (normalized.rooms) specsPills.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
+    if (normalized.area_m2 != null && normalized.area_m2 !== '') specsPills.push(`📐 ${normalized.area_m2} м²`);
+    if (normalized.floor) specsPills.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
+    const backSpecsItemsBase = [];
+    if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
+    if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
+    if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} USD/m²` });
+    if (normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
+    if (normalized.bathrooms) backSpecsItemsBase.push({ icon: '🛁', text: `${isUa ? 'Санвузлів' : 'Санузлов'}: ${normalized.bathrooms}` });
     const dynamicExtras = Array.isArray(normalized.backFeatureItems) ? normalized.backFeatureItems : [];
-    const backSpecsItemsFallback = [
-      { icon: '🏠', text: locale.backSpecsExtraType || 'Тип: апартаменты' },
-      { icon: '📈', text: locale.backSpecsExtraMarket || 'Рынок: первичный' },
-      { icon: '🗓️', text: locale.backSpecsExtraHandover || 'Сдача: Q4 2027' },
-      { icon: '✨', text: locale.backSpecsExtraFinish || 'Отделка: премиум' },
-      { icon: '🚗', text: locale.backSpecsExtraParking || 'Паркинг: 1 место' },
-      { icon: '🌿', text: locale.backSpecsExtraTerrace || 'Терраса: есть' }
-    ];
-    const backSpecsItems = [...backSpecsItemsBase, ...(dynamicExtras.length ? dynamicExtras : backSpecsItemsFallback)];
+    const backSpecsItems = [...backSpecsItemsBase, ...dynamicExtras].filter((item) => {
+      const text = String(item?.text || '').trim();
+      if (!text) return false;
+      const lower = text.toLowerCase();
+      return !lower.endsWith(': no') && !lower.endsWith(': ні') && !lower.endsWith(': нет');
+    });
     const backSpecsHtml = backSpecsItems
       .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
       .join('');
@@ -8956,7 +8952,7 @@ render() {
               </button>
             </div>
             <div class="cs-row cs-row--specs">
-              <div class="cs-features cs-features--main-specs">${specsPills.map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
+              <div class="cs-features cs-features--main-specs">${(specsPills.length ? specsPills : ['📐 —']).map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
             </div>
             <div class="card-slide-paginator cards-dots-row"></div>
             <div class="card-actions-wrap">
@@ -9182,38 +9178,6 @@ render() {
     const items = Array.from(target.querySelectorAll('.card-back-specs__item'));
     if (!items.length) return;
     items.forEach((item) => item.classList.remove('is-hidden', 'is-last-single', 'is-wide'));
-
-    const visibleLimit = 11; // 11 data chips + 1 blue +N chip = ровная сетка 6x2
-    let hiddenCount = Math.max(0, items.length - visibleLimit);
-    if (hiddenCount > 0) {
-      for (let i = visibleLimit; i < items.length; i += 1) {
-        items[i].classList.add('is-hidden');
-      }
-    }
-
-    const moreBtn = document.createElement('button');
-    moreBtn.type = 'button';
-    moreBtn.className = 'card-back-specs__more';
-    moreBtn.setAttribute('data-action', 'show-hidden-specs');
-    moreBtn.textContent = `+${Math.max(1, hiddenCount)}`;
-    moreBtn.setAttribute('data-hidden-count', String(Math.max(1, hiddenCount)));
-    let morePopupOpened = false;
-    const openMorePopup = (ev) => {
-      try {
-        ev.preventDefault();
-        ev.stopPropagation();
-        if (typeof ev.stopImmediatePropagation === 'function') ev.stopImmediatePropagation();
-      } catch {}
-      if (morePopupOpened) return;
-      morePopupOpened = true;
-      setTimeout(() => { morePopupOpened = false; }, 250);
-      const payloadHiddenCount = Number(moreBtn.getAttribute('data-hidden-count')) || 1;
-      this.showBackSpecsOverflowPopup({ slide, hiddenCount: payloadHiddenCount });
-    };
-    moreBtn.addEventListener('click', openMorePopup);
-    moreBtn.addEventListener('pointerup', openMorePopup);
-    moreBtn.addEventListener('touchend', openMorePopup, { passive: false });
-    target.appendChild(moreBtn);
   }
 
   fitBackSpecsForAllSlides() {
@@ -10319,8 +10283,8 @@ render() {
       }
     };
     const truthyLabel = (v) => {
-      if (v === true || v === 'true' || v === 1 || v === '1') return 'yes';
-      if (v === false || v === 'false' || v === 0 || v === '0') return 'no';
+      if (v === true || v === 'true' || v === 1 || v === '1') return true;
+      if (v === false || v === 'false' || v === 0 || v === '0') return false;
       return null;
     };
     const pushExtra = (arr, icon, label, value) => {
@@ -10340,6 +10304,7 @@ render() {
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
     const operationRaw = String(raw.operation || raw.listingMode || '').trim().toLowerCase();
+    const isUaLang = this.getLangCode() === 'ua';
     const operationBadgeLabel = operationRaw === 'rent'
       ? 'Аренда'
       : (operationRaw === 'sale' ? 'Продажа' : '');
@@ -10353,6 +10318,16 @@ render() {
       if (propertyTypeRaw === 'parking') return 'Паркинг';
       return propertyType;
     })();
+    const mapPropertyTypeLabel = (v) => {
+      const rawType = String(v || '').trim().toLowerCase();
+      if (!rawType) return '';
+      if (['apartment', 'flat'].includes(rawType)) return isUaLang ? 'Квартира' : 'Квартира';
+      if (rawType === 'house') return isUaLang ? 'Будинок' : 'Дом';
+      if (rawType === 'commercial') return isUaLang ? 'Комерція' : 'Коммерция';
+      if (rawType === 'land') return isUaLang ? 'Земля' : 'Земля';
+      if (rawType === 'parking') return isUaLang ? 'Паркінг' : 'Паркинг';
+      return String(v || '').trim();
+    };
     const title = String(raw.title ?? '').trim();
     const rawFeatures = parseObject(raw.features) || {};
     const displaySpecs = parseObject(raw.display_specs) || parseObject(rawFeatures.display_specs) || null;
@@ -10403,14 +10378,19 @@ render() {
     const matchTier = ['high', 'mid', 'low'].includes(normalizedTier) ? normalizedTier : 'low';
 
     const dynamicBackFeatureItems = [];
-    pushExtra(dynamicBackFeatureItems, '🏠', 'Тип', propertyType || rawFeatures.type || rawFeatures.propertyType || rawFeatures.buildingType);
+    pushExtra(dynamicBackFeatureItems, '🏠', isUaLang ? 'Тип' : 'Тип', mapPropertyTypeLabel(propertyType || rawFeatures.type || rawFeatures.propertyType || rawFeatures.buildingType));
     pushExtra(dynamicBackFeatureItems, '🧱', 'Стіни', rawFeatures.wallMaterial || rawFeatures.materialWalls);
-    pushExtra(dynamicBackFeatureItems, '🛗', 'Ліфт', rawFeatures.elevator ?? truthyLabel(rawFeatures.elevator));
-    pushExtra(dynamicBackFeatureItems, '🌤️', 'Балкон', rawFeatures.balconyType || rawFeatures.balcony || truthyLabel(rawFeatures.balcony));
+    const elevatorFlag = truthyLabel(rawFeatures.elevator);
+    if (elevatorFlag === true) pushExtra(dynamicBackFeatureItems, '🛗', isUaLang ? 'Ліфт' : 'Лифт', isUaLang ? 'є' : 'есть');
+    pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', rawFeatures.balconyType || null);
+    const balconyFlag = truthyLabel(rawFeatures.balcony);
+    if (balconyFlag === true) pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', isUaLang ? 'є' : 'есть');
     pushExtra(dynamicBackFeatureItems, '🛠️', 'Стан', rawFeatures.condition || rawFeatures.objectCondition || rawFeatures.renovation || rawFeatures.finish);
     pushExtra(dynamicBackFeatureItems, '🚗', 'Паркінг', rawFeatures.parking || rawFeatures.parkingSpaces);
-    pushExtra(dynamicBackFeatureItems, '🌿', 'Тераса', rawFeatures.terrace ?? truthyLabel(rawFeatures.terrace));
-    pushExtra(dynamicBackFeatureItems, '🪑', 'Меблі', rawFeatures.furnished ?? truthyLabel(rawFeatures.furnished));
+    const terraceFlag = truthyLabel(rawFeatures.terrace);
+    if (terraceFlag === true) pushExtra(dynamicBackFeatureItems, '🌿', isUaLang ? 'Тераса' : 'Терраса', isUaLang ? 'є' : 'есть');
+    const furnishedFlag = truthyLabel(rawFeatures.furnished);
+    if (furnishedFlag === true) pushExtra(dynamicBackFeatureItems, '🪑', isUaLang ? 'Меблі' : 'Мебель', isUaLang ? 'є' : 'есть');
     pushExtra(dynamicBackFeatureItems, '🏗️', 'Поверхів', rawFeatures.buildingFloors);
     pushExtra(dynamicBackFeatureItems, '🏛️', 'Рік', rawFeatures.buildingYear);
     if (Array.isArray(rawFeatures.buildingInfrastructure) && rawFeatures.buildingInfrastructure.length) {
