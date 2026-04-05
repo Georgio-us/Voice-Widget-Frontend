@@ -2215,6 +2215,7 @@ const ASSETS_BASE = (() => {
 
 const VW_DEEP_LINK_PARAM = 'propId';
 const VW_DEEP_LINK_PREFIX = 'prop_';
+const VW_DEEP_LINK_SELECTION_PREFIX = 'sel_';
 const VW_TELEGRAM_BOT_USERNAME = (() => {
   try {
     const fromWindow = typeof window !== 'undefined' ? window.__VW_TELEGRAM_BOT_USERNAME__ : '';
@@ -2265,6 +2266,7 @@ const LOCALES = {
     accessAdminSortDealSale: 'Сделка: продажа',
     accessAdminSortDealRent: 'Сделка: аренда',
     accessAdminSortReset: 'Сброс',
+    accessAdminSortApply: 'Применить',
     accessAdminSubscription: 'Управление подпиской',
     accessAdminOlxConnect: 'Подключить OLX',
     accessAdminOlxConnectOpening: 'Открываю OLX...',
@@ -2410,6 +2412,7 @@ const LOCALES = {
     accessAdminSortDealSale: 'Угода: продаж',
     accessAdminSortDealRent: 'Угода: оренда',
     accessAdminSortReset: 'Скинути',
+    accessAdminSortApply: 'Застосувати',
     accessAdminSubscription: 'Керування підпискою',
     accessAdminOlxConnect: 'Підключити OLX',
     accessAdminOlxConnectOpening: 'Відкриваю OLX...',
@@ -2555,8 +2558,10 @@ class VoiceWidget extends HTMLElement {
     this.audioBlob = null;
     this.recordedChunks = [];
     this._deepLinkPropId = this.getDeepLinkPropIdFromUrl();
+    this._deepLinkSelectionIds = this.getDeepLinkSelectionIdsFromUrl();
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
+    this._deepLinkModeType = null;
     this._sliderCheckpointShown = { 10: false, 20: false };
     /** @type {'slider'|'list'} */
     this._catalogDisplayMode = 'slider';
@@ -2634,6 +2639,7 @@ class VoiceWidget extends HTMLElement {
     const raw = String(rawValue || '').trim();
     if (!raw) return '';
     const value = raw.replace(/\+/g, ' ').trim();
+    if (value.toLowerCase().startsWith(VW_DEEP_LINK_SELECTION_PREFIX)) return '';
     const tokenMatch = value.match(/prop_([a-z0-9_-]+)/i);
     if (tokenMatch?.[1]) return String(tokenMatch[1]).trim().toUpperCase();
     const withoutPrefix = value.toLowerCase().startsWith(VW_DEEP_LINK_PREFIX)
@@ -2641,6 +2647,56 @@ class VoiceWidget extends HTMLElement {
       : value;
     const idMatch = String(withoutPrefix || '').trim().match(/^([a-z0-9_-]+)$/i);
     return idMatch?.[1] ? idMatch[1].toUpperCase() : '';
+  }
+
+  normalizeDeepLinkSelectionToken(rawValue) {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return '';
+    const value = raw.replace(/\+/g, ' ').trim();
+    const tokenMatch = value.match(/sel_([a-z0-9_-]+)/i);
+    if (tokenMatch?.[1]) return String(tokenMatch[1]).trim();
+    const withoutPrefix = value.toLowerCase().startsWith(VW_DEEP_LINK_SELECTION_PREFIX)
+      ? value.slice(VW_DEEP_LINK_SELECTION_PREFIX.length)
+      : value;
+    const keyMatch = String(withoutPrefix || '').trim().match(/^([a-z0-9_-]+)$/i);
+    return keyMatch?.[1] ? keyMatch[1] : '';
+  }
+
+  encodeDeepLinkSelectionIds(ids = []) {
+    const normalized = Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .map((id) => this.normalizeDeepLinkPropId(id))
+          .filter(Boolean)
+      )
+    );
+    if (!normalized.length) return '';
+    const payload = normalized.join(',');
+    try {
+      return btoa(payload).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    } catch {
+      return '';
+    }
+  }
+
+  decodeDeepLinkSelectionIds(encodedToken) {
+    const token = String(encodedToken || '').trim();
+    if (!token) return [];
+    const padded = token.replace(/-/g, '+').replace(/_/g, '/');
+    const fixed = padded + '='.repeat((4 - (padded.length % 4 || 4)) % 4);
+    try {
+      const decoded = atob(fixed);
+      return Array.from(
+        new Set(
+          String(decoded || '')
+            .split(',')
+            .map((id) => this.normalizeDeepLinkPropId(id))
+            .filter(Boolean)
+        )
+      );
+    } catch {
+      return [];
+    }
   }
 
   readTelegramStartParam() {
@@ -2684,6 +2740,8 @@ class VoiceWidget extends HTMLElement {
       const href = String(window.location.href || '');
       const fromHref = href.match(/(?:startapp|start_param|tgWebAppStartParam)=([^&#]+)/i)?.[1] || '';
       if (fromHref) candidates.push(decodeURIComponent(fromHref));
+      const fromPath = href.match(/\/share\/prop\/([^/?#]+)/i)?.[1] || '';
+      if (fromPath) candidates.push(fromPath);
       const propToken = href.match(/prop_[a-z0-9_-]+/i)?.[0] || '';
       if (propToken) candidates.push(propToken);
     } catch {}
@@ -2694,10 +2752,42 @@ class VoiceWidget extends HTMLElement {
     return null;
   }
 
+  getDeepLinkSelectionIdsFromUrl() {
+    const candidates = [];
+    try {
+      const params = new URLSearchParams(window.location.search);
+      candidates.push(params.get('selection'));
+      candidates.push(params.get('selectionId'));
+      candidates.push(params.get('selectionToken'));
+      candidates.push(params.get('startapp'));
+      candidates.push(params.get('start'));
+    } catch {}
+    candidates.push(this.readTelegramStartParam());
+    try {
+      const href = String(window.location.href || '');
+      const fromHref = href.match(/(?:startapp|start_param|tgWebAppStartParam|selection|selectionId|selectionToken)=([^&#]+)/i)?.[1] || '';
+      if (fromHref) candidates.push(decodeURIComponent(fromHref));
+      const fromPath = href.match(/\/share\/sel\/([^/?#]+)/i)?.[1] || '';
+      if (fromPath) candidates.push(fromPath);
+      const token = href.match(/sel_[a-z0-9_-]+/i)?.[0] || '';
+      if (token) candidates.push(token);
+    } catch {}
+    for (const value of candidates) {
+      const token = this.normalizeDeepLinkSelectionToken(value);
+      if (!token) continue;
+      const ids = this.decodeDeepLinkSelectionIds(token);
+      if (ids.length) return ids;
+    }
+    return [];
+  }
+
   clearDeepLinkParamInUrl() {
     try {
       const currentUrl = new URL(window.location.href);
       currentUrl.searchParams.delete(VW_DEEP_LINK_PARAM);
+      currentUrl.searchParams.delete('selection');
+      currentUrl.searchParams.delete('selectionId');
+      currentUrl.searchParams.delete('selectionToken');
       currentUrl.searchParams.delete('startapp');
       currentUrl.searchParams.delete('start');
       window.history.replaceState({}, '', `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
@@ -2725,7 +2815,47 @@ class VoiceWidget extends HTMLElement {
       this.showChatScreen();
       this.showMockCardWithActions(this._toCardEngineShape(item), { suppressAutoscroll: false });
       this._isDeepLinkMode = true;
+      this._deepLinkModeType = 'property';
       this._activeDeepLinkPropId = String(propId).trim();
+      this._deepLinkSelectionIds = [];
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async renderSelectionByIds(ids = []) {
+    const normalizedIds = Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .map((id) => this.normalizeDeepLinkPropId(id))
+          .filter(Boolean)
+      )
+    );
+    if (!normalizedIds.length) return false;
+    const selected = [];
+    for (let i = 0; i < normalizedIds.length; i += 1) {
+      const id = normalizedIds[i];
+      let item = this.getCatalogPropertyById(id);
+      if (!item) {
+        try {
+          item = await this.api.fetchCardById(id);
+          if (item) this.mergePropertiesToCatalog([item]);
+        } catch {}
+      }
+      if (item) selected.push(item);
+    }
+    if (!selected.length) return false;
+    this.clearPropertiesSlider();
+    try {
+      this.showChatScreen();
+      selected.forEach((item) => {
+        this.showMockCardWithActions(this._toCardEngineShape(item), { suppressAutoscroll: true });
+      });
+      this._isDeepLinkMode = true;
+      this._deepLinkModeType = 'selection';
+      this._activeDeepLinkPropId = null;
+      this._deepLinkSelectionIds = normalizedIds;
       return true;
     } catch {
       return false;
@@ -2735,15 +2865,24 @@ class VoiceWidget extends HTMLElement {
   async tryOpenDeepLinkedProperty() {
     const propId = this._deepLinkPropId || this.getDeepLinkPropIdFromUrl();
     this._deepLinkPropId = propId || null;
-    if (!propId) return false;
-    return await this.renderSinglePropertyById(propId);
+    if (propId) {
+      return await this.renderSinglePropertyById(propId);
+    }
+    const selectionIds = Array.isArray(this._deepLinkSelectionIds) && this._deepLinkSelectionIds.length
+      ? this._deepLinkSelectionIds
+      : this.getDeepLinkSelectionIdsFromUrl();
+    this._deepLinkSelectionIds = Array.isArray(selectionIds) ? selectionIds : [];
+    if (!this._deepLinkSelectionIds.length) return false;
+    return await this.renderSelectionByIds(this._deepLinkSelectionIds);
   }
 
   exitDeepLinkMode({ clearUrl = true } = {}) {
     if (!this._isDeepLinkMode) return false;
     this._isDeepLinkMode = false;
+    this._deepLinkModeType = null;
     this._activeDeepLinkPropId = null;
     this._deepLinkPropId = null;
+    this._deepLinkSelectionIds = [];
     if (clearUrl) this.clearDeepLinkParamInUrl();
     this.renderPropertiesFromCatalog().catch(() => {});
     return true;
@@ -2753,6 +2892,12 @@ class VoiceWidget extends HTMLElement {
     const safeId = this.normalizeDeepLinkPropId(propId);
     if (!safeId) return '';
     return `${VW_SHARE_BASE_URL}/share/prop/${encodeURIComponent(safeId)}`;
+  }
+
+  buildTelegramSelectionLink(ids = []) {
+    const token = this.encodeDeepLinkSelectionIds(ids);
+    if (!token) return '';
+    return `${VW_SHARE_BASE_URL}/share/sel/${encodeURIComponent(token)}`;
   }
 
   showShareNotice(message) {
@@ -2807,6 +2952,45 @@ class VoiceWidget extends HTMLElement {
     const payload = {
       title,
       text: 'Посмотри этот объект в моем боте:',
+      url: shareUrl
+    };
+    try {
+      if (navigator?.share) {
+        await navigator.share(payload);
+        this.showShareNotice('Успешно отправлено ✓');
+        return true;
+      }
+    } catch (error) {
+      if (error && error.name === 'AbortError') return false;
+      console.warn('navigator.share failed, using clipboard fallback:', error);
+    }
+    const copied = await this.copyTextToClipboard(shareUrl);
+    if (copied) {
+      this.showShareNotice('Ссылка скопирована ✓');
+      return true;
+    }
+    this.showShareNotice('Не удалось поделиться');
+    return false;
+  }
+
+  async sharePropertiesSelectionByIds(ids = []) {
+    const normalized = Array.from(
+      new Set(
+        (Array.isArray(ids) ? ids : [])
+          .map((id) => this.normalizeDeepLinkPropId(id))
+          .filter(Boolean)
+      )
+    );
+    if (!normalized.length) return false;
+    const shareUrl = normalized.length === 1
+      ? this.buildTelegramPropertyLink(normalized[0])
+      : this.buildTelegramSelectionLink(normalized);
+    if (!shareUrl) return false;
+    const payload = {
+      title: normalized.length === 1 ? 'Объект недвижимости' : `Подборка объектов (${normalized.length})`,
+      text: normalized.length === 1
+        ? 'Посмотри этот объект в моем боте:'
+        : `Посмотри подборку из ${normalized.length} объектов в моем боте:`,
       url: shareUrl
     };
     try {
@@ -3941,64 +4125,119 @@ class VoiceWidget extends HTMLElement {
         const reopenWith = (patch = {}) => {
           this.openAccessSubOverlay('properties', { ...adminViewOptions, ...patch });
         };
-        const priceLabel = adminViewOptions.sortBy === 'price'
-          ? (adminViewOptions.sortDir === 'desc' ? (locale.accessAdminSortPriceDesc || 'Цена ↓') : (locale.accessAdminSortPriceAsc || 'Цена ↑'))
-          : (locale.accessAdminSortPriceAsc || 'Цена ↑');
-        const areaLabel = adminViewOptions.sortBy === 'area'
-          ? (adminViewOptions.sortDir === 'desc' ? (locale.accessAdminSortAreaDesc || 'Площадь ↓') : (locale.accessAdminSortAreaAsc || 'Площадь ↑'))
-          : (locale.accessAdminSortAreaAsc || 'Площадь ↑');
-        const dealLabel = adminViewOptions.operationFilter === 'sale'
-          ? (locale.accessAdminSortDealSale || 'Сделка: продажа')
-          : adminViewOptions.operationFilter === 'rent'
-            ? (locale.accessAdminSortDealRent || 'Сделка: аренда')
-            : (locale.accessAdminSortDealAll || 'Сделка: все');
-        const likedLabel = adminViewOptions.onlyLiked ? (locale.accessAdminShowAll || 'Все') : (locale.accessAdminShowLiked || 'Лайкнутые');
+        const draft = {
+          onlyLiked: !!adminViewOptions.onlyLiked,
+          sortBy: String(adminViewOptions.sortBy || ''),
+          sortDir: adminViewOptions.sortDir === 'desc' ? 'desc' : 'asc',
+          operationFilter: ['all', 'sale', 'rent'].includes(adminViewOptions.operationFilter) ? adminViewOptions.operationFilter : 'all'
+        };
         const layer = document.createElement('div');
         layer.className = 'vw-access-add-dialog-layer';
         layer.innerHTML = `
           <div class="vw-access-add-dialog">
-            <div class="vw-access-add-dialog-title">${locale.accessAdminSort || 'Сортировка'}</div>
+            <div class="vw-access-add-dialog-head">
+              <div class="vw-access-add-dialog-title">${locale.accessAdminSort || 'Сортировка'}</div>
+              <button type="button" class="vw-access-add-dialog-close" data-role="sort-close" aria-label="${locale.close || 'Закрыть'}">×</button>
+            </div>
             <div class="vw-access-add-dialog-actions">
-              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-liked">${likedLabel}</button>
-              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-price">${priceLabel}</button>
-              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-area">${areaLabel}</button>
-              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-deal">${dealLabel}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-liked"></button>
+              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-price"></button>
+              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-area"></button>
+              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-deal"></button>
+            </div>
+            <div class="vw-access-add-dialog-actions">
               <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-reset">${locale.accessAdminSortReset || 'Сброс'}</button>
-              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-close">${locale.cancel || 'Отмена'}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-apply">${locale.accessAdminSortApply || 'Применить'}</button>
             </div>
           </div>
         `;
         overlay.appendChild(layer);
         const close = () => { try { layer.remove(); } catch {} };
+        const getLabelPrice = () => (
+          draft.sortBy === 'price'
+            ? (draft.sortDir === 'desc' ? (locale.accessAdminSortPriceDesc || 'Цена ↓') : (locale.accessAdminSortPriceAsc || 'Цена ↑'))
+            : (locale.accessAdminSortPriceAsc || 'Цена ↑')
+        );
+        const getLabelArea = () => (
+          draft.sortBy === 'area'
+            ? (draft.sortDir === 'desc' ? (locale.accessAdminSortAreaDesc || 'Площадь ↓') : (locale.accessAdminSortAreaAsc || 'Площадь ↑'))
+            : (locale.accessAdminSortAreaAsc || 'Площадь ↑')
+        );
+        const getLabelDeal = () => (
+          draft.operationFilter === 'sale'
+            ? (locale.accessAdminSortDealSale || 'Сделка: продажа')
+            : draft.operationFilter === 'rent'
+              ? (locale.accessAdminSortDealRent || 'Сделка: аренда')
+              : (locale.accessAdminSortDealAll || 'Сделка: все')
+        );
+        const syncState = () => {
+          const likedBtn = layer.querySelector('[data-role="sort-liked"]');
+          const priceBtn = layer.querySelector('[data-role="sort-price"]');
+          const areaBtn = layer.querySelector('[data-role="sort-area"]');
+          const dealBtn = layer.querySelector('[data-role="sort-deal"]');
+          if (likedBtn) {
+            likedBtn.textContent = draft.onlyLiked ? (locale.accessAdminShowAll || 'Все') : (locale.accessAdminShowLiked || 'Лайкнутые');
+            likedBtn.classList.toggle('is-active', draft.onlyLiked);
+          }
+          if (priceBtn) {
+            priceBtn.textContent = getLabelPrice();
+            priceBtn.classList.toggle('is-active', draft.sortBy === 'price');
+          }
+          if (areaBtn) {
+            areaBtn.textContent = getLabelArea();
+            areaBtn.classList.toggle('is-active', draft.sortBy === 'area');
+          }
+          if (dealBtn) {
+            dealBtn.textContent = getLabelDeal();
+            dealBtn.classList.toggle('is-active', draft.operationFilter !== 'all');
+          }
+        };
+        syncState();
         layer.addEventListener('click', (event) => {
           if (event.target === layer) close();
         });
         layer.querySelector('[data-role="sort-close"]')?.addEventListener('click', close);
         layer.querySelector('[data-role="sort-liked"]')?.addEventListener('click', () => {
-          close();
-          reopenWith({ onlyLiked: !adminViewOptions.onlyLiked });
+          draft.onlyLiked = !draft.onlyLiked;
+          syncState();
         });
         layer.querySelector('[data-role="sort-price"]')?.addEventListener('click', () => {
-          close();
-          const nextSortDir = adminViewOptions.sortBy === 'price' && adminViewOptions.sortDir === 'asc' ? 'desc' : 'asc';
-          reopenWith({ sortBy: 'price', sortDir: nextSortDir });
+          draft.sortDir = draft.sortBy === 'price' && draft.sortDir === 'asc' ? 'desc' : 'asc';
+          draft.sortBy = 'price';
+          syncState();
         });
         layer.querySelector('[data-role="sort-area"]')?.addEventListener('click', () => {
-          close();
-          const nextSortDir = adminViewOptions.sortBy === 'area' && adminViewOptions.sortDir === 'asc' ? 'desc' : 'asc';
-          reopenWith({ sortBy: 'area', sortDir: nextSortDir });
+          draft.sortDir = draft.sortBy === 'area' && draft.sortDir === 'asc' ? 'desc' : 'asc';
+          draft.sortBy = 'area';
+          syncState();
         });
         layer.querySelector('[data-role="sort-deal"]')?.addEventListener('click', () => {
-          close();
-          reopenWith({ operationFilter: cycleDeal(adminViewOptions.operationFilter) });
+          draft.operationFilter = cycleDeal(draft.operationFilter);
+          syncState();
         });
         layer.querySelector('[data-role="sort-reset"]')?.addEventListener('click', () => {
+          draft.onlyLiked = false;
+          draft.sortBy = '';
+          draft.sortDir = 'asc';
+          draft.operationFilter = 'all';
+          syncState();
+        });
+        layer.querySelector('[data-role="sort-apply"]')?.addEventListener('click', () => {
           close();
-          reopenWith({ onlyLiked: false, sortBy: '', sortDir: 'asc', operationFilter: 'all' });
+          reopenWith({
+            onlyLiked: draft.onlyLiked,
+            sortBy: draft.sortBy,
+            sortDir: draft.sortDir,
+            operationFilter: draft.operationFilter
+          });
         });
       });
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
-        this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
+        const selectedIds = getSelectedIds();
+        if (!selectedIds.length) return;
+        this.sharePropertiesSelectionByIds(selectedIds).catch(() => {
+          this.ui?.showNotification?.('Не удалось поделиться подборкой');
+        });
       });
       overlay.querySelector('[data-role="delete-selected"]')?.addEventListener('click', () => {
         const selectedIds = getSelectedIds();
@@ -6949,10 +7188,29 @@ class VoiceWidget extends HTMLElement {
         gap: 12px;
         padding: 14px;
       }
+      .vw-access-add-dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
       .vw-access-add-dialog-title {
         color: var(--text-secondary, rgba(255,255,255,0.78));
         font-size: .9rem;
         line-height: 1.4;
+      }
+      .vw-access-add-dialog-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.2));
+        background: rgba(255,255,255,0.08);
+        color: var(--text-primary, #fff);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        line-height: 1;
       }
       .vw-access-add-dialog-actions {
         display: grid;
@@ -6973,6 +7231,11 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-add-dialog-btn.is-neutral {
         border-color: var(--border-light, rgba(255,255,255,0.22));
+      }
+      .vw-access-add-dialog-btn.is-active {
+        border-color: rgba(92, 150, 255, 0.9);
+        box-shadow: 0 0 0 1px rgba(92, 150, 255, 0.45) inset;
+        background: rgba(45, 143, 225, 0.18);
       }
       .vw-access-add-dialog-btn.is-danger {
         border-color: rgba(236, 96, 96, 0.82);
@@ -8346,7 +8609,7 @@ render() {
       } catch {}
     } else if (e.target.closest('.card-back-header__close')) {
       // В deep-link режиме возвращаемся в общий каталог, иначе обычный flip-back.
-      if (this._isDeepLinkMode) {
+      if (this._isDeepLinkMode && this._deepLinkModeType === 'property') {
         this.exitDeepLinkMode({ clearUrl: true });
       } else {
         const slide = e.target.closest('.card-slide');
@@ -9452,10 +9715,7 @@ render() {
           <div class="card-back-specs">${backSpecsHtml}</div>
         </div>
         <div class="card-back-actions">
-          <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h8l4 4v12H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 4v4h4M9 13h6M9 16h6M9 10h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            <span>${locale.cardReadDescription || 'Читать описание'}</span>
-          </button>
+          <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
           <div class="card-back-actions__row">
             <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
             <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
