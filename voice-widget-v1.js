@@ -3350,6 +3350,11 @@ class VoiceWidget extends HTMLElement {
     if (targetState) this._wishlistIds.add(sid);
     else this._wishlistIds.delete(sid);
     this.persistWishlistIds();
+    try { this.updateAccessHeaderButton({ pulse: targetState }); } catch {}
+    try {
+      const accessOverlay = this.getRoot().querySelector('#vwAccessOverlay');
+      if (accessOverlay) this.updateAdminWishlistMenuBadge(accessOverlay);
+    } catch {}
     return targetState;
   }
 
@@ -3531,15 +3536,15 @@ class VoiceWidget extends HTMLElement {
     const wishlistCount = this.getWishlistCount();
     btn.disabled = false;
     btn.classList.remove('app-theme-btn--placeholder');
-    btn.classList.toggle('app-theme-btn--has-wishlist', !isAdmin && wishlistCount > 0);
-    if (!isAdmin && wishlistCount > 0) {
+    btn.classList.toggle('app-theme-btn--has-wishlist', wishlistCount > 0);
+    if (wishlistCount > 0) {
       btn.dataset.count = String(wishlistCount);
-      btn.textContent = '♥';
+      btn.textContent = isAdmin ? (locale.accessAdminIcon || '👑') : '♥';
     } else {
       delete btn.dataset.count;
       btn.textContent = isAdmin ? (locale.accessAdminIcon || '👑') : (locale.accessUserIcon || '♡');
     }
-    if (!isAdmin && pulse && wishlistCount > 0) {
+    if (pulse && wishlistCount > 0) {
       btn.classList.remove('is-insight-pulse');
       void btn.offsetWidth;
       btn.classList.add('is-insight-pulse');
@@ -3551,6 +3556,16 @@ class VoiceWidget extends HTMLElement {
     }
     btn.setAttribute('title', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
     btn.setAttribute('aria-label', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
+  }
+
+  updateAdminWishlistMenuBadge(overlay) {
+    if (!overlay) return;
+    const item = overlay.querySelector('[data-role="admin-wishlist"]');
+    if (!item) return;
+    const count = this.getWishlistCount();
+    item.classList.toggle('vw-access-item--has-count', count > 0);
+    if (count > 0) item.dataset.count = String(count);
+    else delete item.dataset.count;
   }
 
   setMobileViewportLock(enabled = false) {
@@ -6761,6 +6776,29 @@ class VoiceWidget extends HTMLElement {
         border-color: rgba(45, 143, 225, 0.65);
         background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
       }
+      .vw-access-item--has-count {
+        position: relative;
+        border-color: rgba(45, 143, 225, 0.72);
+        box-shadow: 0 0 0 1px rgba(92, 150, 255, 0.24) inset;
+      }
+      .vw-access-item--has-count::after {
+        content: attr(data-count);
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: rgba(45, 143, 225, 0.95);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.5);
+        font-size: .66rem;
+        font-weight: 700;
+        line-height: 16px;
+        text-align: center;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.28);
+      }
       .vw-access-hint {
         font-size: .84rem;
         line-height: 1.45;
@@ -7446,8 +7484,9 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-greeting">${greeting}</div>
           <div class="vw-access-list">
             <button type="button" class="vw-access-item vw-access-item--primary" data-role="admin-add-property"><span class="vw-access-item__icon" aria-hidden="true">➕</span><span class="vw-access-item__label">Добавить объект</span></button>
-            <button type="button" class="vw-access-item" data-role="admin-stats"><span class="vw-access-item__icon" aria-hidden="true">📊</span><span class="vw-access-item__label">${locale.accessAdminStats || 'Статистика'}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-properties"><span class="vw-access-item__icon" aria-hidden="true">🏠</span><span class="vw-access-item__label">${locale.accessAdminProperties || "Мої об'єкти"}</span></button>
+            <button type="button" class="vw-access-item" data-role="admin-wishlist"><span class="vw-access-item__icon" aria-hidden="true">♡</span><span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span></button>
+            <button type="button" class="vw-access-item" data-role="admin-stats"><span class="vw-access-item__icon" aria-hidden="true">📊</span><span class="vw-access-item__label">${locale.accessAdminStats || 'Статистика'}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-subscription"><span class="vw-access-item__icon" aria-hidden="true">💳</span><span class="vw-access-item__label">${locale.accessAdminSubscription || 'Керування підпискою'}</span></button>
             <button type="button" class="vw-access-item" data-role="olx-connect"><span class="vw-access-item__icon" aria-hidden="true">🔗</span><span class="vw-access-item__label">${locale.accessAdminOlxConnect || 'Подключить OLX'}</span></button>
             <button type="button" class="vw-access-item" data-role="olx-sync"><span class="vw-access-item__icon" aria-hidden="true">⬇️</span><span class="vw-access-item__label">${locale.accessAdminOlxSync || 'Импортировать объекты OLX'}</span></button>
@@ -7473,6 +7512,7 @@ class VoiceWidget extends HTMLElement {
 
     this.getRoot().appendChild(overlay);
     this._accessOverlayOpen = true;
+    if (isAdmin) this.updateAdminWishlistMenuBadge(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeAccessOverlay());
     const olxConnectBtn = overlay.querySelector('[data-role="olx-connect"]');
     const olxSyncBtn = overlay.querySelector('[data-role="olx-sync"]');
@@ -7491,6 +7531,7 @@ class VoiceWidget extends HTMLElement {
       try { await this.ensureAdminFullCatalogLoaded(); } catch {}
       this.openAccessSubOverlay('properties');
     });
+    overlay.querySelector('[data-role="admin-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.addEventListener('click', (event) => {
@@ -8553,7 +8594,6 @@ render() {
       const variantId = likeBtn.getAttribute('data-variant-id');
       this.toggleWishlistSelection(variantId, isLiked);
       this.syncWishlistButtonsInDom();
-      try { this.updateAccessHeaderButton({ pulse: isLiked }); } catch {}
       if (!isLiked) return;
       
       // Логируем card_like
