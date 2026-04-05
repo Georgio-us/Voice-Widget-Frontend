@@ -3229,7 +3229,7 @@ class VoiceWidget extends HTMLElement {
         const areaRaw = Number(item?.area_m2 || item?.area || item?.specs_area_m2);
         const area = Number.isFinite(areaRaw) && areaRaw > 0 ? `${Math.round(areaRaw)} м²` : '—';
         const priceUsdRaw = Number(item?.priceUSD || item?.price_usd || item?.priceUsd);
-        const priceRaw = Number(item?.priceEUR || item?.price || item?.price_amount);
+        const priceRaw = Number(item?.price || item?.price_amount || item?.priceEUR);
         const normalizedUsd = Number.isFinite(priceUsdRaw) && priceUsdRaw > 0
           ? Math.round(priceUsdRaw)
           : (Number.isFinite(priceRaw) && priceRaw > 0 ? Math.round(priceRaw) : null);
@@ -4057,9 +4057,10 @@ class VoiceWidget extends HTMLElement {
         };
         const parsePrice = () => {
           const fromPrice = Number(property.price);
-          const fromEur = Number(property.priceEUR);
+          const fromUsd = Number(property.priceUSD ?? property.price_usd ?? property.priceUsd);
           const fromAmount = Number(property.price_amount);
-          const value = [fromPrice, fromEur, fromAmount].find((n) => Number.isFinite(n) && n > 0);
+          const fromLegacy = Number(property.priceEUR);
+          const value = [fromPrice, fromUsd, fromAmount, fromLegacy].find((n) => Number.isFinite(n) && n > 0);
           return Number.isFinite(value) ? String(Math.round(value)) : '';
         };
         const parseArea = () => {
@@ -8168,8 +8169,8 @@ render() {
       ? raw.images.find((src) => typeof src === 'string' && src.trim())
       : (typeof raw.images === 'string' ? raw.images : '');
     const image = raw.image || raw.imageUrl || firstImage || '';
-    const priceEUR = raw.priceEUR ?? raw.price_amount ?? raw.priceAmount ?? null;
-    const price = raw.price ?? priceEUR ?? null;
+    const priceUSD = raw.priceUSD ?? raw.price_usd ?? raw.priceUsd ?? raw.price_amount ?? raw.priceAmount ?? raw.priceEUR ?? null;
+    const price = raw.price ?? priceUSD ?? null;
     const areaM2 = raw.area_m2 ?? raw.specs_area_m2 ?? raw.specs?.area_m2 ?? null;
     const numericArea = Number(areaM2);
     const numericPrice = Number(price);
@@ -8186,7 +8187,8 @@ render() {
         ? raw.images
         : (typeof raw.images === 'string' && raw.images.trim() ? [raw.images.trim()] : (image ? [image] : [])),
       price,
-      priceEUR,
+      priceUSD,
+      priceEUR: priceUSD,
       city: raw.city || raw.location_city || raw.location?.city || '',
       district: raw.district || raw.location_district || raw.location?.district || '',
       neighborhood: raw.neighborhood || raw.location_neighborhood || raw.location?.neighborhood || '',
@@ -8802,7 +8804,7 @@ render() {
     }).join('');
     slide.innerHTML = `
       <div class="card-slide-front">
-        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-usd="${normalized.priceUSD}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
@@ -10211,7 +10213,7 @@ render() {
       if (!text) return;
       arr.push({ icon, text: `${label}: ${text}` });
     };
-    const priceNum = toInt(raw.price ?? raw.priceEUR ?? raw.price_amount ?? raw.priceAmount);
+    const priceNum = toInt(raw.price ?? raw.priceUSD ?? raw.price_usd ?? raw.priceUsd ?? raw.price_amount ?? raw.priceAmount ?? raw.priceEUR);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
     const areaNum = toDecimal(raw.area_m2);
@@ -10330,6 +10332,7 @@ render() {
       propertyTypeBadgeLabel,
       furnished: furnishedKnown ? furnishedBool : null,
       furnishedLabel: furnishedKnown ? (furnishedBool ? 'Furnished' : 'Unfurnished') : '',
+      priceUSD: priceNum != null ? priceNum : null,
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel,
       features: rawFeatures,

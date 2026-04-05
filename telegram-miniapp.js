@@ -86,7 +86,8 @@ export function mountTelegramMiniApp(root) {
             const id = htmlEscape(card.id || '-');
             const city = htmlEscape(card.city || '');
             const district = htmlEscape(card.district || '');
-            const price = card.priceEUR ? `${Number(card.priceEUR).toLocaleString('en-US')} EUR` : '-';
+            const priceValue = card.priceUSD ?? card.price_usd ?? card.priceUsd ?? card.priceEUR;
+            const price = priceValue ? `${Number(priceValue).toLocaleString('en-US')} USD` : '-';
             const rooms = card.rooms ?? '-';
             const image = htmlEscape(card.images?.[0] || '');
             return `
