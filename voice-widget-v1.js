@@ -8930,13 +8930,11 @@ render() {
                 ${normalized.operationBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--operation">${escCardText(normalized.operationBadgeLabel)}</div>` : ''}
                 ${normalized.propertyTypeBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--type">${escCardText(normalized.propertyTypeBadgeLabel)}</div>` : ''}
               </div>
-              <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
-              <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
+              <button class="cs-like-btn card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
               </button>
-              -->
             </div>
             <div class="cs-image-click-area">
               <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">` : 'Put image here'}</div>

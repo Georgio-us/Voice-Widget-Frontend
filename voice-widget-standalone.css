@@ -192,22 +192,22 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:6px 10px;
+    padding:4px 8px;
     border-radius:999px;
     background:var(--shadow-strong);
     border:1px solid var(--border-light);
     color:var(--text-on-photo);
-    font-size:13px;
+    font-size:11px;
     font-weight:600;
     line-height:1;
   }
   .card-screen .cs-image .cs-badge-stack{
     position:absolute;
     top:10px;
-    right:10px;
+    left:10px;
     display:flex;
     flex-direction:column;
-    align-items:flex-end;
+    align-items:flex-start;
     gap:6px;
     pointer-events:none;
   }
@@ -239,12 +239,19 @@
     align-items:center;
     justify-content:center;
     padding:8px;
-    border:none;
-    background:transparent;
+    border:1px solid var(--border-light);
+    background:var(--shadow-strong);
     border-radius:999px;
-    cursor:pointer; 
+    cursor:pointer;
+    pointer-events:auto;
   }
-  .card-screen .cs-image .card-btn.like[data-action="like"]:hover{ background: var(--border-light); }
+  .card-screen .cs-image .cs-like-btn{
+    position:absolute;
+    top:10px;
+    right:10px;
+    z-index:3;
+  }
+  .card-screen .cs-image .card-btn.like[data-action="like"]:hover{ background: color-mix(in srgb, var(--bg-card) 72%, transparent); }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg,
   .card-screen .cs-image .card-btn.like[data-action="like"] svg *{ pointer-events:none; }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg{ width:24px; height:24px; display:block; }
@@ -2552,14 +2559,19 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-price-tag {
-  padding: 3px 6px;
-  font-size: 10px;
+  padding: 2px 6px;
+  font-size: 9px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-badge-stack {
   top: 4px;
-  right: 4px;
+  left: 4px;
   gap: 4px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-like-btn {
+  top: 4px;
+  right: 4px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-meta-badge {
