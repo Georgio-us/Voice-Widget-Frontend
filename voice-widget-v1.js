@@ -10174,6 +10174,17 @@ render() {
       const n = String(v).replace(/[^0-9]/g, '');
       return n ? parseInt(n, 10) : null;
     };
+    const toDecimal = (v) => {
+      if (v == null) return null;
+      const cleaned = String(v)
+        .trim()
+        .replace(/\s+/g, '')
+        .replace(/,/g, '.')
+        .replace(/[^0-9.-]/g, '');
+      if (!cleaned) return null;
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : null;
+    };
     const formatNumberUS = (v) => {
       const n = toInt(v);
       return n != null ? n.toLocaleString('en-US') : null;
@@ -10203,7 +10214,7 @@ render() {
     const priceNum = toInt(raw.price ?? raw.priceEUR ?? raw.price_amount ?? raw.priceAmount);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
-    const areaNum = toInt(raw.area_m2);
+    const areaNum = toDecimal(raw.area_m2);
     const pricePerM2Num = toInt(raw.price_per_m2);
     const bathroomsNum = toInt(raw.bathrooms);
     const city = raw.city || raw.location || '';
