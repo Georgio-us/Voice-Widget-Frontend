@@ -4046,8 +4046,8 @@ class VoiceWidget extends HTMLElement {
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
                   <span>Сбросить</span>
                   <svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12.7 6.3a5 5 0 1 0 .1 3.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M11 2.8h2.8V5.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </button>
               </div>
@@ -4100,8 +4100,8 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
           <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">
             <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12.7 6.3a5 5 0 1 0 .1 3.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M11 2.8h2.8V5.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
         </div>
@@ -7489,6 +7489,7 @@ class VoiceWidget extends HTMLElement {
         align-items: center;
         gap: 8px;
         justify-self: end;
+        min-width: 0;
       }
       .vw-access-objects-topbar-actions--right .vw-access-sub-btn {
         min-height: 40px;
@@ -7515,6 +7516,31 @@ class VoiceWidget extends HTMLElement {
         min-height: 44px;
         font-size: .95rem;
         border-radius: 12px;
+      }
+      @media (max-width: 420px) {
+        .vw-access-objects-topbar {
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-areas:
+            "total select"
+            "actions actions";
+          row-gap: 6px;
+        }
+        .vw-access-objects-total {
+          grid-area: total;
+        }
+        .vw-access-objects-topbar > [data-role="select-all"] {
+          grid-area: select;
+          justify-self: start;
+          padding-left: 0;
+        }
+        .vw-access-objects-topbar-actions {
+          grid-area: actions;
+          justify-self: start;
+        }
+        .vw-access-objects-topbar-actions--right .vw-access-sub-btn {
+          min-height: 34px;
+          padding: 0 6px;
+        }
       }
       .vw-access-objects-total {
         font-size: .83rem;
