@@ -5256,8 +5256,9 @@ class VoiceWidget extends HTMLElement {
     }
     const district = String(source.district || '').trim();
     if (district) out.district = district;
-    const rc = String(source.residentialComplex || '').trim();
-    if (rc) out.residentialComplex = rc;
+    if (Object.prototype.hasOwnProperty.call(source, 'residentialComplex')) {
+      out.residentialComplex = String(source.residentialComplex || '').trim();
+    }
     const op = String(source.listingMode || source.operation || '').trim().toLowerCase();
     if (op === 'sale' || op === 'rent') out.operation = op;
     const ptype = String(source.propertyType || source.type || '').trim();
