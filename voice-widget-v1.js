@@ -2270,7 +2270,7 @@ const LOCALES = {
     cardSelect: 'Выбрать',
     cardNext: 'Ещё одну',
     cardBackContact: 'Связаться',
-    cardReadDescription: 'Описание',
+    cardReadDescription: 'Читать описание',
     cardDescriptionTitle: 'Описание объекта',
     cardDescriptionOk: 'OK',
     cardDescriptionEmpty: 'Описание пока недоступно',
@@ -2400,7 +2400,7 @@ const LOCALES = {
     cardSelect: 'Обрати',
     cardNext: 'Ще одну',
     cardBackContact: "Зв'язатися",
-    cardReadDescription: 'Опис',
+    cardReadDescription: 'Читати опис',
     cardDescriptionTitle: "Опис об'єкта",
     cardDescriptionOk: 'OK',
     cardDescriptionEmpty: 'Опис поки недоступний',
@@ -8947,10 +8947,6 @@ render() {
             </div>
             <div class="cs-row cs-row--district">
               <div class="cs-district">${districtLine}</div>
-              <button type="button" class="cs-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Описание'}">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h8l4 4v12H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 4v4h4M9 13h6M9 16h6M9 10h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                <span>${locale.cardReadDescription || 'Описание'}</span>
-              </button>
             </div>
             <div class="cs-row cs-row--specs">
               <div class="cs-features cs-features--main-specs">${(specsPills.length ? specsPills : ['📐 —']).map((item) => `<span class="cs-feature-item cs-feature-item--pill">${item}</span>`).join('')}</div>
@@ -8982,9 +8978,15 @@ render() {
           <div class="card-back-specs">${backSpecsHtml}</div>
         </div>
         <div class="card-back-actions">
-          <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
-          <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
-          <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+          <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h8l4 4v12H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 4v4h4M9 13h6M9 16h6M9 10h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <span>${locale.cardReadDescription || 'Читать описание'}</span>
+          </button>
+          <div class="card-back-actions__row">
+            <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
+            <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
+            <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+          </div>
         </div>
       </div>
       <div class="card-slide-form">
