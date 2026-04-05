@@ -2254,6 +2254,8 @@ const LOCALES = {
     accessUserGreeting: 'Добро пожаловать, {name} (@{username})! Это ваш список избранного',
     accessAdminStats: 'Статистика',
     accessAdminProperties: 'Мои объекты',
+    accessAdminShowLiked: 'Лайкнутые',
+    accessAdminShowAll: 'Все',
     accessAdminSubscription: 'Управление подпиской',
     accessAdminOlxConnect: 'Подключить OLX',
     accessAdminOlxConnectOpening: 'Открываю OLX...',
@@ -2388,6 +2390,8 @@ const LOCALES = {
     accessUserGreeting: 'Вітаємо, {name} (@{username})! Це ваш список обраного',
     accessAdminStats: 'Статистика',
     accessAdminProperties: "Мої об'єкти",
+    accessAdminShowLiked: 'Лайкнуті',
+    accessAdminShowAll: 'Усі',
     accessAdminSubscription: 'Керування підпискою',
     accessAdminOlxConnect: 'Підключити OLX',
     accessAdminOlxConnectOpening: 'Відкриваю OLX...',
@@ -3328,8 +3332,56 @@ class VoiceWidget extends HTMLElement {
     try { this.setMobileViewportLock(false); } catch {}
   }
 
-  getAdminObjectsMockList() {
-    const list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+  _getFullCatalogProperties() {
+    const full = Array.isArray(window?.appState?.fullCatalogProperties) ? window.appState.fullCatalogProperties : [];
+    return full;
+  }
+
+  _setFullCatalogProperties(properties = []) {
+    if (!window.appState) window.appState = {};
+    const incoming = this._extractPropertiesList(properties).map((item) => this._toCardEngineShape(item));
+    window.appState.fullCatalogProperties = incoming;
+  }
+
+  _mergeIntoFullCatalogProperties(properties = []) {
+    if (!window.appState) window.appState = {};
+    const current = this._getFullCatalogProperties();
+    const incoming = this._extractPropertiesList(properties);
+    const merged = new Map();
+    current.forEach((item, idx) => {
+      const normalized = this._toCardEngineShape(item);
+      merged.set(this._getPropertyCatalogKey(normalized, idx), normalized);
+    });
+    incoming.forEach((item, idx) => {
+      const normalized = this._toCardEngineShape(item);
+      merged.set(this._getPropertyCatalogKey(normalized, idx), normalized);
+    });
+    window.appState.fullCatalogProperties = Array.from(merged.values());
+  }
+
+  async ensureAdminFullCatalogLoaded() {
+    const existing = this._getFullCatalogProperties();
+    if (existing.length) return existing;
+    try {
+      const all = await this.loadAllProperties();
+      if (Array.isArray(all) && all.length) {
+        this._setFullCatalogProperties(all);
+        return this._getFullCatalogProperties();
+      }
+    } catch {}
+    return [];
+  }
+
+  getAdminObjectsMockList(options = {}) {
+    const safeOptions = options && typeof options === 'object' ? options : {};
+    const preferFull = safeOptions.preferFull === true;
+    const onlyLiked = safeOptions.onlyLiked === true;
+    const sourceList = preferFull
+      ? (this._getFullCatalogProperties().length ? this._getFullCatalogProperties() : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []))
+      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
+    const list = onlyLiked
+      ? sourceList.filter((item) => this.isWishlistSelected(item?.id || item?.external_id || item?.externalId || item?.propertyId || item?.uid))
+      : sourceList;
     const objects = list
       .map((item, idx) => {
         const id = String(item?.id || item?.variantId || item?._id || '').trim();
@@ -3406,9 +3458,13 @@ class VoiceWidget extends HTMLElement {
     };
     const locale = this.getCurrentLocale();
     const safeSection = String(section || '').trim().toLowerCase();
-    const list = safeSection === 'wishlist' ? this.getWishlistObjectsList() : this.getAdminObjectsMockList();
-    const isAddProperty = safeSection === 'add-property';
     const safeOptions = options && typeof options === 'object' ? options : {};
+    const adminOnlyLiked = safeSection === 'properties'
+      && (safeOptions.onlyLiked === true || String(safeOptions.onlyLiked || '').toLowerCase() === 'true');
+    const list = safeSection === 'wishlist'
+      ? this.getWishlistObjectsList()
+      : this.getAdminObjectsMockList({ preferFull: safeSection === 'properties', onlyLiked: adminOnlyLiked });
+    const isAddProperty = safeSection === 'add-property';
     const editPropertyId = isAddProperty ? String(safeOptions.propertyId || '').trim() : '';
     const isEditProperty = isAddProperty && String(safeOptions.mode || '').trim().toLowerCase() === 'edit' && !!editPropertyId;
     const editSourceProperty = isEditProperty ? this.findCatalogPropertyById(editPropertyId) : null;
@@ -3602,7 +3658,10 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
               <div class="vw-access-objects-total">Всего объектов: <strong>${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn" data-role="sort-trigger">Сортировка</button>
+              <div class="vw-access-objects-topbar-actions">
+                <button type="button" class="vw-access-sub-btn" data-role="toggle-liked">${adminOnlyLiked ? (locale.accessAdminShowAll || 'Все') : (locale.accessAdminShowLiked || 'Лайкнутые')}</button>
+                <button type="button" class="vw-access-sub-btn" data-role="sort-trigger">Сортировка</button>
+              </div>
             </div>
             <div class="vw-access-objects-scroll">
               <div class="vw-access-obj-list">${rows}</div>
@@ -3811,6 +3870,10 @@ class VoiceWidget extends HTMLElement {
       overlay.querySelector('[data-role="sort-trigger"]')?.addEventListener('click', () => {
         this.ui?.showNotification?.('Сортировка будет добавлена следующим шагом');
       });
+      overlay.querySelector('[data-role="toggle-liked"]')?.addEventListener('click', async () => {
+        const nextOnlyLiked = !adminOnlyLiked;
+        this.openAccessSubOverlay('properties', { onlyLiked: nextOnlyLiked });
+      });
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
         this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
       });
@@ -3840,6 +3903,14 @@ class VoiceWidget extends HTMLElement {
               const id = String(item?.id || item?.variantId || item?._id || '').trim();
               return !succeeded.includes(id);
             });
+            const fullList = this._getFullCatalogProperties();
+            if (fullList.length) {
+              const nextFull = fullList.filter((item) => {
+                const id = String(item?.id || item?.variantId || item?._id || '').trim();
+                return !succeeded.includes(id);
+              });
+              this._setFullCatalogProperties(nextFull);
+            }
             getRows().forEach((row) => {
               const id = String(row.getAttribute('data-id') || '').trim();
               if (succeeded.includes(id)) row.remove();
@@ -6804,6 +6875,11 @@ class VoiceWidget extends HTMLElement {
         align-items: center;
         gap: 10px;
       }
+      .vw-access-objects-topbar-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
       .vw-access-objects-bottombar--wishlist {
         grid-template-columns: repeat(2, minmax(0, auto));
         justify-content: center;
@@ -6975,7 +7051,10 @@ class VoiceWidget extends HTMLElement {
     }
     overlay.querySelector('[data-role="admin-add-property"]')?.addEventListener('click', () => this.openAccessSubOverlay('add-property'));
     overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
-    overlay.querySelector('[data-role="admin-properties"]')?.addEventListener('click', () => this.openAccessSubOverlay('properties'));
+    overlay.querySelector('[data-role="admin-properties"]')?.addEventListener('click', async () => {
+      try { await this.ensureAdminFullCatalogLoaded(); } catch {}
+      this.openAccessSubOverlay('properties');
+    });
     overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.addEventListener('click', (event) => {
@@ -8615,6 +8694,7 @@ render() {
       merged.set(this._getPropertyCatalogKey(normalized, idx), normalized);
     });
     window.appState.allProperties = Array.from(merged.values());
+    this._mergeIntoFullCatalogProperties(incoming);
   }
 
   replacePropertiesCatalog(properties = []) {
@@ -8684,6 +8764,7 @@ render() {
         const all = await this.loadAllProperties();
         if (Array.isArray(all) && all.length) {
           this.replacePropertiesCatalog(all);
+          this._setFullCatalogProperties(all);
           if ((Number(window.appState.lastTotalMatches) || 0) <= 0) {
             window.appState.lastTotalMatches = all.length;
           }
