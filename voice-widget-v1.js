@@ -3568,6 +3568,14 @@ class VoiceWidget extends HTMLElement {
     else delete item.dataset.count;
   }
 
+  updateUserWishlistMenuCount(overlay) {
+    if (!overlay) return;
+    const countEl = overlay.querySelector('[data-role="user-wishlist-count"]');
+    if (!countEl) return;
+    const count = this.getWishlistCount();
+    countEl.textContent = String(count);
+  }
+
   setMobileViewportLock(enabled = false) {
     try {
       const meta = document.querySelector('meta[name="viewport"]');
@@ -4036,7 +4044,7 @@ class VoiceWidget extends HTMLElement {
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">Выбрать всё</button>
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
-                  <span>Сбросить подборку</span>
+                  <span>Сбросить</span>
                   <svg viewBox="0 0 16 16" aria-hidden="true">
                     <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                     <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -4090,7 +4098,12 @@ class VoiceWidget extends HTMLElement {
         <div class="vw-access-add-head">
           <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
           <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
-          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">↺</button>
+          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
         </div>
       `
       : `
@@ -6830,6 +6843,19 @@ class VoiceWidget extends HTMLElement {
       .vw-access-item__label {
         flex: 1;
       }
+      .vw-access-item__count {
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(92, 150, 255, 0.7);
+        background: rgba(92, 150, 255, 0.16);
+        color: var(--text-primary, #fff);
+        font-size: .72rem;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
+      }
       .vw-access-item--primary {
         border-color: rgba(45, 143, 225, 0.65);
         background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
@@ -6948,10 +6974,10 @@ class VoiceWidget extends HTMLElement {
         color: rgba(92, 150, 255, 0.98);
       }
       .vw-access-sub-btn--text-action {
-        min-height: 38px;
-        padding: 0 8px;
+        min-height: 34px;
+        padding: 0 6px;
         gap: 6px;
-        font-size: .95rem;
+        font-size: .83em;
         display: inline-flex;
         align-items: center;
         justify-content: flex-start;
@@ -7012,7 +7038,15 @@ class VoiceWidget extends HTMLElement {
         background: rgba(236, 96, 96, 0.12);
         color: rgba(255,255,255,0.88);
         padding: 0 12px;
-        font-size: .95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+      .vw-access-add-reset-head svg {
+        width: 14px;
+        height: 14px;
+        display: block;
       }
       .vw-access-add-form {
         display: grid;
@@ -7619,19 +7653,21 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-access-close" data-role="close" aria-label="${locale.close || 'Закрыть'}">×</button>
           </div>
           <div class="vw-access-greeting">${greeting}</div>
-          <div class="vw-access-hint">${locale.accessUserEmpty || "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)"}</div>
           <div class="vw-access-list">
             <button type="button" class="vw-access-item vw-access-item--primary" data-role="user-wishlist">
               <span class="vw-access-item__icon" aria-hidden="true">♡</span>
               <span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span>
+              <span class="vw-access-item__count" data-role="user-wishlist-count">0</span>
             </button>
           </div>
+          <div class="vw-access-hint">${locale.accessUserEmpty || "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)"}</div>
         </div>
       `;
 
     this.getRoot().appendChild(overlay);
     this._accessOverlayOpen = true;
     if (isAdmin) this.updateAdminWishlistMenuBadge(overlay);
+    else this.updateUserWishlistMenuCount(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeAccessOverlay());
     const olxConnectBtn = overlay.querySelector('[data-role="olx-connect"]');
     const olxSyncBtn = overlay.querySelector('[data-role="olx-sync"]');
