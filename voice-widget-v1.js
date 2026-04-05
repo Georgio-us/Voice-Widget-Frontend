@@ -8895,7 +8895,7 @@ render() {
     const backSpecsItemsBase = [];
     if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
     if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
-    if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} USD/m²` });
+    if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
     if (normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
     if (normalized.bathrooms) backSpecsItemsBase.push({ icon: '🛁', text: `${isUa ? 'Санвузлів' : 'Санузлов'}: ${normalized.bathrooms}` });
     const dynamicExtras = Array.isArray(normalized.backFeatureItems) ? normalized.backFeatureItems : [];
@@ -10328,6 +10328,35 @@ render() {
       if (rawType === 'parking') return isUaLang ? 'Паркінг' : 'Паркинг';
       return String(v || '').trim();
     };
+    const boolYesLabel = (flag) => (flag === true ? (isUaLang ? 'є' : 'есть') : null);
+    const mapOlxHeatingLabel = (v) => {
+      const rawValue = String(v || '').trim();
+      if (!rawValue) return null;
+      const key = rawValue.toLowerCase();
+      const dict = {
+        own_boiler_house: isUaLang ? 'власна котельня' : 'своя котельная',
+        'own_boiler-house': isUaLang ? 'власна котельня' : 'своя котельная',
+        individual_gas: isUaLang ? 'індивідуальне газове' : 'индивидуальное газовое',
+        centralized: isUaLang ? 'централізоване' : 'централизованное',
+        central: isUaLang ? 'централізоване' : 'централизованное',
+        electric: isUaLang ? 'електричне' : 'электрическое',
+        no_heating: isUaLang ? 'без опалення' : 'без отопления'
+      };
+      return dict[key] || rawValue;
+    };
+    const mapOlxRepairLabel = (v) => {
+      const rawValue = String(v || '').trim();
+      if (!rawValue) return null;
+      const key = rawValue.toLowerCase();
+      const dict = {
+        '1': isUaLang ? 'після будівельників' : 'после строителей',
+        '2': isUaLang ? 'косметичний' : 'косметический',
+        '4': isUaLang ? 'євроремонт' : 'евроремонт',
+        repaired: isUaLang ? 'з ремонтом' : 'с ремонтом',
+        needs_repair: isUaLang ? 'потребує ремонту' : 'требует ремонта'
+      };
+      return dict[key] || rawValue;
+    };
     const title = String(raw.title ?? '').trim();
     const rawFeatures = parseObject(raw.features) || {};
     const displaySpecs = parseObject(raw.display_specs) || parseObject(rawFeatures.display_specs) || null;
@@ -10381,16 +10410,18 @@ render() {
     pushExtra(dynamicBackFeatureItems, '🏠', isUaLang ? 'Тип' : 'Тип', mapPropertyTypeLabel(propertyType || rawFeatures.type || rawFeatures.propertyType || rawFeatures.buildingType));
     pushExtra(dynamicBackFeatureItems, '🧱', 'Стіни', rawFeatures.wallMaterial || rawFeatures.materialWalls);
     const elevatorFlag = truthyLabel(rawFeatures.elevator);
-    if (elevatorFlag === true) pushExtra(dynamicBackFeatureItems, '🛗', isUaLang ? 'Ліфт' : 'Лифт', isUaLang ? 'є' : 'есть');
+    if (elevatorFlag === true) pushExtra(dynamicBackFeatureItems, '🛗', isUaLang ? 'Ліфт' : 'Лифт', boolYesLabel(elevatorFlag));
     pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', rawFeatures.balconyType || null);
     const balconyFlag = truthyLabel(rawFeatures.balcony);
-    if (balconyFlag === true) pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', isUaLang ? 'є' : 'есть');
+    if (balconyFlag === true) pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', boolYesLabel(balconyFlag));
     pushExtra(dynamicBackFeatureItems, '🛠️', 'Стан', rawFeatures.condition || rawFeatures.objectCondition || rawFeatures.renovation || rawFeatures.finish);
-    pushExtra(dynamicBackFeatureItems, '🚗', 'Паркінг', rawFeatures.parking || rawFeatures.parkingSpaces);
+    const parkingFlag = truthyLabel(rawFeatures.parking);
+    if (parkingFlag === true) pushExtra(dynamicBackFeatureItems, '🚗', isUaLang ? 'Паркінг' : 'Паркинг', boolYesLabel(parkingFlag));
+    if (parkingFlag !== true) pushExtra(dynamicBackFeatureItems, '🚗', isUaLang ? 'Паркінг' : 'Паркинг', rawFeatures.parkingSpaces);
     const terraceFlag = truthyLabel(rawFeatures.terrace);
-    if (terraceFlag === true) pushExtra(dynamicBackFeatureItems, '🌿', isUaLang ? 'Тераса' : 'Терраса', isUaLang ? 'є' : 'есть');
+    if (terraceFlag === true) pushExtra(dynamicBackFeatureItems, '🌿', isUaLang ? 'Тераса' : 'Терраса', boolYesLabel(terraceFlag));
     const furnishedFlag = truthyLabel(rawFeatures.furnished);
-    if (furnishedFlag === true) pushExtra(dynamicBackFeatureItems, '🪑', isUaLang ? 'Меблі' : 'Мебель', isUaLang ? 'є' : 'есть');
+    if (furnishedFlag === true) pushExtra(dynamicBackFeatureItems, '🪑', isUaLang ? 'Меблі' : 'Мебель', boolYesLabel(furnishedFlag));
     pushExtra(dynamicBackFeatureItems, '🏗️', 'Поверхів', rawFeatures.buildingFloors);
     pushExtra(dynamicBackFeatureItems, '🏛️', 'Рік', rawFeatures.buildingYear);
     if (Array.isArray(rawFeatures.buildingInfrastructure) && rawFeatures.buildingInfrastructure.length) {
@@ -10400,11 +10431,11 @@ render() {
     // Old/manual cards may not have this object; in that case the existing fallback logic is used.
     if (displaySpecs) {
       pushExtra(dynamicBackFeatureItems, '📍', 'Улица', displaySpecs.street);
-      pushExtra(dynamicBackFeatureItems, '🏘️', 'Жилой комплекс', displaySpecs.complex);
+      pushExtra(dynamicBackFeatureItems, '🏘️', 'ЖК', displaySpecs.complex);
       pushExtra(dynamicBackFeatureItems, '🍳', 'Кухня', displaySpecs.kitchen_area != null ? `${displaySpecs.kitchen_area} м²` : null);
       pushExtra(dynamicBackFeatureItems, '🏗️', 'Этажность дома', displaySpecs.total_floors);
-      pushExtra(dynamicBackFeatureItems, '🔥', 'Отопление', displaySpecs.heating);
-      pushExtra(dynamicBackFeatureItems, '🛠️', 'Ремонт', displaySpecs.repair);
+      pushExtra(dynamicBackFeatureItems, '🔥', isUaLang ? 'Опалення' : 'Отопление', mapOlxHeatingLabel(displaySpecs.heating));
+      pushExtra(dynamicBackFeatureItems, '🛠️', 'Ремонт', mapOlxRepairLabel(displaySpecs.repair));
       pushExtra(dynamicBackFeatureItems, '🏙️', 'Инфраструктура', displaySpecs.infrastructure);
       pushExtra(dynamicBackFeatureItems, '🌳', 'Ландшафт', displaySpecs.landscape);
     }
