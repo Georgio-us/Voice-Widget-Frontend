@@ -1780,10 +1780,49 @@
     box-shadow: 0 20px 60px var(--shadow-strong);
     background: var(--bg-card);
   }
+  .img-lightbox .img-lightbox-nav{
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    width:42px;
+    height:42px;
+    border-radius:999px;
+    border:1px solid var(--border-light);
+    background: color-mix(in srgb, var(--bg-card) 78%, transparent);
+    color:var(--text-primary);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:28px;
+    line-height:1;
+    cursor:pointer;
+    z-index:1003;
+    user-select:none;
+    transition:transform .14s ease, opacity .14s ease, background .18s ease;
+  }
+  .img-lightbox .img-lightbox-nav:hover{ transform:translateY(-50%) scale(1.05); }
+  .img-lightbox .img-lightbox-nav:active{ transform:translateY(-50%) scale(.98); }
+  .img-lightbox .img-lightbox-nav--prev{ left:24px; }
+  .img-lightbox .img-lightbox-nav--next{ right:24px; }
+  .img-lightbox .lightbox-counter{
+    position:absolute;
+    top:26px;
+    right:24px;
+    color:var(--text-primary);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.02em;
+    background: color-mix(in srgb, var(--bg-card) 72%, transparent);
+    border:1px solid var(--border-light);
+    border-radius:999px;
+    padding:6px 10px;
+    z-index:1003;
+    user-select:none;
+  }
   .img-lightbox .lightbox-close-hint{
     position:absolute;
     left:50%;
-    top:28px;
+    top:66px;
     transform:translateX(-50%);
     display:inline-flex;
     align-items:center;
@@ -1835,6 +1874,26 @@
     0%{ opacity:.55; transform:scale(.55); }
     70%{ opacity:.2; }
     100%{ opacity:0; transform:scale(1.45); }
+  }
+  @media (max-width: 720px){
+    .img-lightbox .img-lightbox-nav{
+      width:36px;
+      height:36px;
+      font-size:24px;
+      opacity:.94;
+    }
+    .img-lightbox .img-lightbox-nav--prev{ left:12px; }
+    .img-lightbox .img-lightbox-nav--next{ right:12px; }
+    .img-lightbox .lightbox-counter{
+      right:12px;
+      top:18px;
+      font-size:11px;
+      padding:5px 9px;
+    }
+    .img-lightbox .lightbox-close-hint{
+      top:52px;
+      font-size:11px;
+    }
   }
   @keyframes hintPulseOuter{
     0%{ opacity:.45; transform:scale(.45); }

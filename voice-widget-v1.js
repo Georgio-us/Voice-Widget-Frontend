@@ -6983,7 +6983,10 @@ render() {
 <!-- COMPAT: v1 chat/details minimal support (do not remove until full v2 wiring) -->
   <!-- Image lightbox overlay -->
   <div class="img-lightbox" id="imgLightbox" aria-hidden="true">
+    <button type="button" class="img-lightbox-nav img-lightbox-nav--prev" id="imgLightboxPrev" aria-label="Previous image">‹</button>
     <img id="imgLightboxImg" alt="">
+    <button type="button" class="img-lightbox-nav img-lightbox-nav--next" id="imgLightboxNext" aria-label="Next image">›</button>
+    <div class="lightbox-counter" id="imgLightboxCounter">1 / 1</div>
     <div class="lightbox-close-hint"><span class="tap-icon"></span>Click to close</div>
   </div>
 
@@ -7452,60 +7455,144 @@ render() {
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
   // Image Lightbox — open/close helpers
-  this.openImageOverlay = (url) => {
+  this._lightboxGallery = [];
+  this._lightboxIndex = 0;
+  this._getLightboxCounterLabel = () => {
+    const total = Array.isArray(this._lightboxGallery) ? this._lightboxGallery.length : 0;
+    const current = total ? (this._lightboxIndex + 1) : 0;
+    return `${current} / ${total || 0}`;
+  };
+  this._renderLightboxState = () => {
     try {
-      if (!url) return;
       const box = this.$byId('imgLightbox');
       const img = this.$byId('imgLightboxImg');
+      const prevBtn = this.$byId('imgLightboxPrev');
+      const nextBtn = this.$byId('imgLightboxNext');
+      const counter = this.$byId('imgLightboxCounter');
       if (!box || !img) return;
-      img.src = url;
+      const list = Array.isArray(this._lightboxGallery) ? this._lightboxGallery : [];
+      const total = list.length;
+      if (!total) return;
+      const safeIndex = ((Number(this._lightboxIndex) || 0) % total + total) % total;
+      this._lightboxIndex = safeIndex;
+      img.src = list[safeIndex] || '';
+      if (counter) counter.textContent = this._getLightboxCounterLabel();
+      const showNav = total > 1;
+      if (prevBtn) prevBtn.style.display = showNav ? 'inline-flex' : 'none';
+      if (nextBtn) nextBtn.style.display = showNav ? 'inline-flex' : 'none';
+    } catch {}
+  };
+  this.stepImageOverlay = (dir = 1) => {
+    try {
+      const list = Array.isArray(this._lightboxGallery) ? this._lightboxGallery : [];
+      if (!list.length) return;
+      this._lightboxIndex = this._lightboxIndex + (dir >= 0 ? 1 : -1);
+      this._renderLightboxState();
+    } catch {}
+  };
+  this.openImageOverlay = (input, opts = {}) => {
+    try {
+      const incomingList = Array.isArray(opts.images) ? opts.images : (Array.isArray(input) ? input : []);
+      const normalizedList = incomingList
+        .map((v) => String(v || '').trim())
+        .filter((v) => v && !/^data:image\/svg\+xml/i.test(v));
+      const uniqueList = [...new Set(normalizedList)];
+      const fallbackUrl = Array.isArray(input) ? '' : String(input || '').trim();
+      if (!uniqueList.length && !fallbackUrl) return;
+      const box = this.$byId('imgLightbox');
+      if (!box) return;
+      const list = uniqueList.length ? uniqueList : [fallbackUrl];
+      const requestedIndex = Number(opts.index);
+      let startIndex = Number.isFinite(requestedIndex) ? requestedIndex : 0;
+      if (fallbackUrl) {
+        const byUrl = list.indexOf(fallbackUrl);
+        if (byUrl >= 0) startIndex = byUrl;
+      }
+      this._lightboxGallery = list;
+      this._lightboxIndex = startIndex;
       box.classList.add('open');
+      box.setAttribute('aria-hidden', 'false');
       this._imageOverlayOpen = true;
+      this._renderLightboxState();
     } catch {}
   };
   this.closeImageOverlay = () => {
     try {
       const box = this.$byId('imgLightbox');
       const img = this.$byId('imgLightboxImg');
+      const counter = this.$byId('imgLightboxCounter');
       if (img) img.src = '';
-      if (box) box.classList.remove('open');
+      if (counter) counter.textContent = '0 / 0';
+      if (box) {
+        box.classList.remove('open');
+        box.setAttribute('aria-hidden', 'true');
+      }
+      this._lightboxGallery = [];
+      this._lightboxIndex = 0;
       this._imageOverlayOpen = false;
     } catch {}
+  };
+  this._collectSlideGalleryImages = (slide) => {
+    try {
+      if (!slide) return [];
+      const urls = [];
+      const push = (value) => {
+        const v = String(value || '').trim();
+        if (!v || /^data:image\/svg\+xml/i.test(v)) return;
+        if (!urls.includes(v)) urls.push(v);
+      };
+      const mainImg = slide.querySelector('.cs-image-click-area img');
+      if (mainImg?.src) push(mainImg.src);
+      slide.querySelectorAll('.card-front-assets .card-back-asset, .card-back-asset').forEach((asset) => {
+        push(asset.getAttribute('data-full-image'));
+        push(asset.getAttribute('data-thumb-image'));
+      });
+      return urls;
+    } catch {
+      return [];
+    }
   };
   // Lightbox interactions: click outside image closes
   try {
     const box = this.$byId('imgLightbox');
     const img = this.$byId('imgLightboxImg');
+    const prevBtn = this.$byId('imgLightboxPrev');
+    const nextBtn = this.$byId('imgLightboxNext');
     if (box) {
+      if (prevBtn) prevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.stepImageOverlay(-1);
+      });
+      if (nextBtn) nextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.stepImageOverlay(1);
+      });
       box.addEventListener('click', (e) => {
+        if (e.target?.closest?.('.img-lightbox-nav')) return;
         if (img && !img.contains(e.target)) {
           e.stopPropagation();
           this.closeImageOverlay();
         }
       });
-      // Swipe-to-close on mobile corners
-      let sx = 0, sy = 0, st = 0, eligible = false;
-      const cornerPad = 24, distThresh = 32, timeThresh = 400;
+      // Swipe left/right to navigate on touch devices
+      let sx = 0, sy = 0, st = 0;
+      const distThresh = 30, timeThresh = 500;
       box.addEventListener('touchstart', (e) => {
-        const t = e.touches && e.touches[0]; if (!t) return;
-        const rect = box.getBoundingClientRect();
+        const t = e.touches && e.touches[0];
+        if (!t) return;
         sx = t.clientX; sy = t.clientY; st = Date.now();
-        const inLeft = sx >= rect.left && sx <= rect.left + cornerPad && sy >= rect.top && sy <= rect.top + cornerPad;
-        const inRight = sx <= rect.right && sx >= rect.right - cornerPad && sy >= rect.top && sy <= rect.top + cornerPad;
-        const inBL = sx >= rect.left && sx <= rect.left + cornerPad && sy <= rect.bottom && sy >= rect.bottom - cornerPad;
-        const inBR = sx <= rect.right && sx >= rect.right - cornerPad && sy <= rect.bottom && sy >= rect.bottom - cornerPad;
-        eligible = inLeft || inRight || inBL || inBR;
       }, { passive: true });
       box.addEventListener('touchend', (e) => {
-        if (!eligible) return;
-        const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]); if (!t) return;
-        const dx = Math.abs(t.clientX - sx);
-        const dy = Math.abs(t.clientY - sy);
+        const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+        if (!t) return;
+        const dx = t.clientX - sx;
+        const dy = t.clientY - sy;
         const dt = Date.now() - st;
-        if (dt <= timeThresh && (dx > distThresh || dy > distThresh)) {
-          this.closeImageOverlay();
+        if (dt <= timeThresh && Math.abs(dx) > distThresh && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          this.stepImageOverlay(dx < 0 ? 1 : -1);
         }
-        eligible = false;
       }, { passive: true });
     }
     if (img) {
@@ -7514,8 +7601,15 @@ render() {
   } catch {}
   // Global ESC: close image overlay first, then (if none) close widget
   this._onGlobalKeydown = (e) => {
-    if (e.key !== 'Escape') return;
+    if (!['Escape', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
     if (!this.classList.contains('open')) return;
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && this._imageOverlayOpen) {
+      e.preventDefault();
+      e.stopPropagation();
+      this.stepImageOverlay(e.key === 'ArrowRight' ? 1 : -1);
+      return;
+    }
+    if (e.key !== 'Escape') return;
     e.preventDefault();
     e.stopPropagation();
     if (this._imageOverlayOpen) { this.closeImageOverlay(); return; }
@@ -7537,7 +7631,13 @@ render() {
     const assetEl = e.target.closest('.card-back-asset');
     if (assetEl) {
       const assetUrl = assetEl.getAttribute('data-full-image') || this._extractBgUrl(assetEl);
-      if (assetUrl) { this.openImageOverlay(assetUrl); return; }
+      if (assetUrl) {
+        const slide = assetEl.closest('.card-slide');
+        const gallery = this._collectSlideGalleryImages(slide);
+        const index = gallery.indexOf(assetUrl);
+        this.openImageOverlay(assetUrl, { images: gallery, index: index >= 0 ? index : 0 });
+        return;
+      }
     }
     // ignore clicks on navigation/dots/buttons and keep click ownership local
     if (e.target.closest('.cards-dots-row, .cards-dot')) {
@@ -7547,15 +7647,33 @@ render() {
     if (e.target.closest('button')) return;
     // 1) direct <img> inside card screen
     const imgEl = e.target.closest('.card-screen .cs-image-click-area img');
-    if (imgEl && imgEl.src) { this.openImageOverlay(imgEl.src); return; }
+    if (imgEl && imgEl.src) {
+      const slide = imgEl.closest('.card-slide');
+      const gallery = this._collectSlideGalleryImages(slide);
+      const index = gallery.indexOf(imgEl.src);
+      this.openImageOverlay(imgEl.src, { images: gallery, index: index >= 0 ? index : 0 });
+      return;
+    }
     // 2) property card background or card mock image areas
     const bgEl = e.target.closest('.card-image, .card-mock .cm-image, .card-screen .cs-image-click-area');
     if (bgEl) {
       const url = this._extractBgUrl(bgEl);
-      if (url) { this.openImageOverlay(url); return; }
+      if (url) {
+        const slide = bgEl.closest('.card-slide');
+        const gallery = this._collectSlideGalleryImages(slide);
+        const index = gallery.indexOf(url);
+        this.openImageOverlay(url, { images: gallery, index: index >= 0 ? index : 0 });
+        return;
+      }
       // fallback: if it contains an img, use it
       const innerImg = bgEl.querySelector('img');
-      if (innerImg && innerImg.src) { this.openImageOverlay(innerImg.src); return; }
+      if (innerImg && innerImg.src) {
+        const slide = bgEl.closest('.card-slide');
+        const gallery = this._collectSlideGalleryImages(slide);
+        const index = gallery.indexOf(innerImg.src);
+        this.openImageOverlay(innerImg.src, { images: gallery, index: index >= 0 ? index : 0 });
+        return;
+      }
     }
   };
   try { this.getRoot().addEventListener('click', this._onImageClick); } catch {}
