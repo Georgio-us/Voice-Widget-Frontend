@@ -2292,6 +2292,7 @@ const LOCALES = {
     cardDescriptionTitle: 'Описание объекта',
     cardDescriptionOk: 'OK',
     cardDescriptionEmpty: 'Описание пока недоступно',
+    cardTitleFullAria: 'Показать полный заголовок',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
     pillCta: 'Смотреть подборку',
@@ -2424,6 +2425,7 @@ const LOCALES = {
     cardDescriptionTitle: "Опис об'єкта",
     cardDescriptionOk: 'OK',
     cardDescriptionEmpty: 'Опис поки недоступний',
+    cardTitleFullAria: 'Показати повний заголовок',
     handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
     handoffDetails: 'Детальніше',
     pillCta: 'Дивитися добірку',
@@ -7926,6 +7928,33 @@ render() {
 
   // Card events
   this.getRoot().addEventListener('click', async (e) => {
+    const closeAllTitlePopovers = () => {
+      this.getRoot().querySelectorAll('.cs-title-popover.open').forEach((node) => {
+        node.classList.remove('open');
+        node.setAttribute('aria-hidden', 'true');
+      });
+    };
+    const titleTrigger = e.target.closest('[data-action="toggle-title"]');
+    if (!titleTrigger && !e.target.closest('[data-role="title-popover"]')) {
+      closeAllTitlePopovers();
+    }
+    if (titleTrigger) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      const slide = titleTrigger.closest('.card-slide');
+      const popover = slide?.querySelector('[data-role="title-popover"]');
+      if (popover) {
+        const willOpen = !popover.classList.contains('open');
+        closeAllTitlePopovers();
+        if (willOpen) {
+          popover.classList.add('open');
+          popover.setAttribute('aria-hidden', 'false');
+        }
+      }
+      return;
+    }
     const likeBtn = e.target.closest('.card-btn[data-action="like"]');
     if (likeBtn) {
       // UI toggle (фиксируем состояние сердечка). При отключении — без side-effects.
@@ -9107,8 +9136,15 @@ render() {
           </div>
           <div class="cs-body">
             <div class="cs-row cs-row--top">
-              <div class="cs-title">${escCardText(headlineTitle || '—')}</div>
+              <button
+                type="button"
+                class="cs-title cs-title-btn"
+                data-action="toggle-title"
+                aria-label="${locale.cardTitleFullAria || 'Показать полный заголовок'}"
+                title="${escCardAttr(headlineTitle || '—')}"
+              >${escCardText(headlineTitle || '—')}</button>
             </div>
+            <div class="cs-title-popover" data-role="title-popover" aria-hidden="true">${escCardText(headlineTitle || '—')}</div>
             <div class="cs-row cs-row--district">
               <div class="cs-district">${districtLine}</div>
               <div class="cs-price-badges">
