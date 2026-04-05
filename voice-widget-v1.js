@@ -10350,13 +10350,13 @@ render() {
       if (!rawValue) return null;
       const key = rawValue.toLowerCase();
       const dict = {
-        '1': isUaLang ? 'після будівельників' : 'после строителей',
-        '2': isUaLang ? 'житловий стан' : 'жилое состояние',
-        '4': isUaLang ? 'євроремонт' : 'евроремонт',
-        '6': isUaLang ? 'авторський проєкт' : 'авторский проект',
+        '1': isUaLang ? 'авторський проєкт' : 'авторский проект',
+        '2': isUaLang ? 'євроремонт' : 'евроремонт',
+        '4': isUaLang ? 'житловий стан' : 'жилое состояние',
         repaired: isUaLang ? 'з ремонтом' : 'с ремонтом',
         needs_repair: isUaLang ? 'потребує ремонту' : 'требует ремонта'
       };
+      if (key === '6') return isUaLang ? 'код OLX 6' : 'код OLX 6';
       return dict[key] || rawValue;
     };
     const title = String(raw.title ?? '').trim();
