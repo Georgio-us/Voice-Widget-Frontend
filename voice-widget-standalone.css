@@ -1807,7 +1807,7 @@
   .img-lightbox .lightbox-counter{
     position:absolute;
     left:50%;
-    bottom:22px;
+    bottom:40px;
     transform:translateX(-50%);
     color:var(--text-primary);
     font-size:12px;
@@ -1887,7 +1887,7 @@
     .img-lightbox .img-lightbox-nav--prev{ left:12px; }
     .img-lightbox .img-lightbox-nav--next{ right:12px; }
     .img-lightbox .lightbox-counter{
-      bottom:14px;
+      bottom:40px;
       font-size:11px;
       padding:5px 9px;
     }
