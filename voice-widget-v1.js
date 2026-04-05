@@ -9126,13 +9126,6 @@ render() {
               </button>
             </div>
           </div>
-          <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
-            <div class="cs-description-panel">
-              <div class="cs-description-title">${locale.cardDescriptionTitle || 'Описание объекта'}</div>
-              <div class="cs-description-text">${safeDescription}</div>
-              <button type="button" class="cs-description-ok" data-action="close-description">${locale.cardDescriptionOk || 'OK'}</button>
-            </div>
-          </div>
         </div>
       </div>
       <div class="card-slide-back">
@@ -9153,6 +9146,13 @@ render() {
             <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
             <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
             <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+          </div>
+        </div>
+        <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
+          <div class="cs-description-panel">
+            <div class="cs-description-title">${locale.cardDescriptionTitle || 'Описание объекта'}</div>
+            <div class="cs-description-text">${safeDescription}</div>
+            <button type="button" class="cs-description-ok" data-action="close-description">${locale.cardDescriptionOk || 'OK'}</button>
           </div>
         </div>
       </div>
