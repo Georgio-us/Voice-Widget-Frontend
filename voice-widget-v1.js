@@ -3668,6 +3668,7 @@ class VoiceWidget extends HTMLElement {
           ? `$${normalizedUsd.toLocaleString('en-US')}`
           : '—';
         const operation = String(item?.operation || item?.listingOperation || '').trim().toLowerCase();
+        const propertyType = String(item?.property_type || item?.propertyType || item?.type || '').trim().toLowerCase();
         return {
           id,
           title,
@@ -3677,7 +3678,8 @@ class VoiceWidget extends HTMLElement {
           price,
           priceValue: Number.isFinite(normalizedUsd) && normalizedUsd > 0 ? normalizedUsd : null,
           areaValue: Number.isFinite(areaRaw) && areaRaw > 0 ? areaRaw : null,
-          operation: ['sale', 'rent'].includes(operation) ? operation : ''
+          operation: ['sale', 'rent'].includes(operation) ? operation : '',
+          propertyType
         };
       })
       .filter(Boolean);
@@ -3689,11 +3691,11 @@ class VoiceWidget extends HTMLElement {
     return normalized.length
       ? normalized
       : [
-          { id: 'OD050', title: 'Одеса, 2к квартира', district: 'Приморский', rooms: '2', area: '56 м²', price: '$79,000', priceValue: 79000, areaValue: 56, operation: 'sale' },
-          { id: 'OD049', title: 'Одеса, 1к квартира', district: 'Киевский', rooms: '1', area: '40 м²', price: '$51,000', priceValue: 51000, areaValue: 40, operation: 'sale' },
-          { id: 'OD048', title: 'Одеса, 3к квартира', district: 'Суворовский', rooms: '3', area: '84 м²', price: '$97,000', priceValue: 97000, areaValue: 84, operation: 'sale' },
-          { id: 'OD047', title: 'Одеса, пентхаус', district: 'Аркадия', rooms: '4', area: '130 м²', price: '$210,000', priceValue: 210000, areaValue: 130, operation: 'sale' },
-          { id: 'OD046', title: 'Одеса, смарт-квартира', district: 'Таирова', rooms: '1', area: '28 м²', price: '$33,000', priceValue: 33000, areaValue: 28, operation: 'rent' }
+          { id: 'OD050', title: 'Одеса, 2к квартира', district: 'Приморский', rooms: '2', area: '56 м²', price: '$79,000', priceValue: 79000, areaValue: 56, operation: 'sale', propertyType: 'apartment' },
+          { id: 'OD049', title: 'Одеса, 1к квартира', district: 'Киевский', rooms: '1', area: '40 м²', price: '$51,000', priceValue: 51000, areaValue: 40, operation: 'sale', propertyType: 'apartment' },
+          { id: 'OD048', title: 'Одеса, 3к квартира', district: 'Суворовский', rooms: '3', area: '84 м²', price: '$97,000', priceValue: 97000, areaValue: 84, operation: 'sale', propertyType: 'apartment' },
+          { id: 'OD047', title: 'Одеса, пентхаус', district: 'Аркадия', rooms: '4', area: '130 м²', price: '$210,000', priceValue: 210000, areaValue: 130, operation: 'sale', propertyType: 'apartment' },
+          { id: 'OD046', title: 'Одеса, смарт-квартира', district: 'Таирова', rooms: '1', area: '28 м²', price: '$33,000', priceValue: 33000, areaValue: 28, operation: 'rent', propertyType: 'apartment' }
         ];
   }
 
@@ -3991,9 +3993,14 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
               <div class="vw-access-objects-total">Всего: <strong data-role="list-total">${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost" data-role="select-all">Выбрать всё</button>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">Выбрать всё</button>
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
-                <button type="button" class="vw-access-sub-btn" data-role="sort-trigger">Сортировать по</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="sort-trigger">
+                  <span>Сортировать по</span>
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M2 4h12M4 8h8M6 12h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
             <div class="vw-access-objects-scroll">
@@ -4025,9 +4032,15 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
               <div class="vw-access-objects-total">Всего: <strong data-role="list-total">${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost" data-role="select-all">Выбрать всё</button>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">Выбрать всё</button>
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger-ghost" data-role="reset-wishlist">Сбросить подборку</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
+                  <span>Сбросить подборку</span>
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
               </div>
             </div>
             <div class="vw-access-objects-scroll">
@@ -6928,9 +6941,22 @@ class VoiceWidget extends HTMLElement {
         background: transparent;
         color: var(--text-primary, #fff);
         font-weight: 600;
+        opacity: .96;
       }
       .vw-access-sub-btn--ghost.is-active {
         color: rgba(92, 150, 255, 0.98);
+      }
+      .vw-access-sub-btn--text-action {
+        min-height: 38px;
+        padding: 0 8px;
+        gap: 6px;
+        font-size: .95rem;
+      }
+      .vw-access-sub-btn--text-action svg {
+        width: 14px;
+        height: 14px;
+        display: inline-block;
+        opacity: .9;
       }
       .vw-access-sub-btn--danger {
         border-color: rgba(236, 96, 96, 0.82);
@@ -7434,12 +7460,14 @@ class VoiceWidget extends HTMLElement {
       .vw-access-objects-bottombar,
       .vw-access-objects-bottombar--wishlist {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 10px;
+        padding: 0 6px 4px;
       }
       .vw-access-objects-bottombar .vw-access-sub-btn,
       .vw-access-objects-bottombar--wishlist .vw-access-sub-btn {
-        min-height: 50px;
-        font-size: 1rem;
-        border-radius: 14px;
+        min-height: 44px;
+        font-size: .95rem;
+        border-radius: 12px;
       }
       .vw-access-objects-total {
         font-size: .83rem;
