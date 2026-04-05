@@ -2270,6 +2270,7 @@ const LOCALES = {
     accessUserEmpty: 'Здесь появятся объекты, которые вы добавите в избранное (Wishlist)',
     accessUserWishlist: 'Моя подборка',
     accessUserConsult: 'Запросить консультацию',
+    accessUserRemove: 'Убрать',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
     privacyPolicy: 'Политика конфиденциальности',
     send: 'Отправить',
@@ -2403,6 +2404,7 @@ const LOCALES = {
     accessUserEmpty: "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)",
     accessUserWishlist: 'Моя добірка',
     accessUserConsult: 'Запросити консультацію',
+    accessUserRemove: 'Прибрати',
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
     privacyPolicy: 'Політика конфіденційності',
     send: 'Надіслати',
@@ -3108,6 +3110,16 @@ class VoiceWidget extends HTMLElement {
     return this._wishlistIds.size;
   }
 
+  syncWishlistButtonsInDom() {
+    try {
+      this.getRoot().querySelectorAll('.card-btn.like[data-action="like"][data-variant-id]').forEach((btn) => {
+        const id = String(btn.getAttribute('data-variant-id') || '').trim();
+        const selected = this.isWishlistSelected(id);
+        btn.classList.toggle('is-liked', selected);
+      });
+    } catch {}
+  }
+
   getBackendBaseUrl() {
     return String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '');
   }
@@ -3364,6 +3376,7 @@ class VoiceWidget extends HTMLElement {
     const shareBtn = overlay.querySelector('[data-role="share"]');
     const deleteBtn = overlay.querySelector('[data-role="delete-selected"]');
     const consultBtn = overlay.querySelector('[data-role="consult-selected"]');
+    const removeBtn = overlay.querySelector('[data-role="remove-selected"]');
     if (shareBtn) {
       shareBtn.disabled = selected <= 0;
       shareBtn.textContent = selected > 0 ? `Поделиться (${selected})` : 'Поделиться';
@@ -3376,6 +3389,11 @@ class VoiceWidget extends HTMLElement {
       const base = locale.accessUserConsult || 'Запросить консультацию';
       consultBtn.disabled = selected <= 0;
       consultBtn.textContent = selected > 0 ? `${base} (${selected})` : base;
+    }
+    if (removeBtn) {
+      const base = locale.accessUserRemove || 'Убрать';
+      removeBtn.disabled = selected <= 0;
+      removeBtn.textContent = selected > 0 ? `${base} (${selected})` : base;
     }
   }
 
@@ -3624,7 +3642,8 @@ class VoiceWidget extends HTMLElement {
             <div class="vw-access-objects-scroll">
               <div class="vw-access-obj-list">${rows}</div>
             </div>
-            <div class="vw-access-objects-bottombar">
+            <div class="vw-access-objects-bottombar vw-access-objects-bottombar--wishlist">
+              <button type="button" class="vw-access-sub-btn" data-role="remove-selected" disabled>${locale.accessUserRemove || 'Убрать'}</button>
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="consult-selected" disabled>${locale.accessUserConsult || 'Запросить консультацию'}</button>
             </div>
           </div>
@@ -3886,6 +3905,22 @@ class VoiceWidget extends HTMLElement {
         if (!selectedIds.length) return;
         this.ui?.showNotification?.(`Запрос на консультацию подготовлен (${selectedIds.length})`);
         this.closeAccessSubOverlay();
+      });
+      overlay.querySelector('[data-role="remove-selected"]')?.addEventListener('click', () => {
+        const selectedIds = getSelectedIds();
+        if (!selectedIds.length) return;
+        selectedIds.forEach((id) => this.toggleWishlistSelection(id, false));
+        getRows().forEach((row) => {
+          const id = String(row.getAttribute('data-id') || '').trim();
+          if (selectedIds.includes(id)) row.remove();
+        });
+        this.syncWishlistButtonsInDom();
+        this.updateAccessHeaderButton({ pulse: false });
+        this.updateAdminObjectsSelectionState(overlay);
+        const remain = getRows().length;
+        const totalEl = overlay.querySelector('.vw-access-objects-total strong');
+        if (totalEl) totalEl.textContent = String(remain);
+        if (!remain) this.openAccessSubOverlay('wishlist');
       });
       this.updateAdminObjectsSelectionState(overlay);
     }
@@ -6769,6 +6804,20 @@ class VoiceWidget extends HTMLElement {
         align-items: center;
         gap: 10px;
       }
+      .vw-access-objects-bottombar--wishlist {
+        grid-template-columns: repeat(2, minmax(0, auto));
+        justify-content: center;
+        justify-items: center;
+        gap: 12px;
+      }
+      .vw-access-objects-bottombar--wishlist .vw-access-sub-btn {
+        min-height: 42px;
+        padding: 0 18px;
+        font-size: .92rem;
+      }
+      .vw-access-objects-bottombar--wishlist .vw-access-sub-btn--primary {
+        min-width: 220px;
+      }
       .vw-access-objects-total {
         font-size: .83rem;
         color: var(--text-secondary, rgba(255,255,255,0.75));
@@ -7988,6 +8037,7 @@ render() {
       } catch {}
       const variantId = likeBtn.getAttribute('data-variant-id');
       this.toggleWishlistSelection(variantId, isLiked);
+      this.syncWishlistButtonsInDom();
       try { this.updateAccessHeaderButton({ pulse: isLiked }); } catch {}
       if (!isLiked) return;
       
