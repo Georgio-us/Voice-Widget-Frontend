@@ -1806,8 +1806,9 @@
   .img-lightbox .img-lightbox-nav--next{ right:24px; }
   .img-lightbox .lightbox-counter{
     position:absolute;
-    top:26px;
-    right:24px;
+    left:50%;
+    bottom:22px;
+    transform:translateX(-50%);
     color:var(--text-primary);
     font-size:12px;
     font-weight:600;
@@ -1818,6 +1819,7 @@
     padding:6px 10px;
     z-index:1003;
     user-select:none;
+    pointer-events:none;
   }
   .img-lightbox .lightbox-close-hint{
     position:absolute;
@@ -1885,8 +1887,7 @@
     .img-lightbox .img-lightbox-nav--prev{ left:12px; }
     .img-lightbox .img-lightbox-nav--next{ right:12px; }
     .img-lightbox .lightbox-counter{
-      right:12px;
-      top:18px;
+      bottom:14px;
       font-size:11px;
       padding:5px 9px;
     }
