@@ -238,7 +238,7 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:8px;
+    padding:5px;
     border:1px solid var(--border-light);
     background:var(--shadow-strong);
     border-radius:999px;
@@ -254,7 +254,7 @@
   .card-screen .cs-image .card-btn.like[data-action="like"]:hover{ background: color-mix(in srgb, var(--bg-card) 72%, transparent); }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg,
   .card-screen .cs-image .card-btn.like[data-action="like"] svg *{ pointer-events:none; }
-  .card-screen .cs-image .card-btn.like[data-action="like"] svg{ width:24px; height:24px; display:block; }
+  .card-screen .cs-image .card-btn.like[data-action="like"] svg{ width:18px; height:18px; display:block; }
   .card-screen .cs-image .card-btn.like[data-action="like"] svg path{ fill: transparent; stroke:var(--text-primary); stroke-width:2; }
   .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
@@ -2572,6 +2572,15 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-like-btn {
   top: 4px;
   right: 4px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .card-btn.like[data-action="like"] {
+  padding: 3px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .card-btn.like[data-action="like"] svg {
+  width: 14px;
+  height: 14px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide:not(.flipped):not(.card-slide--form-open) .cs-meta-badge {
