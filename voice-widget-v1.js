@@ -2256,6 +2256,15 @@ const LOCALES = {
     accessAdminProperties: 'Мои объекты',
     accessAdminShowLiked: 'Лайкнутые',
     accessAdminShowAll: 'Все',
+    accessAdminSort: 'Сортировка',
+    accessAdminSortPriceAsc: 'Цена ↑',
+    accessAdminSortPriceDesc: 'Цена ↓',
+    accessAdminSortAreaAsc: 'Площадь ↑',
+    accessAdminSortAreaDesc: 'Площадь ↓',
+    accessAdminSortDealAll: 'Сделка: все',
+    accessAdminSortDealSale: 'Сделка: продажа',
+    accessAdminSortDealRent: 'Сделка: аренда',
+    accessAdminSortReset: 'Сброс',
     accessAdminSubscription: 'Управление подпиской',
     accessAdminOlxConnect: 'Подключить OLX',
     accessAdminOlxConnectOpening: 'Открываю OLX...',
@@ -2392,6 +2401,15 @@ const LOCALES = {
     accessAdminProperties: "Мої об'єкти",
     accessAdminShowLiked: 'Лайкнуті',
     accessAdminShowAll: 'Усі',
+    accessAdminSort: 'Сортування',
+    accessAdminSortPriceAsc: 'Ціна ↑',
+    accessAdminSortPriceDesc: 'Ціна ↓',
+    accessAdminSortAreaAsc: 'Площа ↑',
+    accessAdminSortAreaDesc: 'Площа ↓',
+    accessAdminSortDealAll: 'Угода: усі',
+    accessAdminSortDealSale: 'Угода: продаж',
+    accessAdminSortDealRent: 'Угода: оренда',
+    accessAdminSortReset: 'Скинути',
     accessAdminSubscription: 'Керування підпискою',
     accessAdminOlxConnect: 'Підключити OLX',
     accessAdminOlxConnectOpening: 'Відкриваю OLX...',
@@ -3400,7 +3418,18 @@ class VoiceWidget extends HTMLElement {
         const price = Number.isFinite(normalizedUsd) && normalizedUsd > 0
           ? `$${normalizedUsd.toLocaleString('en-US')}`
           : '—';
-        return { id, title, district, rooms, area, price };
+        const operation = String(item?.operation || item?.listingOperation || '').trim().toLowerCase();
+        return {
+          id,
+          title,
+          district,
+          rooms,
+          area,
+          price,
+          priceValue: Number.isFinite(normalizedUsd) && normalizedUsd > 0 ? normalizedUsd : null,
+          areaValue: Number.isFinite(areaRaw) && areaRaw > 0 ? areaRaw : null,
+          operation: ['sale', 'rent'].includes(operation) ? operation : ''
+        };
       })
       .filter(Boolean);
     const uniq = new Map();
@@ -3411,12 +3440,44 @@ class VoiceWidget extends HTMLElement {
     return normalized.length
       ? normalized
       : [
-          { id: 'OD050', title: 'Одеса, 2к квартира', district: 'Приморский', rooms: '2', area: '56 м²', price: '$79,000' },
-          { id: 'OD049', title: 'Одеса, 1к квартира', district: 'Киевский', rooms: '1', area: '40 м²', price: '$51,000' },
-          { id: 'OD048', title: 'Одеса, 3к квартира', district: 'Суворовский', rooms: '3', area: '84 м²', price: '$97,000' },
-          { id: 'OD047', title: 'Одеса, пентхаус', district: 'Аркадия', rooms: '4', area: '130 м²', price: '$210,000' },
-          { id: 'OD046', title: 'Одеса, смарт-квартира', district: 'Таирова', rooms: '1', area: '28 м²', price: '$33,000' }
+          { id: 'OD050', title: 'Одеса, 2к квартира', district: 'Приморский', rooms: '2', area: '56 м²', price: '$79,000', priceValue: 79000, areaValue: 56, operation: 'sale' },
+          { id: 'OD049', title: 'Одеса, 1к квартира', district: 'Киевский', rooms: '1', area: '40 м²', price: '$51,000', priceValue: 51000, areaValue: 40, operation: 'sale' },
+          { id: 'OD048', title: 'Одеса, 3к квартира', district: 'Суворовский', rooms: '3', area: '84 м²', price: '$97,000', priceValue: 97000, areaValue: 84, operation: 'sale' },
+          { id: 'OD047', title: 'Одеса, пентхаус', district: 'Аркадия', rooms: '4', area: '130 м²', price: '$210,000', priceValue: 210000, areaValue: 130, operation: 'sale' },
+          { id: 'OD046', title: 'Одеса, смарт-квартира', district: 'Таирова', rooms: '1', area: '28 м²', price: '$33,000', priceValue: 33000, areaValue: 28, operation: 'rent' }
         ];
+  }
+
+  applyAdminPropertiesView(items = [], options = {}) {
+    const list = Array.isArray(items) ? [...items] : [];
+    const safeOptions = options && typeof options === 'object' ? options : {};
+    const onlyLiked = safeOptions.onlyLiked === true;
+    const operationFilter = String(safeOptions.operationFilter || 'all').toLowerCase();
+    const sortBy = String(safeOptions.sortBy || '').toLowerCase();
+    const sortDir = String(safeOptions.sortDir || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc';
+
+    let filtered = list;
+    if (onlyLiked) {
+      filtered = filtered.filter((item) => this.isWishlistSelected(item?.id));
+    }
+    if (operationFilter === 'sale' || operationFilter === 'rent') {
+      filtered = filtered.filter((item) => String(item?.operation || '').toLowerCase() === operationFilter);
+    }
+    if (sortBy === 'price' || sortBy === 'area') {
+      const dirFactor = sortDir === 'desc' ? -1 : 1;
+      filtered.sort((a, b) => {
+        const av = sortBy === 'price' ? Number(a?.priceValue) : Number(a?.areaValue);
+        const bv = sortBy === 'price' ? Number(b?.priceValue) : Number(b?.areaValue);
+        const aOk = Number.isFinite(av);
+        const bOk = Number.isFinite(bv);
+        if (!aOk && !bOk) return 0;
+        if (!aOk) return 1;
+        if (!bOk) return -1;
+        if (av === bv) return 0;
+        return av > bv ? dirFactor : -dirFactor;
+      });
+    }
+    return filtered;
   }
 
   updateAdminObjectsSelectionState(overlay) {
@@ -3459,11 +3520,16 @@ class VoiceWidget extends HTMLElement {
     const locale = this.getCurrentLocale();
     const safeSection = String(section || '').trim().toLowerCase();
     const safeOptions = options && typeof options === 'object' ? options : {};
-    const adminOnlyLiked = safeSection === 'properties'
-      && (safeOptions.onlyLiked === true || String(safeOptions.onlyLiked || '').toLowerCase() === 'true');
+    const adminViewOptions = {
+      onlyLiked: safeOptions.onlyLiked === true || String(safeOptions.onlyLiked || '').toLowerCase() === 'true',
+      sortBy: String(safeOptions.sortBy || '').toLowerCase(),
+      sortDir: String(safeOptions.sortDir || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc',
+      operationFilter: String(safeOptions.operationFilter || 'all').toLowerCase()
+    };
+    const adminRawList = this.getAdminObjectsMockList({ preferFull: safeSection === 'properties' });
     const list = safeSection === 'wishlist'
       ? this.getWishlistObjectsList()
-      : this.getAdminObjectsMockList({ preferFull: safeSection === 'properties', onlyLiked: adminOnlyLiked });
+      : (safeSection === 'properties' ? this.applyAdminPropertiesView(adminRawList, adminViewOptions) : adminRawList);
     const isAddProperty = safeSection === 'add-property';
     const editPropertyId = isAddProperty ? String(safeOptions.propertyId || '').trim() : '';
     const isEditProperty = isAddProperty && String(safeOptions.mode || '').trim().toLowerCase() === 'edit' && !!editPropertyId;
@@ -3659,8 +3725,7 @@ class VoiceWidget extends HTMLElement {
             <div class="vw-access-objects-topbar">
               <div class="vw-access-objects-total">Всего объектов: <strong>${list.length}</strong></div>
               <div class="vw-access-objects-topbar-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="toggle-liked">${adminOnlyLiked ? (locale.accessAdminShowAll || 'Все') : (locale.accessAdminShowLiked || 'Лайкнутые')}</button>
-                <button type="button" class="vw-access-sub-btn" data-role="sort-trigger">Сортировка</button>
+                <button type="button" class="vw-access-sub-btn" data-role="sort-trigger">${locale.accessAdminSort || 'Сортировка'}</button>
               </div>
             </div>
             <div class="vw-access-objects-scroll">
@@ -3868,11 +3933,69 @@ class VoiceWidget extends HTMLElement {
         });
       });
       overlay.querySelector('[data-role="sort-trigger"]')?.addEventListener('click', () => {
-        this.ui?.showNotification?.('Сортировка будет добавлена следующим шагом');
-      });
-      overlay.querySelector('[data-role="toggle-liked"]')?.addEventListener('click', async () => {
-        const nextOnlyLiked = !adminOnlyLiked;
-        this.openAccessSubOverlay('properties', { onlyLiked: nextOnlyLiked });
+        const cycleDeal = (current) => {
+          if (current === 'all') return 'sale';
+          if (current === 'sale') return 'rent';
+          return 'all';
+        };
+        const reopenWith = (patch = {}) => {
+          this.openAccessSubOverlay('properties', { ...adminViewOptions, ...patch });
+        };
+        const priceLabel = adminViewOptions.sortBy === 'price'
+          ? (adminViewOptions.sortDir === 'desc' ? (locale.accessAdminSortPriceDesc || 'Цена ↓') : (locale.accessAdminSortPriceAsc || 'Цена ↑'))
+          : (locale.accessAdminSortPriceAsc || 'Цена ↑');
+        const areaLabel = adminViewOptions.sortBy === 'area'
+          ? (adminViewOptions.sortDir === 'desc' ? (locale.accessAdminSortAreaDesc || 'Площадь ↓') : (locale.accessAdminSortAreaAsc || 'Площадь ↑'))
+          : (locale.accessAdminSortAreaAsc || 'Площадь ↑');
+        const dealLabel = adminViewOptions.operationFilter === 'sale'
+          ? (locale.accessAdminSortDealSale || 'Сделка: продажа')
+          : adminViewOptions.operationFilter === 'rent'
+            ? (locale.accessAdminSortDealRent || 'Сделка: аренда')
+            : (locale.accessAdminSortDealAll || 'Сделка: все');
+        const likedLabel = adminViewOptions.onlyLiked ? (locale.accessAdminShowAll || 'Все') : (locale.accessAdminShowLiked || 'Лайкнутые');
+        const layer = document.createElement('div');
+        layer.className = 'vw-access-add-dialog-layer';
+        layer.innerHTML = `
+          <div class="vw-access-add-dialog">
+            <div class="vw-access-add-dialog-title">${locale.accessAdminSort || 'Сортировка'}</div>
+            <div class="vw-access-add-dialog-actions">
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-liked">${likedLabel}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-price">${priceLabel}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-area">${areaLabel}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-deal">${dealLabel}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-reset">${locale.accessAdminSortReset || 'Сброс'}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-close">${locale.cancel || 'Отмена'}</button>
+            </div>
+          </div>
+        `;
+        overlay.appendChild(layer);
+        const close = () => { try { layer.remove(); } catch {} };
+        layer.addEventListener('click', (event) => {
+          if (event.target === layer) close();
+        });
+        layer.querySelector('[data-role="sort-close"]')?.addEventListener('click', close);
+        layer.querySelector('[data-role="sort-liked"]')?.addEventListener('click', () => {
+          close();
+          reopenWith({ onlyLiked: !adminViewOptions.onlyLiked });
+        });
+        layer.querySelector('[data-role="sort-price"]')?.addEventListener('click', () => {
+          close();
+          const nextSortDir = adminViewOptions.sortBy === 'price' && adminViewOptions.sortDir === 'asc' ? 'desc' : 'asc';
+          reopenWith({ sortBy: 'price', sortDir: nextSortDir });
+        });
+        layer.querySelector('[data-role="sort-area"]')?.addEventListener('click', () => {
+          close();
+          const nextSortDir = adminViewOptions.sortBy === 'area' && adminViewOptions.sortDir === 'asc' ? 'desc' : 'asc';
+          reopenWith({ sortBy: 'area', sortDir: nextSortDir });
+        });
+        layer.querySelector('[data-role="sort-deal"]')?.addEventListener('click', () => {
+          close();
+          reopenWith({ operationFilter: cycleDeal(adminViewOptions.operationFilter) });
+        });
+        layer.querySelector('[data-role="sort-reset"]')?.addEventListener('click', () => {
+          close();
+          reopenWith({ onlyLiked: false, sortBy: '', sortDir: 'asc', operationFilter: 'all' });
+        });
       });
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
         this.ui?.showNotification?.('Список объектов подготовлен к шарингу (demo)');
