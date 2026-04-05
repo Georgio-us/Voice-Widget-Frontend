@@ -899,6 +899,9 @@ class UIManager {
   isAdminCommand(text) {
     return String(text || '').trim().toLowerCase() === '//admin';
   }
+  isGuestCommand(text) {
+    return String(text || '').trim().toLowerCase() === '//guest';
+  }
   tryHandleResetCommand(text) {
     if (!this.isResetCommand(text)) return false;
     const { textInput } = this.elements;
@@ -924,12 +927,25 @@ class UIManager {
     this.widget.ui?.showNotification?.('Admin access enabled (dev)');
     return true;
   }
+  tryHandleGuestCommand(text) {
+    if (!this.isGuestCommand(text)) return false;
+    const { textInput } = this.elements;
+    if (textInput) textInput.value = '';
+    this.widget.accessRole = 'user';
+    this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+    try { this.widget.updateAccessHeaderButton?.(); } catch {}
+    this.widget.updateSendButtonState('chat');
+    this.widget.openAccessOverlay?.();
+    this.widget.ui?.showNotification?.('Guest access enabled (dev)');
+    return true;
+  }
   handleSendText() {
     const { textInput } = this.elements;
     const text = textInput?.value?.trim();
     if (!text) return;
     if (this.tryHandleResetCommand(text)) return;
     if (this.tryHandleAdminCommand(text)) return;
+    if (this.tryHandleGuestCommand(text)) return;
     this.widget.api.sendTextMessage();
   }
 
@@ -2252,6 +2268,8 @@ const LOCALES = {
     accessAdminOlxSyncFailed: 'Не удалось импортировать объекты OLX',
     accessAdminOlxSyncLocked: 'Сначала подключите OLX',
     accessUserEmpty: 'Здесь появятся объекты, которые вы добавите в избранное (Wishlist)',
+    accessUserWishlist: 'Моя подборка',
+    accessUserConsult: 'Запросить консультацию',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
     privacyPolicy: 'Политика конфиденциальности',
     send: 'Отправить',
@@ -2382,6 +2400,8 @@ const LOCALES = {
     accessAdminOlxSyncFailed: 'Не вдалося імпортувати обʼєкти OLX',
     accessAdminOlxSyncLocked: 'Спочатку підключіть OLX',
     accessUserEmpty: "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)",
+    accessUserWishlist: 'Моя добірка',
+    accessUserConsult: 'Запросити консультацію',
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
     privacyPolicy: 'Політика конфіденційності',
     send: 'Надіслати',
@@ -2528,6 +2548,7 @@ class VoiceWidget extends HTMLElement {
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
     this._filtersOverlayOpen = false;
+    this._wishlistIds = this.loadWishlistIds();
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -3026,6 +3047,60 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  getWishlistStorageKey() {
+    const tgUser = this.getCurrentTelegramUser();
+    const userId = String(tgUser?.id || 'anon').trim() || 'anon';
+    return `vw_wishlist_ids_${userId}`;
+  }
+
+  loadWishlistIds() {
+    try {
+      const raw = localStorage.getItem(this.getWishlistStorageKey());
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return new Set();
+      const ids = parsed
+        .map((item) => String(item || '').trim())
+        .filter(Boolean);
+      return new Set(ids);
+    } catch {
+      return new Set();
+    }
+  }
+
+  persistWishlistIds() {
+    try {
+      if (!(this._wishlistIds instanceof Set)) this._wishlistIds = new Set();
+      localStorage.setItem(this.getWishlistStorageKey(), JSON.stringify(Array.from(this._wishlistIds)));
+    } catch {}
+  }
+
+  isWishlistSelected(id) {
+    const sid = String(id || '').trim();
+    if (!sid) return false;
+    if (!(this._wishlistIds instanceof Set)) this._wishlistIds = this.loadWishlistIds();
+    return this._wishlistIds.has(sid);
+  }
+
+  toggleWishlistSelection(id, selected = null) {
+    const sid = String(id || '').trim();
+    if (!sid) return false;
+    if (!(this._wishlistIds instanceof Set)) this._wishlistIds = this.loadWishlistIds();
+    const targetState = selected == null ? !this._wishlistIds.has(sid) : !!selected;
+    if (targetState) this._wishlistIds.add(sid);
+    else this._wishlistIds.delete(sid);
+    this.persistWishlistIds();
+    return targetState;
+  }
+
+  getWishlistObjectsList() {
+    if (!(this._wishlistIds instanceof Set)) this._wishlistIds = this.loadWishlistIds();
+    const selectedIds = this._wishlistIds;
+    if (!selectedIds.size) return [];
+    const all = this.getAdminObjectsMockList();
+    return all.filter((item) => selectedIds.has(String(item?.id || '').trim()));
+  }
+
   getBackendBaseUrl() {
     return String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '');
   }
@@ -3257,11 +3332,13 @@ class VoiceWidget extends HTMLElement {
 
   updateAdminObjectsSelectionState(overlay) {
     if (!overlay) return;
+    const locale = this.getCurrentLocale();
     const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-card'));
     const checks = rows.map((row) => row.querySelector('[data-role="row-check"]')).filter(Boolean);
     const selected = checks.filter((check) => check.checked).length;
     const shareBtn = overlay.querySelector('[data-role="share"]');
     const deleteBtn = overlay.querySelector('[data-role="delete-selected"]');
+    const consultBtn = overlay.querySelector('[data-role="consult-selected"]');
     if (shareBtn) {
       shareBtn.disabled = selected <= 0;
       shareBtn.textContent = selected > 0 ? `Поделиться (${selected})` : 'Поделиться';
@@ -3270,17 +3347,23 @@ class VoiceWidget extends HTMLElement {
       deleteBtn.disabled = selected <= 0;
       deleteBtn.textContent = selected > 0 ? `Удалить (${selected})` : 'Удалить';
     }
+    if (consultBtn) {
+      const base = locale.accessUserConsult || 'Запросить консультацию';
+      consultBtn.disabled = selected <= 0;
+      consultBtn.textContent = selected > 0 ? `${base} (${selected})` : base;
+    }
   }
 
   openAccessSubOverlay(section = 'stats', options = {}) {
     this.closeAccessSubOverlay();
-    const list = this.getAdminObjectsMockList();
     const now = new Date();
     const nextMonth = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
     const fmtDate = (d) => {
       try { return d.toLocaleDateString('ru-RU'); } catch { return ''; }
     };
+    const locale = this.getCurrentLocale();
     const safeSection = String(section || '').trim().toLowerCase();
+    const list = safeSection === 'wishlist' ? this.getWishlistObjectsList() : this.getAdminObjectsMockList();
     const isAddProperty = safeSection === 'add-property';
     const safeOptions = options && typeof options === 'object' ? options : {};
     const editPropertyId = isAddProperty ? String(safeOptions.propertyId || '').trim() : '';
@@ -3488,6 +3571,40 @@ class VoiceWidget extends HTMLElement {
           </div>
         `;
       }
+      if (safeSection === 'wishlist') {
+        if (!list.length) {
+          return `
+            <div class="vw-access-sub-list">
+              <div class="vw-access-sub-item">${locale.accessUserEmpty || "Здесь появятся объекты, которые вы добавите в избранное (Wishlist)"}</div>
+            </div>
+          `;
+        }
+        const rows = list.map((item) => `
+          <article class="vw-access-obj-card" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}">
+            <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
+            <div class="vw-access-obj-main">
+              <div class="vw-access-obj-headline">
+                <span class="vw-access-obj-id-badge">${item.id}</span>
+                <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
+              </div>
+              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} комн · ${item.district}</div>
+            </div>
+          </article>
+        `).join('');
+        return `
+          <div class="vw-access-objects-layout">
+            <div class="vw-access-objects-topbar">
+              <div class="vw-access-objects-total">Всего объектов: <strong>${list.length}</strong></div>
+            </div>
+            <div class="vw-access-objects-scroll">
+              <div class="vw-access-obj-list">${rows}</div>
+            </div>
+            <div class="vw-access-objects-bottombar">
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="consult-selected" disabled>${locale.accessUserConsult || 'Запросить консультацию'}</button>
+            </div>
+          </div>
+        `;
+      }
       if (safeSection === 'subscription') {
         return `
           <div class="vw-access-sub-list">
@@ -3510,6 +3627,8 @@ class VoiceWidget extends HTMLElement {
 
     const title = safeSection === 'properties'
       ? 'Мои объекты'
+      : safeSection === 'wishlist'
+        ? (locale.accessUserWishlist || 'Моя подборка')
       : isAddProperty
         ? 'Новый объект'
       : safeSection === 'subscription'
@@ -3705,6 +3824,43 @@ class VoiceWidget extends HTMLElement {
             }
           }
         });
+      });
+      this.updateAdminObjectsSelectionState(overlay);
+    }
+    if (safeSection === 'wishlist') {
+      const getRows = () => Array.from(overlay.querySelectorAll('.vw-access-obj-card'));
+      const getSelectedIds = () => getRows()
+        .filter((row) => !!row.querySelector('[data-role="row-check"]')?.checked)
+        .map((row) => String(row.getAttribute('data-id') || '').trim())
+        .filter(Boolean);
+      getRows().forEach((row) => {
+        const check = row.querySelector('[data-role="row-check"]');
+        const checkWrap = row.querySelector('[data-role="row-check-wrap"]');
+        const sync = () => {
+          const selected = !!check?.checked;
+          row.classList.toggle('is-selected', selected);
+          this.updateAdminObjectsSelectionState(overlay);
+        };
+        check?.addEventListener('change', sync);
+        checkWrap?.addEventListener('click', (event) => event.stopPropagation());
+        row.addEventListener('click', () => {
+          if (!check) return;
+          check.checked = !check.checked;
+          sync();
+        });
+        row.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          if (!check) return;
+          check.checked = !check.checked;
+          sync();
+        });
+      });
+      overlay.querySelector('[data-role="consult-selected"]')?.addEventListener('click', () => {
+        const selectedIds = getSelectedIds();
+        if (!selectedIds.length) return;
+        this.ui?.showNotification?.(`Запрос на консультацию подготовлен (${selectedIds.length})`);
+        this.closeAccessSubOverlay();
       });
       this.updateAdminObjectsSelectionState(overlay);
     }
@@ -6720,6 +6876,12 @@ class VoiceWidget extends HTMLElement {
           </div>
           <div class="vw-access-greeting">${greeting}</div>
           <div class="vw-access-hint">${locale.accessUserEmpty || "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)"}</div>
+          <div class="vw-access-list">
+            <button type="button" class="vw-access-item vw-access-item--primary" data-role="user-wishlist">
+              <span class="vw-access-item__icon" aria-hidden="true">♡</span>
+              <span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span>
+            </button>
+          </div>
         </div>
       `;
 
@@ -6741,6 +6903,7 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
     overlay.querySelector('[data-role="admin-properties"]')?.addEventListener('click', () => this.openAccessSubOverlay('properties'));
     overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
+    overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeAccessOverlay();
     });
@@ -7763,13 +7926,17 @@ render() {
 
   // Card events
   this.getRoot().addEventListener('click', async (e) => {
-    if (e.target.matches('.card-btn[data-action="like"]')) {
+    const likeBtn = e.target.closest('.card-btn[data-action="like"]');
+    if (likeBtn) {
       // UI toggle (фиксируем состояние сердечка). При отключении — без side-effects.
+      let isLiked = false;
       try {
-        e.target.classList.toggle('is-liked');
-        if (!e.target.classList.contains('is-liked')) return;
+        likeBtn.classList.toggle('is-liked');
+        isLiked = likeBtn.classList.contains('is-liked');
       } catch {}
-      const variantId = e.target.getAttribute('data-variant-id');
+      const variantId = likeBtn.getAttribute('data-variant-id');
+      this.toggleWishlistSelection(variantId, isLiked);
+      if (!isLiked) return;
       
       // Логируем card_like
       const track = this.getRoot().querySelector('.cards-slider .cards-track');
@@ -8927,7 +9094,7 @@ render() {
                 ${normalized.operationBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--operation">${escCardText(normalized.operationBadgeLabel)}</div>` : ''}
                 ${normalized.propertyTypeBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--type">${escCardText(normalized.propertyTypeBadgeLabel)}</div>` : ''}
               </div>
-              <button class="cs-like-btn card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
+              <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
