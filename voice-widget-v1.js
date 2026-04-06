@@ -2587,8 +2587,13 @@ class VoiceWidget extends HTMLElement {
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = false;
     this._catalogStrictFlowActive = false;
+    this._catalogStrictQuery = null;
+    this._catalogLastRefineMode = 'filters';
     this._catalogStrictSeedIds = [];
     this._catalogRelaxedUnlocked = false;
+    this._catalogRelaxLevel = 0;
+    this._catalogRelaxPool = null;
+    this._catalogRelaxShownIds = new Set();
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarLoading = false;
     this.accessRole = 'user';
@@ -6333,7 +6338,11 @@ class VoiceWidget extends HTMLElement {
       })
       : listRaw;
     this._catalogStrictFlowActive = this._isStrictFlowQuery(query);
+    this._catalogStrictQuery = { ...query };
     this._catalogRelaxedUnlocked = false;
+    this._catalogRelaxLevel = 0;
+    this._catalogRelaxPool = null;
+    this._catalogRelaxShownIds = new Set();
     this._catalogStrictEndPromptShown = false;
     this._catalogStrictSeedIds = list
       .map((item) => String(this._toCardEngineShape(item)?.id || '').trim())
@@ -6348,6 +6357,7 @@ class VoiceWidget extends HTMLElement {
   async applyCatalogFilters(payload = {}) {
     const normalized = this.normalizeCatalogFilterOverrides(payload);
     this._catalogManualFilterOverrides = Object.keys(normalized).length ? normalized : null;
+    this._catalogLastRefineMode = 'filters';
     try {
       const list = await this.refreshCatalogByEffectiveQuery();
       this.ui?.showNotification?.(`Фильтры применены: ${list.length}`);
@@ -6360,6 +6370,7 @@ class VoiceWidget extends HTMLElement {
   async resetCatalogFiltersToAll(overlay = null) {
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = true;
+    this._catalogLastRefineMode = 'filters';
     if (overlay) this.resetFiltersOverlayForm(overlay);
     try {
       const list = await this.refreshCatalogByEffectiveQuery({});
@@ -9506,6 +9517,7 @@ render() {
       const migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
       this._catalogManualFilterOverrides = null;
       this._catalogIgnoreAssistantBaseFilters = false;
+      this._catalogLastRefineMode = 'ai';
       this.refreshCatalogByEffectiveQuery(migratedInsights).catch((error) => {
         console.warn('refreshCatalogByEffectiveQuery failed:', error);
       });
@@ -9743,6 +9755,116 @@ render() {
     });
   }
 
+  _normalizeDistrictForRelax(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (/примор|primor/.test(raw)) return 'primorsky';
+    if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
+    if (/сувор|suvor/.test(raw)) return 'suvorovsky';
+    if (/малин|malin/.test(raw)) return 'malinovsky';
+    if (/хаджиб|hadzhib|hadji/.test(raw)) return 'hadzhibeyskyi';
+    if (/лиман|liman/.test(raw)) return 'limanka';
+    if (/крыжан|kryzhan|kryjan/.test(raw)) return 'kryzhanivka';
+    if (/аванг|avang/.test(raw)) return 'avangard';
+    return raw;
+  }
+
+  _computeRelaxStepForCandidate(item = {}, query = {}) {
+    const toNum = (value) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+    const text = (v) => String(v || '').trim().toLowerCase();
+    const boolish = (v) => {
+      if (v === true || v === false) return v;
+      const t = text(v);
+      if (!t) return null;
+      if (['1', 'true', 'yes', 'y', 'да', 'так', 'є'].includes(t)) return true;
+      if (['0', 'false', 'no', 'n', 'нет', 'ні'].includes(t)) return false;
+      return null;
+    };
+
+    const qOp = text(query.operation);
+    const iOp = text(item.operation);
+    if (qOp && iOp && qOp !== iOp) return null;
+
+    const qType = text(query.type);
+    const iType = text(item.property_type || item.type);
+    if (qType && iType && qType !== iType) return null;
+
+    const qDistrict = this._normalizeDistrictForRelax(query.district || '');
+    const iDistrict = this._normalizeDistrictForRelax(item.district || item.neighborhood || item.city || '');
+    if (qDistrict && iDistrict && qDistrict !== iDistrict) return null;
+
+    const qRc = text(query.residentialComplex);
+    const iRc = text(item?.features?.complex || item?.features?.display_specs?.complex);
+    if (qRc && (!iRc || !iRc.includes(qRc))) return null;
+    if (query.rcOnly === true && !iRc) return null;
+
+    let step = 1;
+
+    if (query.parking === true) {
+      const hasParking = boolish(item?.features?.parking) === true || boolish(item?.features?.has_parking) === true;
+      if (!hasParking) step = Math.max(step, 1);
+    }
+    if (query.balconyLoggia === true) {
+      const hasBalcony = boolish(item?.balcony) === true
+        || boolish(item?.features?.balcony) === true
+        || boolish(item?.features?.has_balcony) === true
+        || boolish(item?.features?.loggia) === true;
+      if (!hasBalcony) step = Math.max(step, 1);
+    }
+
+    const price = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
+    const minPrice = toNum(query.minPrice);
+    const maxPrice = toNum(query.maxPrice);
+    if (price != null) {
+      if (minPrice != null && price < minPrice) {
+        const ratio = minPrice > 0 ? ((minPrice - price) / minPrice) : 1;
+        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
+      }
+      if (maxPrice != null && price > maxPrice) {
+        const ratio = maxPrice > 0 ? ((price - maxPrice) / maxPrice) : 1;
+        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
+      }
+    }
+
+    const area = toNum(item.area_m2);
+    const minArea = toNum(query.minArea);
+    const maxArea = toNum(query.maxArea);
+    if (area != null) {
+      if (minArea != null && area < minArea) {
+        const ratio = minArea > 0 ? ((minArea - area) / minArea) : 1;
+        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
+      }
+      if (maxArea != null && area > maxArea) {
+        const ratio = maxArea > 0 ? ((area - maxArea) / maxArea) : 1;
+        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
+      }
+    }
+
+    const floor = toNum(item.floor);
+    const minFloor = toNum(query.minFloor);
+    const maxFloor = toNum(query.maxFloor);
+    if (floor != null) {
+      if (minFloor != null && floor < minFloor) step = Math.max(step, 3);
+      if (maxFloor != null && floor > maxFloor) step = Math.max(step, 3);
+    }
+
+    const roomsRaw = String(query.rooms || '').trim();
+    const roomsWanted = roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null);
+    const roomsActual = toNum(item.rooms);
+    if (roomsWanted != null && Number.isFinite(roomsWanted) && roomsActual != null) {
+      if (roomsRaw === '4plus') {
+        if (roomsActual < 4) step = Math.max(step, 4);
+      } else if (roomsActual !== roomsWanted) {
+        step = Math.max(step, Math.abs(roomsActual - roomsWanted) === 1 ? 4 : 5);
+      }
+    }
+
+    return step;
+  }
+
   _getCurrentCatalogActiveIndex() {
     try {
       const slider = this.getRoot().querySelector('.cards-slider');
@@ -9779,7 +9901,13 @@ render() {
     this.getRoot().appendChild(overlay);
     overlay.querySelector('[data-role="refine"]')?.addEventListener('click', () => {
       this.closeSliderCheckpointPopup();
-      try { this.openFiltersOverlay(); } catch {}
+      try {
+        if (this._catalogLastRefineMode === 'ai') {
+          this.$byId('textInput')?.focus();
+        } else {
+          this.openFiltersOverlay();
+        }
+      } catch {}
     });
     overlay.querySelector('[data-role="similar"]')?.addEventListener('click', async () => {
       try {
@@ -9794,37 +9922,45 @@ render() {
   }
 
   async unlockCatalogSimilarMode() {
-    if (this._catalogRelaxedUnlocked === true) return;
     if (this._catalogSimilarLoading) return;
     this._catalogSimilarLoading = true;
     try {
-      const payload = await this.api?.fetchSessionCandidates?.(2000);
-      const source = Array.isArray(payload?.cards) ? payload.cards : [];
-      const normalized = source.map((item) => this._toCardEngineShape(item)).filter((item) => item?.id);
-      if (!normalized.length) {
-        this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
-        return;
+      if (!Array.isArray(this._catalogRelaxPool)) {
+        const payload = await this.api?.fetchSessionCandidates?.(2000);
+        const source = Array.isArray(payload?.cards) ? payload.cards : [];
+        const normalized = source.map((item) => this._toCardEngineShape(item)).filter((item) => item?.id);
+        this._catalogRelaxPool = normalized;
       }
+      const normalized = Array.isArray(this._catalogRelaxPool) ? this._catalogRelaxPool : [];
+      if (!normalized.length) return this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
 
       const current = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
       const seen = new Set(current.map((item) => String(this._toCardEngineShape(item)?.id || '').trim()).filter(Boolean));
       const strictSeed = new Set((Array.isArray(this._catalogStrictSeedIds) ? this._catalogStrictSeedIds : []).map((id) => String(id || '').trim()).filter(Boolean));
-      const extras = normalized.filter((item) => {
-        const id = String(item?.id || '').trim();
-        if (!id) return false;
-        if (seen.has(id)) return false;
-        // only similar part, strict portion is already shown from deterministic search
-        if (strictSeed.has(id)) return false;
-        return true;
-      });
+      const shown = this._catalogRelaxShownIds instanceof Set ? this._catalogRelaxShownIds : new Set();
+      const query = this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : {};
 
-      if (!extras.length) {
-        this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
-        return;
+      let level = Math.max(0, Number(this._catalogRelaxLevel) || 0);
+      let extras = [];
+      while (level < 5 && !extras.length) {
+        level += 1;
+        extras = normalized.filter((item) => {
+          const id = String(item?.id || '').trim();
+          if (!id || seen.has(id) || strictSeed.has(id) || shown.has(id)) return false;
+          const step = this._computeRelaxStepForCandidate(item, query);
+          return step != null && step <= level;
+        });
       }
+      if (!extras.length) return this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
 
       window.appState.allProperties = [...current, ...extras];
       this._mergeIntoFullCatalogProperties(extras);
+      extras.forEach((item) => {
+        const id = String(item?.id || '').trim();
+        if (id) shown.add(id);
+      });
+      this._catalogRelaxShownIds = shown;
+      this._catalogRelaxLevel = level;
 
       const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
       const first = extras[0];
