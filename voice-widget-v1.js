@@ -6227,13 +6227,13 @@ class VoiceWidget extends HTMLElement {
         exclusive: /(эксклюзив|exclusive)/i.test(text),
         parking: /(паркинг|парковк|parking|garage)/i.test(text),
         balconyLoggia: /(балкон|лоджи|balcony|loggia)/i.test(text),
-        rcOnly: /(?:^|\s)(?:жк|ж\/к)(?:\s|$)|только\s*жк|лишь\s*жк|исключительно\s*жк|в\s*жк|жил(?:ой|ого|ом|ые|ых)?\s+комплекс(?:ы|а|е|ах)?|в\s+жил(?:ом|ых)\s+комплекс(?:е|ах)?|residential\s+complex(?:es)?/i.test(text)
+        rcOnly: /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|только\s*[жз]к|лишь\s*[жз]к|исключительно\s*[жз]к|в\s*[жз]к|жил(?:ой|ого|ом|ые|ых)?\s+комплекс(?:ы|а|е|ах)?|в\s+жил(?:ом|ых)\s+комплекс(?:е|ах)?|residential\s+complex(?:es)?/i.test(text)
       };
     };
     const stripRcPrefixes = (text) => {
       let s = String(text || '').trim();
       if (!s) return '';
-      return s.replace(/^(?:жк|жилой\s+комплекс|жилкомплекс)\s*[«"']?/i, '').replace(/[»"']$/g, '').trim() || s;
+      return s.replace(/^(?:жк|зк|жилой\s+комплекс|жилкомплекс)\s*[«"']?/i, '').replace(/[»"']$/g, '').trim() || s;
     };
     const isGenericCityLocation = (text) => {
       const t = String(text || '').trim().toLowerCase();
@@ -9872,7 +9872,6 @@ render() {
 
     const qRc = text(query.residentialComplex);
     const iRc = text(item?.features?.complex || item?.features?.display_specs?.complex);
-    if (qRc && (!iRc || !iRc.includes(qRc))) return null;
     if (query.rcOnly === true && !iRc) return null;
 
     const price = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
@@ -9884,6 +9883,15 @@ render() {
       if (rel > 0.35) penalty += 4;
       else if (rel > 0.25) penalty += 2;
       else if (rel > 0.15) penalty += 1;
+    }
+
+    if (qRc) {
+      if (!iRc) {
+        if (query.rcOnly !== true) penalty += 4;
+      } else if (!iRc.includes(qRc)) {
+        // Similar mode: when exact ЖК is exhausted, allow other ЖК with penalty.
+        penalty += query.rcOnly === true ? 3 : 4;
+      }
     }
 
     const area = toNum(item.area_m2);
