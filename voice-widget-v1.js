@@ -6175,7 +6175,6 @@ class VoiceWidget extends HTMLElement {
       if (/(house|villa|home|дом|таунхаус|таун)/i.test(raw)) return 'house';
       if (/(land|plot|участок|земл)/i.test(raw)) return 'land';
       if (/(commercial|office|retail|склад|коммер|офис|нежил)/i.test(raw)) return 'commercial';
-      if (/(parking|паркинг|паркомест)/i.test(raw)) return 'parking';
       return '';
     };
     const parseFeaturesTokens = (insights) => {
