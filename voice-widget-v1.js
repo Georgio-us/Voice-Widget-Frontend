@@ -6235,6 +6235,9 @@ class VoiceWidget extends HTMLElement {
     } else if (locRaw && !districtSlug && !isGenericCityLocation(locRaw)) {
       base.residentialComplex = stripRcPrefixes(locRaw);
     }
+    if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
+      base.rcOnly = true;
+    }
     const featureFlags = parseFeaturesTokens(insights);
     if (featureFlags.smart) base.smart = true;
     if (featureFlags.arcadia) base.arcadia = true;
