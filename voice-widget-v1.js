@@ -4045,10 +4045,7 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
                   <span>Сбросить</span>
-                  <svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                  <span class="vw-access-reset-glyph" aria-hidden="true">↻</span>
                 </button>
               </div>
             </div>
@@ -6991,6 +6988,13 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-btn--text-action span {
         display: inline-block;
         min-width: 0;
+      }
+      .vw-access-reset-glyph {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .95rem;
+        line-height: 1;
       }
       .vw-access-sub-btn--danger {
         border-color: rgba(236, 96, 96, 0.82);
