@@ -11419,7 +11419,7 @@ render() {
       pushExtra(dynamicBackFeatureItems, '📍', 'Улица', displaySpecs.street);
       pushExtra(dynamicBackFeatureItems, '🏘️', 'ЖК', displaySpecs.complex);
       pushExtra(dynamicBackFeatureItems, '🍳', 'Кухня', displaySpecs.kitchen_area != null ? `${displaySpecs.kitchen_area} м²` : null);
-      pushExtra(dynamicBackFeatureItems, '🏗️', 'Этажность дома', displaySpecs.total_floors);
+      pushExtra(dynamicBackFeatureItems, '🏗️', 'Этажность', displaySpecs.total_floors);
       pushExtra(dynamicBackFeatureItems, '🔥', isUaLang ? 'Опалення' : 'Отопление', mapOlxHeatingLabel(displaySpecs.heating));
       pushExtra(dynamicBackFeatureItems, '🛠️', 'Ремонт', mapOlxRepairLabel(displaySpecs.repair));
       pushExtra(dynamicBackFeatureItems, '🏙️', 'Инфраструктура', displaySpecs.infrastructure);
