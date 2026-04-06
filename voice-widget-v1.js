@@ -9833,6 +9833,22 @@ render() {
       return Number.isFinite(n) ? n : null;
     };
     const text = (v) => String(v || '').trim().toLowerCase();
+    const canonicalOperation = (v) => {
+      const t = text(v);
+      if (!t) return '';
+      if (/(buy|sale|sell|purchase|покуп|купит|продаж)/i.test(t)) return 'sale';
+      if (/(rent|lease|аренд|снять)/i.test(t)) return 'rent';
+      return t;
+    };
+    const canonicalType = (v) => {
+      const t = text(v);
+      if (!t) return '';
+      if (/(apartment|flat|квартир|апартамент|апарты)/i.test(t)) return 'apartment';
+      if (/(house|villa|home|дом|таунхаус|таун)/i.test(t)) return 'house';
+      if (/(land|plot|участок|земл)/i.test(t)) return 'land';
+      if (/(commercial|office|retail|склад|коммер|офис|нежил)/i.test(t)) return 'commercial';
+      return t;
+    };
     const boolish = (v) => {
       if (v === true || v === false) return v;
       const t = text(v);
@@ -9842,12 +9858,12 @@ render() {
       return null;
     };
 
-    const qOp = text(query.operation);
-    const iOp = text(item.operation);
+    const qOp = canonicalOperation(query.operation);
+    const iOp = canonicalOperation(item.operation);
     if (qOp && iOp && qOp !== iOp) return null;
 
-    const qType = text(query.type);
-    const iType = text(item.property_type || item.type);
+    const qType = canonicalType(query.type);
+    const iType = canonicalType(item.property_type || item.type);
     if (qType && iType && qType !== iType) return null;
 
     const qDistrict = this._normalizeDistrictForRelax(query.district || '');
@@ -9993,10 +10009,14 @@ render() {
     });
     overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
       this.closeSliderCheckpointPopup();
+      this._catalogSimilarEndPromptShown = false;
       try { this.openContactManagerPopup({ source: 'tg_similar_end_popup' }); } catch {}
     });
     overlay.addEventListener('click', (ev) => {
-      if (ev.target === overlay) this.closeSliderCheckpointPopup();
+      if (ev.target === overlay) {
+        this.closeSliderCheckpointPopup();
+        this._catalogSimilarEndPromptShown = false;
+      }
     });
   }
 
@@ -10005,10 +10025,48 @@ render() {
     this._catalogSimilarLoading = true;
     try {
       if (!Array.isArray(this._catalogRelaxPool)) {
-        const payload = await this.api?.fetchSessionCandidates?.(2000);
-        const source = Array.isArray(payload?.cards) ? payload.cards : [];
-        const normalized = source.map((item) => this._toCardEngineShape(item)).filter((item) => item?.id);
-        this._catalogRelaxPool = normalized;
+        const source = [];
+        const appendSource = (list) => {
+          if (!Array.isArray(list) || !list.length) return;
+          source.push(...list);
+        };
+        if (this._catalogLastRefineMode === 'filters') {
+          appendSource(this._getFullCatalogProperties());
+          appendSource(Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
+          if (!source.length) {
+            const all = await this.loadAllProperties();
+            if (Array.isArray(all) && all.length) {
+              this._setFullCatalogProperties(all);
+              appendSource(all);
+            }
+          }
+          if (!source.length) {
+            const payload = await this.api?.fetchSessionCandidates?.(2000);
+            appendSource(Array.isArray(payload?.cards) ? payload.cards : []);
+          }
+        } else {
+          const payload = await this.api?.fetchSessionCandidates?.(2000);
+          appendSource(Array.isArray(payload?.cards) ? payload.cards : []);
+          if (!source.length) {
+            appendSource(this._getFullCatalogProperties());
+            if (!source.length) {
+              const all = await this.loadAllProperties();
+              if (Array.isArray(all) && all.length) {
+                this._setFullCatalogProperties(all);
+                appendSource(all);
+              }
+            }
+          }
+        }
+        const byId = new Map();
+        source
+          .map((item) => this._toCardEngineShape(item))
+          .forEach((item) => {
+            const id = String(item?.id || '').trim();
+            if (!id) return;
+            if (!byId.has(id)) byId.set(id, item);
+          });
+        this._catalogRelaxPool = Array.from(byId.values());
       }
       const normalized = Array.isArray(this._catalogRelaxPool) ? this._catalogRelaxPool : [];
       if (!normalized.length) return this.showSimilarEndPopup();
@@ -10059,6 +10117,7 @@ render() {
       }
       this._catalogRelaxedUnlocked = true;
       this._catalogStrictEndPromptShown = false;
+      this._catalogSimilarEndPromptShown = false;
     } catch (error) {
       console.warn('unlockCatalogSimilarMode failed:', error);
       this.showSimilarEndPopup();
@@ -10154,6 +10213,8 @@ render() {
     if (!queue.length) {
       if (this._catalogStrictFlowActive === true && this._catalogRelaxedUnlocked !== true) {
         this.showStrictEndPopup();
+      } else if (this._catalogRelaxedUnlocked === true) {
+        this.showSimilarEndPopup();
       }
       this.updateCatalogListNavState();
       return;
@@ -10283,6 +10344,11 @@ render() {
           && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
         ) {
           this.showStrictEndPopup();
+        } else if (
+          this._catalogRelaxedUnlocked === true
+          && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
+        ) {
+          this.showSimilarEndPopup();
         }
         return;
       }
