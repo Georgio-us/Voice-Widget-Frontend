@@ -2939,6 +2939,29 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  buildSinglePropertyShareText(rawProperty = {}) {
+    const normalized = this.normalizeCardData(rawProperty || {});
+    const typeLabel = String(normalized.propertyTypeBadgeLabel || normalized.propertyType || 'Объект').trim() || 'Объект';
+    const roomsRaw = Number(normalized.rooms);
+    const roomsLabel = Number.isFinite(roomsRaw) && roomsRaw > 0
+      ? `${roomsRaw} ${roomsRaw === 1 ? 'комната' : (roomsRaw >= 2 && roomsRaw <= 4 ? 'комнаты' : 'комнат')}`
+      : '';
+    const typeWithRooms = roomsLabel ? `${typeLabel}, ${roomsLabel}` : typeLabel;
+    const priceLabel = String(normalized.priceLabel || '—').trim() || '—';
+    const areaNum = Number(normalized.area_m2);
+    const areaLabel = Number.isFinite(areaNum) && areaNum > 0
+      ? `${String(areaNum).replace(/\.0+$/, '').replace('.', ',')} м²`
+      : '—';
+    const districtLabel = String(normalized.district || normalized.neighborhood || normalized.city || '—').trim() || '—';
+    return [
+      'Подобрал объект, который может вам подойти.',
+      `Тип: ${typeWithRooms}`,
+      `Цена: ${priceLabel}`,
+      `Площадь: ${areaLabel}`,
+      `Район: ${districtLabel}`
+    ].join('\n');
+  }
+
   async sharePropertyFromSlide(slide) {
     const card = slide?.querySelector('.cs');
     const propId = card?.getAttribute('data-variant-id') || '';
@@ -2951,7 +2974,7 @@ class VoiceWidget extends HTMLElement {
     if (!shareUrl) return false;
     const payload = {
       title,
-      text: 'Здравствуйте! Делюсь объектом, который может быть вам интересен.',
+      text: this.buildSinglePropertyShareText(source || { id: propId }),
       url: shareUrl
     };
     try {
@@ -3039,8 +3062,8 @@ class VoiceWidget extends HTMLElement {
     const payload = {
       title: normalized.length === 1 ? 'Объект недвижимости' : `Подборка объектов (${normalized.length})`,
       text: normalized.length === 1
-        ? 'Здравствуйте! Делюсь объектом, который может быть вам интересен.'
-        : `Здравствуйте! Делюсь подборкой из ${normalized.length} объектов, которая может быть вам интересна:`,
+        ? this.buildSinglePropertyShareText(this.getCatalogPropertyById(normalized[0]) || { id: normalized[0] })
+        : `Подобрал для вас подборку из ${normalized.length} объектов.\nОткройте карточки — внутри все детали и фото.`,
       url: shareUrl
     };
     try {
@@ -8394,8 +8417,18 @@ render() {
   // Expose helpers
   this.showScreen = showScreen;
   this.showChatScreen = () => showScreen('dialog');
+  this.getEntryGreetingMessage = () => {
+    const selectionIds = Array.isArray(this._deepLinkSelectionIds) && this._deepLinkSelectionIds.length
+      ? this._deepLinkSelectionIds
+      : this.getDeepLinkSelectionIdsFromUrl();
+    const count = Array.isArray(selectionIds) ? selectionIds.length : 0;
+    if (count > 0) {
+      return `Здравствуйте! Для вас подготовлена подборка из ${count} объектов. Листайте карточки, а если захотите увидеть больше объектов - я здесь что бы помочь!`;
+    }
+    return this.t('assistantGreeting') || '';
+  };
   this.showGreetingMessage = () => {
-    try { this.ui?.addMessage?.({ type: 'assistant', content: this.t('assistantGreeting') || '', timestamp: new Date(), greeting: true }); } catch {}
+    try { this.ui?.addMessage?.({ type: 'assistant', content: this.getEntryGreetingMessage(), timestamp: new Date(), greeting: true }); } catch {}
   };
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
