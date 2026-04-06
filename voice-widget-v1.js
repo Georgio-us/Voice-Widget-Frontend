@@ -6312,12 +6312,25 @@ class VoiceWidget extends HTMLElement {
 
   async refreshCatalogByEffectiveQuery(insightsSource = null) {
     const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 2000 };
-    const cards = await this.api?.fetchCardsSearch?.(query);
-    const listRaw = Array.isArray(cards) ? cards : [];
     const toNum = (value) => {
       const n = Number(value);
       return Number.isFinite(n) ? n : null;
     };
+    const isAiMode = this._catalogLastRefineMode === 'ai';
+    const aiBudgetAnchor = isAiMode ? toNum(query.maxPrice) : null;
+    if (isAiMode && aiBudgetAnchor != null && aiBudgetAnchor > 0 && query.minPrice == null) {
+      // AI "до X" трактуем как "около X": strict окно ±25%
+      query.minPrice = Math.max(0, Math.round(aiBudgetAnchor * 0.75));
+      query.maxPrice = Math.round(aiBudgetAnchor * 1.25);
+      query.__budgetAnchor = aiBudgetAnchor;
+    } else if (aiBudgetAnchor != null && aiBudgetAnchor > 0) {
+      query.__budgetAnchor = aiBudgetAnchor;
+    }
+
+    const requestQuery = { ...query };
+    delete requestQuery.__budgetAnchor;
+    const cards = await this.api?.fetchCardsSearch?.(requestQuery);
+    const listRaw = Array.isArray(cards) ? cards : [];
     const list = (query.floorNotFirst === true || query.floorNotLast === true)
       ? listRaw.filter((item) => {
         const floor = toNum(item?.floor ?? item?.specs_floor ?? item?.specs?.floor);
@@ -9569,9 +9582,17 @@ render() {
       : null;
     const parsedScore = Number(raw.score ?? raw._score);
     const parsedStrictScore = Number(raw.strictScore ?? raw._strictScore);
+    const fallbackTitle = (() => {
+      const direct = String(raw.title || raw.headline || '').trim();
+      if (direct) return direct;
+      const fromDescription = String(raw.description || '').trim();
+      if (!fromDescription) return '';
+      return fromDescription.length > 120 ? `${fromDescription.slice(0, 117)}...` : fromDescription;
+    })();
     return {
       ...raw,
       id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
+      title: fallbackTitle,
       image,
       images: Array.isArray(raw.images)
         ? raw.images
@@ -9816,6 +9837,11 @@ render() {
     }
 
     const price = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
+    const budgetAnchor = toNum(query.__budgetAnchor);
+    if (budgetAnchor != null && budgetAnchor > 0 && price != null) {
+      const rel = Math.abs(price - budgetAnchor) / budgetAnchor;
+      if (rel > 0.5) return null; // hard cap for "similar": max ±50% from AI budget anchor
+    }
     const minPrice = toNum(query.minPrice);
     const maxPrice = toNum(query.maxPrice);
     if (price != null) {
