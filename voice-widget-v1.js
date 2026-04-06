@@ -6327,8 +6327,28 @@ class VoiceWidget extends HTMLElement {
       query.__budgetAnchor = aiBudgetAnchor;
     }
 
+    const qMinPrice = toNum(query.minPrice);
+    const qMaxPrice = toNum(query.maxPrice);
+    if (qMinPrice != null && qMaxPrice != null) query.__priceAnchor = Math.round((qMinPrice + qMaxPrice) / 2);
+    else query.__priceAnchor = qMaxPrice ?? qMinPrice ?? null;
+
+    const qMinArea = toNum(query.minArea);
+    const qMaxArea = toNum(query.maxArea);
+    if (qMinArea != null && qMaxArea != null) query.__areaAnchor = Math.round((qMinArea + qMaxArea) / 2);
+    else query.__areaAnchor = qMinArea ?? qMaxArea ?? null;
+
+    const qRoomsRaw = String(query.rooms || '').trim();
+    if (qRoomsRaw === '4plus') query.__roomsAnchor = 4;
+    else {
+      const qRooms = toNum(qRoomsRaw);
+      query.__roomsAnchor = qRooms != null ? qRooms : null;
+    }
+
     const requestQuery = { ...query };
     delete requestQuery.__budgetAnchor;
+    delete requestQuery.__priceAnchor;
+    delete requestQuery.__areaAnchor;
+    delete requestQuery.__roomsAnchor;
     const cards = await this.api?.fetchCardsSearch?.(requestQuery);
     const listRaw = Array.isArray(cards) ? cards : [];
     const list = (query.floorNotFirst === true || query.floorNotLast === true)
@@ -9822,73 +9842,56 @@ render() {
     if (qRc && (!iRc || !iRc.includes(qRc))) return null;
     if (query.rcOnly === true && !iRc) return null;
 
-    let step = 1;
+    const price = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
+    const priceAnchor = toNum(query.__priceAnchor ?? query.__budgetAnchor);
+    let penalty = 0;
+    if (priceAnchor != null && priceAnchor > 0 && price != null) {
+      const rel = Math.abs(price - priceAnchor) / priceAnchor;
+      if (rel > 0.5) return null; // hard cap ±50%
+      if (rel > 0.35) penalty += 4;
+      else if (rel > 0.25) penalty += 2;
+      else if (rel > 0.15) penalty += 1;
+    }
 
+    const area = toNum(item.area_m2);
+    const areaAnchor = toNum(query.__areaAnchor);
+    if (areaAnchor != null && areaAnchor > 0 && area != null) {
+      const rel = Math.abs(area - areaAnchor) / areaAnchor;
+      if (rel > 0.5) return null; // hard cap ±50%
+      if (rel > 0.35) penalty += 3;
+      else if (rel > 0.25) penalty += 2;
+      else if (rel > 0.15) penalty += 1;
+    }
+
+    // Similar mode: floors are intentionally ignored.
+
+    const roomsRaw = String(query.rooms || '').trim();
+    const roomsWanted = toNum(query.__roomsAnchor ?? (roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null)));
+    const roomsActual = toNum(item.rooms);
+    if (roomsWanted != null && Number.isFinite(roomsWanted) && roomsActual != null) {
+      if (Math.abs(roomsActual - roomsWanted) > 1) return null; // hard cap ±1 room
+      if (roomsActual !== roomsWanted) penalty += 3;
+    }
+
+    // Amenity requests are softer than price/area/rooms
     if (query.parking === true) {
       const hasParking = boolish(item?.features?.parking) === true || boolish(item?.features?.has_parking) === true;
-      if (!hasParking) step = Math.max(step, 1);
+      if (!hasParking) penalty += 1;
     }
     if (query.balconyLoggia === true) {
       const hasBalcony = boolish(item?.balcony) === true
         || boolish(item?.features?.balcony) === true
         || boolish(item?.features?.has_balcony) === true
         || boolish(item?.features?.loggia) === true;
-      if (!hasBalcony) step = Math.max(step, 1);
+      if (!hasBalcony) penalty += 1;
     }
 
-    const price = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
-    const budgetAnchor = toNum(query.__budgetAnchor);
-    if (budgetAnchor != null && budgetAnchor > 0 && price != null) {
-      const rel = Math.abs(price - budgetAnchor) / budgetAnchor;
-      if (rel > 0.5) return null; // hard cap for "similar": max ±50% from AI budget anchor
-    }
-    const minPrice = toNum(query.minPrice);
-    const maxPrice = toNum(query.maxPrice);
-    if (price != null) {
-      if (minPrice != null && price < minPrice) {
-        const ratio = minPrice > 0 ? ((minPrice - price) / minPrice) : 1;
-        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
-      }
-      if (maxPrice != null && price > maxPrice) {
-        const ratio = maxPrice > 0 ? ((price - maxPrice) / maxPrice) : 1;
-        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
-      }
-    }
-
-    const area = toNum(item.area_m2);
-    const minArea = toNum(query.minArea);
-    const maxArea = toNum(query.maxArea);
-    if (area != null) {
-      if (minArea != null && area < minArea) {
-        const ratio = minArea > 0 ? ((minArea - area) / minArea) : 1;
-        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
-      }
-      if (maxArea != null && area > maxArea) {
-        const ratio = maxArea > 0 ? ((area - maxArea) / maxArea) : 1;
-        step = Math.max(step, ratio <= 0.1 ? 2 : ratio <= 0.25 ? 3 : 4);
-      }
-    }
-
-    const floor = toNum(item.floor);
-    const minFloor = toNum(query.minFloor);
-    const maxFloor = toNum(query.maxFloor);
-    if (floor != null) {
-      if (minFloor != null && floor < minFloor) step = Math.max(step, 3);
-      if (maxFloor != null && floor > maxFloor) step = Math.max(step, 3);
-    }
-
-    const roomsRaw = String(query.rooms || '').trim();
-    const roomsWanted = roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null);
-    const roomsActual = toNum(item.rooms);
-    if (roomsWanted != null && Number.isFinite(roomsWanted) && roomsActual != null) {
-      if (roomsRaw === '4plus') {
-        if (roomsActual < 4) step = Math.max(step, 4);
-      } else if (roomsActual !== roomsWanted) {
-        step = Math.max(step, Math.abs(roomsActual - roomsWanted) === 1 ? 4 : 5);
-      }
-    }
-
-    return step;
+    // 10/10 -> 7/10 -> 5/10 -> 3/10 style ladder
+    if (penalty <= 0) return 1;
+    if (penalty <= 2) return 2;
+    if (penalty <= 4) return 3;
+    if (penalty <= 6) return 4;
+    return 5;
   }
 
   _getCurrentCatalogActiveIndex() {
