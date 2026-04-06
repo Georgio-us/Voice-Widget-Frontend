@@ -6124,8 +6124,8 @@ class VoiceWidget extends HTMLElement {
     const maxArea = parseNum(source.areaTo);
     const minFloor = parseNum(source.floorFrom);
     const maxFloor = parseNum(source.floorTo);
-    if (source.floorNotFirst === true) out.floorNotFirst = true;
-    if (source.floorNotLast === true) out.floorNotLast = true;
+    if (Object.prototype.hasOwnProperty.call(source, 'floorNotFirst')) out.floorNotFirst = source.floorNotFirst === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'floorNotLast')) out.floorNotLast = source.floorNotLast === true;
     if (minPrice != null) out.minPrice = minPrice;
     if (maxPrice != null) out.maxPrice = maxPrice;
     if (minArea != null) out.minArea = minArea;
@@ -6147,12 +6147,12 @@ class VoiceWidget extends HTMLElement {
     if (op === 'sale' || op === 'rent') out.operation = op;
     const ptype = String(source.propertyType || source.type || '').trim();
     if (ptype) out.type = ptype;
-    if (source.arcadia === true) out.arcadia = true;
-    if (source.residentialComplexOnly === true) out.rcOnly = true;
-    if (source.exclusive === true) out.exclusive = true;
-    if (source.center === true) out.center = true;
-    if (source.parking === true) out.parking = true;
-    if (source.balconyLoggia === true) out.balconyLoggia = true;
+    if (Object.prototype.hasOwnProperty.call(source, 'arcadia')) out.arcadia = source.arcadia === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'residentialComplexOnly')) out.rcOnly = source.residentialComplexOnly === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'exclusive')) out.exclusive = source.exclusive === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'center')) out.center = source.center === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'parking')) out.parking = source.parking === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'balconyLoggia')) out.balconyLoggia = source.balconyLoggia === true;
     return out;
   }
 
@@ -9731,7 +9731,16 @@ render() {
 
   _isStrictFlowQuery(query = {}) {
     if (!query || typeof query !== 'object') return false;
-    return Object.keys(query).some((key) => key !== 'limit' && query[key] != null && String(query[key]).trim() !== '');
+    return Object.keys(query).some((key) => {
+      if (key === 'limit') return false;
+      const value = query[key];
+      if (value == null) return false;
+      if (typeof value === 'boolean') return value === true;
+      const text = String(value).trim();
+      if (!text) return false;
+      if (text === 'false') return false;
+      return true;
+    });
   }
 
   _getCurrentCatalogActiveIndex() {
