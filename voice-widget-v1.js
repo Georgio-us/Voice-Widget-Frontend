@@ -2996,7 +2996,7 @@ class VoiceWidget extends HTMLElement {
     return false;
   }
 
-  async sharePropertiesSelectionByIds(ids = []) {
+  async sharePropertiesSelectionByIds(ids = [], options = {}) {
     const normalized = Array.from(
       new Set(
         (Array.isArray(ids) ? ids : [])
@@ -3005,9 +3005,11 @@ class VoiceWidget extends HTMLElement {
       )
     );
     if (!normalized.length) return false;
+    const safeOptions = options && typeof options === 'object' ? options : {};
+    const preferNative = safeOptions.preferNative === true;
     const tg = window?.Telegram?.WebApp;
     const initDataPresent = Boolean(String(tg?.initData || '').trim());
-    if (tg && initDataPresent) {
+    if (!preferNative && tg && initDataPresent) {
       try {
         if (normalized.length === 1) {
           const inlineQuery = `share_prop_${normalized[0]}`;
@@ -4366,7 +4368,7 @@ class VoiceWidget extends HTMLElement {
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
         const selectedIds = getSelectedIds();
         if (!selectedIds.length) return;
-        this.sharePropertiesSelectionByIds(selectedIds).catch(() => {
+        this.sharePropertiesSelectionByIds(selectedIds, { preferNative: true }).catch(() => {
           this.ui?.showNotification?.('Не удалось поделиться подборкой');
         });
       });
@@ -8894,7 +8896,12 @@ render() {
       try { await this.sharePropertyFromSlide(slide); } catch {}
     } else if (e.target.closest('.card-back-icon-btn[data-action="tg-share-property"]')) {
       const slide = e.target.closest('.card-slide');
-      try { this.sharePropertyToTelegram(slide); } catch {}
+      try {
+        const ok = this.sharePropertyToTelegram(slide);
+        if (!ok) await this.sharePropertyFromSlide(slide);
+      } catch {
+        try { await this.sharePropertyFromSlide(slide); } catch {}
+      }
     } else if (
       e.target.closest('[data-action="contact-manager"]') ||
       e.target.matches('.btn-open-form') ||
