@@ -2575,6 +2575,7 @@ class VoiceWidget extends HTMLElement {
     this._pillCtaTimer = null;
     this._lastPillInsightsSnapshot = null;
     this._catalogManualFilterOverrides = null;
+    this._catalogIgnoreAssistantBaseFilters = false;
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
@@ -5885,7 +5886,10 @@ class VoiceWidget extends HTMLElement {
       return opts;
     }
     if (type === 'floorMin' || type === 'floorMax') {
-      if (type === 'floorMin') opts.push({ value: '', label: 'От min' });
+      if (type === 'floorMin') {
+        opts.push({ value: '', label: 'Этаж от минимум до максимум' });
+        opts.push({ value: 'not_first_last', label: 'Не первый и не последний' });
+      }
       if (type === 'floorMax') opts.push({ value: 'max', label: 'До max' });
       for (let v = 0; v <= 30; v += 1) {
         opts.push({ value: String(v), label: String(v) });
@@ -5901,12 +5905,24 @@ class VoiceWidget extends HTMLElement {
     selectEl.innerHTML = options.map((opt) => `<option value="${String(opt.value).replace(/"/g, '&quot;')}">${String(opt.label)}</option>`).join('');
   }
 
+  syncFiltersSelectAllLabels(overlay) {
+    if (!overlay) return;
+    ['propertyType', 'district', 'rooms'].forEach((role) => {
+      const selectEl = overlay.querySelector(`[data-role="${role}"]`);
+      if (!selectEl) return;
+      const allOption = Array.from(selectEl.options || []).find((opt) => String(opt.value || '').trim() === 'all');
+      if (!allOption) return;
+      allOption.textContent = String(selectEl.value || '').trim() === 'all' ? 'Выбрано всё' : 'Выбрать всё';
+    });
+  }
+
   normalizeFilterRangePair(overlay, base, changed = '') {
     const minSel = overlay.querySelector(`select[data-picker="${base}Min"]`);
     const maxSel = overlay.querySelector(`select[data-picker="${base}Max"]`);
     if (!minSel || !maxSel) return;
     const minVal = minSel.value;
     const maxVal = maxSel.value;
+    if (base === 'floor' && minVal === 'not_first_last') return;
     if (!minVal || !maxVal || maxVal === 'max') return;
     const minNum = Number(minVal);
     const maxNum = Number(maxVal);
@@ -5931,20 +5947,27 @@ class VoiceWidget extends HTMLElement {
     const read = (name) => String(overlay.querySelector(`select[data-picker="${name}"]`)?.value || '');
     const listingMode = String(overlay.querySelector('[data-role="listingMode"].is-active')?.getAttribute('data-value') || 'sale')
       .toLowerCase();
-    const roomsVal = String(overlay.querySelector('[data-role="rooms"]')?.value || '');
+    const normalizeSelectVal = (role) => {
+      const val = String(overlay.querySelector(`[data-role="${role}"]`)?.value || '').trim();
+      return val === 'all' ? '' : val;
+    };
+    const roomsVal = normalizeSelectVal('rooms');
     const smartRoom = roomsVal === 'smart';
+    const floorFromRaw = read('floorMin');
+    const floorNotFirstLast = floorFromRaw === 'not_first_last';
     return {
       listingMode: listingMode === 'rent' ? 'rent' : 'sale',
-      propertyType: String(overlay.querySelector('[data-role="propertyType"]')?.value || ''),
+      propertyType: normalizeSelectVal('propertyType'),
       priceFrom: read('priceMin'),
       priceTo: read('priceMax'),
       areaFrom: read('areaMin'),
       areaTo: read('areaMax'),
-      floorFrom: read('floorMin'),
-      floorTo: read('floorMax'),
+      floorFrom: floorNotFirstLast ? '' : floorFromRaw,
+      floorTo: floorNotFirstLast ? 'max' : read('floorMax'),
+      floorNotFirstLast,
       rooms: smartRoom ? '' : roomsVal,
       smart: smartRoom,
-      district: String(overlay.querySelector('[data-role="district"]')?.value || ''),
+      district: normalizeSelectVal('district'),
       arcadia: !!overlay.querySelector('[data-role="arcadia"]')?.checked,
       exclusive: !!overlay.querySelector('[data-role="exclusive"]')?.checked,
       center: !!overlay.querySelector('[data-role="center"]')?.checked,
@@ -6006,8 +6029,8 @@ class VoiceWidget extends HTMLElement {
     setPicker('priceMax', payload.priceTo);
     setPicker('areaMin', payload.areaFrom);
     setPicker('areaMax', payload.areaTo);
-    setPicker('floorMin', payload.floorFrom);
-    setPicker('floorMax', payload.floorTo);
+    setPicker('floorMin', payload.floorNotFirstLast === true ? 'not_first_last' : payload.floorFrom);
+    setPicker('floorMax', payload.floorNotFirstLast === true ? 'max' : payload.floorTo);
     if (payload.smart === true) {
       setSelect('rooms', 'smart');
     } else {
@@ -6024,6 +6047,7 @@ class VoiceWidget extends HTMLElement {
     const rcHid = overlay.querySelector('[data-role="filters-rc-hidden"]');
     if (rcHid) rcHid.value = String(payload.residentialComplex || '').trim();
     try { overlay._syncFiltersRcLabel?.(); } catch {}
+    this.syncFiltersSelectAllLabels(overlay);
     this.syncFilterPickerLabels(overlay);
   }
 
@@ -6044,6 +6068,7 @@ class VoiceWidget extends HTMLElement {
     const maxArea = parseNum(source.areaTo);
     const minFloor = parseNum(source.floorFrom);
     const maxFloor = parseNum(source.floorTo);
+    if (source.floorNotFirstLast === true) out.floorNotFirstLast = true;
     if (minPrice != null) out.minPrice = minPrice;
     if (maxPrice != null) out.maxPrice = maxPrice;
     if (minArea != null) out.minArea = minArea;
@@ -6106,7 +6131,7 @@ class VoiceWidget extends HTMLElement {
     };
     const insights = insightsSource && typeof insightsSource === 'object'
       ? insightsSource
-      : (this.understanding?.export?.() || {});
+      : (this._catalogIgnoreAssistantBaseFilters === true ? {} : (this.understanding?.export?.() || {}));
     const base = {};
     const type = String(insights.type || '').trim();
     if (type) base.type = type;
@@ -6160,6 +6185,7 @@ class VoiceWidget extends HTMLElement {
       areaTo: query.maxArea != null ? String(query.maxArea) : '',
       floorFrom: query.minFloor != null ? String(query.minFloor) : '',
       floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
+      floorNotFirstLast: query.floorNotFirstLast === true,
       rooms: query.smart === true ? '' : (query.rooms != null ? String(query.rooms) : ''),
       smart: query.smart === true,
       district: query.district != null ? String(query.district) : '',
@@ -6176,7 +6202,28 @@ class VoiceWidget extends HTMLElement {
   async refreshCatalogByEffectiveQuery(insightsSource = null) {
     const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 2000 };
     const cards = await this.api?.fetchCardsSearch?.(query);
-    const list = Array.isArray(cards) ? cards : [];
+    const listRaw = Array.isArray(cards) ? cards : [];
+    const toNum = (value) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+    const list = query.floorNotFirstLast === true
+      ? listRaw.filter((item) => {
+        const floor = toNum(item?.floor ?? item?.specs_floor ?? item?.specs?.floor);
+        if (floor == null) return false;
+        if (floor <= 1) return false;
+        const totalFloors = toNum(
+          item?.building_floors
+          ?? item?.floors_total
+          ?? item?.floorsTotal
+          ?? item?.total_floors
+          ?? item?.display_specs?.total_floors
+          ?? item?.features?.display_specs?.total_floors
+        );
+        if (totalFloors != null && totalFloors > 1) return floor < totalFloors;
+        return true;
+      })
+      : listRaw;
     this.replacePropertiesCatalog(list);
     if (!window.appState) window.appState = {};
     window.appState.lastTotalMatches = list.length;
@@ -6193,6 +6240,19 @@ class VoiceWidget extends HTMLElement {
     } catch (error) {
       console.error('filters.apply failed:', error);
       this.ui?.showNotification?.('Не удалось применить фильтры');
+    }
+  }
+
+  async resetCatalogFiltersToAll(overlay = null) {
+    this._catalogManualFilterOverrides = null;
+    this._catalogIgnoreAssistantBaseFilters = true;
+    if (overlay) this.resetFiltersOverlayForm(overlay);
+    try {
+      const list = await this.refreshCatalogByEffectiveQuery({});
+      this.ui?.showNotification?.(`Фильтры сброшены: ${list.length}`);
+    } catch (error) {
+      console.error('filters.reset failed:', error);
+      this.ui?.showNotification?.('Не удалось сбросить фильтры');
     }
   }
 
@@ -6216,6 +6276,7 @@ class VoiceWidget extends HTMLElement {
     const rcHid = overlay.querySelector('[data-role="filters-rc-hidden"]');
     if (rcHid) rcHid.value = '';
     try { overlay._syncFiltersRcLabel?.(); } catch {}
+    this.syncFiltersSelectAllLabels(overlay);
     this.syncFilterPickerLabels(overlay);
   }
 
@@ -6232,14 +6293,31 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelectorAll('select[data-picker]').forEach((selectEl) => {
       selectEl.addEventListener('change', () => {
         const picker = String(selectEl.getAttribute('data-picker') || '');
+        if (picker === 'floorMin' && String(selectEl.value || '') === 'not_first_last') {
+          const floorMax = overlay.querySelector('select[data-picker="floorMax"]');
+          if (floorMax) floorMax.selectedIndex = 0;
+        }
+        if (picker === 'floorMax') {
+          const floorMin = overlay.querySelector('select[data-picker="floorMin"]');
+          if (floorMin && String(floorMin.value || '') === 'not_first_last' && String(selectEl.value || '') !== 'max') {
+            floorMin.selectedIndex = 0;
+          }
+        }
         if (picker.startsWith('price')) this.normalizeFilterRangePair(overlay, 'price', picker);
         if (picker.startsWith('area')) this.normalizeFilterRangePair(overlay, 'area', picker);
         if (picker.startsWith('floor')) this.normalizeFilterRangePair(overlay, 'floor', picker);
         this.syncFilterPickerLabels(overlay);
       });
     });
+    ['propertyType', 'district', 'rooms'].forEach((role) => {
+      const selectEl = overlay.querySelector(`[data-role="${role}"]`);
+      if (!selectEl) return;
+      selectEl.addEventListener('change', () => {
+        this.syncFiltersSelectAllLabels(overlay);
+      });
+    });
     overlay.querySelector('[data-role="reset"]')?.addEventListener('click', () => {
-      this.resetFiltersOverlayForm(overlay);
+      this.resetCatalogFiltersToAll(overlay);
     });
     overlay.querySelector('[data-role="apply"]')?.addEventListener('click', async () => {
       const payload = this.collectFiltersOverlayPayload(overlay);
@@ -6654,7 +6732,8 @@ class VoiceWidget extends HTMLElement {
                 <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="rent">Аренда</button>
               </div>
               <select class="vw-filters-select" data-role="propertyType" aria-label="Тип недвижимости">
-                <option value="">Тип недвижимости</option>
+                <option value="" selected disabled>Тип недвижимости</option>
+                <option value="all">Выбрать всё</option>
                 <option value="apartment">Квартира</option>
                 <option value="house">Дом</option>
                 <option value="commercial">Коммерческая</option>
@@ -6662,14 +6741,16 @@ class VoiceWidget extends HTMLElement {
             </div>
             <div class="vw-filters-top-grid">
               <select class="vw-filters-select" aria-label="Район" data-role="district">
-                <option value="">Район</option>
+                <option value="" selected disabled>Район</option>
+                <option value="all">Выбрать всё</option>
                 <option value="primorsky">Приморский</option>
                 <option value="kievsky">Киевский</option>
                 <option value="malinovsky">Малиновский</option>
                 <option value="suvorovsky">Суворовский</option>
               </select>
               <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
-                <option value="">Кол-во комнат</option>
+                <option value="" selected disabled>Количество комнат</option>
+                <option value="all">Выбрать всё</option>
                 <option value="smart">Смарт-квартира</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -6709,10 +6790,10 @@ class VoiceWidget extends HTMLElement {
             </div>
           </div>
           <div class="vw-filters-range-block">
-            <span class="vw-filters-range-name">Этаж</span>
+            <span class="vw-filters-range-name">Этаж от минимум до максимум</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="floorMin">От min</span>
+                <span class="vw-filters-picker-label" data-display="floorMin">Этаж от минимум до максимум</span>
                 <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
@@ -9264,6 +9345,8 @@ render() {
     if (cards.length) window.appState.lastBackendCandidatesAt = Date.now();
     if (data.insights && typeof data.insights === 'object') {
       const migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
+      this._catalogManualFilterOverrides = null;
+      this._catalogIgnoreAssistantBaseFilters = false;
       this.refreshCatalogByEffectiveQuery(migratedInsights).catch((error) => {
         console.warn('refreshCatalogByEffectiveQuery failed:', error);
       });
@@ -11534,6 +11617,8 @@ render() {
     this.sessionId = null;
 
     this.understanding.reset();
+    this._catalogManualFilterOverrides = null;
+    this._catalogIgnoreAssistantBaseFilters = false;
     this.ui.clearMessages();
     this.ui.setState('idle');
 
