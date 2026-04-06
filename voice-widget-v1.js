@@ -6161,6 +6161,41 @@ class VoiceWidget extends HTMLElement {
       if (/малин|malin/.test(raw)) return 'malinovsky';
       return '';
     };
+    const normalizeOperationToSearch = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/(buy|sale|sell|purchase|покуп|купит|продаж)/i.test(raw)) return 'sale';
+      if (/(rent|lease|аренд|снять)/i.test(raw)) return 'rent';
+      return '';
+    };
+    const normalizeTypeToSearch = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/(apartment|flat|квартир|апартамент|апарты)/i.test(raw)) return 'apartment';
+      if (/(house|villa|home|дом|таунхаус|таун)/i.test(raw)) return 'house';
+      if (/(land|plot|участок|земл)/i.test(raw)) return 'land';
+      if (/(commercial|office|retail|склад|коммер|офис|нежил)/i.test(raw)) return 'commercial';
+      if (/(parking|паркинг|паркомест)/i.test(raw)) return 'parking';
+      return '';
+    };
+    const parseFeaturesTokens = (insights) => {
+      const raw = [];
+      if (Array.isArray(insights?.features)) raw.push(...insights.features);
+      if (typeof insights?.features === 'string') raw.push(insights.features);
+      if (insights?.details != null) raw.push(insights.details);
+      if (insights?.preferences != null) raw.push(insights.preferences);
+      if (insights?.location != null) raw.push(insights.location);
+      const text = raw.map((v) => String(v || '').toLowerCase()).join(' ');
+      return {
+        smart: /(смарт|smart)/i.test(text),
+        arcadia: /(аркад|arcad)/i.test(text),
+        center: /(центр|center|central)/i.test(text),
+        exclusive: /(эксклюзив|exclusive)/i.test(text),
+        parking: /(паркинг|парковк|parking|garage)/i.test(text),
+        balconyLoggia: /(балкон|лоджи|balcony|loggia)/i.test(text),
+        rcOnly: /(^|\s)(жк|ж\/к)(\s|$)|жил(ой|ого)\s+комплекс|residential\s+complex|complex/i.test(text)
+      };
+    };
     const stripRcPrefixes = (text) => {
       let s = String(text || '').trim();
       if (!s) return '';
@@ -6175,7 +6210,9 @@ class VoiceWidget extends HTMLElement {
       ? insightsSource
       : (this._catalogIgnoreAssistantBaseFilters === true ? {} : (this.understanding?.export?.() || {}));
     const base = {};
-    const type = String(insights.type || '').trim();
+    const operation = normalizeOperationToSearch(insights.operation);
+    if (operation) base.operation = operation;
+    const type = normalizeTypeToSearch(insights.type);
     if (type) base.type = type;
     const roomsNum = parseNum(insights.rooms);
     if (roomsNum != null) base.rooms = roomsNum >= 4 ? '4plus' : String(roomsNum);
@@ -6199,6 +6236,14 @@ class VoiceWidget extends HTMLElement {
     } else if (locRaw && !districtSlug && !isGenericCityLocation(locRaw)) {
       base.residentialComplex = stripRcPrefixes(locRaw);
     }
+    const featureFlags = parseFeaturesTokens(insights);
+    if (featureFlags.smart) base.smart = true;
+    if (featureFlags.arcadia) base.arcadia = true;
+    if (featureFlags.center) base.center = true;
+    if (featureFlags.exclusive) base.exclusive = true;
+    if (featureFlags.parking) base.parking = true;
+    if (featureFlags.balconyLoggia) base.balconyLoggia = true;
+    if (featureFlags.rcOnly) base.rcOnly = true;
     const manual = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
       ? this._catalogManualFilterOverrides
       : {};
