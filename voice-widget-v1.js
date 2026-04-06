@@ -4098,12 +4098,7 @@ class VoiceWidget extends HTMLElement {
         <div class="vw-access-add-head">
           <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
           <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
-          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M13.5 8a5.5 5.5 0 1 1-1.44-3.72" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              <path d="M10.5 1.8h3v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
+          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">↻</button>
         </div>
       `
       : `
@@ -7038,15 +7033,11 @@ class VoiceWidget extends HTMLElement {
         background: rgba(236, 96, 96, 0.12);
         color: rgba(255,255,255,0.88);
         padding: 0 12px;
+        font-size: .95rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         line-height: 1;
-      }
-      .vw-access-add-reset-head svg {
-        width: 14px;
-        height: 14px;
-        display: block;
       }
       .vw-access-add-form {
         display: grid;
