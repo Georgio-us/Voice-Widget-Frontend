@@ -6227,7 +6227,7 @@ class VoiceWidget extends HTMLElement {
         exclusive: /(эксклюзив|exclusive)/i.test(text),
         parking: /(паркинг|парковк|parking|garage)/i.test(text),
         balconyLoggia: /(балкон|лоджи|balcony|loggia)/i.test(text),
-        rcOnly: /(^|\s)(жк|ж\/к)(\s|$)|жил(ой|ого)\s+комплекс|residential\s+complex|complex/i.test(text)
+        rcOnly: /(?:^|\s)(?:жк|ж\/к)(?:\s|$)|только\s*жк|лишь\s*жк|исключительно\s*жк|в\s*жк|жил(?:ой|ого|ом|ые|ых)?\s+комплекс(?:ы|а|е|ах)?|в\s+жил(?:ом|ых)\s+комплекс(?:е|ах)?|residential\s+complex(?:es)?/i.test(text)
       };
     };
     const stripRcPrefixes = (text) => {
