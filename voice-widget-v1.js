@@ -8420,11 +8420,12 @@ render() {
   this.showScreen = showScreen;
   this.showChatScreen = () => showScreen('dialog');
   this.getEntryGreetingMessage = () => {
-    const selectionIds = Array.isArray(this._deepLinkSelectionIds) && this._deepLinkSelectionIds.length
-      ? this._deepLinkSelectionIds
-      : this.getDeepLinkSelectionIdsFromUrl();
-    const count = Array.isArray(selectionIds) ? selectionIds.length : 0;
-    if (count > 0) {
+    const selectionIdsFromUrl = this.getDeepLinkSelectionIdsFromUrl();
+    const deepLinkSelectionActive = this._isDeepLinkMode === true && this._deepLinkModeType === 'selection';
+    const count = selectionIdsFromUrl.length > 0
+      ? selectionIdsFromUrl.length
+      : (deepLinkSelectionActive && Array.isArray(this._deepLinkSelectionIds) ? this._deepLinkSelectionIds.length : 0);
+    if (count > 0 && (selectionIdsFromUrl.length > 0 || deepLinkSelectionActive)) {
       return `Здравствуйте! Для вас подготовлена подборка из ${count} объектов. Листайте карточки, а если захотите увидеть больше объектов - я здесь что бы помочь!`;
     }
     return this.t('assistantGreeting') || '';
