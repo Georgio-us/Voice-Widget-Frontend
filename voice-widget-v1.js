@@ -2323,6 +2323,10 @@ const LOCALES = {
     strictEndRefine: 'Уточнить',
     strictEndSimilar: 'Показать похожие',
     strictEndNoSimilar: 'Похожие объекты пока не найдены',
+    similarEndTitle: 'Похожие объекты закончились',
+    similarEndText: 'Мы показали все похожие объекты по вашему запросу. Вы можете продолжить самостоятельный поиск или связаться для консультации.',
+    similarEndContinue: 'Продолжить поиск',
+    similarEndContact: 'Связаться',
     backSpecsOverflowTitle: 'Дополнительные детали',
     backSpecsOverflowText: 'К сожалению, не вся информация поместилась в данной карточке. Чтобы узнать дополнительные детали, вы можете связаться с менеджером.',
     backSpecsOverflowContact: 'Связаться',
@@ -2474,6 +2478,10 @@ const LOCALES = {
     strictEndRefine: 'Уточнити',
     strictEndSimilar: 'Показати схожі',
     strictEndNoSimilar: 'Схожих об’єктів поки не знайдено',
+    similarEndTitle: 'Схожі об’єкти закінчилися',
+    similarEndText: 'Ми показали всі схожі об’єкти за вашим запитом. Ви можете продовжити самостійний пошук або зв’язатися для консультації.',
+    similarEndContinue: 'Продовжити пошук',
+    similarEndContact: "Зв'язатися",
     backSpecsOverflowTitle: 'Додаткові деталі',
     backSpecsOverflowText: "На жаль, не вся інформація помістилася в цій картці. Щоб дізнатися додаткові деталі, ви можете зв’язатися з менеджером.",
     backSpecsOverflowContact: "Зв'язатися",
@@ -2595,6 +2603,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogStrictEndPromptShown = false;
+    this._catalogSimilarEndPromptShown = false;
     this._catalogSimilarLoading = false;
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
@@ -6377,6 +6386,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogStrictEndPromptShown = false;
+    this._catalogSimilarEndPromptShown = false;
     this._catalogStrictSeedIds = list
       .map((item) => String(this._toCardEngineShape(item)?.id || '').trim())
       .filter(Boolean);
@@ -9750,6 +9760,7 @@ render() {
     this._catalogActiveId = null;
     this._catalogListWindowStart = 0;
     this._catalogStrictEndPromptShown = false;
+    this._catalogSimilarEndPromptShown = false;
     this._catalogSimilarLoading = false;
     try { this.closeSliderCheckpointPopup(); } catch {}
   }
@@ -9950,6 +9961,39 @@ render() {
     });
   }
 
+  showSimilarEndPopup() {
+    if (this._catalogSimilarEndPromptShown) return;
+    this._catalogSimilarEndPromptShown = true;
+    this.closeSliderCheckpointPopup();
+    this.ensureSliderCheckpointStyles();
+    const locale = this.getCurrentLocale();
+    const overlay = document.createElement('div');
+    overlay.id = 'vwSliderCheckpointOverlay';
+    overlay.className = 'vw-slider-checkpoint-overlay';
+    overlay.innerHTML = `
+      <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="Similar matches ended">
+        <div class="vw-slider-checkpoint-title">${locale.similarEndTitle || 'Похожие объекты закончились'}</div>
+        <div class="vw-slider-checkpoint-text">${locale.similarEndText || 'Мы показали все похожие объекты по вашему запросу. Вы можете продолжить самостоятельный поиск или связаться для консультации.'}</div>
+        <div class="vw-slider-checkpoint-actions">
+          <button type="button" class="vw-slider-checkpoint-btn" data-role="continue">${locale.similarEndContinue || 'Продолжить поиск'}</button>
+          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">${locale.similarEndContact || 'Связаться'}</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="continue"]')?.addEventListener('click', () => {
+      this.closeSliderCheckpointPopup();
+      this._catalogSimilarEndPromptShown = false;
+    });
+    overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
+      this.closeSliderCheckpointPopup();
+      try { this.openContactManagerPopup({ source: 'tg_similar_end_popup' }); } catch {}
+    });
+    overlay.addEventListener('click', (ev) => {
+      if (ev.target === overlay) this.closeSliderCheckpointPopup();
+    });
+  }
+
   async unlockCatalogSimilarMode() {
     if (this._catalogSimilarLoading) return;
     this._catalogSimilarLoading = true;
@@ -9961,7 +10005,7 @@ render() {
         this._catalogRelaxPool = normalized;
       }
       const normalized = Array.isArray(this._catalogRelaxPool) ? this._catalogRelaxPool : [];
-      if (!normalized.length) return this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
+      if (!normalized.length) return this.showSimilarEndPopup();
 
       const current = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
       const seen = new Set(current.map((item) => String(this._toCardEngineShape(item)?.id || '').trim()).filter(Boolean));
@@ -9980,7 +10024,7 @@ render() {
           return step != null && step <= level;
         });
       }
-      if (!extras.length) return this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
+      if (!extras.length) return this.showSimilarEndPopup();
 
       window.appState.allProperties = [...current, ...extras];
       this._mergeIntoFullCatalogProperties(extras);
@@ -10011,7 +10055,7 @@ render() {
       this._catalogStrictEndPromptShown = false;
     } catch (error) {
       console.warn('unlockCatalogSimilarMode failed:', error);
-      this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
+      this.showSimilarEndPopup();
     } finally {
       this._catalogSimilarLoading = false;
     }
@@ -10921,20 +10965,8 @@ render() {
   }
 
   maybeTriggerSliderCheckpoint(activeIdx = 0) {
-    const viewed = Number(activeIdx) + 1;
-    if (!Number.isFinite(viewed) || viewed <= 0) return;
-    if (!this._sliderCheckpointShown || typeof this._sliderCheckpointShown !== 'object') {
-      this._sliderCheckpointShown = { 10: false, 20: false };
-    }
-    if (viewed >= 20 && this._sliderCheckpointShown[20] !== true) {
-      this._sliderCheckpointShown[20] = true;
-      this.showSliderCheckpointPopup(20);
-      return;
-    }
-    if (viewed >= 10 && this._sliderCheckpointShown[10] !== true) {
-      this._sliderCheckpointShown[10] = true;
-      this.showSliderCheckpointPopup(10);
-    }
+    // checkpoint popups 10/20 disabled by product decision
+    return;
   }
 
   // ---------- RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ----------
