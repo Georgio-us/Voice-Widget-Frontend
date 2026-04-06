@@ -5921,10 +5921,13 @@ class VoiceWidget extends HTMLElement {
     }
     if (type === 'floorMin' || type === 'floorMax') {
       if (type === 'floorMin') {
-        opts.push({ value: '', label: 'Этаж от минимум до максимум' });
-        opts.push({ value: 'not_first_last', label: 'Не первый и не последний' });
+        opts.push({ value: '', label: 'От max' });
+        opts.push({ value: 'not_first', label: 'Не первый' });
       }
-      if (type === 'floorMax') opts.push({ value: 'max', label: 'До max' });
+      if (type === 'floorMax') {
+        opts.push({ value: 'max', label: 'До max' });
+        opts.push({ value: 'not_last', label: 'Не последний' });
+      }
       for (let v = 0; v <= 30; v += 1) {
         opts.push({ value: String(v), label: String(v) });
       }
@@ -5956,7 +5959,7 @@ class VoiceWidget extends HTMLElement {
     if (!minSel || !maxSel) return;
     const minVal = minSel.value;
     const maxVal = maxSel.value;
-    if (base === 'floor' && minVal === 'not_first_last') return;
+    if (base === 'floor' && (minVal === 'not_first' || maxVal === 'not_last')) return;
     if (!minVal || !maxVal || maxVal === 'max') return;
     const minNum = Number(minVal);
     const maxNum = Number(maxVal);
@@ -5988,7 +5991,9 @@ class VoiceWidget extends HTMLElement {
     const roomsVal = normalizeSelectVal('rooms');
     const smartRoom = roomsVal === 'smart';
     const floorFromRaw = read('floorMin');
-    const floorNotFirstLast = floorFromRaw === 'not_first_last';
+    const floorToRaw = read('floorMax');
+    const floorNotFirst = floorFromRaw === 'not_first';
+    const floorNotLast = floorToRaw === 'not_last';
     return {
       listingMode: (listingMode === 'sale' || listingMode === 'rent') ? listingMode : '',
       propertyType: normalizeSelectVal('propertyType'),
@@ -5996,9 +6001,10 @@ class VoiceWidget extends HTMLElement {
       priceTo: read('priceMax'),
       areaFrom: read('areaMin'),
       areaTo: read('areaMax'),
-      floorFrom: floorNotFirstLast ? '' : floorFromRaw,
-      floorTo: floorNotFirstLast ? 'max' : read('floorMax'),
-      floorNotFirstLast,
+      floorFrom: floorNotFirst ? '' : floorFromRaw,
+      floorTo: floorNotLast ? 'max' : floorToRaw,
+      floorNotFirst,
+      floorNotLast,
       rooms: smartRoom ? '' : roomsVal,
       smart: smartRoom,
       district: normalizeSelectVal('district'),
@@ -6064,8 +6070,8 @@ class VoiceWidget extends HTMLElement {
     setPicker('priceMax', payload.priceTo);
     setPicker('areaMin', payload.areaFrom);
     setPicker('areaMax', payload.areaTo);
-    setPicker('floorMin', payload.floorNotFirstLast === true ? 'not_first_last' : payload.floorFrom);
-    setPicker('floorMax', payload.floorNotFirstLast === true ? 'max' : payload.floorTo);
+    setPicker('floorMin', payload.floorNotFirst === true ? 'not_first' : payload.floorFrom);
+    setPicker('floorMax', payload.floorNotLast === true ? 'not_last' : payload.floorTo);
     if (payload.smart === true) {
       setSelect('rooms', 'smart');
     } else {
@@ -6103,7 +6109,8 @@ class VoiceWidget extends HTMLElement {
     const maxArea = parseNum(source.areaTo);
     const minFloor = parseNum(source.floorFrom);
     const maxFloor = parseNum(source.floorTo);
-    if (source.floorNotFirstLast === true) out.floorNotFirstLast = true;
+    if (source.floorNotFirst === true) out.floorNotFirst = true;
+    if (source.floorNotLast === true) out.floorNotLast = true;
     if (minPrice != null) out.minPrice = minPrice;
     if (maxPrice != null) out.maxPrice = maxPrice;
     if (minArea != null) out.minArea = minArea;
@@ -6221,7 +6228,8 @@ class VoiceWidget extends HTMLElement {
       areaTo: query.maxArea != null ? String(query.maxArea) : '',
       floorFrom: query.minFloor != null ? String(query.minFloor) : '',
       floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
-      floorNotFirstLast: query.floorNotFirstLast === true,
+      floorNotFirst: query.floorNotFirst === true,
+      floorNotLast: query.floorNotLast === true,
       rooms: query.smart === true ? '' : (query.rooms != null ? String(query.rooms) : ''),
       smart: query.smart === true,
       district: query.district != null ? String(query.district) : '',
@@ -6243,20 +6251,22 @@ class VoiceWidget extends HTMLElement {
       const n = Number(value);
       return Number.isFinite(n) ? n : null;
     };
-    const list = query.floorNotFirstLast === true
+    const list = (query.floorNotFirst === true || query.floorNotLast === true)
       ? listRaw.filter((item) => {
         const floor = toNum(item?.floor ?? item?.specs_floor ?? item?.specs?.floor);
         if (floor == null) return false;
-        if (floor <= 1) return false;
-        const totalFloors = toNum(
-          item?.building_floors
-          ?? item?.floors_total
-          ?? item?.floorsTotal
-          ?? item?.total_floors
-          ?? item?.display_specs?.total_floors
-          ?? item?.features?.display_specs?.total_floors
-        );
-        if (totalFloors != null && totalFloors > 1) return floor < totalFloors;
+        if (query.floorNotFirst === true && floor <= 1) return false;
+        if (query.floorNotLast === true) {
+          const totalFloors = toNum(
+            item?.building_floors
+            ?? item?.floors_total
+            ?? item?.floorsTotal
+            ?? item?.total_floors
+            ?? item?.display_specs?.total_floors
+            ?? item?.features?.display_specs?.total_floors
+          );
+          if (totalFloors != null && totalFloors > 1 && floor >= totalFloors) return false;
+        }
         return true;
       })
       : listRaw;
@@ -6333,16 +6343,6 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelectorAll('select[data-picker]').forEach((selectEl) => {
       selectEl.addEventListener('change', () => {
         const picker = String(selectEl.getAttribute('data-picker') || '');
-        if (picker === 'floorMin' && String(selectEl.value || '') === 'not_first_last') {
-          const floorMax = overlay.querySelector('select[data-picker="floorMax"]');
-          if (floorMax) floorMax.selectedIndex = 0;
-        }
-        if (picker === 'floorMax') {
-          const floorMin = overlay.querySelector('select[data-picker="floorMin"]');
-          if (floorMin && String(floorMin.value || '') === 'not_first_last' && String(selectEl.value || '') !== 'max') {
-            floorMin.selectedIndex = 0;
-          }
-        }
         if (picker.startsWith('price')) this.normalizeFilterRangePair(overlay, 'price', picker);
         if (picker.startsWith('area')) this.normalizeFilterRangePair(overlay, 'area', picker);
         if (picker.startsWith('floor')) this.normalizeFilterRangePair(overlay, 'floor', picker);
@@ -6830,10 +6830,10 @@ class VoiceWidget extends HTMLElement {
             </div>
           </div>
           <div class="vw-filters-range-block">
-            <span class="vw-filters-range-name">Этаж от минимум до максимум</span>
+            <span class="vw-filters-range-name">Этаж</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="floorMin">Этаж от минимум до максимум</span>
+                <span class="vw-filters-picker-label" data-display="floorMin">От max</span>
                 <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
