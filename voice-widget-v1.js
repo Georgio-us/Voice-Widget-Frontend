@@ -3789,15 +3789,15 @@ class VoiceWidget extends HTMLElement {
     const selected = checks.filter((check) => check.checked).length;
     const total = checks.length;
     const shareBtn = overlay.querySelector('[data-role="share"]');
-    const deleteBtn = overlay.querySelector('[data-role="delete-selected"]');
+    const cancelBtn = overlay.querySelector('[data-role="cancel-selected"]');
     const removeBtn = overlay.querySelector('[data-role="remove-selected"]');
     const selectAllBtn = overlay.querySelector('[data-role="select-all"]');
     const totalValue = overlay.querySelector('[data-role="list-total"]');
     if (shareBtn) {
       shareBtn.disabled = selected <= 0;
     }
-    if (deleteBtn) {
-      deleteBtn.disabled = selected <= 0;
+    if (cancelBtn) {
+      cancelBtn.disabled = selected <= 0;
     }
     if (removeBtn) {
       removeBtn.disabled = selected <= 0;
@@ -4010,8 +4010,24 @@ class VoiceWidget extends HTMLElement {
       }
       if (safeSection === 'properties') {
         const rows = list.map((item) => `
-          <article class="vw-access-obj-card" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}">
-            <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
+          <article class="vw-access-obj-card vw-access-obj-card--admin" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}">
+            <div class="vw-access-obj-side">
+              <button
+                type="button"
+                class="vw-access-obj-edit"
+                data-role="row-edit"
+                aria-label="Редактировать объект ${item.id}"
+                title="Редактировать"
+              >✎</button>
+              <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
+              <button
+                type="button"
+                class="vw-access-obj-delete"
+                data-role="row-delete"
+                aria-label="Удалить объект ${item.id}"
+                title="Удалить"
+              >🗑</button>
+            </div>
             <div class="vw-access-obj-main">
               <div class="vw-access-obj-badges">
                 <span class="vw-access-obj-id-badge">${item.id}</span>
@@ -4041,7 +4057,7 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-obj-list">${rows}</div>
             </div>
             <div class="vw-access-objects-bottombar">
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="delete-selected" disabled>Удалить</button>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>Отменить</button>
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
             </div>
           </div>
@@ -4221,9 +4237,68 @@ class VoiceWidget extends HTMLElement {
           }
         });
       };
+      const deleteSelectedIds = async (selectedIds = []) => {
+        if (!Array.isArray(selectedIds) || !selectedIds.length) return;
+        const deleteApi = this.api?.deleteManualProperty;
+        if (typeof deleteApi !== 'function') {
+          throw new Error('DELETE_API_UNAVAILABLE');
+        }
+        const failed = [];
+        const succeeded = [];
+        for (let i = 0; i < selectedIds.length; i += 1) {
+          const id = selectedIds[i];
+          try {
+            await deleteApi.call(this.api, id);
+            succeeded.push(id);
+          } catch (error) {
+            failed.push({ id, code: String(error?.message || 'UNKNOWN') });
+          }
+        }
+        const currentList = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+        window.appState.allProperties = currentList.filter((item) => {
+          const id = String(item?.id || item?.variantId || item?._id || '').trim();
+          return !succeeded.includes(id);
+        });
+        const fullList = this._getFullCatalogProperties();
+        if (fullList.length) {
+          const nextFull = fullList.filter((item) => {
+            const id = String(item?.id || item?.variantId || item?._id || '').trim();
+            return !succeeded.includes(id);
+          });
+          this._setFullCatalogProperties(nextFull);
+        }
+        getRows().forEach((row) => {
+          const id = String(row.getAttribute('data-id') || '').trim();
+          if (succeeded.includes(id)) row.remove();
+        });
+        if (succeeded.length) {
+          try {
+            const all = await this.loadAllProperties();
+            if (Array.isArray(all)) this.replacePropertiesCatalog(all);
+          } catch {}
+        }
+        this.updateAdminObjectsSelectionState(overlay);
+        if (!failed.length) {
+          this.ui?.showNotification?.(`Удалено: ${succeeded.length}`);
+          return;
+        }
+        if (!succeeded.length) {
+          const hasForbidden = failed.some((x) => x.code.includes('FORBIDDEN_ADMIN_ONLY'));
+          if (hasForbidden) {
+            this.ui?.showNotification?.('Нет прав на удаление объектов');
+          } else {
+            const code = String(failed?.[0]?.code || 'UNKNOWN');
+            this.ui?.showNotification?.(`Удаление не выполнено (${code})`);
+          }
+        } else {
+          this.ui?.showNotification?.(`Удаление частично выполнено: ${succeeded.length}/${selectedIds.length}`);
+        }
+      };
       getRows().forEach((row) => {
         const check = row.querySelector('[data-role="row-check"]');
         const checkWrap = row.querySelector('[data-role="row-check-wrap"]');
+        const editBtn = row.querySelector('[data-role="row-edit"]');
+        const deleteBtn = row.querySelector('[data-role="row-delete"]');
         const sync = () => {
           const selected = !!check?.checked;
           row.classList.toggle('is-selected', selected);
@@ -4242,6 +4317,25 @@ class VoiceWidget extends HTMLElement {
           if (!check) return;
           check.checked = !check.checked;
           sync();
+        });
+        editBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const id = String(row.getAttribute('data-id') || '').trim();
+          if (!id) return;
+          this.openAccessSubOverlay('add-property', { mode: 'edit', propertyId: id });
+        });
+        deleteBtn?.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const id = String(row.getAttribute('data-id') || '').trim();
+          if (!id) return;
+          showDeleteDialog({
+            count: 1,
+            onConfirm: async () => {
+              await deleteSelectedIds([id]);
+            }
+          });
         });
       });
       overlay.querySelector('[data-role="select-all"]')?.addEventListener('click', () => {
@@ -4373,68 +4467,8 @@ class VoiceWidget extends HTMLElement {
           this.ui?.showNotification?.('Не удалось поделиться подборкой');
         });
       });
-      overlay.querySelector('[data-role="delete-selected"]')?.addEventListener('click', () => {
-        const selectedIds = getSelectedIds();
-        if (!selectedIds.length) return;
-        showDeleteDialog({
-          count: selectedIds.length,
-          onConfirm: async () => {
-            const deleteApi = this.api?.deleteManualProperty;
-            if (typeof deleteApi !== 'function') {
-              throw new Error('DELETE_API_UNAVAILABLE');
-            }
-            const failed = [];
-            const succeeded = [];
-            for (let i = 0; i < selectedIds.length; i += 1) {
-              const id = selectedIds[i];
-              try {
-                await deleteApi.call(this.api, id);
-                succeeded.push(id);
-              } catch (error) {
-                failed.push({ id, code: String(error?.message || 'UNKNOWN') });
-              }
-            }
-            const currentList = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
-            window.appState.allProperties = currentList.filter((item) => {
-              const id = String(item?.id || item?.variantId || item?._id || '').trim();
-              return !succeeded.includes(id);
-            });
-            const fullList = this._getFullCatalogProperties();
-            if (fullList.length) {
-              const nextFull = fullList.filter((item) => {
-                const id = String(item?.id || item?.variantId || item?._id || '').trim();
-                return !succeeded.includes(id);
-              });
-              this._setFullCatalogProperties(nextFull);
-            }
-            getRows().forEach((row) => {
-              const id = String(row.getAttribute('data-id') || '').trim();
-              if (succeeded.includes(id)) row.remove();
-            });
-            if (succeeded.length) {
-              try {
-                const all = await this.loadAllProperties();
-                if (Array.isArray(all)) this.replacePropertiesCatalog(all);
-              } catch {}
-            }
-            this.updateAdminObjectsSelectionState(overlay);
-            if (!failed.length) {
-              this.ui?.showNotification?.(`Удалено: ${succeeded.length}`);
-              return;
-            }
-            if (!succeeded.length) {
-              const hasForbidden = failed.some((x) => x.code.includes('FORBIDDEN_ADMIN_ONLY'));
-              if (hasForbidden) {
-                this.ui?.showNotification?.('Нет прав на удаление объектов');
-              } else {
-                const code = String(failed?.[0]?.code || 'UNKNOWN');
-                this.ui?.showNotification?.(`Удаление не выполнено (${code})`);
-              }
-            } else {
-              this.ui?.showNotification?.(`Удаление частично выполнено: ${succeeded.length}/${selectedIds.length}`);
-            }
-          }
-        });
+      overlay.querySelector('[data-role="cancel-selected"]')?.addEventListener('click', () => {
+        setAllSelected(false);
       });
       this.updateAdminObjectsSelectionState(overlay);
     }
@@ -7655,6 +7689,15 @@ class VoiceWidget extends HTMLElement {
       .vw-access-obj-check {
         padding-top: 30px;
       }
+      .vw-access-obj-card--admin .vw-access-obj-side {
+        display: grid;
+        gap: 8px;
+        justify-items: center;
+        align-content: start;
+      }
+      .vw-access-obj-card--admin .vw-access-obj-check {
+        padding-top: 0;
+      }
       .vw-access-obj-check input {
         width: 18px;
         height: 18px;
@@ -7663,12 +7706,54 @@ class VoiceWidget extends HTMLElement {
       .vw-access-obj-main {
         min-width: 0;
       }
+      .vw-access-obj-headline {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8px;
+      }
       .vw-access-obj-badges {
         display: flex;
         align-items: center;
         gap: 8px;
         min-width: 0;
         flex-wrap: wrap;
+      }
+      .vw-access-obj-edit {
+        flex: 0 0 auto;
+        min-width: 28px;
+        min-height: 28px;
+        border-radius: 8px;
+        border: 1px solid rgba(92, 150, 255, 0.55);
+        background: rgba(92, 150, 255, 0.12);
+        color: var(--text-primary, #fff);
+        font-size: .95rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .vw-access-obj-edit:active {
+        transform: translateY(1px);
+      }
+      .vw-access-obj-delete {
+        flex: 0 0 auto;
+        min-width: 28px;
+        min-height: 28px;
+        border-radius: 8px;
+        border: 1px solid rgba(236, 96, 96, 0.72);
+        background: rgba(236, 96, 96, 0.12);
+        color: var(--text-primary, #fff);
+        font-size: .9rem;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+      .vw-access-obj-delete:active {
+        transform: translateY(1px);
       }
       .vw-access-obj-id-badge {
         font-size: .72rem;
