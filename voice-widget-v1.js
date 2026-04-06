@@ -5979,7 +5979,7 @@ class VoiceWidget extends HTMLElement {
 
   collectFiltersOverlayPayload(overlay) {
     const read = (name) => String(overlay.querySelector(`select[data-picker="${name}"]`)?.value || '');
-    const listingMode = String(overlay.querySelector('[data-role="listingMode"].is-active')?.getAttribute('data-value') || 'sale')
+    const listingMode = String(overlay.querySelector('[data-role="listingMode"].is-active')?.getAttribute('data-value') || '')
       .toLowerCase();
     const normalizeSelectVal = (role) => {
       const val = String(overlay.querySelector(`[data-role="${role}"]`)?.value || '').trim();
@@ -5990,7 +5990,7 @@ class VoiceWidget extends HTMLElement {
     const floorFromRaw = read('floorMin');
     const floorNotFirstLast = floorFromRaw === 'not_first_last';
     return {
-      listingMode: listingMode === 'rent' ? 'rent' : 'sale',
+      listingMode: (listingMode === 'sale' || listingMode === 'rent') ? listingMode : '',
       propertyType: normalizeSelectVal('propertyType'),
       priceFrom: read('priceMin'),
       priceTo: read('priceMax'),
@@ -6054,10 +6054,11 @@ class VoiceWidget extends HTMLElement {
       const el = overlay.querySelector(`[data-role="${role}"]`);
       if (el) el.checked = !!checked;
     };
-    const mode = String(payload.listingMode || payload.operation || 'sale').toLowerCase() === 'rent' ? 'rent' : 'sale';
+    const rawMode = String(payload.listingMode || payload.operation || '').toLowerCase();
+    const mode = rawMode === 'sale' || rawMode === 'rent' ? rawMode : '';
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
       const v = String(btn.getAttribute('data-value') || '');
-      btn.classList.toggle('is-active', v === mode);
+      btn.classList.toggle('is-active', !!mode && v === mode);
     });
     setPicker('priceMin', payload.priceFrom);
     setPicker('priceMax', payload.priceTo);
@@ -6209,9 +6210,10 @@ class VoiceWidget extends HTMLElement {
 
   buildFiltersOverlayPayloadFromEffectiveQuery() {
     const query = this.getCatalogEffectiveSearchParams();
-    const op = String(query.operation || 'sale').toLowerCase();
+    const opRaw = String(query.operation || '').toLowerCase();
+    const op = opRaw === 'sale' || opRaw === 'rent' ? opRaw : '';
     return {
-      listingMode: op === 'rent' ? 'rent' : 'sale',
+      listingMode: op,
       propertyType: query.type != null ? String(query.type) : '',
       priceFrom: query.minPrice != null ? String(query.minPrice) : '',
       priceTo: query.maxPrice != null ? String(query.maxPrice) : '',
@@ -6293,8 +6295,7 @@ class VoiceWidget extends HTMLElement {
   resetFiltersOverlayForm(overlay) {
     if (!overlay) return;
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
-      const v = String(btn.getAttribute('data-value') || '');
-      btn.classList.toggle('is-active', v === 'sale');
+      btn.classList.remove('is-active');
     });
     overlay.querySelectorAll('select[data-picker]').forEach((sel) => { sel.selectedIndex = 0; });
     const rooms = overlay.querySelector('[data-role="rooms"]');
@@ -6319,6 +6320,11 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const v = String(btn.getAttribute('data-value') || '');
+        const isAlreadyActive = btn.classList.contains('is-active');
+        if (isAlreadyActive) {
+          overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => b.classList.remove('is-active'));
+          return;
+        }
         overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => {
           b.classList.toggle('is-active', String(b.getAttribute('data-value') || '') === v);
         });
@@ -6762,7 +6768,7 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-filters-block-top">
             <div class="vw-filters-top-grid">
               <div class="vw-filters-segmented" role="group" aria-label="Сделка">
-                <button type="button" class="vw-filters-segment is-active" data-role="listingMode" data-value="sale">Продажа</button>
+                <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="sale">Продажа</button>
                 <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="rent">Аренда</button>
               </div>
               <select class="vw-filters-select" data-role="propertyType" aria-label="Тип недвижимости">
