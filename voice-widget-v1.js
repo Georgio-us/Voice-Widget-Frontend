@@ -2318,6 +2318,11 @@ const LOCALES = {
     sliderCheckpointText20: 'Дальше идут варианты с более низкой релевантностью. Уточнить запрос или связаться с экспертом?',
     sliderCheckpointRefine: 'Уточнить',
     sliderCheckpointContact: 'Связаться',
+    strictEndTitle: 'Точные объекты закончились',
+    strictEndText: 'По вашему запросу вы просмотрели все точные совпадения. Хотите уточнить фильтры или показать похожие объекты?',
+    strictEndRefine: 'Уточнить',
+    strictEndSimilar: 'Показать похожие',
+    strictEndNoSimilar: 'Похожие объекты пока не найдены',
     backSpecsOverflowTitle: 'Дополнительные детали',
     backSpecsOverflowText: 'К сожалению, не вся информация поместилась в данной карточке. Чтобы узнать дополнительные детали, вы можете связаться с менеджером.',
     backSpecsOverflowContact: 'Связаться',
@@ -2464,6 +2469,11 @@ const LOCALES = {
     sliderCheckpointText20: 'Далі йдуть варіанти з нижчою релевантністю. Уточнити запит чи зв’язатися з експертом?',
     sliderCheckpointRefine: 'Уточнити',
     sliderCheckpointContact: "Зв'язатися",
+    strictEndTitle: 'Точні об’єкти закінчилися',
+    strictEndText: 'За вашим запитом ви переглянули всі точні збіги. Хочете уточнити фільтри чи показати схожі об’єкти?',
+    strictEndRefine: 'Уточнити',
+    strictEndSimilar: 'Показати схожі',
+    strictEndNoSimilar: 'Схожих об’єктів поки не знайдено',
     backSpecsOverflowTitle: 'Додаткові деталі',
     backSpecsOverflowText: "На жаль, не вся інформація помістилася в цій картці. Щоб дізнатися додаткові деталі, ви можете зв’язатися з менеджером.",
     backSpecsOverflowContact: "Зв'язатися",
@@ -2576,6 +2586,11 @@ class VoiceWidget extends HTMLElement {
     this._lastPillInsightsSnapshot = null;
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = false;
+    this._catalogStrictFlowActive = false;
+    this._catalogStrictSeedIds = [];
+    this._catalogRelaxedUnlocked = false;
+    this._catalogStrictEndPromptShown = false;
+    this._catalogSimilarLoading = false;
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
@@ -6317,6 +6332,12 @@ class VoiceWidget extends HTMLElement {
         return true;
       })
       : listRaw;
+    this._catalogStrictFlowActive = this._isStrictFlowQuery(query);
+    this._catalogRelaxedUnlocked = false;
+    this._catalogStrictEndPromptShown = false;
+    this._catalogStrictSeedIds = list
+      .map((item) => String(this._toCardEngineShape(item)?.id || '').trim())
+      .filter(Boolean);
     this.replacePropertiesCatalog(list);
     if (!window.appState) window.appState = {};
     window.appState.lastTotalMatches = list.length;
@@ -9673,9 +9694,11 @@ render() {
     this._catalogOverflowLoading = false;
     this._catalogVisibleIds = [];
     this._sliderCheckpointShown = { 10: false, 20: false };
-    try { this.closeSliderCheckpointPopup(); } catch {}
     this._catalogActiveId = null;
     this._catalogListWindowStart = 0;
+    this._catalogStrictEndPromptShown = false;
+    this._catalogSimilarLoading = false;
+    try { this.closeSliderCheckpointPopup(); } catch {}
   }
 
   findCatalogPropertyById(id) {
@@ -9704,6 +9727,120 @@ render() {
       if (vid) domIds.push(vid);
     });
     return Array.from(new Set(domIds));
+  }
+
+  _isStrictFlowQuery(query = {}) {
+    if (!query || typeof query !== 'object') return false;
+    return Object.keys(query).some((key) => key !== 'limit' && query[key] != null && String(query[key]).trim() !== '');
+  }
+
+  _getCurrentCatalogActiveIndex() {
+    try {
+      const slider = this.getRoot().querySelector('.cards-slider');
+      if (!slider) return -1;
+      const slides = Array.from(slider.querySelectorAll('.card-slide'));
+      if (!slides.length) return -1;
+      const active = slider.querySelector('.card-slide.active');
+      if (!active) return slides.length - 1;
+      return Math.max(0, slides.indexOf(active));
+    } catch {
+      return -1;
+    }
+  }
+
+  showStrictEndPopup() {
+    if (this._catalogStrictEndPromptShown) return;
+    this._catalogStrictEndPromptShown = true;
+    this.closeSliderCheckpointPopup();
+    this.ensureSliderCheckpointStyles();
+    const locale = this.getCurrentLocale();
+    const overlay = document.createElement('div');
+    overlay.id = 'vwSliderCheckpointOverlay';
+    overlay.className = 'vw-slider-checkpoint-overlay';
+    overlay.innerHTML = `
+      <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="Strict matches ended">
+        <div class="vw-slider-checkpoint-title">${locale.strictEndTitle || 'Точные объекты закончились'}</div>
+        <div class="vw-slider-checkpoint-text">${locale.strictEndText || 'По вашему запросу вы просмотрели все точные совпадения. Хотите уточнить фильтры или показать похожие объекты?'}</div>
+        <div class="vw-slider-checkpoint-actions">
+          <button type="button" class="vw-slider-checkpoint-btn" data-role="refine">${locale.strictEndRefine || 'Уточнить'}</button>
+          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="similar">${locale.strictEndSimilar || 'Показать похожие'}</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="refine"]')?.addEventListener('click', () => {
+      this.closeSliderCheckpointPopup();
+      try { this.openFiltersOverlay(); } catch {}
+    });
+    overlay.querySelector('[data-role="similar"]')?.addEventListener('click', async () => {
+      try {
+        await this.unlockCatalogSimilarMode();
+      } finally {
+        this.closeSliderCheckpointPopup();
+      }
+    });
+    overlay.addEventListener('click', (ev) => {
+      if (ev.target === overlay) this.closeSliderCheckpointPopup();
+    });
+  }
+
+  async unlockCatalogSimilarMode() {
+    if (this._catalogRelaxedUnlocked === true) return;
+    if (this._catalogSimilarLoading) return;
+    this._catalogSimilarLoading = true;
+    try {
+      const payload = await this.api?.fetchSessionCandidates?.(2000);
+      const source = Array.isArray(payload?.cards) ? payload.cards : [];
+      const normalized = source.map((item) => this._toCardEngineShape(item)).filter((item) => item?.id);
+      if (!normalized.length) {
+        this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
+        return;
+      }
+
+      const current = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+      const seen = new Set(current.map((item) => String(this._toCardEngineShape(item)?.id || '').trim()).filter(Boolean));
+      const strictSeed = new Set((Array.isArray(this._catalogStrictSeedIds) ? this._catalogStrictSeedIds : []).map((id) => String(id || '').trim()).filter(Boolean));
+      const extras = normalized.filter((item) => {
+        const id = String(item?.id || '').trim();
+        if (!id) return false;
+        if (seen.has(id)) return false;
+        // only similar part, strict portion is already shown from deterministic search
+        if (strictSeed.has(id)) return false;
+        return true;
+      });
+
+      if (!extras.length) {
+        this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
+        return;
+      }
+
+      window.appState.allProperties = [...current, ...extras];
+      this._mergeIntoFullCatalogProperties(extras);
+
+      const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+      const first = extras[0];
+      const firstId = String(first?.id || '').trim();
+      const queueTail = extras.slice(1);
+      this._catalogOverflowQueue = [...(Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : []), ...queueTail];
+      if (firstId && !loadedIds.includes(firstId)) {
+        this._catalogVisibleIds = [...loadedIds, firstId];
+        this._catalogActiveId = firstId;
+        this.rebuildCatalogLayoutFromVisibleIds();
+        if (this._catalogDisplayMode !== 'list') {
+          const idx = this._catalogVisibleIds.indexOf(firstId);
+          if (idx >= 0) this.scrollToSlideIndex(idx);
+        }
+      } else {
+        this.updateCatalogListNavState();
+      }
+      this._catalogRelaxedUnlocked = true;
+      this._catalogStrictEndPromptShown = false;
+    } catch (error) {
+      console.warn('unlockCatalogSimilarMode failed:', error);
+      this.showNotification(this.getCurrentLocale().strictEndNoSimilar || 'Похожие объекты пока не найдены');
+    } finally {
+      this._catalogSimilarLoading = false;
+    }
   }
 
   renderCatalogListWindow(loadedIds = [], activeId = null) {
@@ -9791,6 +9928,9 @@ render() {
     }
     const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
     if (!queue.length) {
+      if (this._catalogStrictFlowActive === true && this._catalogRelaxedUnlocked !== true) {
+        this.showStrictEndPopup();
+      }
       this.updateCatalogListNavState();
       return;
     }
@@ -9912,7 +10052,16 @@ render() {
     try {
       if (this._catalogDisplayMode === 'list') return;
       const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
-      if (!queue.length) return;
+      if (!queue.length) {
+        if (
+          this._catalogStrictFlowActive === true
+          && this._catalogRelaxedUnlocked !== true
+          && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
+        ) {
+          this.showStrictEndPopup();
+        }
+        return;
+      }
       if (this._catalogOverflowLoading) return;
       if (activeIdx < Math.max(0, totalSlides - 1)) return;
       this._catalogOverflowLoading = true;
