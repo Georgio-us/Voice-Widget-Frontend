@@ -6184,11 +6184,17 @@ class VoiceWidget extends HTMLElement {
     const normalizeDistrictSlug = (value) => {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
-      if (/примор|primor/.test(raw)) return 'primorsky';
+      if (/примор|промор|primor|promor/.test(raw)) return 'primorsky';
       if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
       return '';
+    };
+    const isDistrictLikeLocation = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return false;
+      if (/\bрайон\b/.test(t)) return true;
+      return /(примор|промор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const normalizeOperationToSearch = (value) => {
       const raw = String(value || '').trim().toLowerCase();
@@ -6259,9 +6265,9 @@ class VoiceWidget extends HTMLElement {
     const districtSlug = normalizeDistrictSlug(locRaw);
     if (districtSlug) base.district = districtSlug;
     const rcInsight = String(insights.residentialComplex || '').trim();
-    if (rcInsight) {
+    if (rcInsight && !normalizeDistrictSlug(rcInsight) && !isDistrictLikeLocation(rcInsight)) {
       base.residentialComplex = rcInsight;
-    } else if (locRaw && !districtSlug && !isGenericCityLocation(locRaw)) {
+    } else if (locRaw && !districtSlug && !isGenericCityLocation(locRaw) && !isDistrictLikeLocation(locRaw)) {
       base.residentialComplex = stripRcPrefixes(locRaw);
     }
     if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
