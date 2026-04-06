@@ -9810,7 +9810,7 @@ render() {
   _normalizeDistrictForRelax(value) {
     const raw = String(value || '').trim().toLowerCase();
     if (!raw) return '';
-    if (/примор|primor/.test(raw)) return 'primorsky';
+    if (/примор|промор|primor|promor/.test(raw)) return 'primorsky';
     if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
     if (/сувор|suvor/.test(raw)) return 'suvorovsky';
     if (/малин|malin/.test(raw)) return 'malinovsky';
