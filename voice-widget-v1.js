@@ -10887,11 +10887,10 @@ render() {
       if (normalized.area_m2 != null && normalized.area_m2 !== '') listMetaParts.push(`${escCardText(normalized.area_m2)}м2`);
       if (districtLine) listMetaParts.push(escCardText(districtLine));
       const listMetaText = listMetaParts.join('  ·  ') || '—';
-      const listMetaChips = [];
-      if (normalized.priceLabel) listMetaChips.push(escCardText(normalized.priceLabel));
-      if (normalized.rooms) listMetaChips.push(`${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
-      if (normalized.area_m2 != null && normalized.area_m2 !== '') listMetaChips.push(`${escCardText(normalized.area_m2)} м²`);
-      if (districtLine) listMetaChips.push(escCardText(districtLine));
+      const listSpecChips = [];
+      if (normalized.rooms) listSpecChips.push(`🛏️ ${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
+      if (normalized.area_m2 != null && normalized.area_m2 !== '') listSpecChips.push(`📐 ${escCardText(normalized.area_m2)} м²`);
+      if (normalized.floor) listSpecChips.push(`🏢 ${escCardText(normalized.floor)} ${escCardText(this.getLangCode() === 'ua' ? 'пов.' : 'этаж')}`);
       slide.innerHTML = `
         <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
           <div class="list-card__media">
@@ -10899,10 +10898,10 @@ render() {
               ? `<img class="list-card__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">`
               : '<div class="list-card__image list-card__image--placeholder">No image</div>'}
             <div class="list-card__badges">
+              <span class="list-card__id-media">${escCardText(normalized.id || 'ID')}</span>
               ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
               ${normalized.propertyTypeBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.propertyTypeBadgeLabel)}</span>` : ''}
             </div>
-            <span class="list-card__id-media">${escCardText(normalized.id || 'ID')}</span>
             <div class="list-card__assets">${listAssetTilesHtml}</div>
             <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -10915,7 +10914,11 @@ render() {
               <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
             </div>
             <div class="list-card__meta">${listMetaText}</div>
-            <div class="list-card__chips">${listMetaChips.map((chip) => `<span class="list-card__chip">${chip}</span>`).join('')}</div>
+            <div class="list-card__row2">
+              <div class="list-card__district">${escCardText(districtLine || '—')}</div>
+              <div class="list-card__price-pill">${escCardText(normalized.priceLabel || '—')}</div>
+            </div>
+            <div class="list-card__chips">${listSpecChips.map((chip) => `<span class="list-card__chip">${chip}</span>`).join('')}</div>
             <div class="list-card__expand-wrap">
               <button type="button" class="list-card__expand" data-action="list-expand" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.handoffDetails || 'Подробнее')}">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>

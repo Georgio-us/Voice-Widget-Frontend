@@ -2885,6 +2885,36 @@ voice-widget,
   min-width: 0;
 }
 
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__row2 {
+  display: none;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__district {
+  font-size: .72rem;
+  color: color-mix(in srgb, var(--text-primary) 84%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__price-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #5a89f0 55%, transparent);
+  background: color-mix(in srgb, #5a89f0 20%, var(--bg-card));
+  padding: 1px 9px;
+  font-size: .72rem;
+  line-height: 1;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__chip {
   display: inline-flex;
   align-items: center;
@@ -2931,10 +2961,8 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__id-media {
-  position: absolute;
-  left: 6px;
-  bottom: 6px;
-  z-index: 2;
+  position: static;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   min-height: 18px;
@@ -3042,10 +3070,9 @@ voice-widget,
   display: inline-flex;
 }
 
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__id-media {
-  bottom: 30px;
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__row2 {
+  display: grid;
 }
-
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__chips {
   display: flex;
 }
@@ -3057,6 +3084,13 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__more-wrap {
   display: flex;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide:not(.is-expanded) .list-card__id-media {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 2;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-full-open {
