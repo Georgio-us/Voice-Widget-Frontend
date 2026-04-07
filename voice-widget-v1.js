@@ -10888,7 +10888,7 @@ render() {
       ).trim();
       const listPrimaryParts = [];
       if (normalized.priceLabel) listPrimaryParts.push(`<span class="list-card__meta-item list-card__meta-item--strong">${escCardText(normalized.priceLabel)}</span>`);
-      if (normalized.rooms) listPrimaryParts.push(`<span class="list-card__meta-item list-card__meta-item--strong">${escCardText(normalized.rooms)}</span>`);
+      if (normalized.rooms) listPrimaryParts.push(`<span class="list-card__meta-item list-card__meta-item--strong">${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімнат' : 'комнат')}</span>`);
       if (normalized.area_m2 != null && normalized.area_m2 !== '') listPrimaryParts.push(`<span class="list-card__meta-item">${escCardText(normalized.area_m2)} м²</span>`);
       const listSecondaryParts = [];
       if (normalized.floor) listSecondaryParts.push(`<span class="list-card__meta-item">${escCardText(this.getLangCode() === 'ua' ? 'Поверх' : 'Этаж')} ${escCardText(normalized.floor)}</span>`);
