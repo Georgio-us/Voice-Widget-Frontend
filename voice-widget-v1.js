@@ -984,6 +984,21 @@ class UIManager {
     if (!textInput) return;
     textInput.addEventListener('input', () => this.handleTextInput());
     textInput.addEventListener('keydown', (e) => this.handleTextKeyDown(e));
+    if (!textInput._vwViewportLockBound) {
+      const onFocus = () => {
+        try {
+          if (this.widget?.isIOSDevice?.()) this.widget.setMobileViewportLock(true);
+        } catch {}
+      };
+      const onBlur = () => {
+        try {
+          if (this.widget?.isIOSDevice?.()) this.widget.setMobileViewportLock(false);
+        } catch {}
+      };
+      textInput.addEventListener('focus', onFocus);
+      textInput.addEventListener('blur', onBlur);
+      textInput._vwViewportLockBound = true;
+    }
   }
   bindUnifiedInputEvents() {
     const { sendButton, textInput, toggleButton } = this.elements;
@@ -3635,13 +3650,30 @@ class VoiceWidget extends HTMLElement {
     try {
       const meta = document.querySelector('meta[name="viewport"]');
       if (!meta) return;
+      if (!Number.isFinite(this._viewportLockDepth)) this._viewportLockDepth = 0;
       if (enabled) {
+        this._viewportLockDepth += 1;
+        if (this._viewportLockDepth > 1) return;
         if (this._viewportMetaOriginalContent == null) this._viewportMetaOriginalContent = meta.getAttribute('content') || '';
         meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
-      } else if (this._viewportMetaOriginalContent != null) {
+      } else {
+        this._viewportLockDepth = Math.max(0, this._viewportLockDepth - 1);
+        if (this._viewportLockDepth > 0) return;
+        if (this._viewportMetaOriginalContent == null) return;
         meta.setAttribute('content', this._viewportMetaOriginalContent || 'width=device-width, initial-scale=1');
       }
     } catch {}
+  }
+
+  isIOSDevice() {
+    try {
+      const ua = navigator.userAgent || '';
+      const iOSUa = /iPad|iPhone|iPod/i.test(ua);
+      const iPadDesktopMode = navigator.platform === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
+      return Boolean(iOSUa || iPadDesktopMode);
+    } catch {
+      return false;
+    }
   }
 
   closeAccessOverlay() {
