@@ -10194,16 +10194,21 @@ render() {
           if (!Array.isArray(list) || !list.length) return;
           source.push(...list);
         };
-        if (this._catalogLastRefineMode === 'filters') {
+        const ensureFullCatalogSource = async () => {
           appendSource(this._getFullCatalogProperties());
-          appendSource(Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
-          if (!source.length) {
+          if (this._getFullCatalogProperties().length) return;
+          try {
             const all = await this.loadAllProperties();
             if (Array.isArray(all) && all.length) {
               this._setFullCatalogProperties(all);
               appendSource(all);
             }
-          }
+          } catch {}
+        };
+        if (this._catalogLastRefineMode === 'filters') {
+          appendSource(this._getFullCatalogProperties());
+          appendSource(Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
+          await ensureFullCatalogSource();
           if (!source.length) {
             const payload = await this.api?.fetchSessionCandidates?.(2000);
             appendSource(Array.isArray(payload?.cards) ? payload.cards : []);
@@ -10211,16 +10216,7 @@ render() {
         } else {
           const payload = await this.api?.fetchSessionCandidates?.(2000);
           appendSource(Array.isArray(payload?.cards) ? payload.cards : []);
-          if (!source.length) {
-            appendSource(this._getFullCatalogProperties());
-            if (!source.length) {
-              const all = await this.loadAllProperties();
-              if (Array.isArray(all) && all.length) {
-                this._setFullCatalogProperties(all);
-                appendSource(all);
-              }
-            }
-          }
+          await ensureFullCatalogSource();
         }
         const byId = new Map();
         source
