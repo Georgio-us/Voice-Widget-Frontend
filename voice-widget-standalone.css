@@ -2814,21 +2814,9 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-}
-
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__id {
-  display: inline-flex;
-  align-items: center;
-  min-height: 20px;
-  padding: 1px 9px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #5a89f0 70%, transparent);
-  color: color-mix(in srgb, var(--text-primary) 95%, white 5%);
-  font-size: .74rem;
-  line-height: 1;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__like-media {
@@ -2875,6 +2863,8 @@ voice-widget,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta {
@@ -2905,6 +2895,67 @@ voice-widget,
   height: 12px;
 }
 
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__id-media {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #5a89f0 70%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 95%, white 5%);
+  font-size: .62rem;
+  line-height: 1;
+  background: color-mix(in srgb, var(--bg-card) 72%, transparent);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__assets {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 76px);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__assets .card-back-asset {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 6px;
+  border-width: 1px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__assets .card-back-asset__label {
+  font-size: .45rem;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more-wrap {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more {
+  min-height: 26px;
+  height: 26px;
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: .66rem;
+  gap: 4px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more svg {
+  width: 11px;
+  height: 11px;
+}
+
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded {
   min-height: 252px;
   height: 252px;
@@ -2923,20 +2974,20 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__title,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__meta {
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  display: block;
   overflow: hidden;
-}
-
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__title {
-  -webkit-line-clamp: 2;
-}
-
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__meta {
-  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__expand svg {
   transform: rotate(180deg);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__assets {
+  display: inline-flex;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__more-wrap {
+  display: flex;
 }

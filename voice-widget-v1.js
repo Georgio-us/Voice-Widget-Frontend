@@ -9228,6 +9228,16 @@ render() {
       const slide = e.target.closest('.card-slide');
       const hiddenCount = Number(e.target.closest('[data-action="show-hidden-specs"]')?.getAttribute('data-hidden-count')) || 0;
       this.showBackSpecsOverflowPopup({ slide, hiddenCount });
+    } else if (e.target.closest('.list-card__assets .card-back-asset')) {
+      return;
+    } else if (e.target.closest('[data-action="list-open-full"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      const variantId = String(e.target.closest('[data-action="list-open-full"]')?.getAttribute('data-variant-id') || '').trim();
+      if (variantId) this.openCatalogCardInSlider(variantId);
+      return;
     } else if (e.target.closest('[data-action="list-expand"]')) {
       try {
         e.preventDefault();
@@ -10417,6 +10427,34 @@ render() {
     }
   }
 
+  openCatalogCardInSlider(variantId = '') {
+    const targetId = String(variantId || '').trim();
+    if (!targetId) return;
+    try {
+      this.setCatalogDisplayMode('slider');
+      requestAnimationFrame(() => {
+        try {
+          const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+          const idx = loadedIds.indexOf(targetId);
+          if (idx >= 0) this.scrollToSlideIndex(idx);
+          requestAnimationFrame(() => {
+            const sliderHost = this.getRoot().querySelector('.card-screen.cards-slider-host');
+            const safeSelector = typeof CSS !== 'undefined' && CSS.escape
+              ? `#${CSS.escape(targetId)}`
+              : `[id="${targetId.replace(/"/g, '\\"')}"]`;
+            const slide = sliderHost?.querySelector(`.cards-slider .card-slide${safeSelector}`);
+            if (!slide) return;
+            sliderHost.querySelectorAll('.card-slide.flipped').forEach((s) => {
+              if (s !== slide) s.classList.remove('flipped', 'card-slide--form-open');
+            });
+            slide.classList.add('flipped');
+            try { this.fitBackSpecsInSlide(slide); } catch {}
+          });
+        } catch {}
+      });
+    } catch {}
+  }
+
   toggleCatalogListExpand(slide = null) {
     try {
       if (this._catalogDisplayMode !== 'list') return;
@@ -10707,6 +10745,18 @@ render() {
     })();
     if (isList) {
       slide.classList.add('list-card-slide');
+      const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
+      const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
+      while (assetSlots.length < 4) assetSlots.push('');
+      const listAssetTilesHtml = assetSlots.map((assetUrl, idx) => {
+        const safeUrl = String(assetUrl || '').trim();
+        const isThumb = !!safeUrl;
+        const openUrl = safeUrl || fallbackAssetOpenUrl;
+        const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
+        const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
+        const bgStyle = isThumb ? ` style="background-image:url('${safeUrl.replace(/'/g, "\\'")}')"` : '';
+        return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}${bgStyle}><span class="card-back-asset__label">img</span></button>`;
+      }).join('');
       const listMetaParts = [];
       if (normalized.priceLabel) listMetaParts.push(escCardText(normalized.priceLabel));
       if (normalized.rooms) listMetaParts.push(`${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'к')}`);
@@ -10723,6 +10773,8 @@ render() {
               ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
               ${normalized.propertyTypeBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.propertyTypeBadgeLabel)}</span>` : ''}
             </div>
+            <span class="list-card__id-media">${escCardText(normalized.id || 'ID')}</span>
+            <div class="list-card__assets">${listAssetTilesHtml}</div>
             <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
@@ -10731,13 +10783,18 @@ render() {
           </div>
           <div class="list-card__body">
             <div class="list-card__top">
-              <span class="list-card__id">${escCardText(normalized.id || 'ID')}</span>
+              <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
               <button type="button" class="list-card__expand" data-action="list-expand" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.handoffDetails || 'Подробнее')}">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </div>
-            <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
             <div class="list-card__meta">${listMetaText}</div>
+            <div class="list-card__more-wrap">
+              <button type="button" class="list-card__more card-btn select card-more-btn" data-action="list-open-full" data-variant-id="${normalized.id}">
+                <span>${locale.handoffDetails || 'Подробнее'}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
           </div>
         </div>`;
       const row = this.ensureCatalogListRow(listBody);
