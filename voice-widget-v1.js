@@ -3880,6 +3880,7 @@ class VoiceWidget extends HTMLElement {
                     <option value="apartment">Квартира</option>
                     <option value="house">Дом</option>
                     <option value="commercial">Коммерция</option>
+                    <option value="land">Участок</option>
                   </select>
                 </label>
                 <label class="vw-access-add-field">
@@ -4722,7 +4723,7 @@ class VoiceWidget extends HTMLElement {
         for (let i = 1; i <= 30; i += 1) opts.push(`<option value="${i}">${i}</option>`);
         selectEl.innerHTML = opts.join('');
       };
-      const typeMap = { apartment: 'apartment', house: 'house', commercial: 'commercial' };
+      const typeMap = { apartment: 'apartment', house: 'house', commercial: 'commercial', land: 'land' };
       const resetForm = () => {
         overlay.querySelectorAll('input, textarea, select').forEach((el) => {
           if (el.matches('[readonly]')) return;
@@ -6908,6 +6909,7 @@ class VoiceWidget extends HTMLElement {
                 <option value="apartment">Квартира</option>
                 <option value="house">Дом</option>
                 <option value="commercial">Коммерческая</option>
+                <option value="land">Участок</option>
               </select>
             </div>
             <div class="vw-filters-top-grid">
@@ -10601,7 +10603,14 @@ render() {
     const escCardText = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const escCardAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const headlineTitle = this._cardFrontHeadline(normalized);
-    const districtLine = normalized.district || normalized.neighborhood || '';
+    const districtLine = (() => {
+      const district = String(normalized.district || '').trim();
+      const neighborhood = String(normalized.neighborhood || '').trim();
+      if (district && neighborhood && district.toLowerCase() !== neighborhood.toLowerCase()) {
+        return `${district} · ${neighborhood}`;
+      }
+      return district || neighborhood || '';
+    })();
     const scoreValue = (() => {
       const raw = Number(normalized.score);
       if (!Number.isFinite(raw)) return 0;
@@ -12133,14 +12142,23 @@ render() {
 
     const dynamicBackFeatureItems = [];
     pushExtra(dynamicBackFeatureItems, '🏠', isUaLang ? 'Тип' : 'Тип', mapPropertyTypeLabel(propertyType || rawFeatures.type || rawFeatures.propertyType || rawFeatures.buildingType));
+    pushExtra(dynamicBackFeatureItems, '📍', isUaLang ? 'Мікрорайон' : 'Микрорайон', neighborhood);
     pushExtra(dynamicBackFeatureItems, '🏘️', 'ЖК', canonicalComplex);
     if (canonicalExclusive) pushExtra(dynamicBackFeatureItems, '⭐', isUaLang ? 'Ексклюзив' : 'Эксклюзив', isUaLang ? 'так' : 'да');
+    const penthouseFlag = truthyLabel(rawFeatures.penthouse);
+    if (penthouseFlag === true) pushExtra(dynamicBackFeatureItems, '🏙️', isUaLang ? 'Пентхаус' : 'Пентхаус', boolYesLabel(penthouseFlag));
+    const smartFlatFlag = truthyLabel(rawFeatures.smartFlat);
+    if (smartFlatFlag === true) pushExtra(dynamicBackFeatureItems, '🧠', isUaLang ? 'Смарт-квартира' : 'Смарт-квартира', boolYesLabel(smartFlatFlag));
+    const newbuildingFlag = truthyLabel(rawFeatures.newbuilding);
+    if (newbuildingFlag === true) pushExtra(dynamicBackFeatureItems, '🆕', isUaLang ? 'Новобудова' : 'Новострой', boolYesLabel(newbuildingFlag));
     pushExtra(dynamicBackFeatureItems, '🧱', 'Стіни', rawFeatures.wallMaterial || rawFeatures.materialWalls);
     const elevatorFlag = truthyLabel(rawFeatures.elevator);
     if (elevatorFlag === true) pushExtra(dynamicBackFeatureItems, '🛗', isUaLang ? 'Ліфт' : 'Лифт', boolYesLabel(elevatorFlag));
     pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', rawFeatures.balconyType || null);
     const balconyFlag = truthyLabel(rawFeatures.balcony);
+    const loggiaFlag = truthyLabel(rawFeatures.loggia);
     if (balconyFlag === true) pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон' : 'Балкон', boolYesLabel(balconyFlag));
+    if (loggiaFlag === true) pushExtra(dynamicBackFeatureItems, '🪟', isUaLang ? 'Лоджія' : 'Лоджия', boolYesLabel(loggiaFlag));
     if (balconyFlag !== true && canonicalBalconyOrLoggia) {
       pushExtra(dynamicBackFeatureItems, '🌤️', isUaLang ? 'Балкон/лоджія' : 'Балкон/лоджия', isUaLang ? 'є' : 'есть');
     }
