@@ -2810,6 +2810,7 @@ voice-widget,
   grid-template-rows: auto auto auto;
   gap: 4px;
   padding: 6px 8px;
+  overflow: hidden;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__top {
@@ -2817,6 +2818,7 @@ voice-widget,
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__like-media {
@@ -2880,6 +2882,7 @@ voice-widget,
   width: 28px;
   height: 20px;
   min-width: 28px;
+  flex: 0 0 28px;
   border-radius: 8px;
   border: 1px solid var(--border-light);
   background: color-mix(in srgb, var(--bg-element) 88%, transparent);
@@ -2914,13 +2917,14 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__assets {
   position: absolute;
-  right: 6px;
+  left: 6px;
   bottom: 6px;
   z-index: 2;
   display: none;
   align-items: center;
   gap: 4px;
-  max-width: calc(100% - 76px);
+  max-width: calc(100% - 12px);
+  overflow: hidden;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__assets .card-back-asset {
@@ -2939,21 +2943,34 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more-wrap {
   display: none;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  margin-top: auto;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more {
   min-height: 26px;
   height: 26px;
   border-radius: 8px;
-  padding: 0 8px;
+  padding: 0 10px;
   font-size: .66rem;
   gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more svg {
   width: 11px;
   height: 11px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__more span {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded {
@@ -2970,6 +2987,7 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__body {
   padding: 8px 10px;
   gap: 6px;
+  grid-template-rows: auto auto 1fr;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__title,
@@ -2980,12 +2998,25 @@ voice-widget,
   text-overflow: ellipsis;
 }
 
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__meta {
+  font-size: .68rem;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #5a89f0 42%, transparent);
+  background: color-mix(in srgb, var(--bg-element) 78%, transparent);
+}
+
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__expand svg {
   transform: rotate(180deg);
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__assets {
   display: inline-flex;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__id-media {
+  bottom: 30px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__more-wrap {
