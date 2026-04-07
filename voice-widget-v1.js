@@ -3714,7 +3714,7 @@ class VoiceWidget extends HTMLElement {
       : sourceList;
     const objects = list
       .map((item, idx) => {
-        const id = String(item?.id || item?.variantId || item?._id || '').trim();
+        const id = String(item?.external_id || item?.externalId || item?.id || item?.variantId || item?._id || '').trim();
         if (!id) return null;
         const title = String(item?.title || item?.description || `Объект ${idx + 1}`).trim();
         const district = String(item?.district || item?.neighborhood || item?.city || '—').trim() || '—';
@@ -4301,13 +4301,13 @@ class VoiceWidget extends HTMLElement {
         }
         const currentList = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
         window.appState.allProperties = currentList.filter((item) => {
-          const id = String(item?.id || item?.variantId || item?._id || '').trim();
+          const id = String(item?.external_id || item?.externalId || item?.id || item?.variantId || item?._id || '').trim();
           return !succeeded.includes(id);
         });
         const fullList = this._getFullCatalogProperties();
         if (fullList.length) {
           const nextFull = fullList.filter((item) => {
-            const id = String(item?.id || item?.variantId || item?._id || '').trim();
+            const id = String(item?.external_id || item?.externalId || item?.id || item?.variantId || item?._id || '').trim();
             return !succeeded.includes(id);
           });
           this._setFullCatalogProperties(nextFull);
