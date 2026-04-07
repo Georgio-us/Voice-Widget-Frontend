@@ -9233,6 +9233,8 @@ render() {
         e.preventDefault();
         e.stopPropagation();
       } catch {}
+      const slide = e.target.closest('.card-slide');
+      this.toggleCatalogListExpand(slide);
       return;
     } else if (e.target.closest('.card-btn[data-action="select"]')) {
       // Flip: визуальный тест — показываем back сторону карточки
@@ -10271,6 +10273,13 @@ render() {
         this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: true });
       } catch {}
     });
+    if (this._catalogExpandedCardId) {
+      const expandedId = String(this._catalogExpandedCardId).trim();
+      const safeSelector = typeof CSS !== 'undefined' && CSS.escape ? `#${CSS.escape(expandedId)}` : `[id="${expandedId.replace(/"/g, '\\"')}"]`;
+      const expandedSlide = listBody.querySelector(`.card-slide.list-card-slide${safeSelector}`);
+      if (expandedSlide) expandedSlide.classList.add('is-expanded');
+      else this._catalogExpandedCardId = null;
+    }
     // Keep active id aligned with currently visible tail card in list mode.
     this._catalogActiveId = windowIds.length ? windowIds[windowIds.length - 1] : null;
     try { this.maybeTriggerSliderCheckpoint(Math.max(0, end - 1)); } catch {}
@@ -10296,6 +10305,7 @@ render() {
 
   handleCatalogListPrev() {
     if (this._catalogDisplayMode !== 'list') return;
+    this._catalogExpandedCardId = null;
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
     if (!loadedIds.length) return;
     const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
@@ -10311,6 +10321,7 @@ render() {
 
   handleCatalogListNext() {
     if (this._catalogDisplayMode !== 'list') return;
+    this._catalogExpandedCardId = null;
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
     if (!loadedIds.length) return;
     const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
@@ -10400,9 +10411,31 @@ render() {
       if (prev !== next && next === 'list') {
         // Re-anchor list window around current active card from slider.
         this._catalogListWindowStart = -1;
+        this._catalogExpandedCardId = null;
       }
       if (prev !== next) this.rebuildCatalogLayoutFromVisibleIds();
     }
+  }
+
+  toggleCatalogListExpand(slide = null) {
+    try {
+      if (this._catalogDisplayMode !== 'list') return;
+      const targetSlide = slide?.closest?.('.card-slide.list-card-slide');
+      if (!targetSlide) return;
+      const variantId = String(
+        targetSlide.id ||
+        targetSlide.querySelector('[data-variant-id]')?.getAttribute('data-variant-id') ||
+        ''
+      ).trim();
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+      if (!host || !variantId) return;
+      const willOpen = this._catalogExpandedCardId !== variantId;
+      this._catalogExpandedCardId = willOpen ? variantId : null;
+      host.querySelectorAll('.card-slide.list-card-slide.is-expanded').forEach((node) => {
+        node.classList.remove('is-expanded');
+      });
+      if (willOpen) targetSlide.classList.add('is-expanded');
+    } catch {}
   }
 
   bindCatalogListScrollOnMessages() {
@@ -10681,7 +10714,7 @@ render() {
       if (districtLine) listMetaParts.push(escCardText(districtLine));
       const listMetaText = listMetaParts.join('  ·  ') || '—';
       slide.innerHTML = `
-        <div class="list-card" data-variant-id="${normalized.id}">
+        <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
           <div class="list-card__media">
             ${normalized.image
               ? `<img class="list-card__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">`
@@ -10690,23 +10723,21 @@ render() {
               ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
               ${normalized.propertyTypeBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.propertyTypeBadgeLabel)}</span>` : ''}
             </div>
+            <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
+              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            </button>
           </div>
           <div class="list-card__body">
             <div class="list-card__top">
               <span class="list-card__id">${escCardText(normalized.id || 'ID')}</span>
-              <button class="list-card__like card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
-                <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-              </button>
-            </div>
-            <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
-            <div class="list-card__meta">${listMetaText}</div>
-            <div class="list-card__actions">
               <button type="button" class="list-card__expand" data-action="list-expand" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.handoffDetails || 'Подробнее')}">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </div>
+            <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
+            <div class="list-card__meta">${listMetaText}</div>
           </div>
         </div>`;
       const row = this.ensureCatalogListRow(listBody);
