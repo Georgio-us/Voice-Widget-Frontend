@@ -3047,7 +3047,7 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card {
   grid-template-columns: 100%;
-  grid-template-rows: 58% 1fr;
+  grid-template-rows: 118px 1fr;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__body {
