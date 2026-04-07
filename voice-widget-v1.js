@@ -4599,6 +4599,28 @@ class VoiceWidget extends HTMLElement {
         if (!clean) return '';
         return Number(clean).toLocaleString('en-US');
       };
+      const normalizeDecimalString = (value, fractionDigits = 2) => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        let cleaned = raw.replace(/\s+/g, '').replace(/,/g, '.').replace(/[^\d.]/g, '');
+        const firstDot = cleaned.indexOf('.');
+        if (firstDot >= 0) {
+          cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
+        }
+        let [intPart = '', fracPart = ''] = cleaned.split('.');
+        intPart = intPart.replace(/^0+(?=\d)/, '');
+        if (!intPart) intPart = '0';
+        fracPart = String(fracPart || '').replace(/[^\d]/g, '').slice(0, Math.max(0, Number(fractionDigits) || 0));
+        return fracPart ? `${intPart}.${fracPart}` : intPart;
+      };
+      const formatAreaLabel = (value) => {
+        const normalized = normalizeDecimalString(value, 2);
+        if (!normalized) return '';
+        const [intPart = '0', fracPart = ''] = normalized.split('.');
+        const groupedInt = String(intPart).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+        const cleanFrac = String(fracPart || '').replace(/0+$/g, '');
+        return cleanFrac ? `${groupedInt},${cleanFrac} м²` : `${groupedInt} м²`;
+      };
       const steps = { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
       const draft = { photos: Array(5).fill(''), photoFiles: Array(5).fill(null) };
       const priceInput = overlay.querySelector('[data-role="price"]');
@@ -4944,9 +4966,11 @@ class VoiceWidget extends HTMLElement {
           const value = [fromPrice, fromUsd, fromAmount, fromLegacy].find((n) => Number.isFinite(n) && n > 0);
           return Number.isFinite(value) ? String(Math.round(value)) : '';
         };
-        const parseArea = () => {
+          const parseArea = () => {
           const n = Number(property.area_m2 ?? property.area ?? property.specs_area_m2);
-          return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : '';
+          if (!Number.isFinite(n) || n <= 0) return '';
+          const rounded = Math.round(n * 100) / 100;
+          return String(rounded).replace(/\.0+$/g, '').replace(/(\.\d*[1-9])0+$/g, '$1');
         };
         const parseRooms = () => {
           const n = Number(property.rooms ?? property.specs_rooms);
@@ -5186,7 +5210,9 @@ class VoiceWidget extends HTMLElement {
         if (fieldEl === areaInput) {
           attachInlineFieldActions(fieldEl, {
             onInput: (el) => {
-              el.value = String(el.value || '').replace(/\s*м²$/i, '');
+              el.value = String(el.value || '')
+                .replace(/\s*м²$/i, '')
+                .replace(/[^\d\s,.\u00A0]/g, '');
             },
             onApply: (el) => {
               const raw = String(el.value || '').replace(/\s*м²$/i, '').trim();
@@ -5195,12 +5221,12 @@ class VoiceWidget extends HTMLElement {
                 setFieldError(el, 'Введите цифры');
                 return false;
               }
-              const digits = raw.replace(/[^\d]/g, '');
-              if (!digits) {
+              const normalized = normalizeDecimalString(raw, 2);
+              if (!normalized || Number(normalized) <= 0) {
                 setFieldError(el, 'Введите цифры');
                 return false;
               }
-              el.value = `${formatThousands(digits)} м²`;
+              el.value = formatAreaLabel(normalized);
               return true;
             }
           });
@@ -5628,7 +5654,7 @@ class VoiceWidget extends HTMLElement {
             complex: data.complex,
             price: String(data.price || '').replace(/[^\d]/g, ''),
             rooms: data.rooms,
-            area: String(data.area || '').replace(/[^\d]/g, ''),
+            area: normalizeDecimalString(String(data.area || '').replace(/\s*м²$/i, ''), 2),
             floor: data.floor,
             floorsTotal: data.floorsTotal,
             existingImages,
