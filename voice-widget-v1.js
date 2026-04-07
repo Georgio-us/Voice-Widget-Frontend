@@ -9857,6 +9857,28 @@ render() {
       if (['0', 'false', 'no', 'n', 'нет', 'ні'].includes(t)) return false;
       return null;
     };
+    const canonicalDistrict = (value) => {
+      const d = this._normalizeDistrictForRelax(value || '');
+      if (d === 'hadzhibeyskyi') return 'malinovsky';
+      if (d === 'peresypskyi') return 'suvorovsky';
+      return d;
+    };
+    const districtRank = (fromDistrict, candidateDistrict) => {
+      const from = canonicalDistrict(fromDistrict);
+      const to = canonicalDistrict(candidateDistrict);
+      if (!from || !to) return null;
+      if (from === to) return 0;
+      const orderMap = {
+        primorsky: ['kievsky', 'malinovsky', 'suvorovsky'],
+        kievsky: ['primorsky', 'malinovsky', 'suvorovsky'],
+        malinovsky: ['kievsky', 'primorsky', 'suvorovsky'],
+        suvorovsky: ['primorsky', 'kievsky', 'malinovsky']
+      };
+      const order = orderMap[from];
+      if (!Array.isArray(order)) return null;
+      const idx = order.indexOf(to);
+      return idx >= 0 ? (idx + 1) : null;
+    };
 
     const qOp = canonicalOperation(query.operation);
     const iOp = canonicalOperation(item.operation);
@@ -9866,9 +9888,8 @@ render() {
     const iType = canonicalType(item.property_type || item.type);
     if (qType && iType && qType !== iType) return null;
 
-    const qDistrict = this._normalizeDistrictForRelax(query.district || '');
-    const iDistrict = this._normalizeDistrictForRelax(item.district || item.neighborhood || item.city || '');
-    if (qDistrict && iDistrict && qDistrict !== iDistrict) return null;
+    const qDistrict = canonicalDistrict(query.district || '');
+    const iDistrict = canonicalDistrict(item.district || item.neighborhood || item.city || '');
 
     const qRc = text(query.residentialComplex);
     const iRc = text(item?.features?.complex || item?.features?.display_specs?.complex);
@@ -9891,6 +9912,23 @@ render() {
       } else if (!iRc.includes(qRc)) {
         // Similar mode: when exact ЖК is exhausted, allow other ЖК with penalty.
         penalty += query.rcOnly === true ? 3 : 4;
+      }
+    }
+
+    if (qDistrict) {
+      const rank = districtRank(qDistrict, iDistrict);
+      if (rank === 0) {
+        // same district, no penalty
+      } else if (rank === 1) {
+        penalty += 1;
+      } else if (rank === 2) {
+        penalty += 2;
+      } else if (rank === 3) {
+        penalty += 3;
+      } else if (!iDistrict) {
+        penalty += 3;
+      } else {
+        return null;
       }
     }
 
