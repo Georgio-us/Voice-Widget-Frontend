@@ -10881,12 +10881,21 @@ render() {
         const bgStyle = isThumb ? ` style="background-image:url('${safeUrl.replace(/'/g, "\\'")}')"` : '';
         return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}${bgStyle}><span class="card-back-asset__label">img</span></button>`;
       }).join('');
-      const listMetaParts = [];
-      if (normalized.priceLabel) listMetaParts.push(escCardText(normalized.priceLabel));
-      if (normalized.rooms) listMetaParts.push(`${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'к')}`);
-      if (normalized.area_m2 != null && normalized.area_m2 !== '') listMetaParts.push(`${escCardText(normalized.area_m2)}м2`);
-      if (districtLine) listMetaParts.push(escCardText(districtLine));
-      const listMetaText = listMetaParts.join('  ·  ') || '—';
+      const complexLine = String(
+        normalized?.features?.complex
+        || normalized?.display_specs?.complex
+        || ''
+      ).trim();
+      const listMetaLine1Parts = [];
+      if (normalized.priceLabel) listMetaLine1Parts.push(`<span class="list-card__meta-strong">${escCardText(normalized.priceLabel)}</span>`);
+      if (normalized.rooms) listMetaLine1Parts.push(`<span class="list-card__meta-strong">${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'к')}</span>`);
+      if (normalized.area_m2 != null && normalized.area_m2 !== '') listMetaLine1Parts.push(`<span>${escCardText(normalized.area_m2)} м²</span>`);
+      const listMetaLine2Parts = [];
+      if (districtLine) listMetaLine2Parts.push(`<span>${escCardText(districtLine)}</span>`);
+      if (normalized.floor) listMetaLine2Parts.push(`<span>${escCardText(this.getLangCode() === 'ua' ? 'Поверх' : 'Этаж')} ${escCardText(normalized.floor)}</span>`);
+      if (complexLine) listMetaLine2Parts.push(`<span>${escCardText(this.getLangCode() === 'ua' ? 'ЖК' : 'ЖК')} ${escCardText(complexLine)}</span>`);
+      const listMetaLine1 = listMetaLine1Parts.join('<span class="list-card__meta-sep"> · </span>') || '<span>—</span>';
+      const listMetaLine2 = listMetaLine2Parts.join('<span class="list-card__meta-sep"> · </span>') || '<span>—</span>';
       const listSpecChips = [];
       if (normalized.rooms) listSpecChips.push(`🛏️ ${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
       if (normalized.area_m2 != null && normalized.area_m2 !== '') listSpecChips.push(`📐 ${escCardText(normalized.area_m2)} м²`);
@@ -10913,7 +10922,10 @@ render() {
             <div class="list-card__top">
               <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
             </div>
-            <div class="list-card__meta">${listMetaText}</div>
+            <div class="list-card__meta">
+              <div class="list-card__meta-line">${listMetaLine1}</div>
+              <div class="list-card__meta-line">${listMetaLine2}</div>
+            </div>
             <div class="list-card__row2">
               <div class="list-card__district">${escCardText(districtLine || '—')}</div>
               <div class="list-card__price-pill">${escCardText(normalized.priceLabel || '—')}</div>

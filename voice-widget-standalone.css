@@ -2874,10 +2874,28 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta {
   font-size: .58rem;
   line-height: 1.25;
-  color: color-mix(in srgb, var(--text-primary) 78%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 88%, transparent);
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-line {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-strong {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text-primary) 96%, transparent);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-sep {
+  color: color-mix(in srgb, var(--text-primary) 62%, transparent);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide:not(.is-expanded) .list-card__top {
+  margin-top: 3px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__chips {
