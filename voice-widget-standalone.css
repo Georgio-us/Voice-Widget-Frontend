@@ -3287,6 +3287,7 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__body {
   min-width: 0;
   min-height: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -3297,6 +3298,16 @@ voice-widget,
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__body .card-back-scroll {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-header {
+  margin-bottom: 14px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-header__close,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-header__score {
+  font-size: .7rem;
+  border-radius: 8px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__title,
@@ -3338,11 +3349,14 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-primary-action {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
   min-height: 40px;
   height: 40px;
-  border-radius: 10px;
-  font-size: var(--fs-body);
+  border-radius: 8px;
+  font-size: .85rem;
+  padding: 0 22px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-icon-btn {
@@ -3350,13 +3364,27 @@ voice-widget,
   height: 40px;
   min-width: 40px;
   flex: 0 0 40px;
+  border-radius: 8px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-description-btn {
   min-height: 24px;
   height: 24px;
   border-radius: 0;
-  font-size: .66rem;
+  font-size: .7rem;
   line-height: 1;
   margin-top: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions {
+  margin-top: 10px;
+  gap: 6px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row {
+  justify-content: center;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-specs__item {
+  border-radius: 8px;
 }
