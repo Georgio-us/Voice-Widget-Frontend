@@ -1012,16 +1012,8 @@ class UIManager {
   _snapshotKey() { return `vw_last_snapshot`; }
 
   loadHistory() {
-    try {
-      const raw = localStorage.getItem(this._storageKey());
-      const list = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(list) && list.length) {
-        this.widget.messages = list;
-        this._renderThreadFromMessages(list);
-        this.activateDialogButtons();
-        this.updateMessageCount();
-      }
-    } catch (e) { console.warn('Не удалось загрузить историю:', e); }
+    // Conversation state intentionally does not survive page reload.
+    this.widget.messages = [];
   }
 
   _renderThreadFromMessages(list) {
@@ -1035,8 +1027,7 @@ class UIManager {
   }
 
   _saveHistory() {
-    try { localStorage.setItem(this._storageKey(), JSON.stringify(this.widget.messages.slice(-500))); }
-    catch (e) { console.warn('Не удалось сохранить историю:', e); }
+    // Conversation state is in-memory only.
   }
 
   addMessage(message) {
@@ -1760,20 +1751,23 @@ class APIClient {
   }
 
   // Загрузка информации о сессии (только если sessionId есть)
-  async loadSessionInfo() {
+  async loadSessionInfo(options = {}) {
     if (!this.widget.sessionId) return { exists: null, expired: false };
+    const applyState = options?.applyState !== false;
     try {
       const sid = this.widget.sessionId;
       const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`);
       const response = await fetch(sessionUrl);
       if (response.ok) {
         const data = await response.json();
-        this.storeLastApiPayload(data, 'loadSessionInfo');
-        this.syncBackendDrivenState(data);
-        if (data.insights) {
-          const migrated = this.widget.understanding.migrateInsights(data.insights);
-          this.widget.understanding.update(migrated);
-          console.log('📥 Загружены данные сессии:', data);
+        if (applyState) {
+          this.storeLastApiPayload(data, 'loadSessionInfo');
+          this.syncBackendDrivenState(data);
+          if (data.insights) {
+            const migrated = this.widget.understanding.migrateInsights(data.insights);
+            this.widget.understanding.update(migrated);
+            console.log('📥 Загружены данные сессии:', data);
+          }
         }
         // 🆕 Sprint I: сохраняем role из server response (read-only)
         if (data?.role !== undefined) {
@@ -1797,6 +1791,7 @@ class APIClient {
 
   // ---------- Текст ----------
   async sendTextMessage() {
+    try { this.widget.touchStorageLifecycle?.(); } catch {}
     const textInput = this.widget.$byId('textInput');
     const sendButton = this.widget.$byId('sendButton');
     const messageText = textInput?.value?.trim();
@@ -1895,6 +1890,7 @@ class APIClient {
 
   // ---------- Аудио ----------
   async sendMessage() {
+    try { this.widget.touchStorageLifecycle?.(); } catch {}
     if (!this.widget.audioRecorder.audioBlob) {
       console.error('Нет аудио для отправки');
       return;
@@ -2570,6 +2566,17 @@ class VoiceWidget extends HTMLElement {
     super();
   }
 
+  static STORAGE_KEYS = {
+    visitor: 'vw_visitor_v1',
+    activity: 'vw_activity_session_v1'
+  };
+
+  static STORAGE_TTL = {
+    visitorMs: 30 * 24 * 60 * 60 * 1000,
+    activityMs: 60 * 60 * 1000,
+    guestWishlistMs: 7 * 24 * 60 * 60 * 1000
+  };
+
   _initializeInstance() {
     if (this._initializedOnce) return;
 
@@ -2624,6 +2631,7 @@ class VoiceWidget extends HTMLElement {
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
     this._accessOverlayOpen = false;
     this._filtersOverlayOpen = false;
+    this.initializeStorageLifecycle();
     this._wishlistIds = this.loadWishlistIds();
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
@@ -3226,8 +3234,106 @@ class VoiceWidget extends HTMLElement {
     return root?.querySelector?.('#' + id) || null;
   }
 
+  _safeReadJsonFromStorage(key) {
+    try {
+      const raw = localStorage.getItem(String(key || ''));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  _safeWriteJsonToStorage(key, value) {
+    try {
+      localStorage.setItem(String(key || ''), JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  _createLifecycleId(prefix = 'vw') {
+    const token = Math.random().toString(36).slice(2, 10);
+    return `${prefix}_${Date.now().toString(36)}_${token}`;
+  }
+
+  _upsertLifecycleRecord({ key, ttlMs, prefix }) {
+    const now = Date.now();
+    const prev = this._safeReadJsonFromStorage(key);
+    const prevExpires = Number(prev?.expiresAt);
+    const prevCreated = Number(prev?.createdAt);
+    const validPrev = !!(prev?.id && Number.isFinite(prevExpires) && prevExpires > now);
+    const renewed = !validPrev;
+    const id = validPrev ? String(prev.id) : this._createLifecycleId(prefix);
+    const createdAt = validPrev && Number.isFinite(prevCreated) ? prevCreated : now;
+    const record = {
+      id,
+      createdAt,
+      lastSeenAt: now,
+      expiresAt: now + Math.max(1, Number(ttlMs) || 1)
+    };
+    this._safeWriteJsonToStorage(key, record);
+    return { record, renewed };
+  }
+
+  initializeStorageLifecycle() {
+    const visitor = this._upsertLifecycleRecord({
+      key: VoiceWidget.STORAGE_KEYS.visitor,
+      ttlMs: VoiceWidget.STORAGE_TTL.visitorMs,
+      prefix: 'vst'
+    });
+    const activity = this._upsertLifecycleRecord({
+      key: VoiceWidget.STORAGE_KEYS.activity,
+      ttlMs: VoiceWidget.STORAGE_TTL.activityMs,
+      prefix: 'act'
+    });
+    this.visitorId = String(visitor?.record?.id || '').trim() || 'anon';
+    this.activitySessionId = String(activity?.record?.id || '').trim() || '';
+    this._activityRenewed = activity?.renewed === true;
+  }
+
+  touchStorageLifecycle() {
+    this._upsertLifecycleRecord({
+      key: VoiceWidget.STORAGE_KEYS.visitor,
+      ttlMs: VoiceWidget.STORAGE_TTL.visitorMs,
+      prefix: 'vst'
+    });
+    this._upsertLifecycleRecord({
+      key: VoiceWidget.STORAGE_KEYS.activity,
+      ttlMs: VoiceWidget.STORAGE_TTL.activityMs,
+      prefix: 'act'
+    });
+  }
+
+  isGuestViewer() {
+    const tgUser = this.getCurrentTelegramUser();
+    const userId = String(tgUser?.id || '').trim();
+    return !userId;
+  }
+
+  getGuestWishlistStorageKey() {
+    return `vw_wishlist_guest_${String(this.visitorId || 'anon').trim() || 'anon'}`;
+  }
+
+  purgeConversationPersistence() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k === 'vw_last_snapshot' || k.startsWith('vw_thread_')) keys.push(k);
+      }
+      keys.forEach((k) => {
+        try { localStorage.removeItem(k); } catch {}
+      });
+    } catch {}
+  }
+
   // берем id из localStorage (если ранее выдал сервер); иначе null
   getInitialSessionId() {
+    if (this._activityRenewed === true) return null;
     try {
       return (
         localStorage.getItem('vw_sessionId') ||
@@ -3379,19 +3485,45 @@ class VoiceWidget extends HTMLElement {
 
   getWishlistStorageKey() {
     const tgUser = this.getCurrentTelegramUser();
-    const userId = String(tgUser?.id || 'anon').trim() || 'anon';
+    const userId = String(tgUser?.id || '').trim();
+    if (!userId) return this.getGuestWishlistStorageKey();
     return `vw_wishlist_ids_${userId}`;
   }
 
   loadWishlistIds() {
     try {
-      const raw = localStorage.getItem(this.getWishlistStorageKey());
+      const storageKey = this.getWishlistStorageKey();
+      let raw = localStorage.getItem(storageKey);
+      if (!raw && this.isGuestViewer()) {
+        const legacyRaw = localStorage.getItem('vw_wishlist_ids_anon');
+        if (legacyRaw) raw = legacyRaw;
+      }
       if (!raw) return new Set();
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return new Set();
-      const ids = parsed
-        .map((item) => String(item || '').trim())
-        .filter(Boolean);
+
+      let parsed = JSON.parse(raw);
+      if (this.isGuestViewer()) {
+        const now = Date.now();
+        if (Array.isArray(parsed)) {
+          parsed = {
+            ids: parsed,
+            createdAt: now,
+            lastSeenAt: now,
+            expiresAt: now + VoiceWidget.STORAGE_TTL.guestWishlistMs
+          };
+        }
+        const expiresAt = Number(parsed?.expiresAt);
+        if (!parsed || !Array.isArray(parsed?.ids) || !Number.isFinite(expiresAt) || expiresAt <= now) {
+          try { localStorage.removeItem(storageKey); } catch {}
+          return new Set();
+        }
+        parsed.lastSeenAt = now;
+        parsed.expiresAt = now + VoiceWidget.STORAGE_TTL.guestWishlistMs;
+        this._safeWriteJsonToStorage(storageKey, parsed);
+      }
+
+      const source = Array.isArray(parsed) ? parsed : parsed?.ids;
+      if (!Array.isArray(source)) return new Set();
+      const ids = source.map((item) => String(item || '').trim()).filter(Boolean);
       return new Set(ids);
     } catch {
       return new Set();
@@ -3401,7 +3533,21 @@ class VoiceWidget extends HTMLElement {
   persistWishlistIds() {
     try {
       if (!(this._wishlistIds instanceof Set)) this._wishlistIds = new Set();
-      localStorage.setItem(this.getWishlistStorageKey(), JSON.stringify(Array.from(this._wishlistIds)));
+      const storageKey = this.getWishlistStorageKey();
+      const ids = Array.from(this._wishlistIds);
+      if (this.isGuestViewer()) {
+        const prev = this._safeReadJsonFromStorage(storageKey);
+        const now = Date.now();
+        const payload = {
+          ids,
+          createdAt: Number(prev?.createdAt) || now,
+          lastSeenAt: now,
+          expiresAt: now + VoiceWidget.STORAGE_TTL.guestWishlistMs
+        };
+        this._safeWriteJsonToStorage(storageKey, payload);
+      } else {
+        localStorage.setItem(storageKey, JSON.stringify(ids));
+      }
     } catch {}
   }
 
@@ -3415,6 +3561,7 @@ class VoiceWidget extends HTMLElement {
   toggleWishlistSelection(id, selected = null) {
     const sid = String(id || '').trim();
     if (!sid) return false;
+    this.touchStorageLifecycle();
     if (!(this._wishlistIds instanceof Set)) this._wishlistIds = this.loadWishlistIds();
     const targetState = selected == null ? !this._wishlistIds.has(sid) : !!selected;
     if (targetState) this._wishlistIds.add(sid);
@@ -8143,6 +8290,10 @@ class VoiceWidget extends HTMLElement {
     const finalizeBootstrapFlow = () => {
       try { this.ensureInitialGreetingAndFreshState(); } catch {}
     };
+    try { this.touchStorageLifecycle(); } catch {}
+    try { this.purgeConversationPersistence(); } catch {}
+    try { this.ui.clearMessages(); } catch {}
+    try { this.resetCatalogRuntimeState(); } catch {}
 
     // единый ввод
     this.ui.bindUnifiedInputEvents();
@@ -8152,7 +8303,7 @@ class VoiceWidget extends HTMLElement {
 
     // 1) проверяем session на сервере 2) только потом грузим локальную историю (без "мигания")
     if (this.sessionId) {
-      this.api.loadSessionInfo()
+      this.api.loadSessionInfo({ applyState: false })
         .then((state) => {
           if (state?.expired) {
             try { this.ui.clearMessages(); } catch {}
@@ -8161,15 +8312,12 @@ class VoiceWidget extends HTMLElement {
             finalizeBootstrapFlow();
             return;
           }
-          try { this.ui.loadHistory(); } catch {}
           finalizeBootstrapFlow();
         })
         .catch(() => {
-          try { this.ui.loadHistory(); } catch {}
           finalizeBootstrapFlow();
         });
     } else {
-      this.ui.loadHistory();
       finalizeBootstrapFlow();
     }
 
