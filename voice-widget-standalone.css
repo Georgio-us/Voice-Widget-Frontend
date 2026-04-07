@@ -2901,7 +2901,7 @@ voice-widget,
   font-size: .68rem;
   line-height: 1.2;
   color: color-mix(in srgb, var(--text-primary) 92%, transparent);
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-secondary {
@@ -2918,7 +2918,7 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-item--strong {
-  font-weight: 900;
+  font-weight: 700;
   color: color-mix(in srgb, var(--text-primary) 96%, transparent);
 }
 
