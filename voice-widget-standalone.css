@@ -2736,3 +2736,159 @@ voice-widget,
   height: 360px;
   max-height: 360px;
 }
+
+/* Dedicated list card template (separate from slider card) */
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide {
+  min-height: 140px;
+  height: 140px;
+  max-height: 140px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  overflow: hidden;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card {
+  display: grid;
+  grid-template-columns: 38% 1fr;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__media {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, var(--bg-element) 80%, black 20%);
+  overflow: hidden;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__image--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--text-primary) 70%, transparent);
+  font-size: .72rem;
+  letter-spacing: .02em;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__badges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: .56rem;
+  line-height: 1;
+  background: color-mix(in srgb, #5a89f0 22%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, #5a89f0 55%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 92%, white 8%);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__body {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__id {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #5a89f0 70%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 95%, white 5%);
+  font-size: .74rem;
+  line-height: 1;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__like {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: color-mix(in srgb, var(--bg-element) 88%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__like svg {
+  width: 15px;
+  height: 15px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__title {
+  font-size: .98rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta {
+  font-size: .80rem;
+  line-height: 1.25;
+  color: color-mix(in srgb, var(--text-primary) 78%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__expand {
+  width: 30px;
+  height: 18px;
+  min-width: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: color-mix(in srgb, var(--bg-element) 88%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 92%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__expand svg {
+  width: 12px;
+  height: 12px;
+}
