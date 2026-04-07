@@ -3185,19 +3185,37 @@ voice-widget,
   position: relative;
   width: 100%;
   height: 100%;
-  display: grid;
-  grid-template-rows: auto 36% 1fr;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .2;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__bg--fallback {
+  background-image: repeating-linear-gradient(45deg,var(--skeleton-a),var(--skeleton-a) 12px,var(--skeleton-b) 12px,var(--skeleton-b) 24px);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full > :not(.list-card-full__bg) {
+  position: relative;
+  z-index: 1;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__head {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px 6px;
+  display: none;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full__back {
@@ -3272,7 +3290,7 @@ voice-widget,
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -3321,23 +3339,23 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-primary-action {
   flex: 1 1 auto;
-  min-height: 28px;
-  height: 28px;
-  border-radius: 8px;
-  font-size: .68rem;
+  min-height: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: var(--fs-body);
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-icon-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  flex: 0 0 28px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  flex: 0 0 40px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-description-btn {
-  min-height: 24px;
-  height: 24px;
-  border-radius: 8px;
-  font-size: .66rem;
-  margin-top: auto;
+  min-height: 32px;
+  height: auto;
+  border-radius: 0;
+  font-size: inherit;
+  margin-top: 0;
 }

@@ -10546,30 +10546,14 @@ render() {
       const safeDescription = String(normalized.description || locale.cardDescriptionEmpty || 'Description unavailable')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-      const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
-        const safeUrl = String(assetUrl || '').trim();
-        const isThumb = !!safeUrl;
-        const openUrl = safeUrl || fallbackAssetOpenUrl;
-        const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
-        const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
-        return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}><span class="card-back-asset__label">img</span></button>`;
-      }).join('');
       const panel = document.createElement('div');
       panel.className = 'list-card-full';
       panel.innerHTML = `
         <div class="cs" data-variant-id="${normalized.id}" style="display:none"></div>
-        <div class="list-card-full__head">
-          <button type="button" class="list-card-full__back" data-action="list-full-close">Назад</button>
-          <div class="list-card-full__title-top">${escCardText(locale.handoffDetails || 'Подробнее')}</div>
+        <div class="list-card-full__bg${normalized.image ? '' : ' list-card-full__bg--fallback'}" aria-hidden="true"></div>
+        <div class="card-back-header">
+          <button type="button" class="card-back-header__close list-card-full__back" data-action="list-full-close" aria-label="Back">Назад</button>
           <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
-        </div>
-        <div class="list-card-full__media cs-image-click-area">
-          ${normalized.image ? `<img class="list-card-full__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle)}">` : '<div class="list-card-full__image list-card-full__image--placeholder">No image</div>'}
-          <div class="list-card-full__badges">
-            ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
-            ${normalized.propertyTypeBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.propertyTypeBadgeLabel)}</span>` : ''}
-          </div>
-          <div class="list-card-full__assets">${assetTilesHtml}</div>
         </div>
         <div class="list-card-full__body">
           <div class="list-card-full__title">${escCardText(headlineTitle)}</div>
@@ -10595,10 +10579,8 @@ render() {
         </div>`;
       slide.appendChild(panel);
       try {
-        panel.querySelectorAll('.card-back-asset.is-thumb').forEach((assetBtn) => {
-          const thumbUrl = assetBtn.getAttribute('data-thumb-image');
-          if (thumbUrl) assetBtn.style.backgroundImage = `url("${thumbUrl}")`;
-        });
+        const backBg = panel.querySelector('.list-card-full__bg');
+        if (backBg && normalized.image) backBg.style.backgroundImage = `url("${normalized.image}")`;
       } catch {}
       slide.classList.add('is-full-open');
       try { this.fitBackSpecsInSlide(slide); } catch {}
