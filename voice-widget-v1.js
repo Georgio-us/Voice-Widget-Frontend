@@ -5549,33 +5549,36 @@ class VoiceWidget extends HTMLElement {
           applyAutoNextId();
         }
       }
+      const promotePhotoToPrimary = (index) => {
+        if (!Number.isFinite(index) || index < 0 || index >= draft.photos.length) return false;
+        if (!draft.photos[index]) return false;
+        if (index === 0) {
+          renderPreview();
+          return true;
+        }
+        const selectedPhoto = draft.photos[index];
+        const selectedFile = draft.photoFiles[index];
+        draft.photos.splice(index, 1);
+        draft.photos.unshift(selectedPhoto);
+        draft.photos = draft.photos.slice(0, 5);
+        while (draft.photos.length < 5) draft.photos.push('');
+        draft.photoFiles.splice(index, 1);
+        draft.photoFiles.unshift(selectedFile || null);
+        draft.photoFiles = draft.photoFiles.slice(0, 5);
+        while (draft.photoFiles.length < 5) draft.photoFiles.push(null);
+        photoSlots.forEach((node, idx) => {
+          const src = draft.photos[idx] || '';
+          updateSlot(node, src ? `photo_${idx + 1}` : '', src);
+        });
+        renderPreview();
+        return true;
+      };
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
           if (!fileInput || !targetInput) return;
           const index = Number(slot.getAttribute('data-slot') || '-1');
           if (!Number.isFinite(index) || index < 0) return;
-          if (draft.photos[index]) {
-            if (index === 0) {
-              renderPreview();
-              return;
-            }
-            const selectedPhoto = draft.photos[index];
-            const selectedFile = draft.photoFiles[index];
-            draft.photos.splice(index, 1);
-            draft.photos.unshift(selectedPhoto);
-            draft.photos = draft.photos.slice(0, 5);
-            while (draft.photos.length < 5) draft.photos.push('');
-            draft.photoFiles.splice(index, 1);
-            draft.photoFiles.unshift(selectedFile || null);
-            draft.photoFiles = draft.photoFiles.slice(0, 5);
-            while (draft.photoFiles.length < 5) draft.photoFiles.push(null);
-            photoSlots.forEach((node, idx) => {
-              const src = draft.photos[idx] || '';
-              updateSlot(node, src ? `photo_${idx + 1}` : '', src);
-            });
-            renderPreview();
-            return;
-          }
+          if (draft.photos[index]) return void promotePhotoToPrimary(index);
           targetInput.value = String(index);
           fileInput.click();
         });
@@ -5610,9 +5613,7 @@ class VoiceWidget extends HTMLElement {
       previewThumbs.forEach((thumb) => {
         thumb.addEventListener('click', () => {
           const idx = Number(thumb.getAttribute('data-thumb-index') || '0');
-          const src = draft.photos[idx] || '';
-          previewThumbs.forEach((btn, i) => btn.classList.toggle('is-active', i === idx));
-          refreshMainImage(src);
+          promotePhotoToPrimary(idx);
         });
       });
       overlay.querySelector('[data-role="add-to-step-2"]')?.addEventListener('click', () => {
