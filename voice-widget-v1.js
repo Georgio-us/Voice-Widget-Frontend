@@ -3935,6 +3935,7 @@ class VoiceWidget extends HTMLElement {
               </div>
               <div class="vw-access-add-actions">
                 <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">Выйти</button>
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-to-step-2">Продолжить</button>
               </div>
             </div>
@@ -3985,6 +3986,7 @@ class VoiceWidget extends HTMLElement {
               </label>
               <div class="vw-access-add-actions">
                 <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">Выйти</button>
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-preview">Предпросмотр</button>
               </div>
             </div>
@@ -5528,6 +5530,9 @@ class VoiceWidget extends HTMLElement {
         overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
           btn.style.display = 'none';
         });
+        overlay.querySelectorAll('[data-role="add-exit"]').forEach((btn) => {
+          btn.style.display = '';
+        });
         try {
           const fallbackDraft = buildEditDraftFromProperty(editSourceProperty);
           if (fallbackDraft) applyDraftState(fallbackDraft);
@@ -5621,6 +5626,15 @@ class VoiceWidget extends HTMLElement {
       });
       overlay.querySelectorAll('[data-role="add-draft"]').forEach((btn) => {
         btn.addEventListener('click', () => saveDraftAndExit());
+      });
+      overlay.querySelectorAll('[data-role="add-exit"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (typeof overlay._showAddExitDialog === 'function') {
+            overlay._showAddExitDialog();
+            return;
+          }
+          this.closeAccessSubOverlay();
+        });
       });
       overlay.querySelector('[data-role="add-preview"]')?.addEventListener('click', () => {
         renderPreview();
