@@ -6188,6 +6188,9 @@ class VoiceWidget extends HTMLElement {
       if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
+      if (/лиман|liman/.test(raw)) return 'kievsky';
+      if (/крыжан|крижан|kryzhan|kryjan/.test(raw)) return 'suvorovsky';
+      if (/аванг|avang/.test(raw)) return 'malinovsky';
       return '';
     };
     const isDistrictLikeLocation = (text) => {
@@ -9821,9 +9824,9 @@ render() {
     if (/сувор|suvor/.test(raw)) return 'suvorovsky';
     if (/малин|malin/.test(raw)) return 'malinovsky';
     if (/хаджиб|hadzhib|hadji/.test(raw)) return 'hadzhibeyskyi';
-    if (/лиман|liman/.test(raw)) return 'limanka';
-    if (/крыжан|kryzhan|kryjan/.test(raw)) return 'kryzhanivka';
-    if (/аванг|avang/.test(raw)) return 'avangard';
+    if (/лиман|liman/.test(raw)) return 'kievsky';
+    if (/крыжан|крижан|kryzhan|kryjan/.test(raw)) return 'suvorovsky';
+    if (/аванг|avang/.test(raw)) return 'malinovsky';
     return raw;
   }
 
