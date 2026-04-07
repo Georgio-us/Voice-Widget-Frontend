@@ -10556,8 +10556,6 @@ render() {
           <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
         </div>
         <div class="list-card-full__body">
-          <div class="list-card-full__title">${escCardText(headlineTitle)}</div>
-          <div class="list-card-full__meta">${escCardText(metaRow)}</div>
           <div class="card-back-scroll">
             <div class="card-back-specs">${backSpecsHtml || specs.map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__text">${item}</span></span>`).join('')}</div>
           </div>

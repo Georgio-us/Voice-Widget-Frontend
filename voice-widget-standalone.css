@@ -3353,9 +3353,10 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-description-btn {
-  min-height: 32px;
-  height: auto;
+  min-height: 24px;
+  height: 24px;
   border-radius: 0;
-  font-size: inherit;
+  font-size: .66rem;
+  line-height: 1;
   margin-top: 0;
 }
