@@ -10054,17 +10054,14 @@ render() {
     this.getRoot().appendChild(overlay);
     overlay.querySelector('[data-role="continue"]')?.addEventListener('click', () => {
       this.closeSliderCheckpointPopup();
-      this._catalogSimilarEndPromptShown = false;
     });
     overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
       this.closeSliderCheckpointPopup();
-      this._catalogSimilarEndPromptShown = false;
       try { this.openContactManagerPopup({ source: 'tg_similar_end_popup' }); } catch {}
     });
     overlay.addEventListener('click', (ev) => {
       if (ev.target === overlay) {
         this.closeSliderCheckpointPopup();
-        this._catalogSimilarEndPromptShown = false;
       }
     });
   }
