@@ -10540,7 +10540,7 @@ render() {
           <button type="button" class="list-card-full__back" data-action="list-full-close">Назад</button>
           <div class="list-card-full__title-top">${escCardText(locale.handoffDetails || 'Подробнее')}</div>
         </div>
-        <div class="list-card-full__media">
+        <div class="list-card-full__media cs-image-click-area">
           ${normalized.image ? `<img class="list-card-full__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle)}">` : '<div class="list-card-full__image list-card-full__image--placeholder">No image</div>'}
           <div class="list-card-full__badges">
             ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
