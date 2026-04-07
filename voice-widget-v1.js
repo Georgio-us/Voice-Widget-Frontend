@@ -10591,11 +10591,12 @@ render() {
       const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
       if (!host || !variantId) return;
       const willOpen = this._catalogExpandedCardId !== variantId;
-      this._catalogExpandedCardId = willOpen ? variantId : null;
+      if (!willOpen) return;
+      this._catalogExpandedCardId = variantId;
       host.querySelectorAll('.card-slide.list-card-slide.is-expanded').forEach((node) => {
         node.classList.remove('is-expanded');
       });
-      if (willOpen) targetSlide.classList.add('is-expanded');
+      targetSlide.classList.add('is-expanded');
     } catch {}
   }
 
@@ -10886,6 +10887,11 @@ render() {
       if (normalized.area_m2 != null && normalized.area_m2 !== '') listMetaParts.push(`${escCardText(normalized.area_m2)}м2`);
       if (districtLine) listMetaParts.push(escCardText(districtLine));
       const listMetaText = listMetaParts.join('  ·  ') || '—';
+      const listMetaChips = [];
+      if (normalized.priceLabel) listMetaChips.push(escCardText(normalized.priceLabel));
+      if (normalized.rooms) listMetaChips.push(`${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
+      if (normalized.area_m2 != null && normalized.area_m2 !== '') listMetaChips.push(`${escCardText(normalized.area_m2)} м²`);
+      if (districtLine) listMetaChips.push(escCardText(districtLine));
       slide.innerHTML = `
         <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
           <div class="list-card__media">
@@ -10907,11 +10913,14 @@ render() {
           <div class="list-card__body">
             <div class="list-card__top">
               <div class="list-card__title" title="${escCardAttr(headlineTitle || '—')}">${escCardText(headlineTitle || '—')}</div>
+            </div>
+            <div class="list-card__meta">${listMetaText}</div>
+            <div class="list-card__chips">${listMetaChips.map((chip) => `<span class="list-card__chip">${chip}</span>`).join('')}</div>
+            <div class="list-card__expand-wrap">
               <button type="button" class="list-card__expand" data-action="list-expand" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.handoffDetails || 'Подробнее')}">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </div>
-            <div class="list-card__meta">${listMetaText}</div>
             <div class="list-card__more-wrap">
               <button type="button" class="list-card__more card-btn select card-more-btn" data-action="list-open-full" data-variant-id="${normalized.id}">
                 <span>${locale.handoffDetails || 'Подробнее'}</span>
