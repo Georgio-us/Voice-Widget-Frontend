@@ -3990,10 +3990,10 @@ class VoiceWidget extends HTMLElement {
             </div>
 
             <div class="vw-access-add-step" data-step-panel="3">
-              <div class="vw-access-preview-card">
+              <div class="vw-access-preview-card" data-role="preview-card">
                 <div class="vw-access-preview-media">
                   <img class="is-empty" data-role="preview-main-image" alt="preview">
-                  <div class="vw-access-preview-id" data-role="preview-id">—</div>
+                  <div class="vw-access-preview-id" data-role="preview-id">ID</div>
                   <div class="vw-access-preview-thumbs">
                     <button type="button" class="vw-access-preview-thumb is-active" data-role="preview-thumb" data-thumb-index="0"></button>
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="1"></button>
@@ -4002,21 +4002,36 @@ class VoiceWidget extends HTMLElement {
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="4"></button>
                   </div>
                 </div>
-                <div class="vw-access-preview-body">
+                <div class="vw-access-preview-body vw-access-preview-side vw-access-preview-side--front" data-role="preview-front">
+                  <div class="vw-access-preview-badges">
+                    <span class="vw-access-preview-pill" data-role="preview-op">Продажа</span>
+                    <span class="vw-access-preview-pill" data-role="preview-type">Квартира</span>
+                  </div>
                   <div class="vw-access-preview-row">
                     <div class="vw-access-preview-title" data-role="preview-title">—</div>
                     <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
                   </div>
                   <div class="vw-access-preview-row">
                     <div class="vw-access-preview-district" data-role="preview-district">—</div>
-                    <button type="button" class="vw-access-preview-desc-btn" data-role="preview-description-btn">Описание</button>
+                    <button type="button" class="vw-access-preview-desc-btn" data-role="preview-toggle-back">Подробнее</button>
                   </div>
                   <div class="vw-access-preview-specs">
                     <span class="vw-access-preview-pill" data-role="preview-rooms">🛏️ 0 rooms</span>
                     <span class="vw-access-preview-pill" data-role="preview-area">📐 0 m²</span>
                     <span class="vw-access-preview-pill" data-role="preview-floor">🏢 0 floor</span>
                   </div>
-                  <button type="button" class="vw-access-preview-more" disabled>Подробнее</button>
+                </div>
+                <div class="vw-access-preview-body vw-access-preview-side vw-access-preview-side--back" data-role="preview-back" hidden>
+                  <div class="vw-access-preview-row">
+                    <button type="button" class="vw-access-preview-desc-btn" data-role="preview-toggle-front">Назад</button>
+                    <div class="vw-access-preview-price" style="justify-self:end;">Предпросмотр</div>
+                  </div>
+                  <div class="vw-access-preview-back-list" data-role="preview-back-features"></div>
+                  <div class="vw-access-preview-back-desc" data-role="preview-back-description">Описание не добавлено.</div>
+                  <div class="vw-access-preview-back-actions">
+                    <button type="button" class="vw-access-sub-btn" data-role="preview-contact" disabled aria-disabled="true">Связаться</button>
+                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="preview-share" disabled aria-disabled="true">Поделиться</button>
+                  </div>
                 </div>
               </div>
               <div class="vw-access-add-actions">
@@ -4599,8 +4614,15 @@ class VoiceWidget extends HTMLElement {
       const floorsTotalInput = overlay.querySelector('[data-role="floors-total"]');
       const descriptionInput = overlay.querySelector('[data-role="description"]');
       const photoSlots = Array.from(overlay.querySelectorAll('[data-role="photo-slot"]'));
+      const previewCard = overlay.querySelector('[data-role="preview-card"]');
+      const previewFront = overlay.querySelector('[data-role="preview-front"]');
+      const previewBack = overlay.querySelector('[data-role="preview-back"]');
       const previewMainImage = overlay.querySelector('[data-role="preview-main-image"]');
       const previewThumbs = Array.from(overlay.querySelectorAll('[data-role="preview-thumb"]'));
+      const previewOp = overlay.querySelector('[data-role="preview-op"]');
+      const previewType = overlay.querySelector('[data-role="preview-type"]');
+      const previewBackFeatures = overlay.querySelector('[data-role="preview-back-features"]');
+      const previewBackDescription = overlay.querySelector('[data-role="preview-back-description"]');
       const textFields = Array.from(overlay.querySelectorAll('input[type="text"]:not([readonly]), textarea'));
       const focusableFields = Array.from(overlay.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([readonly]), textarea, select'));
       let activeField = null;
@@ -4741,8 +4763,6 @@ class VoiceWidget extends HTMLElement {
             try {
               const nextId = await this.resolveNextManualExternalId();
               if (reservedIdInput) reservedIdInput.value = nextId;
-              const previewId = overlay.querySelector('[data-role="preview-id"]');
-              if (previewId) previewId.textContent = nextId;
             } catch {}
           })();
         }
@@ -4802,12 +4822,6 @@ class VoiceWidget extends HTMLElement {
         }
         const step = Number(saved.step || 1);
         setStep(step >= 1 && step <= 3 ? step : 1);
-        const reservedSync = overlay.querySelector('[data-role="reserved-external-id"]');
-        const previewIdSync = overlay.querySelector('[data-role="preview-id"]');
-        if (reservedSync && previewIdSync) {
-          const rid = String(reservedSync.value || '').trim();
-          if (rid) previewIdSync.textContent = rid;
-        }
         try { updateComplexLabel(); } catch {}
       };
       const hasUnsavedChanges = () => {
@@ -4991,19 +5005,55 @@ class VoiceWidget extends HTMLElement {
         previewMainImage.removeAttribute('src');
         previewMainImage.classList.add('is-empty');
       };
+      const setPreviewSide = (side = 'front') => {
+        const showBack = side === 'back';
+        if (previewFront) previewFront.hidden = showBack;
+        if (previewBack) previewBack.hidden = !showBack;
+        if (previewCard) previewCard.setAttribute('data-side', showBack ? 'back' : 'front');
+      };
       const renderPreview = () => {
         const data = getDraftData();
+        const opLabelMap = { sale: 'Продажа', rent: 'Аренда' };
+        const typeLabelMap = {
+          apartment: 'Квартира',
+          house: 'Дом',
+          commercial: 'Коммерция',
+          land: 'Участок'
+        };
         const fmtPrice = `${String(data.price || '0').replace(/[^\d]/g, '') || '0'}`
           .replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         const imageList = data.photos.length ? data.photos : [''];
-        overlay.querySelector('[data-role="preview-id"]') && (overlay.querySelector('[data-role="preview-id"]').textContent = data.id);
+        if (previewOp) previewOp.textContent = opLabelMap[data.operation] || 'Продажа';
+        if (previewType) previewType.textContent = typeLabelMap[data.type] || 'Квартира';
         const previewHeadline = String(titleInput?.value || '').trim() || '—';
         overlay.querySelector('[data-role="preview-title"]') && (overlay.querySelector('[data-role="preview-title"]').textContent = previewHeadline);
         overlay.querySelector('[data-role="preview-price"]') && (overlay.querySelector('[data-role="preview-price"]').textContent = `${fmtPrice} USD`);
-        overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = data.district);
+        const districtMeta = [String(data.district || '').trim(), String(data.microdistrict || '').trim()].filter(Boolean);
+        overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = districtMeta.length ? districtMeta.join(' · ') : '—');
         overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
         overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = `📐 ${data.area} m²`);
         overlay.querySelector('[data-role="preview-floor"]') && (overlay.querySelector('[data-role="preview-floor"]').textContent = `🏢 ${data.floor} floor`);
+        const featureBadges = [];
+        if (data.complex) featureBadges.push(`ЖК ${data.complex}`);
+        if (data.floor !== '0') {
+          featureBadges.push(data.floorsTotal ? `Этаж ${data.floor}/${data.floorsTotal}` : `Этаж ${data.floor}`);
+        }
+        if (data.checks.parking) featureBadges.push('Паркинг');
+        if (data.checks.balcony) featureBadges.push('Балкон');
+        if (data.checks.loggia) featureBadges.push('Лоджия');
+        if (data.checks.terrace) featureBadges.push('Терраса');
+        if (data.checks.newbuilding) featureBadges.push('Новострой');
+        if (data.checks.penthouse) featureBadges.push('Пентхаус');
+        if (data.checks.smartFlat) featureBadges.push('Смарт');
+        if (data.checks.exclusive) featureBadges.push('Эксклюзив');
+        if (previewBackFeatures) {
+          previewBackFeatures.innerHTML = (featureBadges.length ? featureBadges : ['Параметры не заполнены'])
+            .map((label) => `<span class="vw-access-preview-back-item">${label}</span>`)
+            .join('');
+        }
+        if (previewBackDescription) {
+          previewBackDescription.textContent = String(data.description || 'Описание не добавлено.');
+        }
         previewThumbs.forEach((thumb, idx) => {
           const src = imageList[idx] || '';
           thumb.classList.toggle('is-filled', !!src);
@@ -5011,6 +5061,7 @@ class VoiceWidget extends HTMLElement {
           thumb.style.backgroundImage = src ? `url("${src}")` : 'none';
         });
         refreshMainImage(imageList[0] || '');
+        setPreviewSide('front');
       };
       const setFieldError = (fieldEl, message) => {
         if (!fieldEl) return;
@@ -5441,8 +5492,6 @@ class VoiceWidget extends HTMLElement {
         try {
           const nextId = await this.resolveNextManualExternalId();
           if (reservedIdInput) reservedIdInput.value = nextId;
-          const previewId = overlay.querySelector('[data-role="preview-id"]');
-          if (previewId) previewId.textContent = nextId;
         } catch {}
       };
       let editTouched = false;
@@ -5477,7 +5526,31 @@ class VoiceWidget extends HTMLElement {
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
           if (!fileInput || !targetInput) return;
-          targetInput.value = String(slot.getAttribute('data-slot') || '');
+          const index = Number(slot.getAttribute('data-slot') || '-1');
+          if (!Number.isFinite(index) || index < 0) return;
+          if (draft.photos[index]) {
+            if (index === 0) {
+              renderPreview();
+              return;
+            }
+            const selectedPhoto = draft.photos[index];
+            const selectedFile = draft.photoFiles[index];
+            draft.photos.splice(index, 1);
+            draft.photos.unshift(selectedPhoto);
+            draft.photos = draft.photos.slice(0, 5);
+            while (draft.photos.length < 5) draft.photos.push('');
+            draft.photoFiles.splice(index, 1);
+            draft.photoFiles.unshift(selectedFile || null);
+            draft.photoFiles = draft.photoFiles.slice(0, 5);
+            while (draft.photoFiles.length < 5) draft.photoFiles.push(null);
+            photoSlots.forEach((node, idx) => {
+              const src = draft.photos[idx] || '';
+              updateSlot(node, src ? `photo_${idx + 1}` : '', src);
+            });
+            renderPreview();
+            return;
+          }
+          targetInput.value = String(index);
           fileInput.click();
         });
       });
@@ -5527,9 +5600,11 @@ class VoiceWidget extends HTMLElement {
         setStep(3);
       });
       overlay.querySelector('[data-role="add-reset-head"]')?.addEventListener('click', () => showResetDialog());
-      overlay.querySelector('[data-role="preview-description-btn"]')?.addEventListener('click', () => {
-        const text = getDraftData().description;
-        this.ui?.showNotification?.(text.length > 90 ? `${text.slice(0, 90)}...` : text);
+      overlay.querySelector('[data-role="preview-toggle-back"]')?.addEventListener('click', () => {
+        setPreviewSide('back');
+      });
+      overlay.querySelector('[data-role="preview-toggle-front"]')?.addEventListener('click', () => {
+        setPreviewSide('front');
       });
       const publish = async () => {
         const publishBtn = overlay.querySelector('[data-role="add-publish-final"]');
@@ -7587,6 +7662,16 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         gap: 10px;
       }
+      .vw-access-preview-side--back[hidden],
+      .vw-access-preview-side--front[hidden] {
+        display: none !important;
+      }
+      .vw-access-preview-badges {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
       .vw-access-preview-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -7645,6 +7730,37 @@ class VoiceWidget extends HTMLElement {
         color: var(--text-primary, #fff);
         font-size: 1rem;
         opacity: .9;
+      }
+      .vw-access-preview-back-list {
+        display: grid;
+        gap: 6px;
+      }
+      .vw-access-preview-back-item {
+        min-height: 32px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.08);
+        display: inline-flex;
+        align-items: center;
+        padding: 0 10px;
+        font-size: .84rem;
+      }
+      .vw-access-preview-back-desc {
+        color: var(--text-secondary, rgba(255,255,255,0.8));
+        font-size: .86rem;
+        line-height: 1.35;
+        max-height: 68px;
+        overflow: auto;
+      }
+      .vw-access-preview-back-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .vw-access-preview-back-actions .vw-access-sub-btn[disabled] {
+        opacity: .55;
+        filter: grayscale(.1);
+        pointer-events: none;
       }
       .vw-access-add-success {
         min-height: 220px;
