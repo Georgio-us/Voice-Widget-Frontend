@@ -8140,6 +8140,9 @@ class VoiceWidget extends HTMLElement {
   // ---------- UI init ----------
   initializeUI() {
     this.ui.initializeUI();
+    const finalizeBootstrapFlow = () => {
+      try { this.ensureInitialGreetingAndFreshState(); } catch {}
+    };
 
     // единый ввод
     this.ui.bindUnifiedInputEvents();
@@ -8153,15 +8156,21 @@ class VoiceWidget extends HTMLElement {
         .then((state) => {
           if (state?.expired) {
             try { this.ui.clearMessages(); } catch {}
+            try { this.resetSessionIdentity(); } catch {}
+            try { this.resetCatalogRuntimeState(); } catch {}
+            finalizeBootstrapFlow();
             return;
           }
           try { this.ui.loadHistory(); } catch {}
+          finalizeBootstrapFlow();
         })
         .catch(() => {
           try { this.ui.loadHistory(); } catch {}
+          finalizeBootstrapFlow();
         });
     } else {
       this.ui.loadHistory();
+      finalizeBootstrapFlow();
     }
 
     // Initialize understanding bar with 0%
@@ -8592,19 +8601,6 @@ render() {
   let _sessionStarted = false;
   this.classList.add("open");
   showScreen('dialog');
-  try {
-    const isTelegramMiniApp = !!(window?.Telegram?.WebApp);
-    const greetingAlreadyInMessages = Array.isArray(this.messages)
-      ? this.messages.some((m) => m && m.greeting === true)
-      : false;
-    if (isTelegramMiniApp && !greetingAlreadyInMessages) {
-      this.showGreetingMessage();
-      sessionStorage.setItem('vw_greeting_shown', '1');
-    } else if (!sessionStorage.getItem('vw_greeting_shown')) {
-      this.showGreetingMessage();
-      sessionStorage.setItem('vw_greeting_shown', '1');
-    }
-  } catch {}
   if (!_sessionStarted) {
     _sessionStarted = true;
     const consent = this.getConsent();
@@ -12618,16 +12614,75 @@ render() {
   isIdle() { return this.ui.isIdle() && !this.audioRecorder.isRecording; }
 
   // очистка сессии (совместимость со старыми вызовами)
-  clearSession() {
+  resetSessionIdentity() {
     try {
       localStorage.removeItem('vw_sessionId');
       localStorage.removeItem('voiceWidgetSessionId');
     } catch {}
     this.sessionId = null;
+  }
 
-    this.understanding.reset();
+  resetCatalogRuntimeState() {
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = false;
+    this._catalogStrictFlowActive = false;
+    this._catalogStrictQuery = null;
+    this._catalogLastRefineMode = 'filters';
+    this._catalogStrictSeedIds = [];
+    this._catalogRelaxedUnlocked = false;
+    this._catalogRelaxLevel = 0;
+    this._catalogRelaxPool = null;
+    this._catalogRelaxShownIds = new Set();
+    this._catalogStrictEndPromptShown = false;
+    this._catalogSimilarEndPromptShown = false;
+    this._catalogSimilarLoading = false;
+    try { this.clearPropertiesSlider(); } catch {}
+    try { this.setCatalogDisplayMode('slider'); } catch {}
+    try {
+      const pillViewButton = this.$byId('pillViewButton');
+      if (pillViewButton) {
+        pillViewButton.classList.remove('is-slider-mode');
+        pillViewButton.setAttribute('aria-pressed', 'false');
+      }
+    } catch {}
+  }
+
+  hasPersistedThreadMessages() {
+    try {
+      const key = `vw_thread_${this.sessionId || 'default'}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return false;
+      const list = JSON.parse(raw);
+      return Array.isArray(list) && list.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  hasVisibleThreadMessages() {
+    if (Array.isArray(this.messages) && this.messages.length > 0) return true;
+    try {
+      const thread = this.$byId('thread');
+      return !!thread?.querySelector?.('.message');
+    } catch {
+      return false;
+    }
+  }
+
+  ensureInitialGreetingAndFreshState() {
+    const hasMessages = this.hasVisibleThreadMessages() || this.hasPersistedThreadMessages();
+    if (hasMessages) return;
+    this.resetSessionIdentity();
+    this.understanding?.reset?.();
+    this.resetCatalogRuntimeState();
+    this.showGreetingMessage();
+    try { sessionStorage.setItem('vw_greeting_shown', '1'); } catch {}
+  }
+
+  clearSession() {
+    this.resetSessionIdentity();
+    this.understanding.reset();
+    this.resetCatalogRuntimeState();
     this.ui.clearMessages();
     this.ui.setState('idle');
 
