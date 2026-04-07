@@ -3034,9 +3034,9 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded {
-  min-height: 252px;
-  height: 252px;
-  max-height: 252px;
+  min-height: 272px;
+  height: 272px;
+  max-height: 272px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card {
