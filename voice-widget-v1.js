@@ -4021,16 +4021,11 @@ class VoiceWidget extends HTMLElement {
                     <span class="vw-access-preview-pill" data-role="preview-area">📐 0 m²</span>
                     <span class="vw-access-preview-pill" data-role="preview-floor">🏢 0 floor</span>
                   </div>
-                  <div class="card-actions-wrap card-actions-wrap--preview">
-                    <button type="button" class="card-btn select card-more-btn" data-role="preview-more">
-                      <span>Подробнее</span>
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </button>
-                  </div>
                 </div>
               </div>
               <div class="vw-access-add-actions">
                 <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">Выйти</button>
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">${isEditProperty ? 'Опубликовать изменения' : 'Опубликовать'}</button>
               </div>
             </div>
@@ -5603,9 +5598,6 @@ class VoiceWidget extends HTMLElement {
         setStep(3);
       });
       overlay.querySelector('[data-role="add-reset-head"]')?.addEventListener('click', () => showResetDialog());
-      overlay.querySelector('[data-role="preview-more"]')?.addEventListener('click', () => {
-        this.ui?.showNotification?.('В превью отображается фронт карточки');
-      });
       const publish = async () => {
         const publishBtn = overlay.querySelector('[data-role="add-publish-final"]');
         const originalLabel = publishBtn?.textContent || (isEditProperty ? 'Опубликовать изменения' : 'Опубликовать');
