@@ -9260,6 +9260,14 @@ render() {
       const slide = e.target.closest('.card-slide');
       const hiddenCount = Number(e.target.closest('[data-action="show-hidden-specs"]')?.getAttribute('data-hidden-count')) || 0;
       this.showBackSpecsOverflowPopup({ slide, hiddenCount });
+    } else if (e.target.closest('[data-action="list-full-close"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      const slide = e.target.closest('.card-slide');
+      this.closeCatalogListFullCard(slide);
+      return;
     } else if (e.target.closest('.list-card__assets .card-back-asset')) {
       return;
     } else if (e.target.closest('[data-action="list-open-full"]')) {
@@ -9267,8 +9275,12 @@ render() {
         e.preventDefault();
         e.stopPropagation();
       } catch {}
-      const variantId = String(e.target.closest('[data-action="list-open-full"]')?.getAttribute('data-variant-id') || '').trim();
-      if (variantId) this.openCatalogCardInSlider(variantId);
+      const trigger = e.target.closest('[data-action="list-open-full"]');
+      const variantId = String(trigger?.getAttribute('data-variant-id') || '').trim();
+      const slide = trigger?.closest('.card-slide') || null;
+      if (variantId) this.openCatalogCardInList(variantId, slide);
+      return;
+    } else if (e.target.closest('.list-card-full')) {
       return;
     } else if (e.target.closest('[data-action="list-expand"]')) {
       try {
@@ -10348,6 +10360,7 @@ render() {
   handleCatalogListPrev() {
     if (this._catalogDisplayMode !== 'list') return;
     this._catalogExpandedCardId = null;
+    this.closeCatalogListFullCard();
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
     if (!loadedIds.length) return;
     const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
@@ -10364,6 +10377,7 @@ render() {
   handleCatalogListNext() {
     if (this._catalogDisplayMode !== 'list') return;
     this._catalogExpandedCardId = null;
+    this.closeCatalogListFullCard();
     const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
     if (!loadedIds.length) return;
     const windowSize = Math.max(1, Number(this._catalogListWindowSize) || 3);
@@ -10454,36 +10468,112 @@ render() {
         // Re-anchor list window around current active card from slider.
         this._catalogListWindowStart = -1;
         this._catalogExpandedCardId = null;
+        this.closeCatalogListFullCard();
       }
       if (prev !== next) this.rebuildCatalogLayoutFromVisibleIds();
     }
   }
 
-  openCatalogCardInSlider(variantId = '') {
-    const targetId = String(variantId || '').trim();
-    if (!targetId) return;
+  closeCatalogListFullCard(slide = null) {
     try {
-      this.setCatalogDisplayMode('slider');
-      requestAnimationFrame(() => {
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+      if (!host) return;
+      const targets = slide
+        ? [slide]
+        : Array.from(host.querySelectorAll('.card-slide.list-card-slide.is-full-open'));
+      targets.forEach((node) => {
         try {
-          const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
-          const idx = loadedIds.indexOf(targetId);
-          if (idx >= 0) this.scrollToSlideIndex(idx);
-          requestAnimationFrame(() => {
-            const sliderHost = this.getRoot().querySelector('.card-screen.cards-slider-host');
-            const safeSelector = typeof CSS !== 'undefined' && CSS.escape
-              ? `#${CSS.escape(targetId)}`
-              : `[id="${targetId.replace(/"/g, '\\"')}"]`;
-            const slide = sliderHost?.querySelector(`.cards-slider .card-slide${safeSelector}`);
-            if (!slide) return;
-            sliderHost.querySelectorAll('.card-slide.flipped').forEach((s) => {
-              if (s !== slide) s.classList.remove('flipped', 'card-slide--form-open');
-            });
-            slide.classList.add('flipped');
-            try { this.fitBackSpecsInSlide(slide); } catch {}
-          });
+          node.classList.remove('is-full-open');
+          const panel = node.querySelector('.list-card-full');
+          if (panel?.parentElement) panel.parentElement.removeChild(panel);
         } catch {}
       });
+    } catch {}
+  }
+
+  openCatalogCardInList(variantId = '', sourceSlide = null) {
+    const targetId = String(variantId || '').trim();
+    if (!targetId || this._catalogDisplayMode !== 'list') return;
+    const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+    if (!host) return;
+    const safeSelector = typeof CSS !== 'undefined' && CSS.escape
+      ? `#${CSS.escape(targetId)}`
+      : `[id="${targetId.replace(/"/g, '\\"')}"]`;
+    const slide = sourceSlide?.closest?.('.card-slide.list-card-slide')
+      || host.querySelector(`.cards-list-body .card-slide.list-card-slide${safeSelector}`);
+    if (!slide) return;
+
+    try {
+      if (!slide.classList.contains('is-expanded')) this.toggleCatalogListExpand(slide);
+      this.closeCatalogListFullCard();
+      const property = this.findCatalogPropertyById(targetId);
+      const normalized = this.normalizeCardData(property || { id: targetId });
+      const locale = this.getCurrentLocale();
+      const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
+      const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
+      while (assetSlots.length < 4) assetSlots.push('');
+      const escCardText = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const escCardAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+      const headlineTitle = this._cardFrontHeadline(normalized) || '—';
+      const isUa = this.getLangCode() === 'ua';
+      const specs = [];
+      if (normalized.rooms) specs.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
+      if (normalized.area_m2 != null && normalized.area_m2 !== '') specs.push(`📐 ${normalized.area_m2} м²`);
+      if (normalized.floor) specs.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
+      const metaRow = [normalized.priceLabel, normalized.district].filter(Boolean).join('  ·  ') || '—';
+      const safeDescription = String(normalized.description || locale.cardDescriptionEmpty || 'Description unavailable')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
+        const safeUrl = String(assetUrl || '').trim();
+        const isThumb = !!safeUrl;
+        const openUrl = safeUrl || fallbackAssetOpenUrl;
+        const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
+        const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
+        return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}><span class="card-back-asset__label">img</span></button>`;
+      }).join('');
+      const panel = document.createElement('div');
+      panel.className = 'list-card-full';
+      panel.innerHTML = `
+        <div class="cs" data-variant-id="${normalized.id}" style="display:none"></div>
+        <div class="list-card-full__head">
+          <button type="button" class="list-card-full__back" data-action="list-full-close">Назад</button>
+          <div class="list-card-full__title-top">${escCardText(locale.handoffDetails || 'Подробнее')}</div>
+        </div>
+        <div class="list-card-full__media">
+          ${normalized.image ? `<img class="list-card-full__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle)}">` : '<div class="list-card-full__image list-card-full__image--placeholder">No image</div>'}
+          <div class="list-card-full__badges">
+            ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
+            ${normalized.propertyTypeBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.propertyTypeBadgeLabel)}</span>` : ''}
+          </div>
+          <div class="list-card-full__assets">${assetTilesHtml}</div>
+        </div>
+        <div class="list-card-full__body">
+          <div class="list-card-full__title">${escCardText(headlineTitle)}</div>
+          <div class="list-card-full__meta">${escCardText(metaRow)}</div>
+          <div class="list-card-full__specs">${specs.map((item) => `<span class="list-card-full__spec-item">${item}</span>`).join('')}</div>
+          <div class="list-card-full__actions">
+            <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
+            <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
+            <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+          </div>
+          <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
+        </div>
+        <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
+          <div class="cs-description-panel">
+            <div class="cs-description-title">${locale.cardDescriptionTitle || 'Описание объекта'}</div>
+            <div class="cs-description-text">${safeDescription}</div>
+            <button type="button" class="cs-description-ok" data-action="close-description">${locale.cardDescriptionOk || 'OK'}</button>
+          </div>
+        </div>`;
+      slide.appendChild(panel);
+      try {
+        panel.querySelectorAll('.card-back-asset.is-thumb').forEach((assetBtn) => {
+          const thumbUrl = assetBtn.getAttribute('data-thumb-image');
+          if (thumbUrl) assetBtn.style.backgroundImage = `url("${thumbUrl}")`;
+        });
+      } catch {}
+      slide.classList.add('is-full-open');
     } catch {}
   }
 
@@ -10492,6 +10582,7 @@ render() {
       if (this._catalogDisplayMode !== 'list') return;
       const targetSlide = slide?.closest?.('.card-slide.list-card-slide');
       if (!targetSlide) return;
+      this.closeCatalogListFullCard();
       const variantId = String(
         targetSlide.id ||
         targetSlide.querySelector('[data-variant-id]')?.getAttribute('data-variant-id') ||
