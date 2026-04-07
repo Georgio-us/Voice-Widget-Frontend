@@ -2214,8 +2214,9 @@ voice-widget,
 }
 
 .vw-app textarea.input-field,
-.vw-app textarea.input-field {
+.vw-app .input-field {
   font-size: 16px;
+  line-height: 1.3;
 }
 
 .vw-app .app-footer-dock {
