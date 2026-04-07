@@ -3099,6 +3099,10 @@ voice-widget,
 }
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__chips {
   display: flex;
+  align-items: flex-start;
+  align-content: flex-start;
+  align-self: start;
+  min-height: 0;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-expanded .list-card__expand-wrap,
