@@ -2293,6 +2293,17 @@ const LOCALES = {
     accessAdminOlxSyncLocked: 'Сначала подключите OLX',
     accessUserEmpty: 'Здесь появятся объекты, которые вы добавите в избранное (Wishlist)',
     accessUserWishlist: 'Моя подборка',
+    accessUserWantBot: 'Хочу такого бота!',
+    accessUserBotSectionTitle: 'Хочу такого бота!',
+    accessUserBotIntro: 'Вы риэлтор, агентство недвижимости или занимаетесь недвижимостью? Подайте заявку на интеграцию и получите бесплатную 7-дневную подписку, чтобы оценить все преимущества.',
+    accessUserBotBenefit1: 'Полная интеграция с вашей базой объектов (включая OLX).',
+    accessUserBotBenefit2: 'Добавление и редактирование объектов прямо в боте.',
+    accessUserBotBenefit3: 'Быстрое формирование подборок для ваших клиентов.',
+    accessUserBotBenefit4: 'ИИ-ассистент работает с клиентами, даже когда вас нет онлайн.',
+    accessUserBotBenefit5: 'Полная аналитика активности: знайте, что хотят ваши клиенты.',
+    accessUserBotBenefit6: 'CRM внутри бота и моментальные заявки прямо в Telegram.',
+    accessUserBotTrialCta: 'Получить бесплатный 7-дневный тест',
+    accessUserBotConsultCta: 'Консультация по интеграции',
     accessUserConsult: 'Консультация',
     accessUserRemove: 'Убрать',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
@@ -2448,6 +2459,17 @@ const LOCALES = {
     accessAdminOlxSyncLocked: 'Спочатку підключіть OLX',
     accessUserEmpty: "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)",
     accessUserWishlist: 'Моя добірка',
+    accessUserWantBot: 'Хочу такого бота!',
+    accessUserBotSectionTitle: 'Хочу такого бота!',
+    accessUserBotIntro: 'Ви рієлтор, агентство нерухомості або працюєте в нерухомості? Подайте заявку на інтеграцію і отримайте безкоштовну 7-денну підписку, щоб оцінити всі переваги.',
+    accessUserBotBenefit1: 'Повна інтеграція з вашою базою обʼєктів (включно з OLX).',
+    accessUserBotBenefit2: 'Додавання та редагування обʼєктів прямо в боті.',
+    accessUserBotBenefit3: 'Швидке формування добірок для ваших клієнтів.',
+    accessUserBotBenefit4: 'AI-асистент працює з клієнтами навіть коли вас немає онлайн.',
+    accessUserBotBenefit5: 'Повна аналітика активності: знайте, чого хочуть ваші клієнти.',
+    accessUserBotBenefit6: 'CRM всередині бота та миттєві заявки прямо в Telegram.',
+    accessUserBotTrialCta: 'Отримати безкоштовний 7-денний тест',
+    accessUserBotConsultCta: 'Консультація щодо інтеграції',
     accessUserConsult: 'Консультація',
     accessUserRemove: 'Прибрати',
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
@@ -4317,6 +4339,23 @@ class VoiceWidget extends HTMLElement {
           </div>
         `;
       }
+      if (safeSection === 'want-bot') {
+        return `
+          <div class="vw-access-sub-list">
+            <div class="vw-access-sub-item">${locale.accessUserBotIntro || ''}</div>
+            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit1 || ''}</div>
+            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit2 || ''}</div>
+            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit3 || ''}</div>
+            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit4 || ''}</div>
+            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit5 || ''}</div>
+            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit6 || ''}</div>
+          </div>
+          <div class="vw-access-sub-toolbar" style="margin-top: 12px; grid-template-columns: 1fr;">
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-bot-trial">${locale.accessUserBotTrialCta || 'Получить бесплатный 7-дневный тест'}</button>
+            <button type="button" class="vw-access-sub-btn" data-role="want-bot-consult">${locale.accessUserBotConsultCta || 'Консультация по интеграции'}</button>
+          </div>
+        `;
+      }
       if (safeSection === 'subscription') {
         return `
           <div class="vw-access-sub-list">
@@ -4341,6 +4380,8 @@ class VoiceWidget extends HTMLElement {
       ? 'Мои объекты'
       : safeSection === 'wishlist'
         ? (locale.accessUserWishlist || 'Моя подборка')
+      : safeSection === 'want-bot'
+        ? (locale.accessUserBotSectionTitle || 'Хочу такого бота!')
       : isAddProperty
         ? 'Новый объект'
       : safeSection === 'subscription'
@@ -4758,6 +4799,13 @@ class VoiceWidget extends HTMLElement {
         });
       });
       this.updateAdminObjectsSelectionState(overlay);
+    }
+    if (safeSection === 'want-bot') {
+      const openConsult = (source = 'guest_want_bot') => {
+        try { this.openContactManagerPopup({ source }); } catch {}
+      };
+      overlay.querySelector('[data-role="want-bot-trial"]')?.addEventListener('click', () => openConsult('guest_want_bot_trial'));
+      overlay.querySelector('[data-role="want-bot-consult"]')?.addEventListener('click', () => openConsult('guest_want_bot_consult'));
     }
     if (isAddProperty) {
       const modal = overlay.querySelector('.vw-access-sub-modal--add') || overlay.querySelector('.vw-access-sub-modal');
@@ -8226,6 +8274,10 @@ class VoiceWidget extends HTMLElement {
               <span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span>
               <span class="vw-access-item__count" data-role="user-wishlist-count">0</span>
             </button>
+            <button type="button" class="vw-access-item" data-role="user-want-bot">
+              <span class="vw-access-item__icon" aria-hidden="true">🤖</span>
+              <span class="vw-access-item__label">${locale.accessUserWantBot || 'Хочу такого бота!'}</span>
+            </button>
           </div>
           <div class="vw-access-hint">${locale.accessUserEmpty || "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)"}</div>
         </div>
@@ -8256,6 +8308,7 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelector('[data-role="admin-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
+    overlay.querySelector('[data-role="user-want-bot"]')?.addEventListener('click', () => this.openAccessSubOverlay('want-bot'));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeAccessOverlay();
     });
