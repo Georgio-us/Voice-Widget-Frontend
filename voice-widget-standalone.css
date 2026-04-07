@@ -3172,9 +3172,9 @@ voice-widget,
 
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-full-open {
-  min-height: 360px;
-  height: 360px;
-  max-height: 360px;
+  min-height: 252px;
+  height: 252px;
+  max-height: 252px;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide.is-full-open .list-card {
