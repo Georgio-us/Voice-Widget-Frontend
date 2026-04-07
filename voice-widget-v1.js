@@ -3995,7 +3995,11 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-preview-card" data-role="preview-card">
                 <div class="vw-access-preview-media">
                   <img class="is-empty" data-role="preview-main-image" alt="preview">
-                  <div class="vw-access-preview-id" data-role="preview-id">ID</div>
+                  <div class="vw-access-preview-overlay-badges">
+                    <span class="vw-access-preview-pill" data-role="preview-id">ID</span>
+                    <span class="vw-access-preview-pill" data-role="preview-op">Продажа</span>
+                    <span class="vw-access-preview-pill" data-role="preview-type">Квартира</span>
+                  </div>
                   <div class="vw-access-preview-thumbs">
                     <button type="button" class="vw-access-preview-thumb is-active" data-role="preview-thumb" data-thumb-index="0"></button>
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="1"></button>
@@ -4004,35 +4008,24 @@ class VoiceWidget extends HTMLElement {
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="4"></button>
                   </div>
                 </div>
-                <div class="vw-access-preview-body vw-access-preview-side vw-access-preview-side--front" data-role="preview-front">
-                  <div class="vw-access-preview-badges">
-                    <span class="vw-access-preview-pill" data-role="preview-op">Продажа</span>
-                    <span class="vw-access-preview-pill" data-role="preview-type">Квартира</span>
-                  </div>
+                <div class="vw-access-preview-body" data-role="preview-front">
                   <div class="vw-access-preview-row">
                     <div class="vw-access-preview-title" data-role="preview-title">—</div>
-                    <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
                   </div>
                   <div class="vw-access-preview-row">
                     <div class="vw-access-preview-district" data-role="preview-district">—</div>
-                    <button type="button" class="vw-access-preview-desc-btn" data-role="preview-toggle-back">Подробнее</button>
+                    <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
                   </div>
                   <div class="vw-access-preview-specs">
                     <span class="vw-access-preview-pill" data-role="preview-rooms">🛏️ 0 rooms</span>
                     <span class="vw-access-preview-pill" data-role="preview-area">📐 0 m²</span>
                     <span class="vw-access-preview-pill" data-role="preview-floor">🏢 0 floor</span>
                   </div>
-                </div>
-                <div class="vw-access-preview-body vw-access-preview-side vw-access-preview-side--back" data-role="preview-back" hidden>
-                  <div class="vw-access-preview-row">
-                    <button type="button" class="vw-access-preview-desc-btn" data-role="preview-toggle-front">Назад</button>
-                    <div class="vw-access-preview-price" style="justify-self:end;">Предпросмотр</div>
-                  </div>
-                  <div class="vw-access-preview-back-list" data-role="preview-back-features"></div>
-                  <div class="vw-access-preview-back-desc" data-role="preview-back-description">Описание не добавлено.</div>
-                  <div class="vw-access-preview-back-actions">
-                    <button type="button" class="vw-access-sub-btn" data-role="preview-contact" disabled aria-disabled="true">Связаться</button>
-                    <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="preview-share" disabled aria-disabled="true">Поделиться</button>
+                  <div class="card-actions-wrap card-actions-wrap--preview">
+                    <button type="button" class="card-btn select card-more-btn" data-role="preview-more">
+                      <span>Подробнее</span>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -4639,14 +4632,10 @@ class VoiceWidget extends HTMLElement {
       const descriptionInput = overlay.querySelector('[data-role="description"]');
       const photoSlots = Array.from(overlay.querySelectorAll('[data-role="photo-slot"]'));
       const previewCard = overlay.querySelector('[data-role="preview-card"]');
-      const previewFront = overlay.querySelector('[data-role="preview-front"]');
-      const previewBack = overlay.querySelector('[data-role="preview-back"]');
       const previewMainImage = overlay.querySelector('[data-role="preview-main-image"]');
       const previewThumbs = Array.from(overlay.querySelectorAll('[data-role="preview-thumb"]'));
       const previewOp = overlay.querySelector('[data-role="preview-op"]');
       const previewType = overlay.querySelector('[data-role="preview-type"]');
-      const previewBackFeatures = overlay.querySelector('[data-role="preview-back-features"]');
-      const previewBackDescription = overlay.querySelector('[data-role="preview-back-description"]');
       const textFields = Array.from(overlay.querySelectorAll('input[type="text"]:not([readonly]), textarea'));
       const focusableFields = Array.from(overlay.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([readonly]), textarea, select'));
       let activeField = null;
@@ -5031,12 +5020,6 @@ class VoiceWidget extends HTMLElement {
         previewMainImage.removeAttribute('src');
         previewMainImage.classList.add('is-empty');
       };
-      const setPreviewSide = (side = 'front') => {
-        const showBack = side === 'back';
-        if (previewFront) previewFront.hidden = showBack;
-        if (previewBack) previewBack.hidden = !showBack;
-        if (previewCard) previewCard.setAttribute('data-side', showBack ? 'back' : 'front');
-      };
       const renderPreview = () => {
         const data = getDraftData();
         const opLabelMap = { sale: 'Продажа', rent: 'Аренда' };
@@ -5059,27 +5042,6 @@ class VoiceWidget extends HTMLElement {
         overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
         overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = `📐 ${data.area} m²`);
         overlay.querySelector('[data-role="preview-floor"]') && (overlay.querySelector('[data-role="preview-floor"]').textContent = `🏢 ${data.floor} floor`);
-        const featureBadges = [];
-        if (data.complex) featureBadges.push(`ЖК ${data.complex}`);
-        if (data.floor !== '0') {
-          featureBadges.push(data.floorsTotal ? `Этаж ${data.floor}/${data.floorsTotal}` : `Этаж ${data.floor}`);
-        }
-        if (data.checks.parking) featureBadges.push('Паркинг');
-        if (data.checks.balcony) featureBadges.push('Балкон');
-        if (data.checks.loggia) featureBadges.push('Лоджия');
-        if (data.checks.terrace) featureBadges.push('Терраса');
-        if (data.checks.newbuilding) featureBadges.push('Новострой');
-        if (data.checks.penthouse) featureBadges.push('Пентхаус');
-        if (data.checks.smartFlat) featureBadges.push('Смарт');
-        if (data.checks.exclusive) featureBadges.push('Эксклюзив');
-        if (previewBackFeatures) {
-          previewBackFeatures.innerHTML = (featureBadges.length ? featureBadges : ['Параметры не заполнены'])
-            .map((label) => `<span class="vw-access-preview-back-item">${label}</span>`)
-            .join('');
-        }
-        if (previewBackDescription) {
-          previewBackDescription.textContent = String(data.description || 'Описание не добавлено.');
-        }
         previewThumbs.forEach((thumb, idx) => {
           const src = imageList[idx] || '';
           thumb.classList.toggle('is-filled', !!src);
@@ -5087,7 +5049,7 @@ class VoiceWidget extends HTMLElement {
           thumb.style.backgroundImage = src ? `url("${src}")` : 'none';
         });
         refreshMainImage(imageList[0] || '');
-        setPreviewSide('front');
+        if (previewCard) previewCard.setAttribute('data-side', 'front');
       };
       const setFieldError = (fieldEl, message) => {
         if (!fieldEl) return;
@@ -5641,11 +5603,8 @@ class VoiceWidget extends HTMLElement {
         setStep(3);
       });
       overlay.querySelector('[data-role="add-reset-head"]')?.addEventListener('click', () => showResetDialog());
-      overlay.querySelector('[data-role="preview-toggle-back"]')?.addEventListener('click', () => {
-        setPreviewSide('back');
-      });
-      overlay.querySelector('[data-role="preview-toggle-front"]')?.addEventListener('click', () => {
-        setPreviewSide('front');
+      overlay.querySelector('[data-role="preview-more"]')?.addEventListener('click', () => {
+        this.ui?.showNotification?.('В превью отображается фронт карточки');
       });
       const publish = async () => {
         const publishBtn = overlay.querySelector('[data-role="add-publish-final"]');
@@ -7661,19 +7620,14 @@ class VoiceWidget extends HTMLElement {
       .vw-access-preview-media img.is-empty {
         opacity: 0;
       }
-      .vw-access-preview-id {
+      .vw-access-preview-overlay-badges {
         position: absolute;
         top: 12px;
-        right: 12px;
-        min-height: 30px;
-        border-radius: 999px;
-        background: rgba(10, 14, 24, 0.64);
-        border: 1px solid rgba(255,255,255,0.2);
-        display: inline-flex;
+        left: 12px;
+        display: flex;
         align-items: center;
-        padding: 0 12px;
-        font-size: 1rem;
-        font-weight: 700;
+        gap: 8px;
+        flex-wrap: wrap;
       }
       .vw-access-preview-thumbs {
         position: absolute;
@@ -7702,10 +7656,6 @@ class VoiceWidget extends HTMLElement {
         padding: 12px;
         display: grid;
         gap: 10px;
-      }
-      .vw-access-preview-side--back[hidden],
-      .vw-access-preview-side--front[hidden] {
-        display: none !important;
       }
       .vw-access-preview-badges {
         display: flex;
@@ -7756,52 +7706,15 @@ class VoiceWidget extends HTMLElement {
         min-height: 34px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.2);
-        background: rgba(255,255,255,0.08);
+        background: rgba(10, 14, 24, 0.64);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         padding: 0 8px;
         font-size: .82rem;
       }
-      .vw-access-preview-more {
-        min-height: 42px;
-        border-radius: 999px;
-        border: 1px solid rgba(255,255,255,0.22);
-        background: rgba(255,255,255,0.12);
-        color: var(--text-primary, #fff);
-        font-size: 1rem;
-        opacity: .9;
-      }
-      .vw-access-preview-back-list {
-        display: grid;
-        gap: 6px;
-      }
-      .vw-access-preview-back-item {
-        min-height: 32px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.18);
-        background: rgba(255,255,255,0.08);
-        display: inline-flex;
-        align-items: center;
-        padding: 0 10px;
-        font-size: .84rem;
-      }
-      .vw-access-preview-back-desc {
-        color: var(--text-secondary, rgba(255,255,255,0.8));
-        font-size: .86rem;
-        line-height: 1.35;
-        max-height: 68px;
-        overflow: auto;
-      }
-      .vw-access-preview-back-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-      }
-      .vw-access-preview-back-actions .vw-access-sub-btn[disabled] {
-        opacity: .55;
-        filter: grayscale(.1);
-        pointer-events: none;
+      .card-actions-wrap--preview {
+        margin-top: 2px;
       }
       .vw-access-add-success {
         min-height: 220px;
