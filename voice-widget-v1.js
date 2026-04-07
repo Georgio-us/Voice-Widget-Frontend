@@ -7811,7 +7811,7 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: start;
-        gap: 10px;
+        gap: 20px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         border-radius: 12px;
@@ -7828,7 +7828,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-obj-card--admin .vw-access-obj-side {
         display: grid;
-        gap: 8px;
+        gap: 10px;
         justify-items: center;
         align-content: start;
       }
@@ -7858,8 +7858,8 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-obj-edit {
         flex: 0 0 auto;
-        min-width: 28px;
-        min-height: 28px;
+        min-width: 24px;
+        min-height: 24px;
         border-radius: 8px;
         border: 1px solid rgba(92, 150, 255, 0.55);
         background: rgba(92, 150, 255, 0.12);
@@ -7876,13 +7876,13 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-obj-delete {
         flex: 0 0 auto;
-        min-width: 28px;
-        min-height: 28px;
+        min-width: 24px;
+        min-height: 24px;
         border-radius: 8px;
         border: 1px solid rgba(236, 96, 96, 0.72);
         background: rgba(236, 96, 96, 0.12);
         color: var(--text-primary, #fff);
-        font-size: .9rem;
+        font-size: .50rem;
         line-height: 1;
         display: inline-flex;
         align-items: center;
