@@ -2872,11 +2872,58 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-location {
   font-size: .58rem;
-  line-height: 1.25;
-  color: color-mix(in srgb, var(--text-primary) 88%, transparent);
-  font-weight: 600;
+  line-height: 1.22;
+  color: color-mix(in srgb, var(--text-primary) 80%, transparent);
+  font-weight: 500;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-primary,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-primary {
+  font-size: .58rem;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--text-primary) 92%, transparent);
+  font-weight: 600;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-secondary {
+  font-size: .56rem;
+  line-height: 1.18;
+  color: color-mix(in srgb, var(--text-primary) 70%, transparent);
+  font-weight: 500;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-item {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-item--strong {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text-primary) 96%, transparent);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-item--muted {
+  color: color-mix(in srgb, var(--text-primary) 56%, transparent);
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__meta-line {
@@ -2896,6 +2943,10 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide:not(.is-expanded) .list-card__top {
   margin-top: 3px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide:not(.is-expanded) .list-card__body {
+  grid-template-rows: auto 1fr auto;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__chips {
