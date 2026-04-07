@@ -9280,8 +9280,6 @@ render() {
       const slide = trigger?.closest('.card-slide') || null;
       if (variantId) this.openCatalogCardInList(variantId, slide);
       return;
-    } else if (e.target.closest('.list-card-full')) {
-      return;
     } else if (e.target.closest('[data-action="list-expand"]')) {
       try {
         e.preventDefault();
@@ -10521,6 +10519,30 @@ render() {
       if (normalized.area_m2 != null && normalized.area_m2 !== '') specs.push(`📐 ${normalized.area_m2} м²`);
       if (normalized.floor) specs.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
       const metaRow = [normalized.priceLabel, normalized.district].filter(Boolean).join('  ·  ') || '—';
+      const scoreValue = (() => {
+        const raw = Number(normalized.score);
+        if (!Number.isFinite(raw)) return 0;
+        return Math.max(0, Math.min(100, Math.round(raw)));
+      })();
+      const scoreTier = String(normalized.matchTier || '').toLowerCase();
+      const scoreTierClass = ['high', 'mid', 'low'].includes(scoreTier) ? ` card-back-header__score--${scoreTier}` : '';
+      const scoreLabel = `Score: ${scoreValue}%`;
+      const backSpecsItemsBase = [];
+      if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
+      if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
+      if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
+      if (normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
+      if (normalized.bathrooms) backSpecsItemsBase.push({ icon: '🛁', text: `${isUa ? 'Санвузлів' : 'Санузлов'}: ${normalized.bathrooms}` });
+      const dynamicExtras = Array.isArray(normalized.backFeatureItems) ? normalized.backFeatureItems : [];
+      const backSpecsItems = [...backSpecsItemsBase, ...dynamicExtras].filter((item) => {
+        const text = String(item?.text || '').trim();
+        if (!text) return false;
+        const lower = text.toLowerCase();
+        return !lower.endsWith(': no') && !lower.endsWith(': ні') && !lower.endsWith(': нет');
+      });
+      const backSpecsHtml = backSpecsItems
+        .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
+        .join('');
       const safeDescription = String(normalized.description || locale.cardDescriptionEmpty || 'Description unavailable')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
@@ -10539,6 +10561,7 @@ render() {
         <div class="list-card-full__head">
           <button type="button" class="list-card-full__back" data-action="list-full-close">Назад</button>
           <div class="list-card-full__title-top">${escCardText(locale.handoffDetails || 'Подробнее')}</div>
+          <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
         </div>
         <div class="list-card-full__media cs-image-click-area">
           ${normalized.image ? `<img class="list-card-full__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle)}">` : '<div class="list-card-full__image list-card-full__image--placeholder">No image</div>'}
@@ -10551,13 +10574,17 @@ render() {
         <div class="list-card-full__body">
           <div class="list-card-full__title">${escCardText(headlineTitle)}</div>
           <div class="list-card-full__meta">${escCardText(metaRow)}</div>
-          <div class="list-card-full__specs">${specs.map((item) => `<span class="list-card-full__spec-item">${item}</span>`).join('')}</div>
-          <div class="list-card-full__actions">
-            <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
-            <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
-            <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+          <div class="card-back-scroll">
+            <div class="card-back-specs">${backSpecsHtml || specs.map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__text">${item}</span></span>`).join('')}</div>
           </div>
-          <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
+          <div class="card-back-actions">
+            <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
+            <div class="card-back-actions__row">
+              <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
+              <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
+              <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+            </div>
+          </div>
         </div>
         <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
           <div class="cs-description-panel">
@@ -10574,6 +10601,7 @@ render() {
         });
       } catch {}
       slide.classList.add('is-full-open');
+      try { this.fitBackSpecsInSlide(slide); } catch {}
     } catch {}
   }
 
