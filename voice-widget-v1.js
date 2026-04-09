@@ -10115,7 +10115,12 @@ render() {
     if (Array.isArray(data.topCandidates)) cards.push(...data.topCandidates);
     if (Array.isArray(data.cards)) cards.push(...data.cards);
     if (data.card && typeof data.card === 'object') cards.push(data.card);
-    if (cards.length) window.appState.lastBackendCandidatesAt = Date.now();
+    if (cards.length) {
+      window.appState.lastBackendCandidatesAt = Date.now();
+      // Keep catalog source in sync with latest backend response so
+      // "Найдено N объектов" always has a renderable dataset on click.
+      this.replacePropertiesCatalog(cards);
+    }
     if (shouldApplyAiRefresh && migratedInsights && typeof migratedInsights === 'object') {
       this._catalogManualFilterOverrides = null;
       this._catalogIgnoreAssistantBaseFilters = false;
@@ -11588,12 +11593,13 @@ render() {
       normalized,
       this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
     );
+    const escFrontBadgeText = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const frontPrimaryBadgeHtml = String(frontBadgePrimary || '').trim()
-      ? `<div class="cs-price-tag cs-price-tag--insight">${escCardText(frontBadgePrimary)}</div>`
+      ? `<div class="cs-price-tag cs-price-tag--insight">${escFrontBadgeText(frontBadgePrimary)}</div>`
       : '';
     const frontReasonBadgesHtml = [frontBadgeArg1, frontBadgeArg2]
       .filter((v) => String(v || '').trim().length > 0)
-      .map((v, idx) => `<div class="cs-meta-badge cs-meta-badge--reason ${idx === 0 ? 'cs-meta-badge--operation' : 'cs-meta-badge--type'}">${escCardText(v)}</div>`)
+      .map((v, idx) => `<div class="cs-meta-badge cs-meta-badge--reason ${idx === 0 ? 'cs-meta-badge--operation' : 'cs-meta-badge--type'}">${escFrontBadgeText(v)}</div>`)
       .join('');
     const backSpecsItemsBase = [];
     if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
