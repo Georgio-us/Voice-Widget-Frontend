@@ -12,6 +12,7 @@ const VW_API_URL = process.env.VW_API_URL || '';
 const VW_CARDS_SEARCH_URL = process.env.VW_CARDS_SEARCH_URL || '';
 const VW_SHARE_BASE_URL = process.env.VW_SHARE_BASE_URL || FRONTEND_APP_URL || '';
 const SHARE_PREFIX = 'prop_';
+const SHARE_SELECTION_PREFIX = 'sel_';
 const INDEX_HTML_PATH = path.join(__dirname, 'index.html');
 
 const trim = (v) => String(v || '').trim();
@@ -58,6 +59,32 @@ function buildPropToken(propId) {
   return normalized ? `${SHARE_PREFIX}${normalized}` : '';
 }
 
+function normalizeSelectionToken(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  const fromPrefixed = value.match(/sel_([a-z0-9_-]+)/i)?.[1];
+  if (fromPrefixed) return String(fromPrefixed).trim();
+  const clean = value.replace(/[^a-zA-Z0-9_-]/g, '');
+  return clean ? clean : '';
+}
+
+function decodeSelectionToken(rawToken) {
+  const token = normalizeSelectionToken(rawToken);
+  if (!token) return [];
+  try {
+    const padded = token.replace(/-/g, '+').replace(/_/g, '/');
+    const fixed = padded + '='.repeat((4 - (padded.length % 4 || 4)) % 4);
+    const decoded = Buffer.from(fixed, 'base64').toString('utf8');
+    const ids = String(decoded || '')
+      .split(',')
+      .map((id) => normalizePropId(id))
+      .filter(Boolean);
+    return Array.from(new Set(ids));
+  } catch {
+    return [];
+  }
+}
+
 function getPublicBaseUrl(req) {
   const configured = String(FRONTEND_APP_URL || '').trim().replace(/\/+$/, '');
   if (configured) return configured;
@@ -76,6 +103,14 @@ function buildShareUrl(propId, req) {
   return `${base}/share/prop/${encodeURIComponent(normalized)}`;
 }
 
+function buildSelectionShareUrl(token, req) {
+  const normalized = normalizeSelectionToken(token);
+  const base = getPublicBaseUrl(req);
+  if (!normalized) return base || '/';
+  if (!base) return `/s/s/${encodeURIComponent(normalized)}`;
+  return `${base}/s/s/${encodeURIComponent(normalized)}`;
+}
+
 function buildDirectMiniAppLink(propId) {
   const token = buildPropToken(propId);
   const bot = String(TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, '');
@@ -89,6 +124,10 @@ function getPropIdFromShareRequest(req) {
   const fromSegment = normalizePropId(req.params?.id);
   if (fromSegment) return fromSegment;
   return '';
+}
+
+function getSelectionTokenFromShareRequest(req) {
+  return normalizeSelectionToken(req.params?.token || req.params?.id || '');
 }
 
 function getPropIdFromAppRequest(req) {
@@ -222,6 +261,34 @@ function buildShareOgMeta({ propId, card, req }) {
   return { title, description, image, shareUrl, tags: tags.join('\n  ') };
 }
 
+function buildSelectionShareOgMeta({ token, idsCount = 0, card, req }) {
+  const image = extractImage(card);
+  const safeCount = Math.max(0, Number(idsCount) || 0);
+  const title = safeCount > 0
+    ? `🏘 Подборка из ${safeCount} объектов`
+    : '🏘 Подборка объектов VIA';
+  const description = safeCount > 0
+    ? `Откройте подборку из ${safeCount} объектов в VIA Properties.`
+    : 'Откройте подборку объектов в VIA Properties.';
+  const shareUrl = buildSelectionShareUrl(token, req);
+  const tags = [
+    `<title>${esc(title)}</title>`,
+    '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="VIA Properties">',
+    `<meta property="og:title" content="${esc(title)}">`,
+    `<meta property="og:description" content="${esc(description)}">`,
+    `<meta property="og:url" content="${esc(shareUrl)}">`,
+    '<meta name="twitter:card" content="summary_large_image">',
+    `<meta name="twitter:title" content="${esc(title)}">`,
+    `<meta name="twitter:description" content="${esc(description)}">`
+  ];
+  if (image) {
+    tags.push(`<meta property="og:image" content="${esc(image)}">`);
+    tags.push(`<meta name="twitter:image" content="${esc(image)}">`);
+  }
+  return { title, description, image, shareUrl, tags: tags.join('\n  ') };
+}
+
 function renderShareLandingHtml({ propId, card, req }) {
   const directLink = buildDirectMiniAppLink(propId);
   const og = buildShareOgMeta({ propId, card: card || {}, req });
@@ -271,6 +338,40 @@ function renderShareLandingHtml({ propId, card, req }) {
 </html>`;
 }
 
+function renderSelectionShareLandingHtml({ token, ids = [], card, req }) {
+  const safeToken = normalizeSelectionToken(token);
+  const idsCount = Array.isArray(ids) ? ids.length : 0;
+  const og = buildSelectionShareOgMeta({ token: safeToken, idsCount, card: card || {}, req });
+  const openButton = TELEGRAM_BOT_USERNAME
+    ? `<a class="open-btn" href="${esc(`https://t.me/${String(TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, '')}/${TELEGRAM_MINIAPP_PATH}?startapp=${encodeURIComponent(`${SHARE_SELECTION_PREFIX}${safeToken}`)}`)}">Открыть подборку в приложении</a>`
+    : `<a class="open-btn" href="${esc(getPublicBaseUrl(req) || '/')}">Открыть каталог</a>`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  ${og.tags}
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#000; color:#fff; font-family:"SF Pro Display","Segoe UI",Arial,sans-serif; padding:18px; box-sizing:border-box; }
+    .wrap { width:min(100%, 420px); padding:16px 14px; text-align:center; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:linear-gradient(155deg, rgba(42,55,80,.38), rgba(17,18,22,.62)); box-shadow:0 14px 40px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08); backdrop-filter:blur(18px) saturate(130%); -webkit-backdrop-filter:blur(18px) saturate(130%); }
+    .title { font-size:18px; line-height:1.22; margin:0 0 8px; font-weight:700; letter-spacing:.1px; }
+    .subtitle { margin:0 0 14px; color:rgba(255,255,255,.72); font-size:13px; font-weight:500; }
+    .open-btn { display:inline-block; padding:11px 16px; min-height:18px; border-radius:9px; font-size:14px; font-weight:700; background:linear-gradient(180deg, #2d8fe1, #2481cc); color:#fff; text-decoration:none; border:1px solid rgba(255,255,255,.14); box-shadow:0 6px 18px rgba(36,129,204,.38); }
+    .open-btn:active { transform:translateY(1px); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1 class="title">${esc(og.title)}</h1>
+    <p class="subtitle">${esc('Откройте подборку в VIA Properties')}</p>
+    ${openButton}
+  </main>
+</body>
+</html>`;
+}
+
 function renderIndexWithOg({ propId, card, injectBaseHref = false, req = null }) {
   let html = INDEX_TEMPLATE;
   if (injectBaseHref && !/<base\s/i.test(html)) {
@@ -299,6 +400,19 @@ async function renderShareRoute(req, res) {
   res.type('html').send(html);
 }
 
+async function renderSelectionShareRoute(req, res) {
+  const token = getSelectionTokenFromShareRequest(req);
+  const ids = decodeSelectionToken(token);
+  let firstCard = null;
+  if (ids.length) {
+    try {
+      firstCard = await fetchPropertyById(ids[0]);
+    } catch {}
+  }
+  const html = renderSelectionShareLandingHtml({ token, ids, card: firstCard, req });
+  res.type('html').send(html);
+}
+
 async function renderApp(req, res) {
   const propId = getPropIdFromAppRequest(req);
   const needsBaseHref = req.path !== '/';
@@ -314,6 +428,9 @@ async function renderApp(req, res) {
 
 app.get('/share/:slug', renderShareRoute);
 app.get('/share/prop/:id', renderShareRoute);
+app.get('/share/sel/:token', renderSelectionShareRoute);
+app.get('/s/p/:id', renderShareRoute);
+app.get('/s/s/:token', renderSelectionShareRoute);
 app.get('/', renderApp);
 app.get('/property/:id', renderApp);
 app.get('*', renderApp);

@@ -2849,7 +2849,7 @@ class VoiceWidget extends HTMLElement {
       const href = String(window.location.href || '');
       const fromHref = href.match(/(?:startapp|start_param|tgWebAppStartParam)=([^&#]+)/i)?.[1] || '';
       if (fromHref) candidates.push(decodeURIComponent(fromHref));
-      const fromPath = href.match(/\/share\/prop\/([^/?#]+)/i)?.[1] || '';
+      const fromPath = href.match(/\/(?:share\/prop|s\/p)\/([^/?#]+)/i)?.[1] || '';
       if (fromPath) candidates.push(fromPath);
       const propToken = href.match(/prop_[a-z0-9_-]+/i)?.[0] || '';
       if (propToken) candidates.push(propToken);
@@ -2876,7 +2876,7 @@ class VoiceWidget extends HTMLElement {
       const href = String(window.location.href || '');
       const fromHref = href.match(/(?:startapp|start_param|tgWebAppStartParam|selection|selectionId|selectionToken)=([^&#]+)/i)?.[1] || '';
       if (fromHref) candidates.push(decodeURIComponent(fromHref));
-      const fromPath = href.match(/\/share\/sel\/([^/?#]+)/i)?.[1] || '';
+      const fromPath = href.match(/\/(?:share\/sel|s\/s)\/([^/?#]+)/i)?.[1] || '';
       if (fromPath) candidates.push(fromPath);
       const token = href.match(/sel_[a-z0-9_-]+/i)?.[0] || '';
       if (token) candidates.push(token);
@@ -3000,13 +3000,13 @@ class VoiceWidget extends HTMLElement {
   buildTelegramPropertyLink(propId) {
     const safeId = this.normalizeDeepLinkPropId(propId);
     if (!safeId) return '';
-    return `${VW_SHARE_BASE_URL}/share/prop/${encodeURIComponent(safeId)}`;
+    return `${VW_SHARE_BASE_URL}/s/p/${encodeURIComponent(safeId)}`;
   }
 
   buildTelegramSelectionLink(ids = []) {
     const token = this.encodeDeepLinkSelectionIds(ids);
     if (!token) return '';
-    return `${VW_SHARE_BASE_URL}/share/sel/${encodeURIComponent(token)}`;
+    return `${VW_SHARE_BASE_URL}/s/s/${encodeURIComponent(token)}`;
   }
 
   showShareNotice(message) {
