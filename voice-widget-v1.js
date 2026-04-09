@@ -6701,13 +6701,13 @@ class VoiceWidget extends HTMLElement {
         exclusive: /(эксклюзив|exclusive)/i.test(text),
         parking: /(паркинг|парковк|parking|garage)/i.test(text),
         balconyLoggia: /(балкон|лоджи|balcony|loggia)/i.test(text),
-        rcOnly: /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|только\s*[жз]к|лишь\s*[жз]к|исключительно\s*[жз]к|в\s*[жз]к|жил(?:ой|ого|ом|ые|ых)?\s+комплекс(?:ы|а|е|ах)?|в\s+жил(?:ом|ых)\s+комплекс(?:е|ах)?|residential\s+complex(?:es)?/i.test(text)
+        rcOnly: /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|(?:только|лишь|исключительно)\s+(?:в\s+)?(?:[жз]к|[жз]\/к|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?)|\bв\s*[жз]к\b|\bжил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?\b|\bв\s+жил(?:ом|ых|ой)\s+комплекс(?:е|ах|ов)?\b|residential\s+complex(?:es)?/i.test(text)
       };
     };
     const stripRcPrefixes = (text) => {
       let s = String(text || '').trim();
       if (!s) return '';
-      return s.replace(/^(?:жк|зк|жилой\s+комплекс|жилкомплекс)\s*[«"']?/i, '').replace(/[»"']$/g, '').trim() || s;
+      return s.replace(/^(?:жк|зк|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?|жилкомплекс(?:ы|а|у|е|ом|ах|ами|ов)?)\s*[«"']?/i, '').replace(/[»"']$/g, '').trim() || s;
     };
     const isGenericCityLocation = (text) => {
       const t = String(text || '').trim().toLowerCase();
