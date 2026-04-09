@@ -921,6 +921,15 @@ class UIManager {
       isOwner: true,
       isSuperAdmin: this.widget.accessFlags?.isSuperAdmin === true
     };
+    this.widget.accessSubscription = {
+      active: true,
+      plan: 'lifetime',
+      status: 'active',
+      endsAt: null,
+      startsAt: null,
+      daysLeft: null,
+      activationSource: 'dev_admin'
+    };
     try { this.widget.updateAccessHeaderButton?.(); } catch {}
     this.widget.updateSendButtonState('chat');
     this.widget.openAccessOverlay?.();
@@ -933,6 +942,7 @@ class UIManager {
     if (textInput) textInput.value = '';
     this.widget.accessRole = 'user';
     this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+    this.widget.accessSubscription = null;
     try { this.widget.updateAccessHeaderButton?.(); } catch {}
     this.widget.updateSendButtonState('chat');
     this.widget.openAccessOverlay?.();
@@ -1435,6 +1445,27 @@ class APIClient {
     return data;
   }
 
+  async redeemSubscriptionActivationKey(activationKey) {
+    const key = String(activationKey || '').trim();
+    if (!key) throw new Error('ACTIVATION_KEY_REQUIRED');
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/subscriptions/redeem');
+    const tgIdentity = this.getTelegramUserIdentity();
+    const payload = { activationKey: key };
+    if (tgIdentity?.id) payload.tgUserId = tgIdentity.id;
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) payload.devAdmin = '1';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      const serverError = String(data?.error || '');
+      throw new Error(serverError || `SUBSCRIPTION_REDEEM_FAILED_${res.status}`);
+    }
+    return data;
+  }
+
   _deriveAdminApiBase() {
     try {
       const u = new URL(String(this.apiUrl));
@@ -1661,6 +1692,7 @@ class APIClient {
     if (!tgIdentity?.id) {
       this.widget.accessRole = 'user';
       this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+      this.widget.accessSubscription = null;
       try { this.widget.updateAccessHeaderButton?.(); } catch {}
       return { accessRole: 'user', isAdmin: false, isOwner: false, isSuperAdmin: false };
     }
@@ -1679,15 +1711,18 @@ class APIClient {
         isOwner: data?.isOwner === true,
         isSuperAdmin: data?.isSuperAdmin === true
       };
+      this.widget.accessSubscription = this.widget.normalizeAccessSubscription(data?.subscription || null);
       try { this.widget.updateAccessHeaderButton?.(); } catch {}
       return {
         accessRole: this.widget.accessRole,
-        ...this.widget.accessFlags
+        ...this.widget.accessFlags,
+        subscription: this.widget.accessSubscription
       };
     } catch (error) {
       console.warn('resolveViewerAccessRole failed:', error);
       this.widget.accessRole = 'user';
       this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+      this.widget.accessSubscription = null;
       try { this.widget.updateAccessHeaderButton?.(); } catch {}
       return { accessRole: 'user', isAdmin: false, isOwner: false, isSuperAdmin: false };
     }
@@ -2651,6 +2686,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogSimilarLoading = false;
     this.accessRole = 'user';
     this.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
+    this.accessSubscription = null;
     this._accessOverlayOpen = false;
     this._filtersOverlayOpen = false;
     this.initializeStorageLifecycle();
@@ -4012,6 +4048,57 @@ class VoiceWidget extends HTMLElement {
     return type ? (type[0].toUpperCase() + type.slice(1)) : '—';
   }
 
+  normalizeAccessSubscription(subscription) {
+    if (!subscription || typeof subscription !== 'object') return null;
+    const active = subscription.active === true;
+    const plan = String(subscription.plan || '').trim().toLowerCase();
+    const status = String(subscription.status || (active ? 'active' : 'expired')).trim().toLowerCase();
+    const startsAt = subscription.startsAt || subscription.starts_at || null;
+    const endsAt = subscription.endsAt || subscription.ends_at || null;
+    const activationSource = subscription.activationSource || subscription.activation_source || subscription.source || null;
+    const daysLeftRaw = subscription.daysLeft ?? subscription.days_left ?? null;
+    const daysLeft = daysLeftRaw == null
+      ? null
+      : (Number.isFinite(Number(daysLeftRaw)) ? Math.max(0, Number(daysLeftRaw)) : null);
+    return {
+      active,
+      plan,
+      status,
+      startsAt,
+      endsAt,
+      activationSource,
+      daysLeft
+    };
+  }
+
+  getSubscriptionPlanLabel(planRaw) {
+    const plan = String(planRaw || '').trim().toLowerCase();
+    if (plan === 'trial_7') return 'Тест 7 дней';
+    if (plan === 'month_30') return 'Месячная (30 дней)';
+    if (plan === 'year_365') return 'Годовая (365 дней)';
+    if (plan === 'lifetime') return 'Lifetime';
+    return plan ? plan : '—';
+  }
+
+  getSubscriptionStatusLabel(statusRaw, active = false) {
+    const status = String(statusRaw || '').trim().toLowerCase();
+    if (active || status === 'active') return 'Активна';
+    if (status === 'expired') return 'Истекла';
+    if (status === 'revoked') return 'Отключена';
+    return status ? status : 'Неактивна';
+  }
+
+  formatSubscriptionDate(value) {
+    if (!value) return '—';
+    try {
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('ru-RU');
+    } catch {
+      return '—';
+    }
+  }
+
   updateAdminObjectsSelectionState(overlay) {
     if (!overlay) return;
     const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-card'));
@@ -4350,19 +4437,47 @@ class VoiceWidget extends HTMLElement {
             <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit5 || ''}</div>
             <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit6 || ''}</div>
           </div>
-          <div class="vw-access-sub-toolbar" style="margin-top: 12px; grid-template-columns: 1fr;">
+          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--stack" style="margin-top: 12px;">
             <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-bot-trial">${locale.accessUserBotTrialCta || 'Получить бесплатный 7-дневный тест'}</button>
             <button type="button" class="vw-access-sub-btn" data-role="want-bot-consult">${locale.accessUserBotConsultCta || 'Консультация по интеграции'}</button>
           </div>
         `;
       }
       if (safeSection === 'subscription') {
+        const subscription = this.normalizeAccessSubscription(this.accessSubscription);
+        const isActive = subscription?.active === true;
+        const planLabel = this.getSubscriptionPlanLabel(subscription?.plan);
+        const statusLabel = this.getSubscriptionStatusLabel(subscription?.status, isActive);
+        const startsAtLabel = this.formatSubscriptionDate(subscription?.startsAt);
+        const endsAtLabel = subscription?.plan === 'lifetime'
+          ? 'Без срока'
+          : this.formatSubscriptionDate(subscription?.endsAt);
+        const daysLeftLabel = subscription?.daysLeft == null
+          ? '—'
+          : `${Math.max(0, Number(subscription.daysLeft))} дн.`;
+        const sourceLabel = subscription?.activationSource
+          ? String(subscription.activationSource)
+          : '—';
         return `
           <div class="vw-access-sub-list">
-            <div class="vw-access-sub-item">Текущий план: <strong>PRO demo</strong></div>
-            <div class="vw-access-sub-item">Дата подписки: <strong>${fmtDate(now)}</strong></div>
-            <div class="vw-access-sub-item">Следующее списание: <strong>${fmtDate(nextMonth)}</strong></div>
-            <div class="vw-access-sub-item">Статус: <strong>Активна</strong></div>
+            <div class="vw-access-sub-item">Текущий план: <strong>${planLabel}</strong></div>
+            <div class="vw-access-sub-item">Статус: <strong>${statusLabel}</strong></div>
+            <div class="vw-access-sub-item">Дата активации: <strong>${startsAtLabel}</strong></div>
+            <div class="vw-access-sub-item">Действует до: <strong>${endsAtLabel}</strong></div>
+            <div class="vw-access-sub-item">Осталось: <strong>${daysLeftLabel}</strong></div>
+            <div class="vw-access-sub-item">Источник активации: <strong>${sourceLabel}</strong></div>
+          </div>
+          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--stack" style="margin-top: 12px;">
+            <input
+              type="text"
+              class="vw-access-sub-input"
+              data-role="subscription-key-input"
+              placeholder="Введите ключ подписки"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="subscription-activate">Активировать ключ</button>
+            <button type="button" class="vw-access-sub-btn" data-role="subscription-refresh">Обновить статус</button>
           </div>
         `;
       }
@@ -4806,6 +4921,69 @@ class VoiceWidget extends HTMLElement {
       };
       overlay.querySelector('[data-role="want-bot-trial"]')?.addEventListener('click', () => openConsult('guest_want_bot_trial'));
       overlay.querySelector('[data-role="want-bot-consult"]')?.addEventListener('click', () => openConsult('guest_want_bot_consult'));
+    }
+    if (safeSection === 'subscription') {
+      const input = overlay.querySelector('[data-role="subscription-key-input"]');
+      const activateBtn = overlay.querySelector('[data-role="subscription-activate"]');
+      const refreshBtn = overlay.querySelector('[data-role="subscription-refresh"]');
+      const updateBusy = (busy = false) => {
+        if (activateBtn) activateBtn.disabled = !!busy;
+        if (refreshBtn) refreshBtn.disabled = !!busy;
+        if (input) input.disabled = !!busy;
+      };
+      const activate = async () => {
+        const key = String(input?.value || '').trim();
+        if (!key) {
+          this.ui?.showNotification?.('Введите ключ активации');
+          try { input?.focus(); } catch {}
+          return;
+        }
+        updateBusy(true);
+        const originalText = activateBtn?.textContent || 'Активировать ключ';
+        if (activateBtn) activateBtn.textContent = 'Активация...';
+        try {
+          await this.api?.redeemSubscriptionActivationKey?.(key);
+          this.ui?.showNotification?.('Ключ активирован');
+          try { await this.api.resolveViewerAccessRole(); } catch {}
+          this.openAccessSubOverlay('subscription');
+        } catch (error) {
+          const code = String(error?.message || '');
+          if (
+            code.includes('404') ||
+            code.includes('SUBSCRIPTION_REDEEM_FAILED_404') ||
+            code.includes('SUBSCRIPTION_ENDPOINT_NOT_FOUND')
+          ) {
+            this.ui?.showNotification?.('Активация ключа пока не подключена на сервере');
+          } else if (code.includes('ACTIVATION_KEY_REQUIRED')) {
+            this.ui?.showNotification?.('Введите ключ активации');
+          } else {
+            this.ui?.showNotification?.(`Не удалось активировать ключ (${code || 'UNKNOWN'})`);
+          }
+        } finally {
+          updateBusy(false);
+          if (activateBtn) activateBtn.textContent = originalText;
+        }
+      };
+      activateBtn?.addEventListener('click', activate);
+      input?.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        activate();
+      });
+      refreshBtn?.addEventListener('click', async () => {
+        updateBusy(true);
+        const originalText = refreshBtn?.textContent || 'Обновить статус';
+        if (refreshBtn) refreshBtn.textContent = 'Обновляем...';
+        try {
+          await this.api.resolveViewerAccessRole();
+          this.openAccessSubOverlay('subscription');
+        } catch {
+          this.ui?.showNotification?.('Не удалось обновить статус подписки');
+        } finally {
+          updateBusy(false);
+          if (refreshBtn) refreshBtn.textContent = originalText;
+        }
+      });
     }
     if (isAddProperty) {
       const modal = overlay.querySelector('.vw-access-sub-modal--add') || overlay.querySelector('.vw-access-sub-modal');
@@ -7516,6 +7694,29 @@ class VoiceWidget extends HTMLElement {
         display: flex;
         justify-content: flex-end;
       }
+      .vw-access-sub-toolbar--stack {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .vw-access-sub-input {
+        width: 100%;
+        min-height: 36px;
+        border-radius: 8px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 12px;
+        font-size: .84rem;
+      }
+      .vw-access-sub-input::placeholder {
+        color: var(--text-secondary, rgba(255,255,255,0.58));
+      }
+      .vw-access-sub-input:focus-visible {
+        outline: none;
+        border-color: rgba(92, 150, 255, 0.88);
+        box-shadow: 0 0 0 2px rgba(92, 150, 255, 0.24);
+      }
       .vw-access-sub-btn {
         min-height: 34px;
         border-radius: 10px;
@@ -8306,7 +8507,10 @@ class VoiceWidget extends HTMLElement {
       this.openAccessSubOverlay('properties');
     });
     overlay.querySelector('[data-role="admin-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
-    overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', () => this.openAccessSubOverlay('subscription'));
+    overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', async () => {
+      try { await this.api.resolveViewerAccessRole(); } catch {}
+      this.openAccessSubOverlay('subscription');
+    });
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.querySelector('[data-role="user-want-bot"]')?.addEventListener('click', () => this.openAccessSubOverlay('want-bot'));
     overlay.addEventListener('click', (event) => {
