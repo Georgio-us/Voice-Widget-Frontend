@@ -2366,6 +2366,7 @@ const LOCALES = {
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
     pillAvailable: 'Доступно {count} объектов',
+    pillFoundGeneric: 'Объекты найдены',
     pillFound: 'Найдено {count} объектов',
     sliderCheckpointTitle10: 'Вы просмотрели 10 лучших совпадений',
     sliderCheckpointTitle20: 'Точность совпадения снижается',
@@ -2531,6 +2532,7 @@ const LOCALES = {
     handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
     handoffDetails: 'Детальніше',
     pillAvailable: 'Доступно {count} обʼєктів',
+    pillFoundGeneric: 'Обʼєкти знайдено',
     pillFound: 'Знайдено {count} обʼєктів',
     sliderCheckpointTitle10: 'Ви переглянули 10 найкращих збігів',
     sliderCheckpointTitle20: 'Точність збігів знижується',
@@ -9967,9 +9969,7 @@ render() {
   }
 
   _buildPillFoundLabel() {
-    const value = Number(this._pillBaseCount);
-    const formatted = new Intl.NumberFormat('en-US').format(Math.max(0, Number.isFinite(value) ? value : 0));
-    return this.t('pillFound', { count: formatted }) || `Найдено ${formatted} объектов`;
+    return this.t('pillFoundGeneric') || 'Объекты найдены';
   }
 
   _refreshObjectsPillLocale({ animate = false } = {}) {
