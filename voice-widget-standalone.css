@@ -3412,10 +3412,15 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .list-description-overlay {
   inset: 0;
-  padding: 0;
-  align-items: stretch;
-  justify-content: stretch;
-  z-index: 12;
+  padding: 6px;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  border-radius: inherit;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-main) 72%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .list-description-panel {
@@ -3423,12 +3428,13 @@ voice-widget,
   height: 100%;
   max-width: none;
   max-height: none;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--border-light) 86%, transparent);
   background: color-mix(in srgb, var(--bg-card) 94%, transparent);
   box-shadow: 0 6px 14px var(--shadow-soft);
   padding: 10px;
   gap: 8px;
+  overflow: hidden;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .list-description-panel .cs-description-title {
@@ -3442,6 +3448,9 @@ voice-widget,
   max-height: none;
   font-size: .72rem;
   line-height: 1.4;
+  border-radius: 8px;
+  padding: 8px;
+  background: color-mix(in srgb, var(--bg-element) 82%, transparent);
   padding-right: 2px;
 }
 
