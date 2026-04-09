@@ -2378,7 +2378,7 @@ voice-widget,
   text-overflow: ellipsis;
 }
 
-.vw-app .pill-overlay-lane .objects-counter-pill.is-state-insight {
+.vw-app .pill-overlay-lane .objects-counter-pill.is-state-results-pending {
   border-color: color-mix(in srgb, var(--color-accent) 72%, #7cf9ff);
   background:
     linear-gradient(90deg,
@@ -2391,7 +2391,7 @@ voice-widget,
     0 10px 24px color-mix(in srgb, var(--color-accent) 42%, transparent);
 }
 
-.vw-app .pill-overlay-lane .objects-counter-pill.is-state-cta {
+.vw-app .pill-overlay-lane .objects-counter-pill.is-state-results-viewed {
   border-color: color-mix(in srgb, var(--color-accent) 28%, var(--border-light));
   background: color-mix(in srgb, var(--bg-pill) 88%, var(--color-accent));
 }
@@ -2439,8 +2439,8 @@ voice-widget,
   84% { transform: translateX(-0.8px); }
 }
 
-.vw-app .pill-overlay-lane .objects-counter-pill.is-state-cta.is-text-animating {
-  animation: pillCtaSettle 2s cubic-bezier(0.22, 0.8, 0.24, 1);
+.vw-app .pill-overlay-lane .objects-counter-pill.is-state-results-viewed.is-text-animating {
+  animation: pillCtaSettle 1.2s cubic-bezier(0.22, 0.8, 0.24, 1);
 }
 
 @keyframes pillCtaSettle {

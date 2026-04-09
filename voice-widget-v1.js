@@ -2366,8 +2366,7 @@ const LOCALES = {
     cardTitleFullAria: 'Показать полный заголовок',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
-    pillCta: 'Смотреть подборку',
-    pillNewInsight: 'Новый инсайт',
+    pillAvailable: 'Доступно {count} объектов',
     pillFound: 'Найдено {count} объектов',
     sliderCheckpointTitle10: 'Вы просмотрели 10 лучших совпадений',
     sliderCheckpointTitle20: 'Точность совпадения снижается',
@@ -2532,8 +2531,7 @@ const LOCALES = {
     cardTitleFullAria: 'Показати повний заголовок',
     handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
     handoffDetails: 'Детальніше',
-    pillCta: 'Дивитися добірку',
-    pillNewInsight: 'Новий інсайт',
+    pillAvailable: 'Доступно {count} обʼєктів',
     pillFound: 'Знайдено {count} обʼєктів',
     sliderCheckpointTitle10: 'Ви переглянули 10 найкращих збігів',
     sliderCheckpointTitle20: 'Точність збігів знижується',
@@ -2669,7 +2667,6 @@ class VoiceWidget extends HTMLElement {
     this._catalogListScrollBound = false;
     this._pillState = 'default';
     this._pillBaseCount = 0;
-    this._pillCtaTimer = null;
     this._lastPillInsightsSnapshot = null;
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = false;
@@ -6875,7 +6872,8 @@ class VoiceWidget extends HTMLElement {
     this.replacePropertiesCatalog(list);
     if (!window.appState) window.appState = {};
     window.appState.lastTotalMatches = list.length;
-    this.updateObjectCount(list.length, { forceLabel: true });
+    this.updateObjectCount(list.length);
+    this._markPillResultsPending({ animate: true });
     return list;
   }
 
@@ -8941,6 +8939,7 @@ render() {
     try {
       console.log('objectsCounterPill clicked');
       await this.renderPropertiesFromCatalog();
+      this._markPillResultsViewed();
     } catch (error) {
       console.error('objectsCounterPill click handler failed:', error);
     }
@@ -9958,20 +9957,27 @@ render() {
   _buildPillDefaultLabel() {
     const locale = this.getCurrentLocale();
     const value = Number(this._pillBaseCount);
-    if (!Number.isFinite(value) || value <= 0) return locale.pillCta || 'Смотреть подборку';
+    if (!Number.isFinite(value) || value < 0) {
+      return this.t('pillAvailable', { count: '0' }) || 'Доступно 0 объектов';
+    }
     const formatted = new Intl.NumberFormat('en-US').format(Math.max(0, value));
+    return this.t('pillAvailable', { count: formatted }) || `Доступно ${formatted} объектов`;
+  }
+
+  _buildPillFoundLabel() {
+    const value = Number(this._pillBaseCount);
+    const formatted = new Intl.NumberFormat('en-US').format(Math.max(0, Number.isFinite(value) ? value : 0));
     return this.t('pillFound', { count: formatted }) || `Найдено ${formatted} объектов`;
   }
 
   _refreshObjectsPillLocale({ animate = false } = {}) {
     const state = String(this._pillState || 'default');
-    const locale = this.getCurrentLocale();
-    if (state === 'insight') {
-      this._setObjectsPillText(locale.pillNewInsight || 'Новый инсайт', 'insight', { animate, pulse: true });
+    if (state === 'results-pending') {
+      this._setObjectsPillText(this._buildPillFoundLabel(), 'results-pending', { animate, pulse: true });
       return;
     }
-    if (state === 'cta') {
-      this._setObjectsPillText(locale.pillCta || 'Смотреть подборку', 'cta', { animate, pulse: false });
+    if (state === 'results-viewed') {
+      this._setObjectsPillText(this._buildPillFoundLabel(), 'results-viewed', { animate, pulse: false });
       return;
     }
     this._setObjectsPillText(this._buildPillDefaultLabel(), 'default', { animate, pulse: false });
@@ -9984,8 +9990,8 @@ render() {
     pill.dataset.state = state;
     pill.textContent = String(text || '');
     pill.classList.toggle('is-state-default', state === 'default');
-    pill.classList.toggle('is-state-insight', state === 'insight');
-    pill.classList.toggle('is-state-cta', state === 'cta');
+    pill.classList.toggle('is-state-results-pending', state === 'results-pending');
+    pill.classList.toggle('is-state-results-viewed', state === 'results-viewed');
     if (animate) {
       pill.classList.remove('is-text-animating');
       // force reflow to restart animation
@@ -9999,6 +10005,22 @@ render() {
     } else {
       pill.classList.remove('is-insight-pulse');
     }
+  }
+
+  _markPillResultsPending({ animate = true } = {}) {
+    this._setObjectsPillText(this._buildPillFoundLabel(), 'results-pending', { animate, pulse: true });
+    try {
+      const tg = window?.Telegram?.WebApp;
+      if (tg?.HapticFeedback?.notificationOccurred) {
+        tg.HapticFeedback.notificationOccurred('success');
+      } else if (navigator?.vibrate) {
+        navigator.vibrate([18, 26, 18]);
+      }
+    } catch {}
+  }
+
+  _markPillResultsViewed({ animate = false } = {}) {
+    this._setObjectsPillText(this._buildPillFoundLabel(), 'results-viewed', { animate, pulse: false });
   }
 
   _snapshotInsights(insights = null) {
@@ -10038,43 +10060,33 @@ render() {
     return Object.keys(next).some((key) => next[key] !== null && next[key] !== prev[key]);
   }
 
-  _runInsightPillSequence() {
-    if (this._pillCtaTimer) {
-      clearTimeout(this._pillCtaTimer);
-      this._pillCtaTimer = null;
-    }
-    this._setObjectsPillText((this.getCurrentLocale().pillNewInsight || 'Новый инсайт'), 'insight', { animate: true, pulse: true });
-    try {
-      const tg = window?.Telegram?.WebApp;
-      if (tg?.HapticFeedback?.notificationOccurred) {
-        tg.HapticFeedback.notificationOccurred('success');
-      } else if (navigator?.vibrate) {
-        navigator.vibrate([18, 26, 18]);
-      }
-    } catch {}
-    this._pillCtaTimer = setTimeout(() => {
-      this._setObjectsPillText((this.getCurrentLocale().pillCta || 'Смотреть подборку'), 'cta', { animate: true, pulse: false });
-      this._pillCtaTimer = null;
-    }, 2000);
-  }
-
-  updateObjectCount(count, { forceLabel = false } = {}) {
+  updateObjectCount(count, { forceLabel = false, animate = false } = {}) {
     const numeric = Number(count);
     this._pillBaseCount = Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
-    if (forceLabel || this._pillState === 'default') {
-      this._setObjectsPillText(this._buildPillDefaultLabel(), 'default', { animate: false, pulse: false });
+    if (forceLabel) {
+      this._setObjectsPillText(this._buildPillDefaultLabel(), 'default', { animate, pulse: false });
+      return;
     }
+    if (this._pillState === 'results-pending') {
+      this._setObjectsPillText(this._buildPillFoundLabel(), 'results-pending', { animate, pulse: true });
+      return;
+    }
+    if (this._pillState === 'results-viewed') {
+      this._setObjectsPillText(this._buildPillFoundLabel(), 'results-viewed', { animate, pulse: false });
+      return;
+    }
+    this._setObjectsPillText(this._buildPillDefaultLabel(), 'default', { animate, pulse: false });
   }
 
   ingestBackendCatalogPayload(data = {}) {
     if (!data || typeof data !== 'object') return;
     if (!window.appState) window.appState = {};
-    const hasNewInsight = this._detectNewInsight(data.insights);
 
     const totalMatches = Number(data.totalMatches);
     if (Number.isFinite(totalMatches)) {
       window.appState.lastTotalMatches = Math.max(0, totalMatches);
       this.updateObjectCount(window.appState.lastTotalMatches);
+      this._markPillResultsPending({ animate: true });
     }
     const strictMatches = Number(data.strictMatches);
     if (Number.isFinite(strictMatches)) {
@@ -10099,7 +10111,6 @@ render() {
         console.warn('refreshCatalogByEffectiveQuery failed:', error);
       });
     }
-    if (hasNewInsight) this._runInsightPillSequence();
   }
 
   _getPropertiesEndpointCandidates() {
