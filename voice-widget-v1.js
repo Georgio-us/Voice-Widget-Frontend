@@ -10422,12 +10422,11 @@ render() {
     const score = Number(normalized?.score);
     const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
     const tier = String(normalized?.matchTier || '').toLowerCase();
+    const q = query && typeof query === 'object' ? query : {};
     const showInterpretation = this._isStrictFlowQuery(q);
     const primary = tier === 'high' || safeScore >= 80
       ? 'Точное попадание'
       : ((tier === 'mid' || safeScore >= 55) ? 'Похожее' : 'Альтернатива');
-
-    const q = query && typeof query === 'object' ? query : {};
     const toNum = (v) => {
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
