@@ -6760,6 +6760,21 @@ class VoiceWidget extends HTMLElement {
       ? this._catalogManualFilterOverrides
       : {};
     const merged = { ...base, ...manual };
+    if (String(merged.residentialComplex || '').trim()) {
+      // Specific ЖК implies ЖК-only baseline for both strict and similar flows.
+      merged.rcOnly = true;
+    }
+    const hasAnyCriteriaExceptOperation = Object.entries(merged).some(([key, value]) => {
+      if (key === 'operation' || key === 'limit') return false;
+      if (value == null) return false;
+      if (typeof value === 'boolean') return value === true;
+      return String(value).trim() !== '';
+    });
+    if (!String(merged.operation || '').trim() && hasAnyCriteriaExceptOperation) {
+      // Product rule: when user applies any filter but doesn't choose deal type,
+      // default to sale.
+      merged.operation = 'sale';
+    }
     if (merged.minPrice != null && merged.maxPrice != null && Number(merged.minPrice) > Number(merged.maxPrice)) {
       merged.maxPrice = merged.minPrice;
     }
@@ -10668,7 +10683,9 @@ render() {
 
     // 7) specific ЖК off, keep "only ЖК" if requested
     if (qRc) {
-      if (!iRc || !iRc.includes(qRc)) requireStage(7);
+      // Never allow non-ЖК into a specific ЖК request.
+      if (!iRc) return null;
+      if (!iRc.includes(qRc)) requireStage(7);
     }
 
     // 8-10) district expansion order
@@ -10682,7 +10699,8 @@ render() {
 
     // 11) drop rcOnly only after district expansion is exhausted
     if (query.rcOnly === true && !iRc) {
-      requireStage(11);
+      // Product rule: when only ЖК is requested, non-ЖК options must not appear.
+      return null;
     }
 
     return stage;
