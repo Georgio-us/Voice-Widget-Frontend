@@ -9321,8 +9321,10 @@ render() {
         if (!v || /^data:image\/svg\+xml/i.test(v)) return;
         if (!urls.includes(v)) urls.push(v);
       };
-      const mainImg = slide.querySelector('.cs-image-click-area img');
-      if (mainImg?.src) push(mainImg.src);
+      const mainFrontImg = slide.querySelector('.cs-image-click-area img');
+      if (mainFrontImg?.src) push(mainFrontImg.src);
+      const listMainImg = slide.querySelector('.list-card__image');
+      if (listMainImg?.src) push(listMainImg.src);
       slide.querySelectorAll('.card-front-assets .card-back-asset, .card-back-asset').forEach((asset) => {
         push(asset.getAttribute('data-full-image'));
         push(asset.getAttribute('data-thumb-image'));
@@ -9426,7 +9428,7 @@ render() {
     }
     if (e.target.closest('button')) return;
     // 1) direct <img> inside card screen
-    const imgEl = e.target.closest('.card-screen .cs-image-click-area img');
+    const imgEl = e.target.closest('.card-screen .cs-image-click-area img, .list-card__image');
     if (imgEl && imgEl.src) {
       const slide = imgEl.closest('.card-slide');
       const gallery = this._collectSlideGalleryImages(slide);
@@ -9435,7 +9437,7 @@ render() {
       return;
     }
     // 2) property card background or card mock image areas
-    const bgEl = e.target.closest('.card-image, .card-mock .cm-image, .card-screen .cs-image-click-area');
+    const bgEl = e.target.closest('.card-image, .card-mock .cm-image, .card-screen .cs-image-click-area, .list-card__media');
     if (bgEl) {
       const url = this._extractBgUrl(bgEl);
       if (url) {
