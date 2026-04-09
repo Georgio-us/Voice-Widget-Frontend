@@ -10085,11 +10085,22 @@ render() {
     if (!data || typeof data !== 'object') return;
     if (!window.appState) window.appState = {};
 
+    let migratedInsights = null;
+    let shouldApplyAiRefresh = false;
+    if (data.insights && typeof data.insights === 'object') {
+      migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
+      shouldApplyAiRefresh = this._detectNewInsight(migratedInsights);
+    }
+
     const totalMatches = Number(data.totalMatches);
     if (Number.isFinite(totalMatches)) {
       window.appState.lastTotalMatches = Math.max(0, totalMatches);
       this.updateObjectCount(window.appState.lastTotalMatches);
-      this._markPillResultsPending({ animate: true });
+      // Only switch pill to "results-pending" when criteria actually changed.
+      // This prevents false "Найдено 0" pulses after end-of-list / similar-flow actions.
+      if (shouldApplyAiRefresh) {
+        this._markPillResultsPending({ animate: true });
+      }
     }
     const strictMatches = Number(data.strictMatches);
     if (Number.isFinite(strictMatches)) {
@@ -10105,8 +10116,7 @@ render() {
     if (Array.isArray(data.cards)) cards.push(...data.cards);
     if (data.card && typeof data.card === 'object') cards.push(data.card);
     if (cards.length) window.appState.lastBackendCandidatesAt = Date.now();
-    if (data.insights && typeof data.insights === 'object') {
-      const migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
+    if (shouldApplyAiRefresh && migratedInsights && typeof migratedInsights === 'object') {
       this._catalogManualFilterOverrides = null;
       this._catalogIgnoreAssistantBaseFilters = false;
       this._catalogLastRefineMode = 'ai';
