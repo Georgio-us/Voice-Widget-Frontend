@@ -2678,6 +2678,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxLevel = 0;
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
+    this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
     this._catalogSimilarLoading = false;
@@ -6804,15 +6805,14 @@ class VoiceWidget extends HTMLElement {
       const n = Number(value);
       return Number.isFinite(n) ? n : null;
     };
-    const isAiMode = this._catalogLastRefineMode === 'ai';
-    const aiBudgetAnchor = isAiMode ? toNum(query.maxPrice) : null;
-    if (isAiMode && aiBudgetAnchor != null && aiBudgetAnchor > 0 && query.minPrice == null) {
-      // AI "до X" трактуем как "около X": strict окно ±25%
-      query.minPrice = Math.max(0, Math.round(aiBudgetAnchor * 0.75));
-      query.maxPrice = Math.round(aiBudgetAnchor * 1.25);
-      query.__budgetAnchor = aiBudgetAnchor;
-    } else if (aiBudgetAnchor != null && aiBudgetAnchor > 0) {
-      query.__budgetAnchor = aiBudgetAnchor;
+    const budgetAnchor = toNum(query.maxPrice);
+    if (budgetAnchor != null && budgetAnchor > 0 && query.minPrice == null) {
+      // Unified behavior for AI/manual: "до X" interpreted as "около X" in strict stage.
+      query.minPrice = Math.max(0, Math.round(budgetAnchor * 0.75));
+      query.maxPrice = Math.round(budgetAnchor * 1.25);
+      query.__budgetAnchor = budgetAnchor;
+    } else if (budgetAnchor != null && budgetAnchor > 0) {
+      query.__budgetAnchor = budgetAnchor;
     }
 
     const qMinPrice = toNum(query.minPrice);
@@ -6864,6 +6864,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxLevel = 0;
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
+    this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
     this._catalogStrictSeedIds = list
@@ -10434,84 +10435,106 @@ render() {
 
     const qRc = text(query.residentialComplex);
     const iRc = text(item?.features?.complex || item?.features?.display_specs?.complex);
-    if (query.rcOnly === true && !iRc) return null;
 
-    const price = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
-    const priceAnchor = toNum(query.__priceAnchor ?? query.__budgetAnchor);
-    let penalty = 0;
-    if (priceAnchor != null && priceAnchor > 0 && price != null) {
-      const rel = Math.abs(price - priceAnchor) / priceAnchor;
-      if (rel > 0.5) return null; // hard cap ±50%
-      if (rel > 0.35) penalty += 4;
-      else if (rel > 0.25) penalty += 2;
-      else if (rel > 0.15) penalty += 1;
-    }
+    let stage = 0;
+    const requireStage = (n) => {
+      if (Number.isFinite(n) && n > stage) stage = n;
+    };
 
-    if (qRc) {
-      if (!iRc) {
-        if (query.rcOnly !== true) penalty += 4;
-      } else if (!iRc.includes(qRc)) {
-        // Similar mode: when exact ЖК is exhausted, allow other ЖК with penalty.
-        penalty += query.rcOnly === true ? 3 : 4;
-      }
-    }
-
-    if (qDistrict) {
-      const rank = districtRank(qDistrict, iDistrict);
-      if (rank === 0) {
-        // same district, no penalty
-      } else if (rank === 1) {
-        penalty += 1;
-      } else if (rank === 2) {
-        penalty += 2;
-      } else if (rank === 3) {
-        penalty += 3;
-      } else if (!iDistrict) {
-        penalty += 3;
-      } else {
-        return null;
-      }
-    }
-
-    const area = toNum(item.area_m2);
-    const areaAnchor = toNum(query.__areaAnchor);
-    if (areaAnchor != null && areaAnchor > 0 && area != null) {
-      const rel = Math.abs(area - areaAnchor) / areaAnchor;
-      if (rel > 0.5) return null; // hard cap ±50%
-      if (rel > 0.35) penalty += 3;
-      else if (rel > 0.25) penalty += 2;
-      else if (rel > 0.15) penalty += 1;
-    }
-
-    // Similar mode: floors are intentionally ignored.
-
-    const roomsRaw = String(query.rooms || '').trim();
-    const roomsWanted = toNum(query.__roomsAnchor ?? (roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null)));
-    const roomsActual = toNum(item.rooms);
-    if (roomsWanted != null && Number.isFinite(roomsWanted) && roomsActual != null) {
-      if (Math.abs(roomsActual - roomsWanted) > 1) return null; // hard cap ±1 room
-      if (roomsActual !== roomsWanted) penalty += 3;
-    }
-
-    // Amenity requests are softer than price/area/rooms
-    if (query.parking === true) {
-      const hasParking = boolish(item?.features?.parking) === true || boolish(item?.features?.has_parking) === true;
-      if (!hasParking) penalty += 1;
-    }
+    // 1) balcony soft-off
     if (query.balconyLoggia === true) {
       const hasBalcony = boolish(item?.balcony) === true
         || boolish(item?.features?.balcony) === true
         || boolish(item?.features?.has_balcony) === true
         || boolish(item?.features?.loggia) === true;
-      if (!hasBalcony) penalty += 1;
+      if (!hasBalcony) requireStage(1);
     }
 
-    // 10/10 -> 7/10 -> 5/10 -> 3/10 style ladder
-    if (penalty <= 0) return 1;
-    if (penalty <= 2) return 2;
-    if (penalty <= 4) return 3;
-    if (penalty <= 6) return 4;
-    return 5;
+    // 2) parking soft-off
+    if (query.parking === true) {
+      const hasParking = boolish(item?.features?.parking) === true || boolish(item?.features?.has_parking) === true;
+      if (!hasParking) requireStage(2);
+    }
+
+    // 3) floor soft-off
+    const qMinFloor = toNum(query.minFloor);
+    const qMaxFloor = toNum(query.maxFloor);
+    if (qMinFloor != null || qMaxFloor != null) {
+      const iFloor = toNum(item.floor);
+      if (iFloor == null) {
+        requireStage(3);
+      } else {
+        if (qMinFloor != null && iFloor < qMinFloor) requireStage(3);
+        if (qMaxFloor != null && iFloor > qMaxFloor) requireStage(3);
+      }
+    }
+
+    // 4) area soft-off
+    const qMinArea = toNum(query.minArea);
+    const qMaxArea = toNum(query.maxArea);
+    if (qMinArea != null || qMaxArea != null) {
+      const iArea = toNum(item.area_m2);
+      if (iArea == null) {
+        requireStage(4);
+      } else {
+        if (qMinArea != null && iArea < qMinArea) requireStage(4);
+        if (qMaxArea != null && iArea > qMaxArea) requireStage(4);
+      }
+    }
+
+    // 5) budget soft-off
+    const qMinPrice = toNum(query.minPrice);
+    const qMaxPrice = toNum(query.maxPrice);
+    if (qMinPrice != null || qMaxPrice != null) {
+      const iPrice = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
+      if (iPrice == null) {
+        requireStage(5);
+      } else {
+        if (qMinPrice != null && iPrice < qMinPrice) requireStage(5);
+        if (qMaxPrice != null && iPrice > qMaxPrice) requireStage(5);
+      }
+    }
+
+    // 6) rooms ±1, >1 only at final broad stage
+    const roomsRaw = String(query.rooms || '').trim();
+    const roomsWanted = toNum(query.__roomsAnchor ?? (roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null)));
+    const roomsActual = toNum(item.rooms);
+    if (roomsWanted != null && Number.isFinite(roomsWanted)) {
+      if (roomsActual == null) {
+        requireStage(12);
+      } else if (roomsRaw === '4plus' || roomsRaw === '5plus') {
+        const minWanted = roomsRaw === '5plus' ? 5 : 4;
+        if (roomsActual < minWanted) {
+          if (roomsActual === minWanted - 1) requireStage(6);
+          else requireStage(12);
+        }
+      } else {
+        const diff = Math.abs(roomsActual - roomsWanted);
+        if (diff === 1) requireStage(6);
+        else if (diff > 1) requireStage(12);
+      }
+    }
+
+    // 7) specific ЖК off, keep "only ЖК" if requested
+    if (qRc) {
+      if (!iRc || !iRc.includes(qRc)) requireStage(7);
+    }
+
+    // 8-10) district expansion order
+    if (qDistrict) {
+      const rank = districtRank(qDistrict, iDistrict);
+      if (rank === 1) requireStage(8);
+      else if (rank === 2) requireStage(9);
+      else if (rank === 3) requireStage(10);
+      else if (rank !== 0) requireStage(11);
+    }
+
+    // 11) drop rcOnly only after district expansion is exhausted
+    if (query.rcOnly === true && !iRc) {
+      requireStage(11);
+    }
+
+    return stage;
   }
 
   _getCurrentCatalogActiveIndex() {
@@ -10571,37 +10594,7 @@ render() {
   }
 
   showSimilarEndPopup() {
-    if (this._catalogSimilarEndPromptShown) return;
-    this._catalogSimilarEndPromptShown = true;
-    this.closeSliderCheckpointPopup();
-    this.ensureSliderCheckpointStyles();
-    const locale = this.getCurrentLocale();
-    const overlay = document.createElement('div');
-    overlay.id = 'vwSliderCheckpointOverlay';
-    overlay.className = 'vw-slider-checkpoint-overlay';
-    overlay.innerHTML = `
-      <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="Similar matches ended">
-        <div class="vw-slider-checkpoint-title">${locale.similarEndTitle || 'Похожие объекты закончились'}</div>
-        <div class="vw-slider-checkpoint-text">${locale.similarEndText || 'Мы показали все похожие объекты по вашему запросу. Вы можете продолжить самостоятельный поиск или связаться для консультации.'}</div>
-        <div class="vw-slider-checkpoint-actions">
-          <button type="button" class="vw-slider-checkpoint-btn" data-role="continue">${locale.similarEndContinue || 'Продолжить поиск'}</button>
-          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="contact">${locale.similarEndContact || 'Связаться'}</button>
-        </div>
-      </div>
-    `;
-    this.getRoot().appendChild(overlay);
-    overlay.querySelector('[data-role="continue"]')?.addEventListener('click', () => {
-      this.closeSliderCheckpointPopup();
-    });
-    overlay.querySelector('[data-role="contact"]')?.addEventListener('click', () => {
-      this.closeSliderCheckpointPopup();
-      try { this.openContactManagerPopup({ source: 'tg_similar_end_popup' }); } catch {}
-    });
-    overlay.addEventListener('click', (ev) => {
-      if (ev.target === overlay) {
-        this.closeSliderCheckpointPopup();
-      }
-    });
+    // Intentionally disabled: similar-mode does not show terminal popup.
   }
 
   async unlockCatalogSimilarMode() {
@@ -10649,7 +10642,10 @@ render() {
         this._catalogRelaxPool = Array.from(byId.values());
       }
       const normalized = Array.isArray(this._catalogRelaxPool) ? this._catalogRelaxPool : [];
-      if (!normalized.length) return this.showSimilarEndPopup();
+      if (!normalized.length) {
+        this._catalogRelaxExhausted = true;
+        return;
+      }
 
       const current = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
       const seen = new Set(current.map((item) => String(this._toCardEngineShape(item)?.id || '').trim()).filter(Boolean));
@@ -10659,25 +10655,41 @@ render() {
 
       let level = Math.max(0, Number(this._catalogRelaxLevel) || 0);
       let extras = [];
-      while (level < 5 && !extras.length) {
+      while (level < 12 && !extras.length) {
         level += 1;
-        extras = normalized.filter((item) => {
-          const id = String(item?.id || '').trim();
-          if (!id || seen.has(id) || strictSeed.has(id) || shown.has(id)) return false;
-          const step = this._computeRelaxStepForCandidate(item, query);
-          return step != null && step <= level;
-        });
+        const stageRows = normalized
+          .map((item) => {
+            const id = String(item?.id || '').trim();
+            if (!id || seen.has(id) || strictSeed.has(id) || shown.has(id)) return null;
+            const step = this._computeRelaxStepForCandidate(item, query);
+            if (step == null || step > level) return null;
+            const score = Number(item?.score ?? item?._score);
+            const safeScore = Number.isFinite(score) ? score : 0;
+            const price = Number(item?.priceUSD ?? item?.priceEUR ?? item?.price_amount);
+            return { item, step, score: safeScore, price: Number.isFinite(price) ? price : Number.MAX_SAFE_INTEGER };
+          })
+          .filter(Boolean)
+          .sort((a, b) => {
+            if (a.step !== b.step) return a.step - b.step;
+            if (a.score !== b.score) return b.score - a.score;
+            return a.price - b.price;
+          });
+        extras = stageRows.map((row) => row.item).slice(0, 40);
       }
-      if (!extras.length) return this.showSimilarEndPopup();
+      if (!extras.length) {
+        this._catalogRelaxExhausted = true;
+        return;
+      }
 
       window.appState.allProperties = [...current, ...extras];
       this._mergeIntoFullCatalogProperties(extras);
       extras.forEach((item) => {
-        const id = String(item?.id || '').trim();
-        if (id) shown.add(id);
-      });
+          const id = String(item?.id || '').trim();
+          if (id) shown.add(id);
+        });
       this._catalogRelaxShownIds = shown;
       this._catalogRelaxLevel = level;
+      this._catalogRelaxExhausted = false;
 
       const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
       const first = extras[0];
@@ -10764,7 +10776,15 @@ render() {
     const start = Math.max(0, Math.min(maxStart, Number(this._catalogListWindowStart) || 0));
     const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
     const canPrev = start > 0;
-    const canNext = start < maxStart || queue.length > 0;
+    const canUnlockStrict = !queue.length
+      && start >= maxStart
+      && this._catalogStrictFlowActive === true
+      && this._catalogRelaxedUnlocked !== true;
+    const canUnlockRelax = !queue.length
+      && start >= maxStart
+      && this._catalogRelaxedUnlocked === true
+      && this._catalogRelaxExhausted !== true;
+    const canNext = start < maxStart || queue.length > 0 || canUnlockStrict || canUnlockRelax;
     prevBtn.disabled = !canPrev;
     nextBtn.disabled = !canNext;
   }
@@ -10786,7 +10806,7 @@ render() {
     this.rebuildCatalogLayoutFromVisibleIds();
   }
 
-  handleCatalogListNext() {
+  async handleCatalogListNext() {
     if (this._catalogDisplayMode !== 'list') return;
     this._catalogExpandedCardId = null;
     this.closeCatalogListFullCard();
@@ -10805,7 +10825,9 @@ render() {
       if (this._catalogStrictFlowActive === true && this._catalogRelaxedUnlocked !== true) {
         this.showStrictEndPopup();
       } else if (this._catalogRelaxedUnlocked === true) {
-        this.showSimilarEndPopup();
+        if (this._catalogRelaxExhausted !== true) {
+          await this.unlockCatalogSimilarMode();
+        }
       }
       this.updateCatalogListNavState();
       return;
@@ -11079,8 +11101,11 @@ render() {
         } else if (
           this._catalogRelaxedUnlocked === true
           && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
+          && this._catalogRelaxExhausted !== true
         ) {
-          this.showSimilarEndPopup();
+          this.unlockCatalogSimilarMode().catch((error) => {
+            console.warn('unlockCatalogSimilarMode failed:', error);
+          });
         }
         return;
       }
@@ -13054,6 +13079,7 @@ render() {
     this._catalogRelaxLevel = 0;
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
+    this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
     this._catalogSimilarLoading = false;
