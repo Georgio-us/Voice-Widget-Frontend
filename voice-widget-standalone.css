@@ -201,6 +201,12 @@
     font-weight:600;
     line-height:1;
   }
+  .card-screen .cs-image .cs-price-tag--insight{
+    background: linear-gradient(135deg, color-mix(in srgb, #18d4a7 58%, #2e88ff) 0%, color-mix(in srgb, #2e88ff 82%, #1e4bb8) 100%);
+    border-color: color-mix(in srgb, #7de3d0 55%, #4f88ff);
+    color: #f5fbff;
+    box-shadow: 0 4px 14px color-mix(in srgb, #2e88ff 38%, transparent);
+  }
   .card-screen .cs-image .cs-badge-stack{
     position:absolute;
     top:10px;
@@ -233,6 +239,11 @@
   }
   .card-screen .cs-image .cs-meta-badge--type{
     background:var(--shadow-strong);
+  }
+  .card-screen .cs-image .cs-meta-badge--reason{
+    border-color: color-mix(in srgb, #5a89f0 55%, transparent);
+    background: color-mix(in srgb, #5a89f0 22%, var(--bg-card));
+    color: color-mix(in srgb, #f0f6ff 92%, var(--text-on-photo));
   }
   .card-screen .cs-image .card-btn.like[data-action="like"]{
     display:inline-flex;
@@ -3050,6 +3061,19 @@ voice-widget,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__id-media--insight {
+  border-color: color-mix(in srgb, #7de3d0 55%, #4f88ff);
+  background: linear-gradient(135deg, color-mix(in srgb, #18d4a7 58%, #2e88ff) 0%, color-mix(in srgb, #2e88ff 82%, #1e4bb8) 100%);
+  color: #f5fbff;
+  box-shadow: 0 4px 14px color-mix(in srgb, #2e88ff 38%, transparent);
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__badge--reason {
+  border-color: color-mix(in srgb, #5a89f0 55%, transparent);
+  background: color-mix(in srgb, #5a89f0 22%, var(--bg-card));
+  color: color-mix(in srgb, #f0f6ff 92%, var(--text-on-photo));
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card__assets {

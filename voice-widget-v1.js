@@ -10417,6 +10417,7 @@ render() {
     const score = Number(normalized?.score);
     const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
     const tier = String(normalized?.matchTier || '').toLowerCase();
+    const showInterpretation = this._isStrictFlowQuery(q);
     const primary = tier === 'high' || safeScore >= 80
       ? 'Точное попадание'
       : ((tier === 'mid' || safeScore >= 55) ? 'Похожее' : 'Альтернатива');
@@ -10513,7 +10514,7 @@ render() {
         pushArg(`Кухня: ${kitchenNum} м²`);
       }
     }
-    return [primary, args[0] || '', args[1] || ''];
+    return [showInterpretation ? primary : '', args[0] || '', args[1] || ''];
   }
 
   _computeRelaxStepForCandidate(item = {}, query = {}) {
@@ -11513,9 +11514,12 @@ render() {
         normalized,
         this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
       );
+      const listPrimaryBadgeHtml = String(listBadgePrimary || '').trim()
+        ? `<span class="list-card__id-media list-card__id-media--insight">${escCardText(listBadgePrimary)}</span>`
+        : '';
       const listArgBadgesHtml = [listBadgeArg1, listBadgeArg2]
         .filter((v) => String(v || '').trim().length > 0)
-        .map((v) => `<span class="list-card__badge">${escCardText(v)}</span>`)
+        .map((v) => `<span class="list-card__badge list-card__badge--reason">${escCardText(v)}</span>`)
         .join('');
       slide.innerHTML = `
         <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
@@ -11524,7 +11528,7 @@ render() {
               ? `<img class="list-card__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">`
               : '<div class="list-card__image list-card__image--placeholder">No image</div>'}
             <div class="list-card__badges">
-              <span class="list-card__id-media">${escCardText(listBadgePrimary)}</span>
+              ${listPrimaryBadgeHtml}
               ${listArgBadgesHtml}
             </div>
             <div class="list-card__assets">${listAssetTilesHtml}</div>
@@ -11609,9 +11613,12 @@ render() {
       normalized,
       this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
     );
+    const frontPrimaryBadgeHtml = String(frontBadgePrimary || '').trim()
+      ? `<div class="cs-price-tag cs-price-tag--insight">${escCardText(frontBadgePrimary)}</div>`
+      : '';
     const frontReasonBadgesHtml = [frontBadgeArg1, frontBadgeArg2]
       .filter((v) => String(v || '').trim().length > 0)
-      .map((v, idx) => `<div class="cs-meta-badge ${idx === 0 ? 'cs-meta-badge--operation' : 'cs-meta-badge--type'}">${escCardText(v)}</div>`)
+      .map((v, idx) => `<div class="cs-meta-badge cs-meta-badge--reason ${idx === 0 ? 'cs-meta-badge--operation' : 'cs-meta-badge--type'}">${escCardText(v)}</div>`)
       .join('');
     const backSpecsItemsBase = [];
     if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
@@ -11645,7 +11652,7 @@ render() {
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
-                <div class="cs-price-tag">${escCardText(frontBadgePrimary)}</div>
+                ${frontPrimaryBadgeHtml}
                 ${frontReasonBadgesHtml}
               </div>
               <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
