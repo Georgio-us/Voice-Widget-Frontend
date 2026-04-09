@@ -3234,7 +3234,7 @@ voice-widget,
   background-image: repeating-linear-gradient(45deg,var(--skeleton-a),var(--skeleton-a) 12px,var(--skeleton-b) 12px,var(--skeleton-b) 24px);
 }
 
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full > :not(.list-card-full__bg) {
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full > :not(.list-card-full__bg):not(.list-description-overlay) {
   position: relative;
   z-index: 1;
 }
@@ -3435,11 +3435,12 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .list-description-overlay {
+  position: absolute;
   inset: 0;
   padding: 6px;
   align-items: center;
   justify-content: center;
-  z-index: 40;
+  z-index: 60;
   border-radius: inherit;
   overflow: hidden;
   background: color-mix(in srgb, var(--bg-main) 72%, transparent);
