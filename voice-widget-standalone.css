@@ -2496,7 +2496,7 @@ voice-widget,
   position: relative;
   z-index: 1;
   padding-top: 0;
-  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 0;
 }
 
 /* Catalog list mode: mobile-only stacked compact rows */
