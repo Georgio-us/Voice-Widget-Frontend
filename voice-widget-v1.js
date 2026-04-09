@@ -11523,7 +11523,7 @@ render() {
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
-                <div class="cs-price-tag">${normalized.id || ''}</div>
+                <div class="cs-price-tag">${scoreLabel}</div>
                 ${normalized.operationBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--operation">${escCardText(normalized.operationBadgeLabel)}</div>` : ''}
                 ${normalized.propertyTypeBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--type">${escCardText(normalized.propertyTypeBadgeLabel)}</div>` : ''}
               </div>
@@ -11572,7 +11572,7 @@ render() {
         <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
           <button type="button" class="card-back-header__close" aria-label="Back">Назад</button>
-          <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
+          <span class="card-back-header__score" aria-hidden="true">${escCardText(normalized.id || '')}</span>
         </div>
         <div class="card-back-scroll">
           <div class="card-back-specs">${backSpecsHtml}</div>
