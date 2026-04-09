@@ -10972,7 +10972,10 @@ render() {
             <div class="card-back-specs">${backSpecsHtml || specs.map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__text">${item}</span></span>`).join('')}</div>
           </div>
           <div class="card-back-actions">
-            <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
+            <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">
+              <span class="card-back-description-btn__icon" aria-hidden="true">📄</span>
+              <span class="card-back-description-btn__text">${locale.cardReadDescription || 'Читать описание'}</span>
+            </button>
             <div class="card-back-actions__row">
               <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
               <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
@@ -10980,8 +10983,8 @@ render() {
             </div>
           </div>
         </div>
-        <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
-          <div class="cs-description-panel">
+        <div class="cs-description-overlay list-description-overlay" data-role="description-overlay" aria-hidden="true">
+          <div class="cs-description-panel list-description-panel">
             <div class="cs-description-title">${locale.cardDescriptionTitle || 'Описание объекта'}</div>
             <div class="cs-description-text">${safeDescription}</div>
             <button type="button" class="cs-description-ok" data-action="close-description">${locale.cardDescriptionOk || 'OK'}</button>
