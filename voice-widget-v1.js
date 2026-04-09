@@ -10379,6 +10379,40 @@ render() {
     return raw;
   }
 
+  _resolveTierByScoreValue(score) {
+    const safe = Number(score) || 0;
+    if (safe >= 80) return 'high';
+    if (safe >= 55) return 'mid';
+    return 'low';
+  }
+
+  _relaxScoreCapByStep(step) {
+    const n = Math.max(0, Number(step) || 0);
+    if (n <= 0) return 100;
+    const caps = {
+      1: 92,
+      2: 88,
+      3: 84,
+      4: 80,
+      5: 76,
+      6: 70,
+      7: 64,
+      8: 58,
+      9: 52,
+      10: 46,
+      11: 40,
+      12: 34
+    };
+    return caps[n] ?? 34;
+  }
+
+  _computeRelaxDisplayScore(item = {}, step = 0) {
+    const baseRaw = Number(item?.score ?? item?._score);
+    const base = Number.isFinite(baseRaw) ? Math.max(0, Math.min(100, Math.round(baseRaw))) : 100;
+    const cap = this._relaxScoreCapByStep(step);
+    return Math.max(0, Math.min(100, Math.round(Math.min(base, cap))));
+  }
+
   _computeRelaxStepForCandidate(item = {}, query = {}) {
     const toNum = (value) => {
       const n = Number(value);
@@ -10673,8 +10707,7 @@ render() {
             if (!id || seen.has(id) || strictSeed.has(id) || shown.has(id)) return null;
             const step = this._computeRelaxStepForCandidate(item, query);
             if (step == null || step > level) return null;
-            const score = Number(item?.score ?? item?._score);
-            const safeScore = Number.isFinite(score) ? score : 0;
+            const safeScore = this._computeRelaxDisplayScore(item, step);
             const price = Number(item?.priceUSD ?? item?.priceEUR ?? item?.price_amount);
             return { item, step, score: safeScore, price: Number.isFinite(price) ? price : Number.MAX_SAFE_INTEGER };
           })
@@ -10684,7 +10717,18 @@ render() {
             if (a.score !== b.score) return b.score - a.score;
             return a.price - b.price;
           });
-        extras = stageRows.map((row) => row.item).slice(0, 40);
+        extras = stageRows
+          .slice(0, 40)
+          .map((row) => {
+            const strictRaw = Number(row?.item?.strictScore ?? row?.item?._strictScore);
+            const strictSafe = Number.isFinite(strictRaw) ? Math.max(0, Math.min(100, Math.round(strictRaw))) : 0;
+            return {
+              ...row.item,
+              score: row.score,
+              strictScore: Math.min(strictSafe, row.score),
+              matchTier: this._resolveTierByScoreValue(row.score)
+            };
+          });
       }
       if (!extras.length) {
         this._catalogRelaxExhausted = true;
