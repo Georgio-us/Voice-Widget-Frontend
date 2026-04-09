@@ -1487,12 +1487,11 @@ class APIClient {
   }
 
   async fetchResidentialComplexes(params = {}) {
-    const base = this._deriveAdminApiBase();
+    const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/cards');
     const u = new URL(`${base}/residential-complexes`);
     const q = String(params.q || '').trim();
     if (q) u.searchParams.set('q', q);
     if (params.limit != null) u.searchParams.set('limit', String(params.limit));
-    this._appendAdminAuthToUrl(u);
     const res = await fetch(u.toString());
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
