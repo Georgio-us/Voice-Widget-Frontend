@@ -10496,13 +10496,24 @@ render() {
       else pushArg('Этаж отличается');
     }
 
-    if (!args.length) {
-      if (safeScore >= 80) pushArg('Высокая релевантность');
-      else if (safeScore >= 55) pushArg('Частичное совпадение');
-      else pushArg('Расширенный вариант');
+    // No "fake" placeholders: only factual arguments.
+    // Fallback chain: price per m2 -> residential complex -> kitchen area.
+    const ppm2 = Number(normalized?.price_per_m2);
+    if (args.length < 2 && Number.isFinite(ppm2) && ppm2 > 0) {
+      pushArg(`Цена за м²: ${Math.round(ppm2).toLocaleString('en-US')} $`);
     }
-    if (args.length < 2) pushArg('Смотрите детали');
-    return [primary, args[0], args[1]];
+    if (args.length < 2) {
+      const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
+      if (complex) pushArg(`ЖК: ${complex}`);
+    }
+    if (args.length < 2) {
+      const kitchen = normalized?.display_specs?.kitchen_area ?? normalized?.features?.display_specs?.kitchen_area;
+      const kitchenNum = Number(kitchen);
+      if (Number.isFinite(kitchenNum) && kitchenNum > 0) {
+        pushArg(`Кухня: ${kitchenNum} м²`);
+      }
+    }
+    return [primary, args[0] || '', args[1] || ''];
   }
 
   _computeRelaxStepForCandidate(item = {}, query = {}) {
@@ -11502,6 +11513,10 @@ render() {
         normalized,
         this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
       );
+      const listArgBadgesHtml = [listBadgeArg1, listBadgeArg2]
+        .filter((v) => String(v || '').trim().length > 0)
+        .map((v) => `<span class="list-card__badge">${escCardText(v)}</span>`)
+        .join('');
       slide.innerHTML = `
         <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
           <div class="list-card__media">
@@ -11510,8 +11525,7 @@ render() {
               : '<div class="list-card__image list-card__image--placeholder">No image</div>'}
             <div class="list-card__badges">
               <span class="list-card__id-media">${escCardText(listBadgePrimary)}</span>
-              <span class="list-card__badge">${escCardText(listBadgeArg1)}</span>
-              <span class="list-card__badge">${escCardText(listBadgeArg2)}</span>
+              ${listArgBadgesHtml}
             </div>
             <div class="list-card__assets">${listAssetTilesHtml}</div>
             <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
@@ -11595,6 +11609,10 @@ render() {
       normalized,
       this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
     );
+    const frontReasonBadgesHtml = [frontBadgeArg1, frontBadgeArg2]
+      .filter((v) => String(v || '').trim().length > 0)
+      .map((v, idx) => `<div class="cs-meta-badge ${idx === 0 ? 'cs-meta-badge--operation' : 'cs-meta-badge--type'}">${escCardText(v)}</div>`)
+      .join('');
     const backSpecsItemsBase = [];
     if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
     if (normalized.propertyTypeBadgeLabel) backSpecsItemsBase.push({ icon: '🏠', text: `${isUa ? 'Тип' : 'Тип'}: ${normalized.propertyTypeBadgeLabel}` });
@@ -11628,8 +11646,7 @@ render() {
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
                 <div class="cs-price-tag">${escCardText(frontBadgePrimary)}</div>
-                <div class="cs-meta-badge cs-meta-badge--operation">${escCardText(frontBadgeArg1)}</div>
-                <div class="cs-meta-badge cs-meta-badge--type">${escCardText(frontBadgeArg2)}</div>
+                ${frontReasonBadgesHtml}
               </div>
               <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
