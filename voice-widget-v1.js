@@ -10413,6 +10413,65 @@ render() {
     return Math.max(0, Math.min(100, Math.round(Math.min(base, cap))));
   }
 
+  _getDynamicFrontBadges(normalized = {}, query = null) {
+    const score = Number(normalized?.score);
+    const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
+    const tier = String(normalized?.matchTier || '').toLowerCase();
+    const primary = tier === 'high'
+      ? 'Самый релевантный'
+      : (tier === 'mid' ? 'Подходящий вариант' : 'Похожий вариант');
+
+    const q = query && typeof query === 'object' ? query : {};
+    const toNum = (v) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const hasParking = !!(
+      normalized?.features?.parking === true
+      || normalized?.features?.has_parking === true
+    );
+    const hasBalcony = !!(
+      normalized?.features?.balcony === true
+      || normalized?.features?.loggia === true
+      || normalized?.features?.has_balcony === true
+      || normalized?.balcony === true
+    );
+
+    // Priority for the 2nd badge: explicit user constraints first.
+    if (q.parking === true) return [primary, hasParking ? 'Есть паркинг' : 'Без паркинга'];
+    if (q.balconyLoggia === true) return [primary, hasBalcony ? 'Есть балкон/лоджия' : 'Без балкона/лоджии'];
+
+    const minP = toNum(q.minPrice);
+    const maxP = toNum(q.maxPrice);
+    const price = toNum(normalized?.priceUSD ?? normalized?.priceEUR ?? normalized?.price_amount);
+    if (price != null && (minP != null || maxP != null)) {
+      if ((minP == null || price >= minP) && (maxP == null || price <= maxP)) return [primary, 'Цена в диапазоне'];
+      if (maxP != null && price > maxP) return [primary, 'Цена выше запроса'];
+      if (minP != null && price < minP) return [primary, 'Цена ниже запроса'];
+    }
+
+    const qRooms = String(q.rooms || '').trim();
+    const rooms = toNum(normalized?.rooms);
+    if (qRooms && rooms != null) {
+      if ((qRooms === '4plus' && rooms >= 4) || (qRooms === '5plus' && rooms >= 5)) return [primary, 'Комнатность совпадает'];
+      const want = toNum(qRooms);
+      if (want != null) {
+        const diff = Math.abs(rooms - want);
+        if (diff === 0) return [primary, 'Комнатность совпадает'];
+        if (diff === 1) return [primary, 'Комнатность близка'];
+      }
+    }
+
+    if (q.rcOnly === true) {
+      const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
+      return [primary, complex ? 'В жилом комплексе' : 'Без ЖК'];
+    }
+
+    if (safeScore >= 90) return [primary, 'Высокое совпадение'];
+    if (safeScore >= 70) return [primary, 'Хорошее совпадение'];
+    return [primary, 'Частичное совпадение'];
+  }
+
   _computeRelaxStepForCandidate(item = {}, query = {}) {
     const toNum = (value) => {
       const n = Number(value);
@@ -11018,6 +11077,8 @@ render() {
       const scoreTierClass = ['high', 'mid', 'low'].includes(scoreTier) ? ` card-back-header__score--${scoreTier}` : '';
       const scoreLabel = `Score: ${scoreValue}%`;
       const backSpecsItemsBase = [];
+      if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
+      if (normalized.propertyTypeBadgeLabel) backSpecsItemsBase.push({ icon: '🏠', text: `${isUa ? 'Тип' : 'Тип'}: ${normalized.propertyTypeBadgeLabel}` });
       if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
       if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
       if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
@@ -11404,6 +11465,10 @@ render() {
       if (normalized.rooms) listSpecChips.push(`🛏️ ${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
       if (normalized.area_m2 != null && normalized.area_m2 !== '') listSpecChips.push(`📐 ${escCardText(normalized.area_m2)} м²`);
       if (normalized.floor) listSpecChips.push(`🏢 ${escCardText(normalized.floor)} ${escCardText(this.getLangCode() === 'ua' ? 'пов.' : 'этаж')}`);
+      const [listBadgePrimary, listBadgeSecondary] = this._getDynamicFrontBadges(
+        normalized,
+        this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
+      );
       slide.innerHTML = `
         <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
           <div class="list-card__media">
@@ -11411,9 +11476,8 @@ render() {
               ? `<img class="list-card__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">`
               : '<div class="list-card__image list-card__image--placeholder">No image</div>'}
             <div class="list-card__badges">
-              <span class="list-card__id-media">${escCardText(normalized.id || 'ID')}</span>
-              ${normalized.operationBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.operationBadgeLabel)}</span>` : ''}
-              ${normalized.propertyTypeBadgeLabel ? `<span class="list-card__badge">${escCardText(normalized.propertyTypeBadgeLabel)}</span>` : ''}
+              <span class="list-card__id-media">${escCardText(listBadgePrimary)}</span>
+              <span class="list-card__badge">${escCardText(listBadgeSecondary)}</span>
             </div>
             <div class="list-card__assets">${listAssetTilesHtml}</div>
             <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
@@ -11493,7 +11557,13 @@ render() {
     if (normalized.rooms) specsPills.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
     if (normalized.area_m2 != null && normalized.area_m2 !== '') specsPills.push(`📐 ${normalized.area_m2} м²`);
     if (normalized.floor) specsPills.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
+    const [frontBadgePrimary, frontBadgeSecondary] = this._getDynamicFrontBadges(
+      normalized,
+      this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
+    );
     const backSpecsItemsBase = [];
+    if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
+    if (normalized.propertyTypeBadgeLabel) backSpecsItemsBase.push({ icon: '🏠', text: `${isUa ? 'Тип' : 'Тип'}: ${normalized.propertyTypeBadgeLabel}` });
     if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
     if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
     if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
@@ -11523,9 +11593,8 @@ render() {
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
-                <div class="cs-price-tag">${scoreLabel}</div>
-                ${normalized.operationBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--operation">${escCardText(normalized.operationBadgeLabel)}</div>` : ''}
-                ${normalized.propertyTypeBadgeLabel ? `<div class="cs-meta-badge cs-meta-badge--type">${escCardText(normalized.propertyTypeBadgeLabel)}</div>` : ''}
+                <div class="cs-price-tag">${escCardText(frontBadgePrimary)}</div>
+                <div class="cs-meta-badge cs-meta-badge--operation">${escCardText(frontBadgeSecondary)}</div>
               </div>
               <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
