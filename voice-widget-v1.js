@@ -10700,45 +10700,18 @@ render() {
   }
 
   showStrictEndPopup() {
+    // Product decision: no strict/similar transition popups.
     if (this._catalogStrictEndPromptShown) return;
     this._catalogStrictEndPromptShown = true;
     this.closeSliderCheckpointPopup();
-    this.ensureSliderCheckpointStyles();
-    const locale = this.getCurrentLocale();
-    const overlay = document.createElement('div');
-    overlay.id = 'vwSliderCheckpointOverlay';
-    overlay.className = 'vw-slider-checkpoint-overlay';
-    overlay.innerHTML = `
-      <div class="vw-slider-checkpoint-modal" role="dialog" aria-modal="true" aria-label="Strict matches ended">
-        <div class="vw-slider-checkpoint-title">${locale.strictEndTitle || 'Точные объекты закончились'}</div>
-        <div class="vw-slider-checkpoint-text">${locale.strictEndText || 'По вашему запросу вы просмотрели все точные совпадения. Хотите уточнить фильтры или показать похожие объекты?'}</div>
-        <div class="vw-slider-checkpoint-actions">
-          <button type="button" class="vw-slider-checkpoint-btn" data-role="refine">${locale.strictEndRefine || 'Уточнить'}</button>
-          <button type="button" class="vw-slider-checkpoint-btn vw-slider-checkpoint-btn--primary" data-role="similar">${locale.strictEndSimilar || 'Показать похожие'}</button>
-        </div>
-      </div>
-    `;
-    this.getRoot().appendChild(overlay);
-    overlay.querySelector('[data-role="refine"]')?.addEventListener('click', () => {
-      this.closeSliderCheckpointPopup();
-      try {
-        if (this._catalogLastRefineMode === 'ai') {
-          this.$byId('textInput')?.focus();
-        } else {
-          this.openFiltersOverlay();
-        }
-      } catch {}
-    });
-    overlay.querySelector('[data-role="similar"]')?.addEventListener('click', async () => {
-      try {
-        await this.unlockCatalogSimilarMode();
-      } finally {
-        this.closeSliderCheckpointPopup();
-      }
-    });
-    overlay.addEventListener('click', (ev) => {
-      if (ev.target === overlay) this.closeSliderCheckpointPopup();
-    });
+    this.unlockCatalogSimilarMode()
+      .catch((error) => {
+        console.warn('unlockCatalogSimilarMode failed:', error);
+      })
+      .finally(() => {
+        this._catalogStrictEndPromptShown = false;
+        try { this.updateCatalogListNavState(); } catch {}
+      });
   }
 
   showSimilarEndPopup() {
@@ -10981,7 +10954,7 @@ render() {
     const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
     if (!queue.length) {
       if (this._catalogStrictFlowActive === true && this._catalogRelaxedUnlocked !== true) {
-        this.showStrictEndPopup();
+        await this.unlockCatalogSimilarMode();
       } else if (this._catalogRelaxedUnlocked === true) {
         if (this._catalogRelaxExhausted !== true) {
           await this.unlockCatalogSimilarMode();
@@ -11257,7 +11230,9 @@ render() {
           && this._catalogRelaxedUnlocked !== true
           && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
         ) {
-          this.showStrictEndPopup();
+          this.unlockCatalogSimilarMode().catch((error) => {
+            console.warn('unlockCatalogSimilarMode failed:', error);
+          });
         } else if (
           this._catalogRelaxedUnlocked === true
           && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
