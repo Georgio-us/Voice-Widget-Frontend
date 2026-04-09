@@ -10417,14 +10417,24 @@ render() {
     const score = Number(normalized?.score);
     const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
     const tier = String(normalized?.matchTier || '').toLowerCase();
-    const primary = tier === 'high'
-      ? 'Самый релевантный'
-      : (tier === 'mid' ? 'Подходящий вариант' : 'Похожий вариант');
+    const primary = tier === 'high' || safeScore >= 80
+      ? 'Точное попадание'
+      : ((tier === 'mid' || safeScore >= 55) ? 'Похожее' : 'Альтернатива');
 
     const q = query && typeof query === 'object' ? query : {};
     const toNum = (v) => {
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
+    };
+    const uniq = new Set();
+    const args = [];
+    const pushArg = (label) => {
+      const text = String(label || '').trim();
+      if (!text) return;
+      const key = text.toLowerCase();
+      if (uniq.has(key)) return;
+      uniq.add(key);
+      args.push(text);
     };
     const hasParking = !!(
       normalized?.features?.parking === true
@@ -10436,40 +10446,63 @@ render() {
       || normalized?.features?.has_balcony === true
       || normalized?.balcony === true
     );
+    const qDistrict = this._normalizeDistrictForRelax(String(q.district || ''));
+    const iDistrict = this._normalizeDistrictForRelax(String(normalized?.district || normalized?.neighborhood || normalized?.city || ''));
 
-    // Priority for the 2nd badge: explicit user constraints first.
-    if (q.parking === true) return [primary, hasParking ? 'Есть паркинг' : 'Без паркинга'];
-    if (q.balconyLoggia === true) return [primary, hasBalcony ? 'Есть балкон/лоджия' : 'Без балкона/лоджии'];
+    // Priority: explicit query constraints first, then soft compat reasons.
+    if (q.parking === true) pushArg(hasParking ? 'Есть паркинг' : 'Без паркинга');
+    if (q.balconyLoggia === true) pushArg(hasBalcony ? 'Есть балкон/лоджия' : 'Без балкона/лоджии');
+    if (q.rcOnly === true) {
+      const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
+      pushArg(complex ? 'В жилом комплексе' : 'Без ЖК');
+    }
+    if (qDistrict) {
+      if (iDistrict && iDistrict === qDistrict) pushArg('Нужный район');
+      else if (iDistrict) pushArg('Соседний район');
+    }
 
     const minP = toNum(q.minPrice);
     const maxP = toNum(q.maxPrice);
     const price = toNum(normalized?.priceUSD ?? normalized?.priceEUR ?? normalized?.price_amount);
     if (price != null && (minP != null || maxP != null)) {
-      if ((minP == null || price >= minP) && (maxP == null || price <= maxP)) return [primary, 'Цена в диапазоне'];
-      if (maxP != null && price > maxP) return [primary, 'Цена выше запроса'];
-      if (minP != null && price < minP) return [primary, 'Цена ниже запроса'];
+      if ((minP == null || price >= minP) && (maxP == null || price <= maxP)) pushArg('Цена в диапазоне');
+      else if (maxP != null && price > maxP) pushArg('Цена выше запроса');
+      else if (minP != null && price < minP) pushArg('Цена ниже запроса');
     }
 
     const qRooms = String(q.rooms || '').trim();
     const rooms = toNum(normalized?.rooms);
     if (qRooms && rooms != null) {
-      if ((qRooms === '4plus' && rooms >= 4) || (qRooms === '5plus' && rooms >= 5)) return [primary, 'Комнатность совпадает'];
+      if ((qRooms === '4plus' && rooms >= 4) || (qRooms === '5plus' && rooms >= 5)) pushArg('Комнатность совпадает');
       const want = toNum(qRooms);
       if (want != null) {
         const diff = Math.abs(rooms - want);
-        if (diff === 0) return [primary, 'Комнатность совпадает'];
-        if (diff === 1) return [primary, 'Комнатность близка'];
+        if (diff === 0) pushArg('Комнатность совпадает');
+        else if (diff === 1) pushArg('Комнатность близка');
       }
     }
-
-    if (q.rcOnly === true) {
-      const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
-      return [primary, complex ? 'В жилом комплексе' : 'Без ЖК'];
+    const minA = toNum(q.minArea);
+    const maxA = toNum(q.maxArea);
+    const area = toNum(normalized?.area_m2);
+    if (area != null && (minA != null || maxA != null)) {
+      if ((minA == null || area >= minA) && (maxA == null || area <= maxA)) pushArg('Подходит по метражу');
+      else pushArg('Метраж отличается');
+    }
+    const minF = toNum(q.minFloor);
+    const maxF = toNum(q.maxFloor);
+    const floor = toNum(normalized?.floor);
+    if (floor != null && (minF != null || maxF != null)) {
+      if ((minF == null || floor >= minF) && (maxF == null || floor <= maxF)) pushArg('Подходящий этаж');
+      else pushArg('Этаж отличается');
     }
 
-    if (safeScore >= 90) return [primary, 'Высокое совпадение'];
-    if (safeScore >= 70) return [primary, 'Хорошее совпадение'];
-    return [primary, 'Частичное совпадение'];
+    if (!args.length) {
+      if (safeScore >= 80) pushArg('Высокая релевантность');
+      else if (safeScore >= 55) pushArg('Частичное совпадение');
+      else pushArg('Расширенный вариант');
+    }
+    if (args.length < 2) pushArg('Смотрите детали');
+    return [primary, args[0], args[1]];
   }
 
   _computeRelaxStepForCandidate(item = {}, query = {}) {
@@ -11465,7 +11498,7 @@ render() {
       if (normalized.rooms) listSpecChips.push(`🛏️ ${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
       if (normalized.area_m2 != null && normalized.area_m2 !== '') listSpecChips.push(`📐 ${escCardText(normalized.area_m2)} м²`);
       if (normalized.floor) listSpecChips.push(`🏢 ${escCardText(normalized.floor)} ${escCardText(this.getLangCode() === 'ua' ? 'пов.' : 'этаж')}`);
-      const [listBadgePrimary, listBadgeSecondary] = this._getDynamicFrontBadges(
+      const [listBadgePrimary, listBadgeArg1, listBadgeArg2] = this._getDynamicFrontBadges(
         normalized,
         this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
       );
@@ -11477,7 +11510,8 @@ render() {
               : '<div class="list-card__image list-card__image--placeholder">No image</div>'}
             <div class="list-card__badges">
               <span class="list-card__id-media">${escCardText(listBadgePrimary)}</span>
-              <span class="list-card__badge">${escCardText(listBadgeSecondary)}</span>
+              <span class="list-card__badge">${escCardText(listBadgeArg1)}</span>
+              <span class="list-card__badge">${escCardText(listBadgeArg2)}</span>
             </div>
             <div class="list-card__assets">${listAssetTilesHtml}</div>
             <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
@@ -11557,7 +11591,7 @@ render() {
     if (normalized.rooms) specsPills.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
     if (normalized.area_m2 != null && normalized.area_m2 !== '') specsPills.push(`📐 ${normalized.area_m2} м²`);
     if (normalized.floor) specsPills.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
-    const [frontBadgePrimary, frontBadgeSecondary] = this._getDynamicFrontBadges(
+    const [frontBadgePrimary, frontBadgeArg1, frontBadgeArg2] = this._getDynamicFrontBadges(
       normalized,
       this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
     );
@@ -11594,7 +11628,8 @@ render() {
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
                 <div class="cs-price-tag">${escCardText(frontBadgePrimary)}</div>
-                <div class="cs-meta-badge cs-meta-badge--operation">${escCardText(frontBadgeSecondary)}</div>
+                <div class="cs-meta-badge cs-meta-badge--operation">${escCardText(frontBadgeArg1)}</div>
+                <div class="cs-meta-badge cs-meta-badge--type">${escCardText(frontBadgeArg2)}</div>
               </div>
               <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
