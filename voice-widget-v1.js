@@ -11279,7 +11279,15 @@ render() {
     let list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
     this._sliderCheckpointShown = { 10: false, 20: false };
     if (!list.length) {
+      const full = this._getFullCatalogProperties();
+      if (Array.isArray(full) && full.length) {
+        this.replacePropertiesCatalog(full);
+        list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+      }
+    }
+    if (!list.length) {
       this.updateObjectCount(Number(window?.appState?.lastTotalMatches) || 0);
+      console.warn('renderCatalogFromCurrentState: no catalog items to render');
       return;
     }
     this.clearPropertiesSlider();
@@ -11289,8 +11297,19 @@ render() {
     this._catalogActiveId = this._catalogVisibleIds.length ? this._catalogVisibleIds[this._catalogVisibleIds.length - 1] : null;
     this._catalogListWindowStart = 0;
     initialBatch.forEach((property, index) => {
-      try { this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: index > 0 }); } catch {}
+      try {
+        this.showMockCardWithActions(this._toCardEngineShape(property), { suppressAutoscroll: index > 0 });
+      } catch (error) {
+        console.error('renderCatalogFromCurrentState: showMockCardWithActions failed', error, property);
+      }
     });
+    try {
+      const host = this.getRoot().querySelector('.card-screen.cards-slider-host');
+      const rendered = host ? host.querySelectorAll('.card-slide').length : 0;
+      if (!rendered) {
+        console.warn('renderCatalogFromCurrentState: host created but no slides rendered');
+      }
+    } catch {}
     requestAnimationFrame(() => {
       try {
         const messages = this.$byId('messagesContainer');
@@ -11304,6 +11323,14 @@ render() {
 
   async renderPropertiesFromCatalog() {
     this._sliderCheckpointShown = { 10: false, 20: false };
+    try {
+      const current = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+      if (!current.length) {
+        await this.initializePropertiesCatalog();
+      }
+    } catch (error) {
+      console.warn('renderPropertiesFromCatalog: initializePropertiesCatalog failed', error);
+    }
     this.renderCatalogFromCurrentState();
   }
 
