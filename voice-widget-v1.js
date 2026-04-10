@@ -10503,7 +10503,12 @@ render() {
       // "Найдено N объектов" always has a renderable dataset on click.
       this.replacePropertiesCatalog(cards);
     }
-    if (shouldApplyAiRefresh && migratedInsights && typeof migratedInsights === 'object') {
+    const hasIncomingOperation = (() => {
+      const raw = String(migratedInsights?.operation || '').trim().toLowerCase();
+      return raw === 'buy' || raw === 'rent' || raw === 'sale';
+    })();
+    const shouldForceConsistencyRefresh = hasIncomingOperation || Boolean(this._catalogManualFilterOverrides?.operation);
+    if ((shouldApplyAiRefresh || shouldForceConsistencyRefresh) && migratedInsights && typeof migratedInsights === 'object') {
       this._catalogIgnoreAssistantBaseFilters = false;
       this._catalogLastRefineMode = 'ai';
       const currentInsights = (this.understanding?.export?.() && typeof this.understanding.export() === 'object')
@@ -12637,13 +12642,15 @@ render() {
         inset: 0;
         background: rgba(0, 0, 0, 0.64);
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         padding: 20px;
         z-index: 10060;
+        overflow-y: auto;
       }
       .vw-debug-insights-modal {
         width: min(560px, 100%);
+        max-height: calc(100dvh - 40px);
         border-radius: 14px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-card, #1e1d20);
@@ -12652,6 +12659,7 @@ render() {
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         padding: 14px 16px 16px;
+        overflow-y: auto;
       }
       .vw-debug-insights-title {
         font-size: 1rem;
