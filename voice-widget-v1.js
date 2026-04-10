@@ -6849,6 +6849,17 @@ class VoiceWidget extends HTMLElement {
     if (Object.prototype.hasOwnProperty.call(source, 'center')) out.center = source.center === true;
     if (Object.prototype.hasOwnProperty.call(source, 'parking')) out.parking = source.parking === true;
     if (Object.prototype.hasOwnProperty.call(source, 'balconyLoggia')) out.balconyLoggia = source.balconyLoggia === true;
+    const hasAnyCriteriaExceptOperation = Object.entries(out).some(([key, value]) => {
+      if (key === 'operation') return false;
+      if (value == null) return false;
+      if (typeof value === 'boolean') return value === true;
+      return String(value).trim() !== '';
+    });
+    if (!String(out.operation || '').trim() && hasAnyCriteriaExceptOperation) {
+      // Product rule for manual filters: if user applies any criteria but does not
+      // explicitly choose deal type, default to sale.
+      out.operation = 'sale';
+    }
     return out;
   }
 
@@ -7178,11 +7189,6 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const v = String(btn.getAttribute('data-value') || '');
-        const isAlreadyActive = btn.classList.contains('is-active');
-        if (isAlreadyActive) {
-          overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => b.classList.remove('is-active'));
-          return;
-        }
         overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => {
           b.classList.toggle('is-active', String(b.getAttribute('data-value') || '') === v);
         });
