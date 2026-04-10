@@ -6925,6 +6925,19 @@ class VoiceWidget extends HTMLElement {
       if (!t) return true;
       return /^(одесса|одеса|odesa|odessa|украина|україна|ukraine)\b/.test(t);
     };
+    const hasResidentialComplexMarker = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return false;
+      return /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|\bжил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?\b|residential\s+complex(?:es)?/i.test(t);
+    };
+    const looksLikeComplexName = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return false;
+      if (isDistrictLikeLocation(t)) return false;
+      if (/\b(район|центр|мор[ея]|возле|рядом|ближе|около|near|district|area)\b/i.test(t)) return false;
+      if (/[;,.!?]/.test(t) && !hasResidentialComplexMarker(t)) return false;
+      return true;
+    };
     const insights = insightsSource && typeof insightsSource === 'object'
       ? insightsSource
       : (this._catalogIgnoreAssistantBaseFilters === true ? {} : (this.understanding?.export?.() || {}));
@@ -6950,9 +6963,15 @@ class VoiceWidget extends HTMLElement {
     const districtSlug = normalizeDistrictSlug(locRaw);
     if (districtSlug) base.district = districtSlug;
     const rcInsight = String(insights.residentialComplex || '').trim();
-    if (rcInsight && !normalizeDistrictSlug(rcInsight) && !isDistrictLikeLocation(rcInsight)) {
+    if (rcInsight && looksLikeComplexName(rcInsight)) {
       base.residentialComplex = rcInsight;
-    } else if (locRaw && !districtSlug && !isGenericCityLocation(locRaw) && !isDistrictLikeLocation(locRaw)) {
+    } else if (
+      locRaw
+      && hasResidentialComplexMarker(locRaw)
+      && !districtSlug
+      && !isGenericCityLocation(locRaw)
+      && !isDistrictLikeLocation(locRaw)
+    ) {
       base.residentialComplex = stripRcPrefixes(locRaw);
     }
     if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
@@ -10439,6 +10458,12 @@ render() {
     if (data.insights && typeof data.insights === 'object') {
       migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
       shouldApplyAiRefresh = this._detectNewInsight(migratedInsights);
+      // AI уточнение должно иметь приоритет над старыми ручными overrides.
+      // Иначе можно застрять в старом operation/type даже при валидных insights.
+      if (this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object') {
+        this._catalogManualFilterOverrides = null;
+        shouldApplyAiRefresh = true;
+      }
     }
 
     const totalMatches = Number(data.totalMatches);
