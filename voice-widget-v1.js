@@ -5178,7 +5178,15 @@ class VoiceWidget extends HTMLElement {
             this.openAccessSubOverlay('keygen');
           } catch (error) {
             const code = String(error?.message || '');
-            this.ui?.showNotification?.(`Не удалось сгенерировать ключ (${code || 'UNKNOWN'})`);
+            if (code.includes('FORBIDDEN_SUPER_ADMIN_ONLY')) {
+              this.ui?.showNotification?.('Доступ к генерации ключей только для super-admin');
+            } else if (code.includes('SUBSCRIPTION_KEY_PEPPER_REQUIRED')) {
+              this.ui?.showNotification?.('На сервере не задан SUBSCRIPTION_KEY_PEPPER');
+            } else if (code.includes('INVALID_PLAN')) {
+              this.ui?.showNotification?.('Некорректный план генерации');
+            } else {
+              this.ui?.showNotification?.(`Не удалось сгенерировать ключ (${code || 'UNKNOWN'})`);
+            }
           } finally {
             btn.textContent = original;
             updateBusy(false);
@@ -8840,7 +8848,16 @@ class VoiceWidget extends HTMLElement {
       this.openAccessSubOverlay('subscription');
     });
     overlay.querySelector('[data-role="admin-keygen"]')?.addEventListener('click', async () => {
-      try { await this.refreshSubscriptionKeygenStats(); } catch {}
+      try {
+        await this.refreshSubscriptionKeygenStats();
+      } catch (error) {
+        const code = String(error?.message || '');
+        if (code.includes('FORBIDDEN_SUPER_ADMIN_ONLY')) {
+          this.ui?.showNotification?.('Доступ к генерации ключей только для super-admin');
+        } else {
+          this.ui?.showNotification?.(`Не удалось загрузить статистику ключей (${code || 'UNKNOWN'})`);
+        }
+      }
       this.openAccessSubOverlay('keygen');
     });
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
