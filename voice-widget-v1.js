@@ -12589,20 +12589,18 @@ render() {
 
   getDebugInsightsSnapshot() {
     const empty = {
-      name: null,
       operation: null,
-      budget: null,
-      budgetMax: null,
       type: null,
       location: null,
       rooms: null,
-      area: null,
+      budget: null,
+      budgetMax: null,
       areaMin: null,
       areaMax: null,
       floor: null,
       features: null,
-      details: null,
-      preferences: null
+      residentialComplex: null,
+      rcOnly: null
     };
     const fromUnderstanding = (typeof this.getUnderstanding === 'function')
       ? (this.getUnderstanding() || {})
@@ -12634,7 +12632,7 @@ render() {
         z-index: 10060;
       }
       .vw-debug-insights-modal {
-        width: min(420px, 100%);
+        width: min(560px, 100%);
         border-radius: 14px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-card, #1e1d20);
@@ -12645,19 +12643,28 @@ render() {
         padding: 14px 16px 16px;
       }
       .vw-debug-insights-title {
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 600;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
+      }
+      .vw-debug-insights-section {
+        margin-top: 10px;
+      }
+      .vw-debug-insights-section-title {
+        margin: 0 0 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--text-primary, #fff);
       }
       .vw-debug-insights-list {
         margin: 0;
         padding-left: 18px;
         display: grid;
-        gap: 6px;
+        gap: 4px;
       }
       .vw-debug-insights-list li {
         color: var(--text-secondary, rgba(255,255,255,0.7));
-        font-size: 0.84rem;
+        font-size: 0.78rem;
         line-height: 1.35;
       }
       .vw-debug-insights-list strong {
@@ -12680,10 +12687,13 @@ render() {
         color: var(--text-secondary, rgba(255,255,255,0.7));
         font-size: 0.72rem;
         line-height: 1.35;
-        max-height: 160px;
+        max-height: 180px;
         overflow: auto;
         white-space: pre-wrap;
         word-break: break-word;
+      }
+      .vw-debug-insights-raw--tall {
+        max-height: 240px;
       }
       .vw-debug-insights-close {
         width: 100%;
@@ -12712,22 +12722,12 @@ render() {
     this.closeDebugInsightsPopup();
     this.ensureDebugInsightsPopupStyles();
     const insights = this.getDebugInsightsSnapshot();
-    const labels = {
-      name: 'Name',
-      operation: 'Operation',
-      budget: 'Budget',
-      budgetMax: 'Budget Max',
-      type: 'Type',
-      location: 'Location',
-      rooms: 'Rooms',
-      area: 'Area',
-      areaMin: 'Area Min',
-      areaMax: 'Area Max',
-      floor: 'Floor',
-      features: 'Features',
-      details: 'Details',
-      preferences: 'Preferences'
-    };
+    const safeText = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
     const pretty = (value) => {
       if (value === null || value === undefined || value === '') return 'null';
       if (typeof value === 'object') {
@@ -12735,20 +12735,128 @@ render() {
       }
       return String(value);
     };
-    const listHtml = Object.keys(labels)
-      .map((key) => `<li><strong>${labels[key]}:</strong> ${pretty(insights[key])}</li>`)
+    const formatPrice = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return String(value ?? 'null');
+      return `${Math.round(n).toLocaleString('en-US')} USD`;
+    };
+    const envelope = this._lastApiPayload && typeof this._lastApiPayload === 'object' ? this._lastApiPayload : {};
+    const api = (envelope.payload && typeof envelope.payload === 'object') ? envelope.payload : envelope;
+    const apiMeta = (envelope.meta && typeof envelope.meta === 'object') ? envelope.meta : (this._lastApiPayloadMeta || {});
+    const effectiveFilters = this.getCatalogEffectiveSearchParams(insights);
+    const interpretedInsights = [
+      ['Operation', insights.operation],
+      ['Type', insights.type],
+      ['Location', insights.location],
+      ['Rooms', insights.rooms],
+      ['Budget', insights.budget],
+      ['Budget Max', insights.budgetMax],
+      ['Area Min', insights.areaMin],
+      ['Area Max', insights.areaMax],
+      ['Floor', insights.floor],
+      ['Residential Complex', insights.residentialComplex],
+      ['RC only', insights.rcOnly],
+      ['Features', insights.features]
+    ];
+    const mappingRows = [
+      ['operation', effectiveFilters.operation],
+      ['type', effectiveFilters.type],
+      ['district', effectiveFilters.district],
+      ['rooms', effectiveFilters.rooms],
+      ['minPrice', effectiveFilters.minPrice],
+      ['maxPrice', effectiveFilters.maxPrice],
+      ['minArea', effectiveFilters.minArea],
+      ['maxArea', effectiveFilters.maxArea],
+      ['minFloor', effectiveFilters.minFloor],
+      ['maxFloor', effectiveFilters.maxFloor],
+      ['rcOnly', effectiveFilters.rcOnly],
+      ['residentialComplex', effectiveFilters.residentialComplex],
+      ['parking', effectiveFilters.parking],
+      ['balconyLoggia', effectiveFilters.balconyLoggia]
+    ];
+    const cards = [
+      ...(Array.isArray(api.topCandidates) ? api.topCandidates : []),
+      ...(Array.isArray(api.cards) ? api.cards : [])
+    ];
+    const dedupCards = [];
+    const cardSeen = new Set();
+    cards.forEach((card) => {
+      const id = String(card?.id || card?.external_id || '').trim();
+      const key = id || JSON.stringify([card?.title, card?.priceEUR, card?.district, card?.rooms]);
+      if (!key || cardSeen.has(key)) return;
+      cardSeen.add(key);
+      dedupCards.push(card);
+    });
+    const interpretedListHtml = interpretedInsights
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const mappingListHtml = mappingRows
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const cardsListHtml = dedupCards.slice(0, 8).map((card, idx) => {
+      const id = String(card?.id || card?.external_id || `#${idx + 1}`).trim();
+      const title = String(card?.title || '—').trim();
+      const operation = String(card?.operation || '').trim();
+      const district = String(card?.district || card?.neighborhood || '').trim();
+      const rooms = card?.rooms != null ? `${card.rooms}` : '—';
+      const priceRaw = card?.priceEUR ?? card?.priceUSD ?? card?.price_amount ?? null;
+      const price = priceRaw == null ? '—' : formatPrice(priceRaw);
+      const score = Number(card?.score ?? card?._score);
+      const scoreText = Number.isFinite(score) ? `, score ${Math.round(score)}%` : '';
+      return `<li><strong>${safeText(id)}:</strong> ${safeText(title)} (${safeText(operation || 'n/a')}, ${safeText(district || 'n/a')}, ${safeText(rooms)} rooms, ${safeText(price)}${safeText(scoreText)})</li>`;
+    }).join('');
+    const metricsListHtml = [
+      ['source', apiMeta?.source],
+      ['at', apiMeta?.at],
+      ['sessionId', api?.sessionId],
+      ['messageCount', api?.messageCount],
+      ['inputType', api?.inputType],
+      ['stage', api?.stage],
+      ['role', api?.role],
+      ['totalMatches', api?.totalMatches],
+      ['strictMatches', api?.strictMatches],
+      ['relaxedMatches', api?.relaxedMatches],
+      ['tokens.prompt', api?.tokens?.prompt],
+      ['tokens.completion', api?.tokens?.completion],
+      ['tokens.total', api?.tokens?.total],
+      ['timing.transcription', api?.timing?.transcription],
+      ['timing.gpt', api?.timing?.gpt],
+      ['timing.total', api?.timing?.total]
+    ]
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const extractionListHtml = [
+      ['metaPresent', api?.extractionStatus?.metaPresent],
+      ['parseError', api?.extractionStatus?.parseError],
+      ['validationError', api?.extractionStatus?.validationError],
+      ['updatesApplied', api?.extractionStatus?.updatesApplied],
+      ['fallbackUsed', api?.extractionStatus?.fallbackUsed],
+      ['invalidFields', Array.isArray(api?.extractionStatus?.invalidFields) ? api.extractionStatus.invalidFields.join(', ') : null]
+    ]
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const dialogListHtml = [
+      ['transcription', api?.transcription],
+      ['assistant response', api?.response]
+    ]
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
       .join('');
     const rawSourceInsights = (() => {
       const src = (typeof this.getUnderstanding === 'function')
         ? (this.getUnderstanding() || {})
         : (this.understanding?.export?.() || {});
-      try { return JSON.stringify(src || {}, null, 2); } catch { return String(src || '{}'); }
+      try { return safeText(JSON.stringify(src || {}, null, 2)); } catch { return safeText(String(src || '{}')); }
     })();
     const rawApiPayload = (() => {
       try {
         const payload = this._lastApiPayload || {};
         const meta = this._lastApiPayloadMeta || {};
-        return JSON.stringify({ meta, payload }, null, 2);
+        return safeText(JSON.stringify({ meta, payload }, null, 2));
       } catch { return '{}'; }
     })();
     const overlay = document.createElement('div');
@@ -12757,11 +12865,31 @@ render() {
     overlay.innerHTML = `
       <div class="vw-debug-insights-modal" role="dialog" aria-modal="true" aria-label="Debug insights">
         <div class="vw-debug-insights-title">Debug Insights</div>
-        <ul class="vw-debug-insights-list">${listHtml}</ul>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">1) Что понял AI</div>
+          <ul class="vw-debug-insights-list">${interpretedListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">2) Как это стало фильтрами</div>
+          <ul class="vw-debug-insights-list">${mappingListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">3) Тайминги, токены, статус извлечения</div>
+          <ul class="vw-debug-insights-list">${metricsListHtml || '<li>Нет данных</li>'}</ul>
+          <ul class="vw-debug-insights-list">${extractionListHtml || ''}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">4) Лог диалога (последний turn)</div>
+          <ul class="vw-debug-insights-list">${dialogListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">5) Выданные объекты (topCandidates/cards)</div>
+          <ul class="vw-debug-insights-list">${cardsListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
         <pre class="vw-debug-insights-raw">${rawSourceInsights}</pre>
         <div class="vw-debug-insights-raw-title">Raw API JSON</div>
-        <pre class="vw-debug-insights-raw">${rawApiPayload}</pre>
+        <pre class="vw-debug-insights-raw vw-debug-insights-raw--tall">${rawApiPayload}</pre>
         <button type="button" class="vw-debug-insights-close" data-role="close">OK</button>
       </div>
     `;
