@@ -6482,7 +6482,7 @@ class VoiceWidget extends HTMLElement {
           }
           .vw-access-rc-panel .vw-access-sub-btn--primary {
             border-color: rgba(45, 143, 225, 0.65);
-            background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+            background: var(--color-accent);
           }
           .vw-access-rc-search-wrap {
             display: flex;
@@ -7826,7 +7826,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-item--primary {
         border-color: rgba(45, 143, 225, 0.65);
-        background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+        background: var(--color-accent);
       }
       .vw-access-item--has-count {
         position: relative;
@@ -7952,7 +7952,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-sub-btn--primary {
         border-color: rgba(45, 143, 225, 0.65);
-        background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+        background: var(--color-accent);
       }
       .vw-access-sub-btn--ghost {
         border-color: transparent;
@@ -8432,7 +8432,7 @@ class VoiceWidget extends HTMLElement {
         min-height: 38px;
         border-radius: 999px;
         border: 1px solid rgba(92, 150, 255, 0.6);
-        background: linear-gradient(180deg, rgba(45,143,225,0.32), rgba(36,129,204,0.26));
+        background: var(--color-accent);
         display: inline-flex;
         align-items: center;
         padding: 0 12px;
