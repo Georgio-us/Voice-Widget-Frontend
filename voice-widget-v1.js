@@ -2332,6 +2332,7 @@ const LOCALES = {
     accessAdminSortReset: 'Сброс',
     accessAdminSortApply: 'Применить',
     accessAdminSubscription: 'Управление подпиской',
+    accessAdminKeygen: 'Генерация ключей',
     accessSubGenerateTitle: 'Генерация ключей',
     accessSubGenerate7: '7 дней',
     accessSubGenerate30: '30 дней',
@@ -2339,6 +2340,10 @@ const LOCALES = {
     accessSubGenerateLife: 'Lifetime',
     accessSubGeneratedKey: 'Сгенерированный ключ',
     accessSubCopyKey: 'Копировать',
+    accessSubPrompt: 'Хотите обновить/активировать подписку?',
+    accessSubKeyPlaceholder: 'Введите ключ подписки',
+    accessSubNoKey: 'у меня нет ключа',
+    accessSubActivate: 'Активировать',
     accessAdminOlxConnect: 'Подключить OLX',
     accessAdminOlxConnectOpening: 'Открываю OLX...',
     accessAdminOlxConnected: 'OLX подключен (переподключить)',
@@ -2505,6 +2510,7 @@ const LOCALES = {
     accessAdminSortReset: 'Скинути',
     accessAdminSortApply: 'Застосувати',
     accessAdminSubscription: 'Керування підпискою',
+    accessAdminKeygen: 'Генерація ключів',
     accessSubGenerateTitle: 'Генерація ключів',
     accessSubGenerate7: '7 днів',
     accessSubGenerate30: '30 днів',
@@ -2512,6 +2518,10 @@ const LOCALES = {
     accessSubGenerateLife: 'Lifetime',
     accessSubGeneratedKey: 'Згенерований ключ',
     accessSubCopyKey: 'Копіювати',
+    accessSubPrompt: 'Хочете оновити/активувати підписку?',
+    accessSubKeyPlaceholder: 'Введіть ключ підписки',
+    accessSubNoKey: 'у мене немає ключа',
+    accessSubActivate: 'Активувати',
     accessAdminOlxConnect: 'Підключити OLX',
     accessAdminOlxConnectOpening: 'Відкриваю OLX...',
     accessAdminOlxConnected: 'OLX підключено (перепідключити)',
@@ -4185,6 +4195,23 @@ class VoiceWidget extends HTMLElement {
     const editPropertyId = isAddProperty ? String(safeOptions.propertyId || '').trim() : '';
     const isEditProperty = isAddProperty && String(safeOptions.mode || '').trim().toLowerCase() === 'edit' && !!editPropertyId;
     const editSourceProperty = isEditProperty ? this.findCatalogPropertyById(editPropertyId) : null;
+    const langCode = this.getLangCode();
+    const formatCountdown = (endsAtRaw, plan) => {
+      if (String(plan || '').trim().toLowerCase() === 'lifetime') {
+        return langCode === 'ua' ? 'Без обмеження терміну' : 'Без ограничения срока';
+      }
+      const endsAt = endsAtRaw ? new Date(endsAtRaw) : null;
+      if (!endsAt || Number.isNaN(endsAt.getTime())) {
+        return langCode === 'ua' ? '0 днів 0 годин 0 хвилин' : '0 дней 0 часов 0 минут';
+      }
+      const diffMs = Math.max(0, endsAt.getTime() - now.getTime());
+      const totalMinutes = Math.floor(diffMs / 60000);
+      const days = Math.floor(totalMinutes / (60 * 24));
+      const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+      const minutes = totalMinutes % 60;
+      if (langCode === 'ua') return `${days} днів ${hours} годин ${minutes} хвилин`;
+      return `${days} дней ${hours} часов ${minutes} минут`;
+    };
     const modalBody = (() => {
       if (isAddProperty) {
         return `
@@ -4477,7 +4504,6 @@ class VoiceWidget extends HTMLElement {
       }
       if (safeSection === 'subscription') {
         const subscription = this.normalizeAccessSubscription(this.accessSubscription);
-        const isSuperAdmin = this.accessFlags?.isSuperAdmin === true || this.accessRole === 'super_admin';
         const isActive = subscription?.active === true;
         const planLabel = this.getSubscriptionPlanLabel(subscription?.plan);
         const statusLabel = this.getSubscriptionStatusLabel(subscription?.status, isActive);
@@ -4485,16 +4511,57 @@ class VoiceWidget extends HTMLElement {
         const endsAtLabel = subscription?.plan === 'lifetime'
           ? 'Без срока'
           : this.formatSubscriptionDate(subscription?.endsAt);
-        const daysLeftLabel = subscription?.daysLeft == null
-          ? '—'
-          : `${Math.max(0, Number(subscription.daysLeft))} дн.`;
-        const sourceLabel = subscription?.activationSource
-          ? String(subscription.activationSource)
-          : '—';
+        const countdownLabel = formatCountdown(subscription?.endsAt, subscription?.plan);
+        return `
+          <div class="vw-subscription-panel">
+            <div class="vw-subscription-status">
+              <div class="vw-subscription-row"><span class="vw-subscription-label">Текущий план:</span><span class="vw-subscription-value">${planLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">Статус:</span><span class="vw-subscription-value">${statusLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">Дата активации:</span><span class="vw-subscription-value">${startsAtLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">Действует до:</span><span class="vw-subscription-value">${endsAtLabel}</span></div>
+            </div>
+            <div class="vw-subscription-countdown">${countdownLabel}</div>
+            <div class="vw-subscription-prompt">${locale.accessSubPrompt || 'Хотите обновить/активировать подписку?'}</div>
+            <input
+              type="text"
+              class="vw-access-sub-input vw-subscription-key-input"
+              data-role="subscription-key-input"
+              placeholder="${locale.accessSubKeyPlaceholder || 'Введите ключ подписки'}"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <button type="button" class="vw-subscription-no-key" data-role="subscription-no-key">${locale.accessSubNoKey || 'у меня нет ключа'}</button>
+            <div class="vw-subscription-actions">
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-subscription-activate-btn" data-role="subscription-activate">${locale.accessSubActivate || 'Активировать'}</button>
+            </div>
+          </div>
+        `;
+      }
+      if (safeSection === 'keygen') {
+        const isSuperAdmin = this.accessFlags?.isSuperAdmin === true || this.accessRole === 'super_admin';
+        if (!isSuperAdmin) {
+          return `
+            <div class="vw-access-sub-list">
+              <div class="vw-access-sub-item">Доступ только для super-admin.</div>
+            </div>
+          `;
+        }
         const generatedKey = String(this._lastGeneratedActivationKey || '').trim();
-        const generatedKeyHtml = generatedKey
-          ? `
-            <div class="vw-access-sub-toolbar" style="margin-top: 8px;">
+        return `
+          <div class="vw-access-sub-list">
+            <div class="vw-access-sub-item"><strong>${locale.accessSubGenerateTitle || 'Генерация ключей'}</strong></div>
+          </div>
+          <div class="vw-access-sub-toolbar" style="margin-top: 6px;">
+            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="trial_7">${locale.accessSubGenerate7 || '7 дней'}</button>
+            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="month_30">${locale.accessSubGenerate30 || '30 дней'}</button>
+            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="year_365">${locale.accessSubGenerate365 || '1 год'}</button>
+            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="lifetime">${locale.accessSubGenerateLife || 'Lifetime'}</button>
+          </div>
+          ${generatedKey ? `
+            <div class="vw-access-sub-list" style="margin-top:10px;">
+              <div class="vw-access-sub-item">${locale.accessSubGeneratedKey || 'Сгенерированный ключ'}</div>
+            </div>
+            <div class="vw-access-sub-toolbar" style="margin-top: 6px;">
               <input
                 type="text"
                 class="vw-access-sub-input"
@@ -4504,44 +4571,7 @@ class VoiceWidget extends HTMLElement {
               >
               <button type="button" class="vw-access-sub-btn" data-role="subscription-copy-key">${locale.accessSubCopyKey || 'Копировать'}</button>
             </div>
-          `
-          : '';
-        const superAdminGeneratorHtml = isSuperAdmin
-          ? `
-            <div class="vw-access-sub-list" style="margin-top: 10px;">
-              <div class="vw-access-sub-item"><strong>${locale.accessSubGenerateTitle || 'Генерация ключей'}</strong></div>
-            </div>
-            <div class="vw-access-sub-toolbar" style="margin-top: 6px;">
-              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="trial_7">${locale.accessSubGenerate7 || '7 дней'}</button>
-              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="month_30">${locale.accessSubGenerate30 || '30 дней'}</button>
-              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="year_365">${locale.accessSubGenerate365 || '1 год'}</button>
-              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="lifetime">${locale.accessSubGenerateLife || 'Lifetime'}</button>
-            </div>
-            ${generatedKeyHtml}
-          `
-          : '';
-        return `
-          <div class="vw-access-sub-list">
-            <div class="vw-access-sub-item">Текущий план: <strong>${planLabel}</strong></div>
-            <div class="vw-access-sub-item">Статус: <strong>${statusLabel}</strong></div>
-            <div class="vw-access-sub-item">Дата активации: <strong>${startsAtLabel}</strong></div>
-            <div class="vw-access-sub-item">Действует до: <strong>${endsAtLabel}</strong></div>
-            <div class="vw-access-sub-item">Осталось: <strong>${daysLeftLabel}</strong></div>
-            <div class="vw-access-sub-item">Источник активации: <strong>${sourceLabel}</strong></div>
-          </div>
-          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--stack" style="margin-top: 12px;">
-            <input
-              type="text"
-              class="vw-access-sub-input"
-              data-role="subscription-key-input"
-              placeholder="Введите ключ подписки"
-              autocomplete="off"
-              spellcheck="false"
-            >
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="subscription-activate">Активировать ключ</button>
-            <button type="button" class="vw-access-sub-btn" data-role="subscription-refresh">Обновить статус</button>
-          </div>
-          ${superAdminGeneratorHtml}
+          ` : ''}
         `;
       }
       return `
@@ -4564,6 +4594,8 @@ class VoiceWidget extends HTMLElement {
         ? 'Новый объект'
       : safeSection === 'subscription'
         ? 'Управление подпиской'
+      : safeSection === 'keygen'
+        ? (locale.accessAdminKeygen || 'Генерация ключей')
         : 'Статистика';
     const modalHead = isAddProperty
       ? `
@@ -4988,15 +5020,10 @@ class VoiceWidget extends HTMLElement {
     if (safeSection === 'subscription') {
       const input = overlay.querySelector('[data-role="subscription-key-input"]');
       const activateBtn = overlay.querySelector('[data-role="subscription-activate"]');
-      const refreshBtn = overlay.querySelector('[data-role="subscription-refresh"]');
-      const copyKeyBtn = overlay.querySelector('[data-role="subscription-copy-key"]');
-      const generatedKeyInput = overlay.querySelector('[data-role="subscription-generated-key"]');
-      const generateBtns = Array.from(overlay.querySelectorAll('[data-role="subscription-generate"]'));
+      const noKeyBtn = overlay.querySelector('[data-role="subscription-no-key"]');
       const updateBusy = (busy = false) => {
         if (activateBtn) activateBtn.disabled = !!busy;
-        if (refreshBtn) refreshBtn.disabled = !!busy;
-        generateBtns.forEach((btn) => { btn.disabled = !!busy; });
-        if (copyKeyBtn) copyKeyBtn.disabled = !!busy;
+        if (noKeyBtn) noKeyBtn.disabled = !!busy;
         if (input) input.disabled = !!busy;
       };
       const activate = async () => {
@@ -5038,20 +5065,18 @@ class VoiceWidget extends HTMLElement {
         event.preventDefault();
         activate();
       });
-      refreshBtn?.addEventListener('click', async () => {
-        updateBusy(true);
-        const originalText = refreshBtn?.textContent || 'Обновить статус';
-        if (refreshBtn) refreshBtn.textContent = 'Обновляем...';
-        try {
-          await this.api.resolveViewerAccessRole();
-          this.openAccessSubOverlay('subscription');
-        } catch {
-          this.ui?.showNotification?.('Не удалось обновить статус подписки');
-        } finally {
-          updateBusy(false);
-          if (refreshBtn) refreshBtn.textContent = originalText;
-        }
+      noKeyBtn?.addEventListener('click', () => {
+        try { this.openContactManagerPopup({ source: 'subscription_no_key' }); } catch {}
       });
+    }
+    if (safeSection === 'keygen') {
+      const copyKeyBtn = overlay.querySelector('[data-role="subscription-copy-key"]');
+      const generatedKeyInput = overlay.querySelector('[data-role="subscription-generated-key"]');
+      const generateBtns = Array.from(overlay.querySelectorAll('[data-role="subscription-generate"]'));
+      const updateBusy = (busy = false) => {
+        generateBtns.forEach((btn) => { btn.disabled = !!busy; });
+        if (copyKeyBtn) copyKeyBtn.disabled = !!busy;
+      };
       copyKeyBtn?.addEventListener('click', async () => {
         const key = String(generatedKeyInput?.value || '').trim();
         if (!key) return;
@@ -5080,7 +5105,7 @@ class VoiceWidget extends HTMLElement {
             if (!key) throw new Error('ACTIVATION_KEY_EMPTY');
             this._lastGeneratedActivationKey = key;
             this.ui?.showNotification?.('Ключ сгенерирован');
-            this.openAccessSubOverlay('subscription');
+            this.openAccessSubOverlay('keygen');
           } catch (error) {
             const code = String(error?.message || '');
             this.ui?.showNotification?.(`Не удалось сгенерировать ключ (${code || 'UNKNOWN'})`);
@@ -7904,6 +7929,66 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-btn:disabled {
         opacity: .45;
       }
+      .vw-subscription-panel {
+        display: grid;
+        gap: 14px;
+      }
+      .vw-subscription-status {
+        display: grid;
+        gap: 6px;
+      }
+      .vw-subscription-row {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .vw-subscription-label {
+        font-size: .96rem;
+        font-weight: 700;
+        color: var(--text-primary, #fff);
+      }
+      .vw-subscription-value {
+        font-size: .94rem;
+        color: var(--text-primary, #fff);
+      }
+      .vw-subscription-countdown {
+        margin-top: 8px;
+        font-size: 2.75rem;
+        line-height: 1.12;
+        color: var(--text-secondary, rgba(255,255,255,0.7));
+        letter-spacing: .01em;
+      }
+      .vw-subscription-prompt {
+        margin-top: 4px;
+        font-size: 1.08rem;
+        color: var(--text-secondary, rgba(255,255,255,0.75));
+      }
+      .vw-subscription-key-input {
+        min-height: 52px;
+        font-size: 1.08rem;
+        border-radius: 12px;
+        padding: 0 14px;
+      }
+      .vw-subscription-no-key {
+        justify-self: end;
+        border: 0;
+        background: transparent;
+        color: var(--text-secondary, rgba(255,255,255,0.68));
+        font-size: .98rem;
+      }
+      .vw-subscription-actions {
+        display: flex;
+        justify-content: center;
+        margin-top: 8px;
+      }
+      .vw-subscription-activate-btn {
+        min-height: 46px;
+        min-width: 196px;
+        border-radius: 12px;
+        font-size: 1rem;
+        padding: 0 20px;
+      }
       .vw-access-sub-modal--add {
         width: min(720px, 100%);
         max-height: min(88vh, 760px);
@@ -8554,6 +8639,7 @@ class VoiceWidget extends HTMLElement {
     const locale = this.getCurrentLocale();
     const tgUser = this.getCurrentTelegramUser();
     const isAdmin = this.accessRole === 'owner' || this.accessRole === 'super_admin' || this.accessFlags?.isAdmin === true;
+    const isSuperAdmin = this.accessRole === 'super_admin' || this.accessFlags?.isSuperAdmin === true;
     const name = String(tgUser?.firstName || tgUser?.username || 'User').trim();
     const username = String(tgUser?.username || 'guest').trim().replace(/^@/, '');
 
@@ -8579,6 +8665,7 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-access-item" data-role="admin-wishlist"><span class="vw-access-item__icon" aria-hidden="true">♡</span><span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-stats"><span class="vw-access-item__icon" aria-hidden="true">📊</span><span class="vw-access-item__label">${locale.accessAdminStats || 'Статистика'}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-subscription"><span class="vw-access-item__icon" aria-hidden="true">💳</span><span class="vw-access-item__label">${locale.accessAdminSubscription || 'Керування підпискою'}</span></button>
+            ${isSuperAdmin ? `<button type="button" class="vw-access-item" data-role="admin-keygen"><span class="vw-access-item__icon" aria-hidden="true">🧩</span><span class="vw-access-item__label">${locale.accessAdminKeygen || 'Генерация ключей'}</span></button>` : ''}
             <button type="button" class="vw-access-item" data-role="olx-connect"><span class="vw-access-item__icon" aria-hidden="true">🔗</span><span class="vw-access-item__label">${locale.accessAdminOlxConnect || 'Подключить OLX'}</span></button>
             <button type="button" class="vw-access-item" data-role="olx-sync"><span class="vw-access-item__icon" aria-hidden="true">⬇️</span><span class="vw-access-item__label">${locale.accessAdminOlxSync || 'Импортировать объекты OLX'}</span></button>
           </div>
@@ -8632,6 +8719,9 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelector('[data-role="admin-subscription"]')?.addEventListener('click', async () => {
       try { await this.api.resolveViewerAccessRole(); } catch {}
       this.openAccessSubOverlay('subscription');
+    });
+    overlay.querySelector('[data-role="admin-keygen"]')?.addEventListener('click', () => {
+      this.openAccessSubOverlay('keygen');
     });
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
     overlay.querySelector('[data-role="user-want-bot"]')?.addEventListener('click', () => this.openAccessSubOverlay('want-bot'));
