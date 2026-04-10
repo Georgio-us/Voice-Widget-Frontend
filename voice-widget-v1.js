@@ -12815,6 +12815,8 @@ render() {
   }
 
   openDebugInsightsPopup() {
+    const isSuperAdmin = this.accessRole === 'super_admin' || this.accessFlags?.isSuperAdmin === true;
+    if (!isSuperAdmin) return;
     this.closeDebugInsightsPopup();
     this.ensureDebugInsightsPopupStyles();
     const insights = this.getDebugInsightsSnapshot();
