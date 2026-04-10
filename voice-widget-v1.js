@@ -1466,6 +1466,25 @@ class APIClient {
     return data;
   }
 
+  async createSubscriptionActivationKey(payload = {}) {
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/subscriptions/keys/create');
+    const tgIdentity = this.getTelegramUserIdentity();
+    const body = payload && typeof payload === 'object' ? { ...payload } : {};
+    if (tgIdentity?.id) body.tgUserId = tgIdentity.id;
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) body.devAdmin = '1';
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      const serverError = String(data?.error || '');
+      throw new Error(serverError || `SUBSCRIPTION_KEY_CREATE_FAILED_${res.status}`);
+    }
+    return data;
+  }
+
   _deriveAdminApiBase() {
     try {
       const u = new URL(String(this.apiUrl));
@@ -2313,6 +2332,13 @@ const LOCALES = {
     accessAdminSortReset: 'Сброс',
     accessAdminSortApply: 'Применить',
     accessAdminSubscription: 'Управление подпиской',
+    accessSubGenerateTitle: 'Генерация ключей',
+    accessSubGenerate7: '7 дней',
+    accessSubGenerate30: '30 дней',
+    accessSubGenerate365: '1 год',
+    accessSubGenerateLife: 'Lifetime',
+    accessSubGeneratedKey: 'Сгенерированный ключ',
+    accessSubCopyKey: 'Копировать',
     accessAdminOlxConnect: 'Подключить OLX',
     accessAdminOlxConnectOpening: 'Открываю OLX...',
     accessAdminOlxConnected: 'OLX подключен (переподключить)',
@@ -2479,6 +2505,13 @@ const LOCALES = {
     accessAdminSortReset: 'Скинути',
     accessAdminSortApply: 'Застосувати',
     accessAdminSubscription: 'Керування підпискою',
+    accessSubGenerateTitle: 'Генерація ключів',
+    accessSubGenerate7: '7 днів',
+    accessSubGenerate30: '30 днів',
+    accessSubGenerate365: '1 рік',
+    accessSubGenerateLife: 'Lifetime',
+    accessSubGeneratedKey: 'Згенерований ключ',
+    accessSubCopyKey: 'Копіювати',
     accessAdminOlxConnect: 'Підключити OLX',
     accessAdminOlxConnectOpening: 'Відкриваю OLX...',
     accessAdminOlxConnected: 'OLX підключено (перепідключити)',
@@ -4444,6 +4477,7 @@ class VoiceWidget extends HTMLElement {
       }
       if (safeSection === 'subscription') {
         const subscription = this.normalizeAccessSubscription(this.accessSubscription);
+        const isSuperAdmin = this.accessFlags?.isSuperAdmin === true || this.accessRole === 'super_admin';
         const isActive = subscription?.active === true;
         const planLabel = this.getSubscriptionPlanLabel(subscription?.plan);
         const statusLabel = this.getSubscriptionStatusLabel(subscription?.status, isActive);
@@ -4457,6 +4491,35 @@ class VoiceWidget extends HTMLElement {
         const sourceLabel = subscription?.activationSource
           ? String(subscription.activationSource)
           : '—';
+        const generatedKey = String(this._lastGeneratedActivationKey || '').trim();
+        const generatedKeyHtml = generatedKey
+          ? `
+            <div class="vw-access-sub-toolbar" style="margin-top: 8px;">
+              <input
+                type="text"
+                class="vw-access-sub-input"
+                data-role="subscription-generated-key"
+                value="${generatedKey.replace(/"/g, '&quot;')}"
+                readonly
+              >
+              <button type="button" class="vw-access-sub-btn" data-role="subscription-copy-key">${locale.accessSubCopyKey || 'Копировать'}</button>
+            </div>
+          `
+          : '';
+        const superAdminGeneratorHtml = isSuperAdmin
+          ? `
+            <div class="vw-access-sub-list" style="margin-top: 10px;">
+              <div class="vw-access-sub-item"><strong>${locale.accessSubGenerateTitle || 'Генерация ключей'}</strong></div>
+            </div>
+            <div class="vw-access-sub-toolbar" style="margin-top: 6px;">
+              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="trial_7">${locale.accessSubGenerate7 || '7 дней'}</button>
+              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="month_30">${locale.accessSubGenerate30 || '30 дней'}</button>
+              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="year_365">${locale.accessSubGenerate365 || '1 год'}</button>
+              <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="lifetime">${locale.accessSubGenerateLife || 'Lifetime'}</button>
+            </div>
+            ${generatedKeyHtml}
+          `
+          : '';
         return `
           <div class="vw-access-sub-list">
             <div class="vw-access-sub-item">Текущий план: <strong>${planLabel}</strong></div>
@@ -4478,6 +4541,7 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="subscription-activate">Активировать ключ</button>
             <button type="button" class="vw-access-sub-btn" data-role="subscription-refresh">Обновить статус</button>
           </div>
+          ${superAdminGeneratorHtml}
         `;
       }
       return `
@@ -4925,9 +4989,14 @@ class VoiceWidget extends HTMLElement {
       const input = overlay.querySelector('[data-role="subscription-key-input"]');
       const activateBtn = overlay.querySelector('[data-role="subscription-activate"]');
       const refreshBtn = overlay.querySelector('[data-role="subscription-refresh"]');
+      const copyKeyBtn = overlay.querySelector('[data-role="subscription-copy-key"]');
+      const generatedKeyInput = overlay.querySelector('[data-role="subscription-generated-key"]');
+      const generateBtns = Array.from(overlay.querySelectorAll('[data-role="subscription-generate"]'));
       const updateBusy = (busy = false) => {
         if (activateBtn) activateBtn.disabled = !!busy;
         if (refreshBtn) refreshBtn.disabled = !!busy;
+        generateBtns.forEach((btn) => { btn.disabled = !!busy; });
+        if (copyKeyBtn) copyKeyBtn.disabled = !!busy;
         if (input) input.disabled = !!busy;
       };
       const activate = async () => {
@@ -4982,6 +5051,44 @@ class VoiceWidget extends HTMLElement {
           updateBusy(false);
           if (refreshBtn) refreshBtn.textContent = originalText;
         }
+      });
+      copyKeyBtn?.addEventListener('click', async () => {
+        const key = String(generatedKeyInput?.value || '').trim();
+        if (!key) return;
+        try {
+          if (navigator?.clipboard?.writeText) await navigator.clipboard.writeText(key);
+          else {
+            generatedKeyInput?.focus?.();
+            generatedKeyInput?.select?.();
+            document.execCommand('copy');
+          }
+          this.ui?.showNotification?.('Ключ скопирован');
+        } catch {
+          this.ui?.showNotification?.('Не удалось скопировать ключ');
+        }
+      });
+      generateBtns.forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const plan = String(btn.getAttribute('data-plan') || '').trim();
+          if (!plan) return;
+          updateBusy(true);
+          const original = btn.textContent || '...';
+          btn.textContent = 'Генерация...';
+          try {
+            const result = await this.api?.createSubscriptionActivationKey?.({ plan });
+            const key = String(result?.activationKey || '').trim();
+            if (!key) throw new Error('ACTIVATION_KEY_EMPTY');
+            this._lastGeneratedActivationKey = key;
+            this.ui?.showNotification?.('Ключ сгенерирован');
+            this.openAccessSubOverlay('subscription');
+          } catch (error) {
+            const code = String(error?.message || '');
+            this.ui?.showNotification?.(`Не удалось сгенерировать ключ (${code || 'UNKNOWN'})`);
+          } finally {
+            btn.textContent = original;
+            updateBusy(false);
+          }
+        });
       });
     }
     if (isAddProperty) {
