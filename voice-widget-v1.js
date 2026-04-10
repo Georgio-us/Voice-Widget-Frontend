@@ -1485,6 +1485,21 @@ class APIClient {
     return data;
   }
 
+  async fetchSubscriptionKeyStats() {
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/subscriptions/keys/stats');
+    const u = new URL(url, window.location.origin);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) u.searchParams.set('tgUserId', String(tgIdentity.id));
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) u.searchParams.set('devAdmin', '1');
+    const res = await fetch(u.toString(), { method: 'GET' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      const serverError = String(data?.error || '');
+      throw new Error(serverError || `SUBSCRIPTION_KEYS_STATS_FAILED_${res.status}`);
+    }
+    return data?.stats && typeof data.stats === 'object' ? data.stats : {};
+  }
+
   _deriveAdminApiBase() {
     try {
       const u = new URL(String(this.apiUrl));
@@ -4141,6 +4156,44 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  getSubscriptionKeyPlanRows() {
+    return [
+      { plan: 'trial_7', code: 'trial_7', title: this.t('accessSubGenerate7') || '7 дней' },
+      { plan: 'month_30', code: 'month_30', title: this.t('accessSubGenerate30') || '30 дней' },
+      { plan: 'year_365', code: 'year_365', title: this.t('accessSubGenerate365') || '1 год' },
+      { plan: 'lifetime', code: 'lifetime', title: this.t('accessSubGenerateLife') || 'Lifetime' }
+    ];
+  }
+
+  _ensureSubscriptionKeygenState() {
+    if (!this._subscriptionKeygenState || typeof this._subscriptionKeygenState !== 'object') {
+      this._subscriptionKeygenState = {
+        generatedByPlan: {},
+        visibleByPlan: {},
+        statsByPlan: {}
+      };
+    }
+    return this._subscriptionKeygenState;
+  }
+
+  _maskSubscriptionKey(raw) {
+    const key = String(raw || '').trim();
+    if (!key) return '';
+    return key.replace(/[A-Z0-9]/g, '•');
+  }
+
+  async refreshSubscriptionKeygenStats() {
+    const state = this._ensureSubscriptionKeygenState();
+    try {
+      const stats = await this.api?.fetchSubscriptionKeyStats?.();
+      if (stats && typeof stats === 'object') {
+        state.statsByPlan = { ...stats };
+      }
+    } catch (error) {
+      console.warn('refreshSubscriptionKeygenStats failed:', error);
+    }
+  }
+
   updateAdminObjectsSelectionState(overlay) {
     if (!overlay) return;
     const rows = Array.from(overlay.querySelectorAll('.vw-access-obj-card'));
@@ -4546,32 +4599,40 @@ class VoiceWidget extends HTMLElement {
             </div>
           `;
         }
-        const generatedKey = String(this._lastGeneratedActivationKey || '').trim();
+        const state = this._ensureSubscriptionKeygenState();
+        const rows = this.getSubscriptionKeyPlanRows().map((row) => {
+          const rawKey = String(state.generatedByPlan?.[row.plan] || '').trim();
+          const isVisible = state.visibleByPlan?.[row.plan] === true;
+          const shownValue = rawKey ? (isVisible ? rawKey : this._maskSubscriptionKey(rawKey)) : '';
+          const generated = Number(state.statsByPlan?.[row.plan]?.generated || 0);
+          const used = Number(state.statsByPlan?.[row.plan]?.used || 0);
+          return `
+            <div class="vw-sub-keygen-row" data-plan-row="${row.plan}">
+              <div class="vw-sub-keygen-row-head">
+                <div class="vw-sub-keygen-plan">${row.code}</div>
+                <button type="button" class="vw-sub-keygen-generate" data-role="subscription-generate" data-plan="${row.plan}">Сгенерировать 🔑</button>
+              </div>
+              <div class="vw-sub-keygen-controls">
+                <input
+                  type="text"
+                  class="vw-access-sub-input vw-sub-keygen-input"
+                  data-role="subscription-generated-key"
+                  data-plan="${row.plan}"
+                  value="${String(shownValue || '').replace(/"/g, '&quot;')}"
+                  placeholder=""
+                  readonly
+                >
+                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-toggle-key" data-plan="${row.plan}" aria-label="Показать/скрыть ключ">👁</button>
+                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-copy-key" data-plan="${row.plan}" aria-label="Копировать ключ">📋</button>
+              </div>
+              <div class="vw-sub-keygen-stats">Всего сгенерировано: <strong>${generated}</strong>&nbsp;&nbsp; Всего использовано: <strong>${used}</strong></div>
+            </div>
+          `;
+        }).join('');
         return `
-          <div class="vw-access-sub-list">
-            <div class="vw-access-sub-item"><strong>${locale.accessSubGenerateTitle || 'Генерация ключей'}</strong></div>
+          <div class="vw-sub-keygen-list">
+            ${rows}
           </div>
-          <div class="vw-access-sub-toolbar" style="margin-top: 6px;">
-            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="trial_7">${locale.accessSubGenerate7 || '7 дней'}</button>
-            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="month_30">${locale.accessSubGenerate30 || '30 дней'}</button>
-            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="year_365">${locale.accessSubGenerate365 || '1 год'}</button>
-            <button type="button" class="vw-access-sub-btn" data-role="subscription-generate" data-plan="lifetime">${locale.accessSubGenerateLife || 'Lifetime'}</button>
-          </div>
-          ${generatedKey ? `
-            <div class="vw-access-sub-list" style="margin-top:10px;">
-              <div class="vw-access-sub-item">${locale.accessSubGeneratedKey || 'Сгенерированный ключ'}</div>
-            </div>
-            <div class="vw-access-sub-toolbar" style="margin-top: 6px;">
-              <input
-                type="text"
-                class="vw-access-sub-input"
-                data-role="subscription-generated-key"
-                value="${generatedKey.replace(/"/g, '&quot;')}"
-                readonly
-              >
-              <button type="button" class="vw-access-sub-btn" data-role="subscription-copy-key">${locale.accessSubCopyKey || 'Копировать'}</button>
-            </div>
-          ` : ''}
         `;
       }
       return `
@@ -5070,28 +5131,34 @@ class VoiceWidget extends HTMLElement {
       });
     }
     if (safeSection === 'keygen') {
-      const copyKeyBtn = overlay.querySelector('[data-role="subscription-copy-key"]');
-      const generatedKeyInput = overlay.querySelector('[data-role="subscription-generated-key"]');
       const generateBtns = Array.from(overlay.querySelectorAll('[data-role="subscription-generate"]'));
+      const copyKeyBtns = Array.from(overlay.querySelectorAll('[data-role="subscription-copy-key"]'));
+      const toggleKeyBtns = Array.from(overlay.querySelectorAll('[data-role="subscription-toggle-key"]'));
       const updateBusy = (busy = false) => {
         generateBtns.forEach((btn) => { btn.disabled = !!busy; });
-        if (copyKeyBtn) copyKeyBtn.disabled = !!busy;
+        copyKeyBtns.forEach((btn) => { btn.disabled = !!busy; });
+        toggleKeyBtns.forEach((btn) => { btn.disabled = !!busy; });
       };
-      copyKeyBtn?.addEventListener('click', async () => {
-        const key = String(generatedKeyInput?.value || '').trim();
+      copyKeyBtns.forEach((btn) => btn.addEventListener('click', async () => {
+        const plan = String(btn.getAttribute('data-plan') || '').trim();
+        const state = this._ensureSubscriptionKeygenState();
+        const key = String(state.generatedByPlan?.[plan] || '').trim();
         if (!key) return;
         try {
           if (navigator?.clipboard?.writeText) await navigator.clipboard.writeText(key);
-          else {
-            generatedKeyInput?.focus?.();
-            generatedKeyInput?.select?.();
-            document.execCommand('copy');
-          }
+          else document.execCommand('copy');
           this.ui?.showNotification?.('Ключ скопирован');
         } catch {
           this.ui?.showNotification?.('Не удалось скопировать ключ');
         }
-      });
+      }));
+      toggleKeyBtns.forEach((btn) => btn.addEventListener('click', () => {
+        const plan = String(btn.getAttribute('data-plan') || '').trim();
+        if (!plan) return;
+        const state = this._ensureSubscriptionKeygenState();
+        state.visibleByPlan = { ...(state.visibleByPlan || {}), [plan]: !(state.visibleByPlan?.[plan] === true) };
+        this.openAccessSubOverlay('keygen');
+      }));
       generateBtns.forEach((btn) => {
         btn.addEventListener('click', async () => {
           const plan = String(btn.getAttribute('data-plan') || '').trim();
@@ -5103,7 +5170,10 @@ class VoiceWidget extends HTMLElement {
             const result = await this.api?.createSubscriptionActivationKey?.({ plan });
             const key = String(result?.activationKey || '').trim();
             if (!key) throw new Error('ACTIVATION_KEY_EMPTY');
-            this._lastGeneratedActivationKey = key;
+            const state = this._ensureSubscriptionKeygenState();
+            state.generatedByPlan = { ...(state.generatedByPlan || {}), [plan]: key };
+            state.visibleByPlan = { ...(state.visibleByPlan || {}), [plan]: false };
+            await this.refreshSubscriptionKeygenStats();
             this.ui?.showNotification?.('Ключ сгенерирован');
             this.openAccessSubOverlay('keygen');
           } catch (error) {
@@ -7989,6 +8059,55 @@ class VoiceWidget extends HTMLElement {
         font-size: 1rem;
         padding: 0 20px;
       }
+      .vw-sub-keygen-list {
+        display: grid;
+        gap: 14px;
+      }
+      .vw-sub-keygen-row {
+        display: grid;
+        gap: 8px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.14));
+      }
+      .vw-sub-keygen-row-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .vw-sub-keygen-plan {
+        font-size: .95rem;
+        color: var(--text-secondary, rgba(255,255,255,0.82));
+      }
+      .vw-sub-keygen-generate {
+        border: 0;
+        background: transparent;
+        color: var(--color-accent, #4ea0ff);
+        font-size: 1.05rem;
+      }
+      .vw-sub-keygen-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+      }
+      .vw-sub-keygen-input {
+        min-height: 44px;
+        border-radius: 12px;
+        font-size: .9rem;
+      }
+      .vw-sub-keygen-icon-btn {
+        min-width: 40px;
+        min-height: 40px;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--color-accent, #4ea0ff);
+        font-size: 1rem;
+      }
+      .vw-sub-keygen-stats {
+        font-size: .92rem;
+        color: var(--text-secondary, rgba(255,255,255,0.82));
+      }
       .vw-access-sub-modal--add {
         width: min(720px, 100%);
         max-height: min(88vh, 760px);
@@ -8720,7 +8839,8 @@ class VoiceWidget extends HTMLElement {
       try { await this.api.resolveViewerAccessRole(); } catch {}
       this.openAccessSubOverlay('subscription');
     });
-    overlay.querySelector('[data-role="admin-keygen"]')?.addEventListener('click', () => {
+    overlay.querySelector('[data-role="admin-keygen"]')?.addEventListener('click', async () => {
+      try { await this.refreshSubscriptionKeygenStats(); } catch {}
       this.openAccessSubOverlay('keygen');
     });
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
