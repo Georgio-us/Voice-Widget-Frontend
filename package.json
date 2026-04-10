@@ -4,7 +4,9 @@
   "description": "Static server for Voice Widget Frontend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "smoke": "node scripts/smoke.js",
+    "smoke:soft": "VW_SMOKE_SOFT=1 node scripts/smoke.js"
   },
   "dependencies": {
     "express": "^4.18.2",
