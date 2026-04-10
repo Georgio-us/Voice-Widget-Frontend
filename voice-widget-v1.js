@@ -1372,7 +1372,11 @@ class APIClient {
     files.forEach((file) => {
       if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
     });
-    const res = await fetch(base, { method: 'POST', body: formData });
+    const res = await fetch(base, {
+      method: 'POST',
+      headers: this.buildTelegramAuthHeaders(),
+      body: formData
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
       throw new Error(String(data?.error || `ADMIN_CREATE_FAILED_${res.status}`));
@@ -1406,7 +1410,11 @@ class APIClient {
     files.forEach((file) => {
       if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
     });
-    const res = await fetch(base, { method: 'PUT', body: formData });
+    const res = await fetch(base, {
+      method: 'PUT',
+      headers: this.buildTelegramAuthHeaders(),
+      body: formData
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
       throw new Error(String(data?.error || `ADMIN_UPDATE_FAILED_${res.status}`));
@@ -1427,7 +1435,7 @@ class APIClient {
     if (options.clientId) payload.clientId = String(options.clientId);
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     const data = await res.json().catch(() => ({}));
@@ -1445,7 +1453,10 @@ class APIClient {
     const tgIdentity = this.getTelegramUserIdentity();
     if (tgIdentity?.id) url.searchParams.set('tgUserId', String(tgIdentity.id));
     if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) url.searchParams.set('devAdmin', '1');
-    const res = await fetch(url.toString(), { method: 'GET' });
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.buildTelegramAuthHeaders()
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
       throw new Error(String(data?.error || `ADMIN_GET_FAILED_${res.status}`));
@@ -1463,7 +1474,7 @@ class APIClient {
     if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) payload.devAdmin = '1';
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     const data = await res.json().catch(() => ({}));
@@ -1482,7 +1493,7 @@ class APIClient {
     if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) body.devAdmin = '1';
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
@@ -1499,7 +1510,10 @@ class APIClient {
     const tgIdentity = this.getTelegramUserIdentity();
     if (tgIdentity?.id) u.searchParams.set('tgUserId', String(tgIdentity.id));
     if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) u.searchParams.set('devAdmin', '1');
-    const res = await fetch(u.toString(), { method: 'GET' });
+    const res = await fetch(u.toString(), {
+      method: 'GET',
+      headers: this.buildTelegramAuthHeaders()
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
       const serverError = String(data?.error || '');
@@ -1551,7 +1565,7 @@ class APIClient {
     if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) payload.devAdmin = '1';
     const res = await fetch(u.toString(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: this.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload)
     });
     const data = await res.json().catch(() => ({}));
@@ -1568,7 +1582,10 @@ class APIClient {
     const u = this._appendAdminAuthToUrl(
       new URL(`${base}/residential-complexes/${encodeURIComponent(safeId)}`)
     );
-    const res = await fetch(u.toString(), { method: 'DELETE' });
+    const res = await fetch(u.toString(), {
+      method: 'DELETE',
+      headers: this.buildTelegramAuthHeaders()
+    });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
       throw new Error(String(data?.error || `RC_DELETE_${res.status}`));
@@ -1705,6 +1722,32 @@ class APIClient {
     } catch {}
   }
 
+  getTelegramInitDataRaw() {
+    try {
+      return String(window?.Telegram?.WebApp?.initData || '').trim();
+    } catch {
+      return '';
+    }
+  }
+
+  buildTelegramAuthHeaders(base = {}) {
+    const headers = new Headers(base || {});
+    const initData = this.getTelegramInitDataRaw();
+    if (initData) headers.set('X-Telegram-Init-Data', initData);
+    return headers;
+  }
+
+  attachTelegramInitDataToUrl(urlLike) {
+    try {
+      const url = urlLike instanceof URL ? urlLike : new URL(String(urlLike), window.location.origin);
+      const initData = this.getTelegramInitDataRaw();
+      if (initData) url.searchParams.set('initData', initData);
+      return url;
+    } catch {
+      return urlLike;
+    }
+  }
+
   getTelegramUserIdentity() {
     try {
       const fromUnsafe = window?.Telegram?.WebApp?.initDataUnsafe?.user || null;
@@ -1742,7 +1785,9 @@ class APIClient {
       const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/audio/access');
       const url = new URL(base);
       url.searchParams.set('tgUserId', tgIdentity.id);
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), {
+        headers: this.buildTelegramAuthHeaders()
+      });
       if (!res.ok) throw new Error(`access role fetch failed: ${res.status}`);
       const data = await res.json().catch(() => ({}));
       const accessRole = String(data?.accessRole || 'user').trim().toLowerCase();
@@ -3725,6 +3770,32 @@ class VoiceWidget extends HTMLElement {
     return String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '');
   }
 
+  getTelegramInitDataRaw() {
+    try {
+      return String(window?.Telegram?.WebApp?.initData || '').trim();
+    } catch {
+      return '';
+    }
+  }
+
+  buildTelegramAuthHeaders(base = {}) {
+    const headers = new Headers(base || {});
+    const initData = this.getTelegramInitDataRaw();
+    if (initData) headers.set('X-Telegram-Init-Data', initData);
+    return headers;
+  }
+
+  attachTelegramInitDataToUrl(urlLike) {
+    try {
+      const url = urlLike instanceof URL ? urlLike : new URL(String(urlLike), window.location.origin);
+      const initData = this.getTelegramInitDataRaw();
+      if (initData) url.searchParams.set('initData', initData);
+      return url;
+    } catch {
+      return urlLike;
+    }
+  }
+
   consumeOlxCallbackState() {
     try {
       const url = new URL(window.location.href);
@@ -3753,6 +3824,7 @@ class VoiceWidget extends HTMLElement {
     if (tgUser?.id) {
       url.searchParams.set('tgUserId', tgUser.id);
     }
+    this.attachTelegramInitDataToUrl(url);
     try {
       url.searchParams.set('returnTo', window.location.href);
     } catch {}
@@ -3792,7 +3864,9 @@ class VoiceWidget extends HTMLElement {
     try {
       const statusUrl = new URL(`${backendBase}/api/olx/status`);
       statusUrl.searchParams.set('tgUserId', tgUser.id);
-      const response = await fetch(statusUrl.toString());
+      const response = await fetch(statusUrl.toString(), {
+        headers: this.buildTelegramAuthHeaders()
+      });
       const payload = await response.json().catch(() => ({}));
       const connected = Boolean(response.ok && payload?.ok && payload?.connected);
       this.setAccessButtonLabel(button, connected
@@ -3842,7 +3916,10 @@ class VoiceWidget extends HTMLElement {
     try {
       const url = new URL(`${backendBase}/api/olx/sync`);
       url.searchParams.set('tgUserId', tgUser.id);
-      const response = await fetch(url.toString(), { method: 'POST' });
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: this.buildTelegramAuthHeaders()
+      });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload?.ok !== true) {
         throw new Error(payload?.error || `HTTP_${response.status}`);
