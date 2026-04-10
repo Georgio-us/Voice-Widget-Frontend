@@ -8009,7 +8009,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-subscription-panel {
         display: grid;
-        gap: 14px;
+        gap: 12px;
       }
       .vw-subscription-status {
         display: grid;
@@ -8022,7 +8022,7 @@ class VoiceWidget extends HTMLElement {
         flex-wrap: wrap;
       }
       .vw-subscription-label {
-        font-size: .96rem;
+        font-size: .78rem;
         font-weight: 700;
         color: var(--text-primary, #fff);
       }
@@ -8032,19 +8032,20 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-subscription-countdown {
         margin-top: 8px;
-        font-size: 2.75rem;
+        font-size: 1.5rem;
         line-height: 1.12;
         color: var(--text-secondary, rgba(255,255,255,0.7));
         letter-spacing: .01em;
+        text-align: center;
       }
       .vw-subscription-prompt {
-        margin-top: 4px;
-        font-size: 1.08rem;
+        margin-top: 12px;
+        font-size: .68rem;
         color: var(--text-secondary, rgba(255,255,255,0.75));
       }
       .vw-subscription-key-input {
         min-height: 52px;
-        font-size: 1.08rem;
+        font-size: .88rem;
         border-radius: 12px;
         padding: 0 14px;
       }
@@ -8053,7 +8054,7 @@ class VoiceWidget extends HTMLElement {
         border: 0;
         background: transparent;
         color: var(--text-secondary, rgba(255,255,255,0.68));
-        font-size: .98rem;
+        font-size: .68rem;
       }
       .vw-subscription-actions {
         display: flex;
