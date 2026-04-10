@@ -497,8 +497,16 @@ class UnderstandingManager {
 
     // Нормализуем входящие данные (поддержка старых/альтернативных ключей и вложенного params)
     const migrated = this.migrateInsights(insights);
-    // Обновляем локальное состояние только каноническими ключами
-    this.understanding = { ...this.understanding, ...migrated };
+    // Update-only merge: не затираем ранее заполненные поля null/пустыми значениями.
+    const patch = {};
+    Object.entries(migrated || {}).forEach(([key, value]) => {
+      if (key === 'progress') return;
+      if (value === null || value === undefined) return;
+      if (Array.isArray(value) && value.length === 0) return;
+      if (!Array.isArray(value) && typeof value === 'string' && value.trim() === '') return;
+      patch[key] = value;
+    });
+    this.understanding = { ...this.understanding, ...patch };
 
     // Пересчитываем прогресс
     this.understanding.progress = this.calculateProgress();
@@ -10464,12 +10472,6 @@ render() {
     if (data.insights && typeof data.insights === 'object') {
       migratedInsights = this.understanding?.migrateInsights?.(data.insights) || data.insights;
       shouldApplyAiRefresh = this._detectNewInsight(migratedInsights);
-      // AI уточнение должно иметь приоритет над старыми ручными overrides.
-      // Иначе можно застрять в старом operation/type даже при валидных insights.
-      if (this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object') {
-        this._catalogManualFilterOverrides = null;
-        shouldApplyAiRefresh = true;
-      }
     }
 
     const totalMatches = Number(data.totalMatches);
@@ -10502,10 +10504,19 @@ render() {
       this.replacePropertiesCatalog(cards);
     }
     if (shouldApplyAiRefresh && migratedInsights && typeof migratedInsights === 'object') {
-      this._catalogManualFilterOverrides = null;
       this._catalogIgnoreAssistantBaseFilters = false;
       this._catalogLastRefineMode = 'ai';
-      this.refreshCatalogByEffectiveQuery(migratedInsights).catch((error) => {
+      const currentInsights = (this.understanding?.export?.() && typeof this.understanding.export() === 'object')
+        ? this.understanding.export()
+        : {};
+      const mergedInsights = { ...currentInsights };
+      Object.entries(migratedInsights || {}).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+        if (Array.isArray(value) && value.length === 0) return;
+        if (!Array.isArray(value) && typeof value === 'string' && value.trim() === '') return;
+        mergedInsights[key] = value;
+      });
+      this.refreshCatalogByEffectiveQuery(mergedInsights).catch((error) => {
         console.warn('refreshCatalogByEffectiveQuery failed:', error);
       });
     }
