@@ -7186,12 +7186,7 @@ class VoiceWidget extends HTMLElement {
       return Number.isFinite(n) ? n : null;
     };
     const budgetAnchor = toNum(query.maxPrice);
-    if (budgetAnchor != null && budgetAnchor > 0 && query.minPrice == null) {
-      // Unified behavior for AI/manual: "до X" interpreted as "около X" in strict stage.
-      query.minPrice = Math.max(0, Math.round(budgetAnchor * 0.75));
-      query.maxPrice = Math.round(budgetAnchor * 1.25);
-      query.__budgetAnchor = budgetAnchor;
-    } else if (budgetAnchor != null && budgetAnchor > 0) {
+    if (budgetAnchor != null && budgetAnchor > 0) {
       query.__budgetAnchor = budgetAnchor;
     }
 
@@ -11798,6 +11793,11 @@ render() {
       }
     }
     if (!list.length) {
+      this.clearPropertiesSlider();
+      this._catalogOverflowQueue = [];
+      this._catalogVisibleIds = [];
+      this._catalogActiveId = null;
+      this._catalogListWindowStart = 0;
       this.updateObjectCount(Number(window?.appState?.lastTotalMatches) || 0);
       console.warn('renderCatalogFromCurrentState: no catalog items to render');
       return;
@@ -13023,14 +13023,19 @@ render() {
       ['arcadia', manualFilters.arcadia],
       ['center', manualFilters.center]
     ];
-    const apiCards = [
-      ...(Array.isArray(api.topCandidates) ? api.topCandidates : []),
-      ...(Array.isArray(api.cards) ? api.cards : [])
-    ];
+    const strictOnly = this._catalogStrictOnlyMode === true;
+    const apiCards = strictOnly
+      ? []
+      : [
+        ...(Array.isArray(api.topCandidates) ? api.topCandidates : []),
+        ...(Array.isArray(api.cards) ? api.cards : [])
+      ];
     const strictCards = Array.isArray(this._strictManualResult) ? this._strictManualResult : [];
-    const catalogCards = strictCards.length
+    const catalogCards = strictOnly
       ? strictCards
-      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
+      : (strictCards.length
+      ? strictCards
+      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []));
     const cards = catalogCards.length
       ? [...catalogCards, ...apiCards]
       : apiCards;
