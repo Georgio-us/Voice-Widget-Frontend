@@ -7187,6 +7187,17 @@ class VoiceWidget extends HTMLElement {
       const n = Number(value);
       return Number.isFinite(n) ? n : null;
     };
+    const strictFlow = this._isStrictFlowQuery(query);
+    const strictMinPrice = toNum(query.minPrice);
+    const strictMaxPrice = toNum(query.maxPrice);
+    // Strict price window rule:
+    // - explicit min+max: keep as-is
+    // - max only: auto-build lower bound at 70%
+    // - min only: keep open upper bound
+    if (strictFlow && strictMinPrice == null && strictMaxPrice != null && strictMaxPrice > 0) {
+      query.minPrice = Math.round(strictMaxPrice * 0.7);
+    }
+
     const budgetAnchor = toNum(query.maxPrice);
     if (budgetAnchor != null && budgetAnchor > 0) {
       query.__budgetAnchor = budgetAnchor;
