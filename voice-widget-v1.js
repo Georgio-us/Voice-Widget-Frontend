@@ -12863,6 +12863,9 @@ render() {
     const api = (envelope.payload && typeof envelope.payload === 'object') ? envelope.payload : envelope;
     const apiMeta = (envelope.meta && typeof envelope.meta === 'object') ? envelope.meta : (this._lastApiPayloadMeta || {});
     const effectiveFilters = this.getCatalogEffectiveSearchParams(insights);
+    const manualFilters = (this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object')
+      ? this._catalogManualFilterOverrides
+      : {};
     const interpretedInsights = [
       ['Operation', insights.operation],
       ['Type', insights.type],
@@ -12893,6 +12896,28 @@ render() {
       ['parking', effectiveFilters.parking],
       ['balconyLoggia', effectiveFilters.balconyLoggia]
     ];
+    const manualRows = [
+      ['operation', manualFilters.operation],
+      ['type', manualFilters.type],
+      ['district', manualFilters.district],
+      ['rooms', manualFilters.rooms],
+      ['smart', manualFilters.smart],
+      ['minPrice', manualFilters.minPrice],
+      ['maxPrice', manualFilters.maxPrice],
+      ['minArea', manualFilters.minArea],
+      ['maxArea', manualFilters.maxArea],
+      ['minFloor', manualFilters.minFloor],
+      ['maxFloor', manualFilters.maxFloor],
+      ['floorNotFirst', manualFilters.floorNotFirst],
+      ['floorNotLast', manualFilters.floorNotLast],
+      ['rcOnly', manualFilters.rcOnly],
+      ['residentialComplex', manualFilters.residentialComplex],
+      ['parking', manualFilters.parking],
+      ['balconyLoggia', manualFilters.balconyLoggia],
+      ['exclusive', manualFilters.exclusive],
+      ['arcadia', manualFilters.arcadia],
+      ['center', manualFilters.center]
+    ];
     const cards = [
       ...(Array.isArray(api.topCandidates) ? api.topCandidates : []),
       ...(Array.isArray(api.cards) ? api.cards : [])
@@ -12914,7 +12939,167 @@ render() {
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
       .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
       .join('');
-    const cardsListHtml = dedupCards.slice(0, 8).map((card, idx) => {
+    const manualListHtml = manualRows
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const toNum = (value) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+    const toBool = (value) => {
+      if (value === true || value === false) return value;
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return null;
+      if (['1', 'true', 'yes', 'y', 'да', 'так', 'є'].includes(raw)) return true;
+      if (['0', 'false', 'no', 'n', 'нет', 'ні'].includes(raw)) return false;
+      return null;
+    };
+    const normalizeOperation = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/(buy|sale|sell|purchase|покуп|купит|продаж)/i.test(raw)) return 'sale';
+      if (/(rent|lease|аренд|оренд|снять)/i.test(raw)) return 'rent';
+      return raw;
+    };
+    const normalizeType = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/(apartment|flat|квартир|апартамент|апарты)/i.test(raw)) return 'apartment';
+      if (/(house|villa|home|дом|таунхаус|таун)/i.test(raw)) return 'house';
+      if (/(land|plot|участок|земл)/i.test(raw)) return 'land';
+      if (/(commercial|office|retail|склад|коммер|офис|нежил)/i.test(raw)) return 'commercial';
+      return raw;
+    };
+    const normalizeRcName = (value) => String(value || '')
+      .toLowerCase()
+      .replace(/^(?:жк|зк|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс)\s*/i, '')
+      .replace(/[«»"'`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const readTotalFloors = (item = {}) => {
+      const variants = [
+        item?.total_floors,
+        item?.totalFloors,
+        item?.floors_total,
+        item?.floorsTotal,
+        item?.specs?.total_floors,
+        item?.specs?.totalFloors
+      ];
+      for (const value of variants) {
+        const n = toNum(value);
+        if (n != null) return n;
+      }
+      return null;
+    };
+    const filterIsSet = (value) => {
+      if (value == null) return false;
+      if (typeof value === 'boolean') return value === true;
+      return String(value).trim() !== '';
+    };
+    const mark = (ok, note = '') => ok ? `✅${note ? ` ${note}` : ''}` : `❌${note ? ` ${note}` : ''}`;
+    const skip = (note = '') => `⏭️${note ? ` ${note}` : ''}`;
+    const evaluateCandidate = (card) => {
+      const normalized = this._toCardEngineShape(card || {});
+      const operation = normalizeOperation(normalized.operation || normalized.listingType);
+      const type = normalizeType(normalized.property_type || normalized.type);
+      const district = this._normalizeDistrictForRelax(String(normalized.district || normalized.neighborhood || normalized.city || ''));
+      const roomsNum = toNum(normalized.rooms);
+      const smartFlat = normalized?.features?.smartFlat === true;
+      const priceNum = toNum(normalized.priceUSD ?? normalized.priceEUR ?? normalized.price_amount ?? normalized.price);
+      const areaNum = toNum(normalized.area_m2);
+      const floorNum = toNum(normalized.floor);
+      const totalFloors = readTotalFloors(normalized);
+      const hasComplex = normalizeRcName(normalized?.features?.complex || normalized?.display_specs?.complex || normalized?.residentialComplex || normalized?.residential_complex || normalized?.complex || '') !== '';
+      const complexName = normalizeRcName(normalized?.features?.complex || normalized?.display_specs?.complex || normalized?.residentialComplex || normalized?.residential_complex || normalized?.complex || '');
+      const hasParking = (
+        toBool(normalized?.features?.parking) === true
+        || toBool(normalized?.features?.has_parking) === true
+      );
+      const hasBalconyLoggia = (
+        toBool(normalized?.features?.balcony) === true
+        || toBool(normalized?.features?.loggia) === true
+        || toBool(normalized?.features?.has_balcony) === true
+        || toBool(normalized?.balcony) === true
+      );
+      const isExclusive = (
+        toBool(normalized?.exclusive) === true
+        || toBool(normalized?.features?.exclusive) === true
+      );
+      const neighborhoodRaw = String(normalized.neighborhood || '').trim().toLowerCase();
+      const titleRaw = String(normalized.title || '').trim().toLowerCase();
+      const isCenter = neighborhoodRaw === 'центр' || neighborhoodRaw === 'center';
+      const isArcadia = (
+        neighborhoodRaw.includes('аркад')
+        || neighborhoodRaw.includes('arcad')
+        || titleRaw.includes('аркад')
+        || titleRaw.includes('arcad')
+      );
+
+      const checks = [];
+      const addCheck = (label, enabled, pass, note = '') => {
+        if (!enabled) return;
+        checks.push(`${label}: ${pass === 'skip' ? skip(note) : mark(!!pass, note)}`);
+      };
+
+      addCheck('operation', filterIsSet(manualFilters.operation), operation === String(manualFilters.operation || '').toLowerCase(), `card=${operation || 'n/a'} expected=${manualFilters.operation}`);
+      addCheck('type', filterIsSet(manualFilters.type), type === normalizeType(manualFilters.type), `card=${type || 'n/a'} expected=${normalizeType(manualFilters.type)}`);
+      addCheck('district', filterIsSet(manualFilters.district), district === String(manualFilters.district || '').toLowerCase(), `card=${district || 'n/a'} expected=${manualFilters.district}`);
+      if (manualFilters.smart === true) {
+        addCheck('smart', true, smartFlat === true, `card=${smartFlat ? 'true' : 'false'}`);
+      } else if (filterIsSet(manualFilters.rooms)) {
+        const want = String(manualFilters.rooms || '').trim().toLowerCase();
+        if (want === '4plus') addCheck('rooms', true, roomsNum != null && roomsNum >= 4, `card=${roomsNum ?? 'n/a'} expected=4plus`);
+        else if (want === '5plus') addCheck('rooms', true, roomsNum != null && roomsNum >= 5, `card=${roomsNum ?? 'n/a'} expected=5plus`);
+        else {
+          const wantNum = toNum(want);
+          addCheck('rooms', true, wantNum != null && roomsNum != null && roomsNum === wantNum, `card=${roomsNum ?? 'n/a'} expected=${wantNum ?? want}`);
+        }
+      }
+      if (filterIsSet(manualFilters.minPrice) || filterIsSet(manualFilters.maxPrice)) {
+        const minP = toNum(manualFilters.minPrice);
+        const maxP = toNum(manualFilters.maxPrice);
+        const pass = priceNum != null && (minP == null || priceNum >= minP) && (maxP == null || priceNum <= maxP);
+        addCheck('price', true, pass, `card=${priceNum ?? 'n/a'} expected=${minP ?? '-'}..${maxP ?? '-'}`);
+      }
+      if (filterIsSet(manualFilters.minArea) || filterIsSet(manualFilters.maxArea)) {
+        const minA = toNum(manualFilters.minArea);
+        const maxA = toNum(manualFilters.maxArea);
+        const pass = areaNum != null && (minA == null || areaNum >= minA) && (maxA == null || areaNum <= maxA);
+        addCheck('area', true, pass, `card=${areaNum ?? 'n/a'} expected=${minA ?? '-'}..${maxA ?? '-'}`);
+      }
+      if (filterIsSet(manualFilters.minFloor) || filterIsSet(manualFilters.maxFloor)) {
+        const minF = toNum(manualFilters.minFloor);
+        const maxF = toNum(manualFilters.maxFloor);
+        const pass = floorNum != null && (minF == null || floorNum >= minF) && (maxF == null || floorNum <= maxF);
+        addCheck('floor', true, pass, `card=${floorNum ?? 'n/a'} expected=${minF ?? '-'}..${maxF ?? '-'}`);
+      }
+      if (manualFilters.floorNotFirst === true) {
+        if (floorNum == null) addCheck('floorNotFirst', true, false, 'card floor unknown');
+        else addCheck('floorNotFirst', true, floorNum > 1, `card=${floorNum}`);
+      }
+      if (manualFilters.floorNotLast === true) {
+        if (floorNum == null) addCheck('floorNotLast', true, false, 'card floor unknown');
+        else if (totalFloors == null) addCheck('floorNotLast', true, 'skip', 'total floors unknown (filter not applied)');
+        else addCheck('floorNotLast', true, floorNum < totalFloors, `card=${floorNum}/${totalFloors}`);
+      }
+      if (manualFilters.rcOnly === true) addCheck('rcOnly', true, hasComplex, hasComplex ? `card=ЖК(${complexName})` : 'card=без ЖК');
+      if (filterIsSet(manualFilters.residentialComplex)) {
+        const wantComplex = normalizeRcName(manualFilters.residentialComplex);
+        addCheck('residentialComplex', true, !!wantComplex && complexName === wantComplex, `card=${complexName || 'n/a'} expected=${wantComplex || 'n/a'}`);
+      }
+      if (manualFilters.parking === true) addCheck('parking', true, hasParking, hasParking ? 'card=yes' : 'card=no');
+      if (manualFilters.balconyLoggia === true) addCheck('balconyLoggia', true, hasBalconyLoggia, hasBalconyLoggia ? 'card=yes' : 'card=no');
+      if (manualFilters.exclusive === true) addCheck('exclusive', true, isExclusive, isExclusive ? 'card=yes' : 'card=no');
+      if (manualFilters.arcadia === true) addCheck('arcadia', true, isArcadia, isArcadia ? 'card=yes' : 'card=no');
+      if (manualFilters.center === true) addCheck('center', true, isCenter, isCenter ? 'card=yes' : 'card=no');
+
+      const passed = checks.filter((line) => line.includes('✅') || line.includes('⏭️')).length;
+      return { checks, passed, total: checks.length };
+    };
+    const candidatesTop = dedupCards.slice(0, 3);
+    const candidateReports = candidatesTop.map((card, idx) => {
+      const result = evaluateCandidate(card);
       const id = String(card?.id || card?.external_id || `#${idx + 1}`).trim();
       const title = String(card?.title || '—').trim();
       const operation = String(card?.operation || '').trim();
@@ -12922,9 +13107,19 @@ render() {
       const rooms = card?.rooms != null ? `${card.rooms}` : '—';
       const priceRaw = card?.priceEUR ?? card?.priceUSD ?? card?.price_amount ?? null;
       const price = priceRaw == null ? '—' : formatPrice(priceRaw);
-      const score = Number(card?.score ?? card?._score);
-      const scoreText = Number.isFinite(score) ? `, score ${Math.round(score)}%` : '';
-      return `<li><strong>${safeText(id)}:</strong> ${safeText(title)} (${safeText(operation || 'n/a')}, ${safeText(district || 'n/a')}, ${safeText(rooms)} rooms, ${safeText(price)}${safeText(scoreText)})</li>`;
+      return { id, title, operation, district, rooms, price, checks: result.checks, passed: result.passed, total: result.total };
+    });
+    const cardsListHtml = candidateReports.map((row) => {
+      const checksHtml = row.checks.length
+        ? `<ul class="vw-debug-insights-list">${row.checks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
+        : '<ul class="vw-debug-insights-list"><li>Нет активных ручных фильтров для проверки</li></ul>';
+      return `
+        <li>
+          <strong>${safeText(row.id)}:</strong> ${safeText(row.title)} (${safeText(row.operation || 'n/a')}, ${safeText(row.district || 'n/a')}, ${safeText(row.rooms)} rooms, ${safeText(row.price)})
+          <br><strong>Match:</strong> ${safeText(`${row.passed}/${row.total}`)}
+          ${checksHtml}
+        </li>
+      `;
     }).join('');
     const metricsListHtml = [
       ['source', apiMeta?.source],
@@ -13001,6 +13196,59 @@ render() {
         }, null, 2));
       } catch { return '{}'; }
     })();
+    const copyReport = (() => {
+      const lines = [];
+      lines.push('=== DEBUG REPORT ===');
+      lines.push('1) MANUAL FILTERS');
+      if (manualRows.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        manualRows.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
+      lines.push('');
+      lines.push('2) AI UNDERSTANDING');
+      if (interpretedInsights.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        interpretedInsights.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
+      lines.push('');
+      lines.push('3) EFFECTIVE FILTERS');
+      if (mappingRows.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        mappingRows.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
+      lines.push('');
+      lines.push('4) TOP CANDIDATES (MATCH BREAKDOWN)');
+      if (!candidateReports.length) {
+        lines.push('- no candidates');
+      } else {
+        candidateReports.forEach((row, idx) => {
+          lines.push(`${idx + 1}. ${row.id} | ${row.title}`);
+          lines.push(`   op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`);
+          lines.push(`   match=${row.passed}/${row.total}`);
+          row.checks.forEach((line) => lines.push(`   - ${line}`));
+        });
+      }
+      lines.push('');
+      lines.push('5) META');
+      lines.push(`- source: ${pretty(apiMeta?.source)}`);
+      lines.push(`- at: ${pretty(apiMeta?.at)}`);
+      lines.push(`- totalMatches: ${pretty(api?.totalMatches)}`);
+      lines.push(`- strictMatches: ${pretty(api?.strictMatches)}`);
+      lines.push(`- relaxedMatches: ${pretty(api?.relaxedMatches)}`);
+      return lines.join('\n');
+    })();
     const overlay = document.createElement('div');
     overlay.id = 'vwDebugInsightsOverlay';
     overlay.className = 'vw-debug-insights-overlay';
@@ -13008,25 +13256,33 @@ render() {
       <div class="vw-debug-insights-modal" role="dialog" aria-modal="true" aria-label="Debug insights">
         <div class="vw-debug-insights-title">Debug Insights</div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">1) Что понял AI</div>
+          <div class="vw-debug-insights-section-title">1) Ручные фильтры</div>
+          <ul class="vw-debug-insights-list">${manualListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">2) Что понял AI</div>
           <ul class="vw-debug-insights-list">${interpretedListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">2) Как это стало фильтрами</div>
+          <div class="vw-debug-insights-section-title">3) Как это стало effective filters</div>
           <ul class="vw-debug-insights-list">${mappingListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">3) Тайминги, токены, статус извлечения</div>
+          <div class="vw-debug-insights-section-title">4) Топ-3 кандидата и совпадения</div>
+          <ul class="vw-debug-insights-list">${cardsListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">5) Тайминги, токены, статус извлечения</div>
           <ul class="vw-debug-insights-list">${metricsListHtml || '<li>Нет данных</li>'}</ul>
           <ul class="vw-debug-insights-list">${extractionListHtml || ''}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">4) Лог диалога (последний turn)</div>
+          <div class="vw-debug-insights-section-title">6) Лог диалога (последний turn)</div>
           <ul class="vw-debug-insights-list">${dialogListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">5) Выданные объекты (topCandidates/cards)</div>
-          <ul class="vw-debug-insights-list">${cardsListHtml || '<li>Нет данных</li>'}</ul>
+          <div class="vw-debug-insights-section-title">7) Copy-ready debug report</div>
+          <pre class="vw-debug-insights-raw">${safeText(copyReport)}</pre>
         </div>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
         <pre class="vw-debug-insights-raw">${rawSourceInsights}</pre>
