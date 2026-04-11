@@ -1323,6 +1323,7 @@ class APIClient {
       'minPrice', 'maxPrice',
       'minArea', 'maxArea',
       'minFloor', 'maxFloor',
+      'floorNotFirst', 'floorNotLast',
       'smart', 'arcadia', 'rcOnly', 'residentialComplex',
       'exclusive', 'center', 'parking', 'balconyLoggia',
       'limit'
@@ -7211,25 +7212,7 @@ class VoiceWidget extends HTMLElement {
     delete requestQuery.__roomsAnchor;
     const cards = await this.api?.fetchCardsSearch?.(requestQuery);
     const listRaw = Array.isArray(cards) ? cards : [];
-    const list = (query.floorNotFirst === true || query.floorNotLast === true)
-      ? listRaw.filter((item) => {
-        const floor = toNum(item?.floor ?? item?.specs_floor ?? item?.specs?.floor);
-        if (floor == null) return false;
-        if (query.floorNotFirst === true && floor <= 1) return false;
-        if (query.floorNotLast === true) {
-          const totalFloors = toNum(
-            item?.building_floors
-            ?? item?.floors_total
-            ?? item?.floorsTotal
-            ?? item?.total_floors
-            ?? item?.display_specs?.total_floors
-            ?? item?.features?.display_specs?.total_floors
-          );
-          if (totalFloors != null && totalFloors > 1 && floor >= totalFloors) return false;
-        }
-        return true;
-      })
-      : listRaw;
+    const list = listRaw;
     this._catalogStrictFlowActive = this._isStrictFlowQuery(query);
     this._catalogStrictQuery = { ...query };
     this._catalogRelaxedUnlocked = false;
