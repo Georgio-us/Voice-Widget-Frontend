@@ -2499,6 +2499,7 @@ const LOCALES = {
     pillAvailable: 'Доступно {count} объектов',
     pillFoundGeneric: 'Объекты найдены',
     pillFound: 'Найдено {count} объектов',
+    pillNotFound: 'Не найдено',
     sliderCheckpointTitle10: 'Вы просмотрели 10 лучших совпадений',
     sliderCheckpointTitle20: 'Точность совпадения снижается',
     sliderCheckpointText10: 'Дальше будут варианты с частичным соответствием. Хотите уточнить критерии или обсудить подбор с экспертом?',
@@ -2677,6 +2678,7 @@ const LOCALES = {
     pillAvailable: 'Доступно {count} обʼєктів',
     pillFoundGeneric: 'Обʼєкти знайдено',
     pillFound: 'Знайдено {count} обʼєктів',
+    pillNotFound: 'Не знайдено',
     sliderCheckpointTitle10: 'Ви переглянули 10 найкращих збігів',
     sliderCheckpointTitle20: 'Точність збігів знижується',
     sliderCheckpointText10: 'Далі будуть варіанти з частковою відповідністю. Хочете уточнити критерії або обговорити підбір з експертом?',
@@ -7232,7 +7234,8 @@ class VoiceWidget extends HTMLElement {
     if (!window.appState) window.appState = {};
     window.appState.lastTotalMatches = list.length;
     this.updateObjectCount(list.length);
-    this._markPillResultsPending({ animate: true });
+    if (list.length > 0) this._markPillResultsPending({ animate: true });
+    else this._markPillNoResults({ animate: true });
     return list;
   }
 
@@ -10449,8 +10452,16 @@ render() {
     return this.t('pillFoundGeneric') || 'Объекты найдены';
   }
 
+  _buildPillNotFoundLabel() {
+    return this.t('pillNotFound') || 'Не найдено';
+  }
+
   _refreshObjectsPillLocale({ animate = false } = {}) {
     const state = String(this._pillState || 'default');
+    if (state === 'results-empty') {
+      this._setObjectsPillText(this._buildPillNotFoundLabel(), 'results-empty', { animate, pulse: false });
+      return;
+    }
     if (state === 'results-pending') {
       this._setObjectsPillText(this._buildPillFoundLabel(), 'results-pending', { animate, pulse: true });
       return;
@@ -10471,6 +10482,7 @@ render() {
     pill.classList.toggle('is-state-default', state === 'default');
     pill.classList.toggle('is-state-results-pending', state === 'results-pending');
     pill.classList.toggle('is-state-results-viewed', state === 'results-viewed');
+    pill.classList.toggle('is-state-results-empty', state === 'results-empty');
     if (animate) {
       pill.classList.remove('is-text-animating');
       // force reflow to restart animation
@@ -10500,6 +10512,10 @@ render() {
 
   _markPillResultsViewed({ animate = false } = {}) {
     this._setObjectsPillText(this._buildPillFoundLabel(), 'results-viewed', { animate, pulse: false });
+  }
+
+  _markPillNoResults({ animate = true } = {}) {
+    this._setObjectsPillText(this._buildPillNotFoundLabel(), 'results-empty', { animate, pulse: false });
   }
 
   _snapshotInsights(insights = null) {
@@ -10547,10 +10563,18 @@ render() {
       return;
     }
     if (this._pillState === 'results-pending') {
+      if (this._pillBaseCount <= 0) {
+        this._setObjectsPillText(this._buildPillNotFoundLabel(), 'results-empty', { animate, pulse: false });
+        return;
+      }
       this._setObjectsPillText(this._buildPillFoundLabel(), 'results-pending', { animate, pulse: true });
       return;
     }
     if (this._pillState === 'results-viewed') {
+      if (this._pillBaseCount <= 0) {
+        this._setObjectsPillText(this._buildPillNotFoundLabel(), 'results-empty', { animate, pulse: false });
+        return;
+      }
       this._setObjectsPillText(this._buildPillFoundLabel(), 'results-viewed', { animate, pulse: false });
       return;
     }
@@ -10575,7 +10599,8 @@ render() {
       // Only switch pill to "results-pending" when criteria actually changed.
       // This prevents false "Найдено 0" pulses after end-of-list / similar-flow actions.
       if (shouldApplyAiRefresh) {
-        this._markPillResultsPending({ animate: true });
+        if (window.appState.lastTotalMatches > 0) this._markPillResultsPending({ animate: true });
+        else this._markPillNoResults({ animate: true });
       }
     }
     const strictMatches = Number(data.strictMatches);
