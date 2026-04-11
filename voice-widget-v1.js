@@ -6948,6 +6948,11 @@ class VoiceWidget extends HTMLElement {
     if (Object.prototype.hasOwnProperty.call(source, 'floorNotLast')) out.floorNotLast = source.floorNotLast === true;
     if (minPrice != null) out.minPrice = minPrice;
     if (maxPrice != null) out.maxPrice = maxPrice;
+    // Manual strict price window:
+    // if user sets only max price, auto-derive lower bound at 70%.
+    if (minPrice == null && maxPrice != null && maxPrice > 0) {
+      out.minPrice = Math.round(maxPrice * 0.7);
+    }
     if (minArea != null) out.minArea = minArea;
     if (maxArea != null) out.maxArea = maxArea;
     if (minFloor != null) out.minFloor = minFloor;
