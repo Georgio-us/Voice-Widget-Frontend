@@ -12966,16 +12966,22 @@ render() {
       ['type', effectiveFilters.type],
       ['district', effectiveFilters.district],
       ['rooms', effectiveFilters.rooms],
+      ['smart', effectiveFilters.smart],
       ['minPrice', effectiveFilters.minPrice],
       ['maxPrice', effectiveFilters.maxPrice],
       ['minArea', effectiveFilters.minArea],
       ['maxArea', effectiveFilters.maxArea],
       ['minFloor', effectiveFilters.minFloor],
       ['maxFloor', effectiveFilters.maxFloor],
+      ['floorNotFirst', effectiveFilters.floorNotFirst],
+      ['floorNotLast', effectiveFilters.floorNotLast],
       ['rcOnly', effectiveFilters.rcOnly],
       ['residentialComplex', effectiveFilters.residentialComplex],
       ['parking', effectiveFilters.parking],
-      ['balconyLoggia', effectiveFilters.balconyLoggia]
+      ['balconyLoggia', effectiveFilters.balconyLoggia],
+      ['exclusive', effectiveFilters.exclusive],
+      ['arcadia', effectiveFilters.arcadia],
+      ['center', effectiveFilters.center]
     ];
     const manualRows = [
       ['operation', manualFilters.operation],
