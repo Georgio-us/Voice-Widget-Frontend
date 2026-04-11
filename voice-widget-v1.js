@@ -1598,16 +1598,18 @@ class APIClient {
   }
 
   _rememberShown(cardId) {
-    if (!cardId) return;
-    this.lastShownCardId = String(cardId);
+    const normalizedCardId = this._normalizeVariantId(cardId);
+    if (!normalizedCardId) return;
+    this.lastShownCardId = normalizedCardId;
   }
 
   _notifyShownToServer(cardId) {
     // show = факт видимости. Отправляем чуть позже, чтобы UI успел отрисовать.
-    if (!cardId) return;
+    const normalizedCardId = this._normalizeVariantId(cardId);
+    if (!normalizedCardId) return;
     try {
       setTimeout(() => {
-        try { this.sendCardInteraction('show', cardId); } catch {}
+        try { this.sendCardInteraction('show', normalizedCardId); } catch {}
       }, 0);
     } catch {}
   }
@@ -1835,10 +1837,29 @@ class APIClient {
     }
   }
 
+  _canUseDebugSessionEndpoint() {
+    return this.widget?.accessFlags?.isSuperAdmin === true;
+  }
+
   async fetchSessionCandidates(limit = 50) {
     if (!this.widget.sessionId) return { totalMatches: 0, cards: [] };
-    const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`);
-    const response = await fetch(sessionUrl);
+    if (!this._canUseDebugSessionEndpoint()) {
+      return {
+        totalMatches: Number.isFinite(Number(window?.appState?.lastTotalMatches))
+          ? Math.max(0, Number(window.appState.lastTotalMatches))
+          : 0,
+        strictMatches: Number.isFinite(Number(window?.appState?.lastStrictMatches))
+          ? Math.max(0, Number(window.appState.lastStrictMatches))
+          : null,
+        relaxedMatches: Number.isFinite(Number(window?.appState?.lastRelaxedMatches))
+          ? Math.max(0, Number(window.appState.lastRelaxedMatches))
+          : null,
+        cards: []
+      };
+    }
+    const sessionUrl = new URL(this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`), window.location.origin);
+    sessionUrl.searchParams.set('verbose', '0');
+    const response = await fetch(sessionUrl.toString());
     if (!response.ok) throw new Error(`Session fetch failed: ${response.status}`);
     const sessionData = await response.json().catch(() => ({}));
     const topCandidates = Array.isArray(sessionData.topCandidates)
@@ -1874,11 +1895,13 @@ class APIClient {
   // Загрузка информации о сессии (только если sessionId есть)
   async loadSessionInfo(options = {}) {
     if (!this.widget.sessionId) return { exists: null, expired: false };
+    if (!this._canUseDebugSessionEndpoint()) return { exists: null, expired: false };
     const applyState = options?.applyState !== false;
     try {
       const sid = this.widget.sessionId;
-      const sessionUrl = this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`);
-      const response = await fetch(sessionUrl);
+      const sessionUrl = new URL(this.apiUrl.replace('/upload', `/session/${this.widget.sessionId}`), window.location.origin);
+      sessionUrl.searchParams.set('verbose', '0');
+      const response = await fetch(sessionUrl.toString());
       if (response.ok) {
         const data = await response.json();
         if (applyState) {
@@ -2162,8 +2185,14 @@ class APIClient {
   }
 
   // 🆕 Sprint I: подтверждение факта рендера карточки в UI
+  _normalizeVariantId(value) {
+    const raw = String(value ?? '').trim();
+    return raw ? raw.toUpperCase() : '';
+  }
+
   async sendCardRendered(cardId) {
-    if (!cardId || !this.widget.sessionId) return;
+    const normalizedCardId = this._normalizeVariantId(cardId);
+    if (!normalizedCardId || !this.widget.sessionId) return;
     
     try {
       const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
@@ -2174,14 +2203,14 @@ class APIClient {
         },
         body: JSON.stringify({
           action: 'ui_card_rendered',
-          variantId: cardId,
+          variantId: normalizedCardId,
           sessionId: this.widget.sessionId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Card rendered confirmation sent:', { cardId, response: data });
+        console.log('✅ Card rendered confirmation sent:', { cardId: normalizedCardId, response: data });
       } else {
         console.warn('Failed to send card rendered confirmation:', response.status);
       }
@@ -2248,7 +2277,8 @@ class APIClient {
 
   // 🆕 Sprint IV: отправка события ui_focus_changed
   async sendFocusChanged(cardId) {
-    if (!this.widget.sessionId || !cardId) return;
+    const normalizedCardId = this._normalizeVariantId(cardId);
+    if (!this.widget.sessionId || !normalizedCardId) return;
     
     try {
       const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
@@ -2259,14 +2289,14 @@ class APIClient {
         },
         body: JSON.stringify({
           action: 'ui_focus_changed',
-          cardId: cardId,
+          cardId: normalizedCardId,
           sessionId: this.widget.sessionId
         })
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Focus changed confirmation sent:', { cardId, response: data });
+        console.log('✅ Focus changed confirmation sent:', { cardId: normalizedCardId, response: data });
       } else {
         console.warn('Failed to send focus changed confirmation:', response.status);
       }
@@ -2277,8 +2307,9 @@ class APIClient {
 
   // ---------- Card Interactions ----------
   async sendCardInteraction(action, variantId) {
+    const normalizedVariantId = this._normalizeVariantId(variantId);
     // Для 'show' допустимо отсутствие variantId — сервер выберет кандидат по сессии
-    if (!variantId && action !== 'show') {
+    if (!normalizedVariantId && action !== 'show') {
       console.warn('No variant ID provided for card interaction');
       return;
     }
@@ -2292,7 +2323,7 @@ class APIClient {
         },
         body: JSON.stringify({
           action: action, // 'like' or 'next' or 'show'
-          variantId: variantId,
+          variantId: normalizedVariantId,
           sessionId: this.widget.sessionId || ''
         })
       });
@@ -2300,7 +2331,7 @@ class APIClient {
       if (response.ok) {
         const data = await response.json();
         this.syncBackendDrivenState(data);
-        console.log('📤 Card interaction sent:', { action, variantId, response: data });
+        console.log('📤 Card interaction sent:', { action, variantId: normalizedVariantId, response: data });
 
         // 🆕 Sprint I: сохраняем role из server response (read-only)
         if (data?.role !== undefined) {
@@ -6981,7 +7012,7 @@ class VoiceWidget extends HTMLElement {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
       if (/(buy|sale|sell|purchase|покуп|купит|продаж)/i.test(raw)) return 'sale';
-      if (/(rent|lease|аренд|снять)/i.test(raw)) return 'rent';
+      if (/(rent|lease|аренд|оренд|снять)/i.test(raw)) return 'rent';
       return '';
     };
     const normalizeTypeToSearch = (value) => {
@@ -11004,7 +11035,7 @@ render() {
       const t = text(v);
       if (!t) return '';
       if (/(buy|sale|sell|purchase|покуп|купит|продаж)/i.test(t)) return 'sale';
-      if (/(rent|lease|аренд|снять)/i.test(t)) return 'rent';
+      if (/(rent|lease|аренд|оренд|снять)/i.test(t)) return 'rent';
       return t;
     };
     const canonicalType = (v) => {
@@ -12050,7 +12081,7 @@ render() {
       const row = this.ensureCatalogListRow(listBody);
       if (row) row.appendChild(slide);
       if (normalized?.id) {
-        const vid = String(normalized.id).trim();
+        const vid = String(normalized.id).trim().toUpperCase();
         if (vid) {
           if (!Array.isArray(this._catalogVisibleIds)) this._catalogVisibleIds = [];
           if (!this._catalogVisibleIds.includes(vid)) this._catalogVisibleIds.push(vid);
@@ -12221,7 +12252,7 @@ render() {
       track.appendChild(slide);
     }
     if (normalized?.id) {
-      const vid = String(normalized.id).trim();
+      const vid = String(normalized.id).trim().toUpperCase();
       if (vid) {
         if (!Array.isArray(this._catalogVisibleIds)) this._catalogVisibleIds = [];
         if (!this._catalogVisibleIds.includes(vid)) this._catalogVisibleIds.push(vid);
@@ -12951,10 +12982,33 @@ render() {
       try { return safeText(JSON.stringify(src || {}, null, 2)); } catch { return safeText(String(src || '{}')); }
     })();
     const rawApiPayload = (() => {
+      const buildCompactPayload = (payload = {}) => ({
+        response: payload?.response ?? null,
+        transcription: payload?.transcription ?? null,
+        sessionId: payload?.sessionId ?? null,
+        messageCount: payload?.messageCount ?? null,
+        inputType: payload?.inputType ?? null,
+        stage: payload?.stage ?? null,
+        role: payload?.role ?? null,
+        insights: payload?.insights ?? null,
+        extractionStatus: payload?.extractionStatus ?? null,
+        totalMatches: payload?.totalMatches ?? null,
+        strictMatches: payload?.strictMatches ?? null,
+        relaxedMatches: payload?.relaxedMatches ?? null,
+        topCandidates: Array.isArray(payload?.topCandidates) ? payload.topCandidates.slice(0, 12) : [],
+        cards: Array.isArray(payload?.cards) ? payload.cards.slice(0, 12) : [],
+        tokens: payload?.tokens ?? null,
+        timing: payload?.timing ?? null
+      });
       try {
         const payload = this._lastApiPayload || {};
         const meta = this._lastApiPayloadMeta || {};
-        return safeText(JSON.stringify({ meta, payload }, null, 2));
+        const envelope = payload && typeof payload === 'object' ? payload : {};
+        const apiPayload = (envelope.payload && typeof envelope.payload === 'object') ? envelope.payload : envelope;
+        return safeText(JSON.stringify({
+          meta,
+          payload: buildCompactPayload(apiPayload)
+        }, null, 2));
       } catch { return '{}'; }
     })();
     const overlay = document.createElement('div');
@@ -12986,7 +13040,7 @@ render() {
         </div>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
         <pre class="vw-debug-insights-raw">${rawSourceInsights}</pre>
-        <div class="vw-debug-insights-raw-title">Raw API JSON</div>
+        <div class="vw-debug-insights-raw-title">Raw API JSON (compact)</div>
         <pre class="vw-debug-insights-raw vw-debug-insights-raw--tall">${rawApiPayload}</pre>
         <button type="button" class="vw-debug-insights-close" data-role="close">OK</button>
       </div>
