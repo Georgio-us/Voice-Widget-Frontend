@@ -2812,8 +2812,10 @@ class VoiceWidget extends HTMLElement {
     this._pillState = 'default';
     this._pillBaseCount = 0;
     this._lastPillInsightsSnapshot = null;
+    // Temporary diagnostics mode: isolate manual filters from AI understanding merge.
+    this._catalogManualOnlyDiagnostics = true;
     this._catalogManualFilterOverrides = null;
-    this._catalogIgnoreAssistantBaseFilters = false;
+    this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true;
     this._catalogStrictFlowActive = false;
     this._catalogStrictQuery = null;
     this._catalogLastRefineMode = 'filters';
@@ -7066,9 +7068,11 @@ class VoiceWidget extends HTMLElement {
       if (/[;,.!?]/.test(t) && !hasResidentialComplexMarker(t)) return false;
       return true;
     };
-    const insights = insightsSource && typeof insightsSource === 'object'
+    const useManualOnly = this._catalogManualOnlyDiagnostics === true;
+    const ignoreAssistant = useManualOnly || this._catalogIgnoreAssistantBaseFilters === true;
+    const insights = insightsSource && typeof insightsSource === 'object' && !useManualOnly
       ? insightsSource
-      : (this._catalogIgnoreAssistantBaseFilters === true ? {} : (this.understanding?.export?.() || {}));
+      : (ignoreAssistant ? {} : (this.understanding?.export?.() || {}));
     const base = {};
     const operation = normalizeOperationToSearch(insights.operation);
     if (operation) base.operation = operation;
@@ -10600,6 +10604,9 @@ render() {
     })();
     const shouldForceConsistencyRefresh = hasIncomingOperation || Boolean(this._catalogManualFilterOverrides?.operation);
     if ((shouldApplyAiRefresh || shouldForceConsistencyRefresh) && migratedInsights && typeof migratedInsights === 'object') {
+      if (this._catalogManualOnlyDiagnostics === true) {
+        return;
+      }
       this._catalogIgnoreAssistantBaseFilters = false;
       this._catalogLastRefineMode = 'ai';
       const currentInsights = (this.understanding?.export?.() && typeof this.understanding.export() === 'object')
@@ -13905,7 +13912,7 @@ render() {
 
   resetCatalogRuntimeState() {
     this._catalogManualFilterOverrides = null;
-    this._catalogIgnoreAssistantBaseFilters = false;
+    this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true ? true : false;
     this._catalogStrictFlowActive = false;
     this._catalogStrictQuery = null;
     this._catalogLastRefineMode = 'filters';
