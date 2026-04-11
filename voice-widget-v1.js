@@ -2814,7 +2814,10 @@ class VoiceWidget extends HTMLElement {
     this._lastPillInsightsSnapshot = null;
     // Temporary diagnostics mode: isolate manual filters from AI understanding merge.
     this._catalogManualOnlyDiagnostics = true;
+    // Temporary hard isolation mode: render catalog strictly from latest manual /search result.
+    this._catalogStrictOnlyMode = true;
     this._catalogManualFilterOverrides = null;
+    this._strictManualResult = [];
     this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true;
     this._catalogStrictFlowActive = false;
     this._catalogStrictQuery = null;
@@ -7217,6 +7220,7 @@ class VoiceWidget extends HTMLElement {
     const cards = await this.api?.fetchCardsSearch?.(requestQuery);
     const listRaw = Array.isArray(cards) ? cards : [];
     const list = listRaw;
+    this._strictManualResult = list.map((item) => this._toCardEngineShape(item));
     this._catalogStrictFlowActive = this._isStrictFlowQuery(query);
     this._catalogStrictQuery = { ...query };
     this._catalogRelaxedUnlocked = false;
@@ -11202,6 +11206,7 @@ render() {
 
   showStrictEndPopup() {
     // Product decision: no strict/similar transition popups.
+    if (this._catalogStrictOnlyMode === true) return;
     if (this._catalogStrictEndPromptShown) return;
     this._catalogStrictEndPromptShown = true;
     this.closeSliderCheckpointPopup();
@@ -11220,6 +11225,7 @@ render() {
   }
 
   async unlockCatalogSimilarMode() {
+    if (this._catalogStrictOnlyMode === true) return;
     if (this._catalogSimilarLoading) return;
     this._catalogSimilarLoading = true;
     try {
@@ -11408,11 +11414,12 @@ render() {
     const start = Math.max(0, Math.min(maxStart, Number(this._catalogListWindowStart) || 0));
     const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
     const canPrev = start > 0;
-    const canUnlockStrict = !queue.length
+    const strictOnly = this._catalogStrictOnlyMode === true;
+    const canUnlockStrict = !strictOnly && !queue.length
       && start >= maxStart
       && this._catalogStrictFlowActive === true
       && this._catalogRelaxedUnlocked !== true;
-    const canUnlockRelax = !queue.length
+    const canUnlockRelax = !strictOnly && !queue.length
       && start >= maxStart
       && this._catalogRelaxedUnlocked === true
       && this._catalogRelaxExhausted !== true;
@@ -11454,6 +11461,10 @@ render() {
     }
     const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
     if (!queue.length) {
+      if (this._catalogStrictOnlyMode === true) {
+        this.updateCatalogListNavState();
+        return;
+      }
       if (this._catalogStrictFlowActive === true && this._catalogRelaxedUnlocked !== true) {
         await this.unlockCatalogSimilarMode();
       } else if (this._catalogRelaxedUnlocked === true) {
@@ -11704,6 +11715,7 @@ render() {
 
   maybeAppendCatalogListOne() {
     try {
+      if (this._catalogStrictOnlyMode === true) return;
       if (this._catalogDisplayMode !== 'list') return;
       const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
       if (!queue.length) return;
@@ -11723,6 +11735,7 @@ render() {
 
   maybeAppendCatalogOverflow(activeIdx = 0, totalSlides = 0) {
     try {
+      if (this._catalogStrictOnlyMode === true) return;
       if (this._catalogDisplayMode === 'list') return;
       const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
       if (!queue.length) {
@@ -11772,9 +11785,12 @@ render() {
   }
 
   renderCatalogFromCurrentState() {
-    let list = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    const strictOnly = this._catalogStrictOnlyMode === true;
+    let list = strictOnly
+      ? (Array.isArray(this._strictManualResult) ? this._strictManualResult : [])
+      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
     this._sliderCheckpointShown = { 10: false, 20: false };
-    if (!list.length) {
+    if (!strictOnly && !list.length) {
       const full = this._getFullCatalogProperties();
       if (Array.isArray(full) && full.length) {
         this.replacePropertiesCatalog(full);
@@ -11788,7 +11804,7 @@ render() {
     }
     this.clearPropertiesSlider();
     const initialBatch = list.slice(0, 3);
-    this._catalogOverflowQueue = list.slice(3);
+    this._catalogOverflowQueue = strictOnly ? [] : list.slice(3);
     this._catalogVisibleIds = initialBatch.map((p) => String(this._toCardEngineShape(p)?.id || '').trim()).filter(Boolean);
     this._catalogActiveId = this._catalogVisibleIds.length ? this._catalogVisibleIds[this._catalogVisibleIds.length - 1] : null;
     this._catalogListWindowStart = 0;
@@ -11820,9 +11836,11 @@ render() {
   async renderPropertiesFromCatalog() {
     this._sliderCheckpointShown = { 10: false, 20: false };
     try {
-      const current = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+      const current = this._catalogStrictOnlyMode === true
+        ? (Array.isArray(this._strictManualResult) ? this._strictManualResult : [])
+        : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
       if (!current.length) {
-        await this.initializePropertiesCatalog();
+        if (this._catalogStrictOnlyMode !== true) await this.initializePropertiesCatalog();
       }
     } catch (error) {
       console.warn('renderPropertiesFromCatalog: initializePropertiesCatalog failed', error);
@@ -13009,7 +13027,10 @@ render() {
       ...(Array.isArray(api.topCandidates) ? api.topCandidates : []),
       ...(Array.isArray(api.cards) ? api.cards : [])
     ];
-    const catalogCards = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    const strictCards = Array.isArray(this._strictManualResult) ? this._strictManualResult : [];
+    const catalogCards = strictCards.length
+      ? strictCards
+      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
     const cards = catalogCards.length
       ? [...catalogCards, ...apiCards]
       : apiCards;
