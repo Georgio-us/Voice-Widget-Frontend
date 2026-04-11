@@ -12824,6 +12824,29 @@ render() {
         background: var(--color-accent, #4178CF);
         color: var(--text-on-accent, #fff);
       }
+      .vw-debug-insights-copy-toast {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        min-width: 220px;
+        max-width: min(300px, calc(100% - 32px));
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.18));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 86%, rgba(0,0,0,0.22));
+        color: var(--text-primary, #fff);
+        padding: 12px 14px;
+        text-align: center;
+        font-size: 0.82rem;
+        font-weight: 600;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .vw-debug-insights-copy-toast[hidden] {
+        display: none !important;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -12832,6 +12855,64 @@ render() {
     try {
       const popup = this.getRoot().querySelector('#vwDebugInsightsOverlay');
       if (popup && popup.parentElement) popup.parentElement.removeChild(popup);
+    } catch {}
+  }
+
+  _getDebugPopupCopyText(overlay) {
+    try {
+      const modal = overlay?.querySelector?.('.vw-debug-insights-modal');
+      if (!modal) return '';
+      const clone = modal.cloneNode(true);
+      clone.querySelectorAll?.('[data-role="close"], .vw-debug-insights-copy-toast')?.forEach((el) => el.remove());
+      return String(clone.innerText || '').replace(/\n{3,}/g, '\n\n').trim();
+    } catch {
+      return '';
+    }
+  }
+
+  async _copyDebugPopupText(text) {
+    const payload = String(text || '').trim();
+    if (!payload) return false;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
+        return true;
+      }
+    } catch {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = payload;
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.top = '0';
+      ta.style.left = '0';
+      ta.style.width = '1px';
+      ta.style.height = '1px';
+      ta.style.opacity = '0.01';
+      ta.style.zIndex = '2147483647';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return !!ok;
+    } catch {
+      return false;
+    }
+  }
+
+  _showDebugCopyToast(overlay, message = 'Скопировано успешно', timeout = 2000) {
+    try {
+      const toast = overlay?.querySelector?.('[data-role="copy-toast"]');
+      if (!toast) return;
+      if (overlay._debugCopyToastTimer) clearTimeout(overlay._debugCopyToastTimer);
+      toast.textContent = String(message || 'Скопировано успешно');
+      toast.hidden = false;
+      overlay._debugCopyToastTimer = setTimeout(() => {
+        try { toast.hidden = true; } catch {}
+        overlay._debugCopyToastTimer = null;
+      }, Math.max(500, Number(timeout) || 2000));
     } catch {}
   }
 
@@ -13288,11 +13369,17 @@ render() {
         <pre class="vw-debug-insights-raw">${rawSourceInsights}</pre>
         <div class="vw-debug-insights-raw-title">Raw API JSON (compact)</div>
         <pre class="vw-debug-insights-raw vw-debug-insights-raw--tall">${rawApiPayload}</pre>
-        <button type="button" class="vw-debug-insights-close" data-role="close">OK</button>
+        <button type="button" class="vw-debug-insights-close" data-role="close">Скопировать</button>
+        <div class="vw-debug-insights-copy-toast" data-role="copy-toast" hidden>Скопировано успешно</div>
       </div>
     `;
     this.getRoot().appendChild(overlay);
-    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeDebugInsightsPopup());
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', async () => {
+      const text = this._getDebugPopupCopyText(overlay);
+      const copied = await this._copyDebugPopupText(text);
+      if (copied) this._showDebugCopyToast(overlay, 'Скопировано успешно', 2000);
+      else this._showDebugCopyToast(overlay, 'Не удалось скопировать', 2000);
+    });
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeDebugInsightsPopup();
     });
