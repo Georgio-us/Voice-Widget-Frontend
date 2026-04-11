@@ -12999,10 +12999,14 @@ render() {
       ['arcadia', manualFilters.arcadia],
       ['center', manualFilters.center]
     ];
-    const cards = [
+    const apiCards = [
       ...(Array.isArray(api.topCandidates) ? api.topCandidates : []),
       ...(Array.isArray(api.cards) ? api.cards : [])
     ];
+    const catalogCards = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
+    const cards = catalogCards.length
+      ? [...catalogCards, ...apiCards]
+      : apiCards;
     const dedupCards = [];
     const cardSeen = new Set();
     cards.forEach((card) => {
@@ -13179,6 +13183,7 @@ render() {
       return { checks, passed, total: checks.length };
     };
     const candidatesTop = dedupCards.slice(0, 3);
+    const candidatesSourceLabel = catalogCards.length ? 'catalog/manual search' : 'api payload';
     const candidateReports = candidatesTop.map((card, idx) => {
       const result = evaluateCandidate(card);
       const id = String(card?.id || card?.external_id || `#${idx + 1}`).trim();
@@ -13311,6 +13316,7 @@ render() {
       }
       lines.push('');
       lines.push('4) TOP CANDIDATES (MATCH BREAKDOWN)');
+      lines.push(`- source: ${candidatesSourceLabel}`);
       if (!candidateReports.length) {
         lines.push('- no candidates');
       } else {
@@ -13350,6 +13356,7 @@ render() {
         </div>
         <div class="vw-debug-insights-section">
           <div class="vw-debug-insights-section-title">4) Топ-3 кандидата и совпадения</div>
+          <ul class="vw-debug-insights-list"><li><strong>source:</strong> ${safeText(candidatesSourceLabel)}</li></ul>
           <ul class="vw-debug-insights-list">${cardsListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
