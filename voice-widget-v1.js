@@ -6738,10 +6738,18 @@ class VoiceWidget extends HTMLElement {
 
   buildFilterPickerOptions(type) {
     const opts = [];
+    const scaleSteps = [
+      5, 10, 15, 20, 25, 30, 35, 40,
+      50, 60, 70, 80, 90, 100,
+      110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
+      220, 240, 260, 280, 300,
+      400, 500, 700, 1000
+    ];
     if (type === 'priceMin' || type === 'priceMax') {
       if (type === 'priceMin') opts.push({ value: '', label: 'От min' });
       if (type === 'priceMax') opts.push({ value: 'max', label: 'До max' });
-      for (let v = 0; v <= 1000000; v += 1000) {
+      for (const k of scaleSteps) {
+        const v = k * 1000;
         opts.push({ value: String(v), label: this.formatPickerNumber(v) });
       }
       return opts;
@@ -6749,14 +6757,14 @@ class VoiceWidget extends HTMLElement {
     if (type === 'areaMin' || type === 'areaMax') {
       if (type === 'areaMin') opts.push({ value: '', label: 'От min' });
       if (type === 'areaMax') opts.push({ value: 'max', label: 'До max' });
-      for (let v = 0; v <= 350; v += 1) {
+      for (const v of scaleSteps) {
         opts.push({ value: String(v), label: `${v} м²` });
       }
       return opts;
     }
     if (type === 'floorMin' || type === 'floorMax') {
       if (type === 'floorMin') {
-        opts.push({ value: '', label: 'От max' });
+        opts.push({ value: '', label: 'От min' });
         opts.push({ value: 'not_first', label: 'Не первый' });
       }
       if (type === 'floorMax') {
