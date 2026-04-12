@@ -1330,13 +1330,6 @@ class APIClient {
     ];
     for (const k of allowed) {
       const v = params[k];
-      if (Array.isArray(v)) {
-        v
-          .map((item) => String(item ?? '').trim())
-          .filter((item) => item !== '')
-          .forEach((item) => url.searchParams.append(k, item));
-        continue;
-      }
       if (v !== undefined && v !== null && String(v).trim() !== '') {
         url.searchParams.set(k, String(v));
       }
@@ -6786,67 +6779,13 @@ class VoiceWidget extends HTMLElement {
 
   syncFiltersSelectAllLabels(overlay) {
     if (!overlay) return;
-    ['propertyType'].forEach((role) => {
+    ['propertyType', 'district', 'rooms'].forEach((role) => {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       const allOption = Array.from(selectEl.options || []).find((opt) => String(opt.value || '').trim() === 'all');
       if (!allOption) return;
       allOption.textContent = String(selectEl.value || '').trim() === 'all' ? 'Выбрано всё' : 'Выбрать всё';
     });
-  }
-
-  _normalizeMultiFilterValues(value, { allowSmart = false } = {}) {
-    const raw = Array.isArray(value) ? value : [value];
-    const out = [];
-    const seen = new Set();
-    raw.forEach((entry) => {
-      String(entry ?? '')
-        .split(',')
-        .map((v) => String(v || '').trim())
-        .filter(Boolean)
-        .forEach((v) => {
-          if (v === 'all') return;
-          if (!allowSmart && v === 'smart') return;
-          const key = v.toLowerCase();
-          if (seen.has(key)) return;
-          seen.add(key);
-          out.push(v);
-        });
-    });
-    return out;
-  }
-
-  _readOverlayMultiValues(overlay, role) {
-    if (!overlay) return [];
-    return Array.from(overlay.querySelectorAll(`input[data-role="${role}-multi-input"]:checked`))
-      .map((el) => String(el.value || '').trim())
-      .filter(Boolean);
-  }
-
-  _setOverlayMultiValues(overlay, role, values = []) {
-    const selected = new Set(this._normalizeMultiFilterValues(values, { allowSmart: role === 'rooms' }).map((v) => v.toLowerCase()));
-    overlay.querySelectorAll(`input[data-role="${role}-multi-input"]`).forEach((el) => {
-      const key = String(el.value || '').trim().toLowerCase();
-      el.checked = selected.has(key);
-    });
-  }
-
-  _syncOverlayMultiLabel(overlay, role, placeholder) {
-    if (!overlay) return;
-    const labelEl = overlay.querySelector(`[data-role="${role}-multi-label"]`);
-    if (!labelEl) return;
-    const values = this._readOverlayMultiValues(overlay, role);
-    if (!values.length) {
-      labelEl.textContent = placeholder;
-      return;
-    }
-    if (values.length === 1) {
-      const input = overlay.querySelector(`input[data-role="${role}-multi-input"][value="${values[0]}"]`);
-      const title = input?.getAttribute('data-title');
-      labelEl.textContent = String(title || values[0]);
-      return;
-    }
-    labelEl.textContent = `Выбрано: ${values.length}`;
   }
 
   normalizeFilterRangePair(overlay, base, changed = '') {
@@ -6884,8 +6823,8 @@ class VoiceWidget extends HTMLElement {
       const val = String(overlay.querySelector(`[data-role="${role}"]`)?.value || '').trim();
       return val === 'all' ? '' : val;
     };
-    const roomsValues = this._readOverlayMultiValues(overlay, 'rooms');
-    const smartRoom = roomsValues.includes('smart');
+    const roomsVal = normalizeSelectVal('rooms');
+    const smartRoom = roomsVal === 'smart';
     const floorFromRaw = read('floorMin');
     const floorToRaw = read('floorMax');
     const floorNotFirst = floorFromRaw === 'not_first';
@@ -6901,9 +6840,9 @@ class VoiceWidget extends HTMLElement {
       floorTo: floorNotLast ? 'max' : floorToRaw,
       floorNotFirst,
       floorNotLast,
-      rooms: smartRoom ? [] : roomsValues.filter((v) => v !== 'smart'),
+      rooms: smartRoom ? '' : roomsVal,
       smart: smartRoom,
-      district: this._readOverlayMultiValues(overlay, 'district'),
+      district: normalizeSelectVal('district'),
       arcadia: !!overlay.querySelector('[data-role="arcadia"]')?.checked,
       exclusive: !!overlay.querySelector('[data-role="exclusive"]')?.checked,
       center: !!overlay.querySelector('[data-role="center"]')?.checked,
@@ -6968,14 +6907,12 @@ class VoiceWidget extends HTMLElement {
     setPicker('areaMax', payload.areaTo);
     setPicker('floorMin', payload.floorNotFirst === true ? 'not_first' : payload.floorFrom);
     setPicker('floorMax', payload.floorNotLast === true ? 'not_last' : payload.floorTo);
-    const roomsValues = payload.smart === true
-      ? ['smart']
-      : this._normalizeMultiFilterValues(payload.rooms, { allowSmart: true });
-    const districtValues = this._normalizeMultiFilterValues(payload.district);
-    this._setOverlayMultiValues(overlay, 'rooms', roomsValues);
-    this._setOverlayMultiValues(overlay, 'district', districtValues);
-    this._syncOverlayMultiLabel(overlay, 'rooms', 'Количество комнат');
-    this._syncOverlayMultiLabel(overlay, 'district', 'Район');
+    if (payload.smart === true) {
+      setSelect('rooms', 'smart');
+    } else {
+      setSelect('rooms', payload.rooms);
+    }
+    setSelect('district', payload.district);
     setSelect('propertyType', payload.propertyType || payload.type);
     setCheck('arcadia', payload.arcadia);
     setCheck('exclusive', payload.exclusive);
@@ -7020,14 +6957,14 @@ class VoiceWidget extends HTMLElement {
     if (maxArea != null) out.maxArea = maxArea;
     if (minFloor != null) out.minFloor = minFloor;
     if (maxFloor != null) out.maxFloor = maxFloor;
-    const roomsList = this._normalizeMultiFilterValues(source.rooms, { allowSmart: true });
-    if (roomsList.includes('smart') || source.smart === true) {
+    const roomsRaw = String(source.rooms || '').trim();
+    if (roomsRaw === 'smart' || source.smart === true) {
       out.smart = true;
-    } else if (roomsList.length) {
-      out.rooms = roomsList;
+    } else if (roomsRaw) {
+      out.rooms = roomsRaw;
     }
-    const districtList = this._normalizeMultiFilterValues(source.district);
-    if (districtList.length) out.district = districtList;
+    const district = String(source.district || '').trim();
+    if (district) out.district = district;
     if (Object.prototype.hasOwnProperty.call(source, 'residentialComplex')) {
       out.residentialComplex = String(source.residentialComplex || '').trim();
     }
@@ -7223,8 +7160,6 @@ class VoiceWidget extends HTMLElement {
 
   buildFiltersOverlayPayloadFromEffectiveQuery() {
     const query = this.getCatalogEffectiveSearchParams();
-    const roomsValues = this._normalizeMultiFilterValues(query.rooms, { allowSmart: true });
-    const districtValues = this._normalizeMultiFilterValues(query.district);
     const opRaw = String(query.operation || '').toLowerCase();
     const op = opRaw === 'sale' || opRaw === 'rent' ? opRaw : '';
     return {
@@ -7238,9 +7173,9 @@ class VoiceWidget extends HTMLElement {
       floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
       floorNotFirst: query.floorNotFirst === true,
       floorNotLast: query.floorNotLast === true,
-      rooms: query.smart === true ? [] : roomsValues,
+      rooms: query.smart === true ? '' : (query.rooms != null ? String(query.rooms) : ''),
       smart: query.smart === true,
-      district: districtValues,
+      district: query.district != null ? String(query.district) : '',
       arcadia: query.arcadia === true,
       exclusive: query.exclusive === true,
       center: query.center === true,
@@ -7283,8 +7218,7 @@ class VoiceWidget extends HTMLElement {
     if (qMinArea != null && qMaxArea != null) query.__areaAnchor = Math.round((qMinArea + qMaxArea) / 2);
     else query.__areaAnchor = qMinArea ?? qMaxArea ?? null;
 
-    const qRoomsSource = Array.isArray(query.rooms) ? query.rooms[0] : query.rooms;
-    const qRoomsRaw = String(qRoomsSource || '').trim();
+    const qRoomsRaw = String(query.rooms || '').trim();
     if (qRoomsRaw === '4plus') query.__roomsAnchor = 4;
     else {
       const qRooms = toNum(qRoomsRaw);
@@ -7354,10 +7288,10 @@ class VoiceWidget extends HTMLElement {
       btn.classList.remove('is-active');
     });
     overlay.querySelectorAll('select[data-picker]').forEach((sel) => { sel.selectedIndex = 0; });
-    this._setOverlayMultiValues(overlay, 'rooms', []);
-    this._setOverlayMultiValues(overlay, 'district', []);
-    this._syncOverlayMultiLabel(overlay, 'rooms', 'Количество комнат');
-    this._syncOverlayMultiLabel(overlay, 'district', 'Район');
+    const rooms = overlay.querySelector('[data-role="rooms"]');
+    if (rooms) rooms.selectedIndex = 0;
+    const district = overlay.querySelector('[data-role="district"]');
+    if (district) district.selectedIndex = 0;
     const propertyType = overlay.querySelector('[data-role="propertyType"]');
     if (propertyType) propertyType.selectedIndex = 0;
     ['rcOnly', 'arcadia', 'exclusive', 'center', 'parking', 'balconyLoggia'].forEach((role) => {
@@ -7390,26 +7324,11 @@ class VoiceWidget extends HTMLElement {
         this.syncFilterPickerLabels(overlay);
       });
     });
-    ['propertyType'].forEach((role) => {
+    ['propertyType', 'district', 'rooms'].forEach((role) => {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       selectEl.addEventListener('change', () => {
         this.syncFiltersSelectAllLabels(overlay);
-      });
-    });
-    ['rooms', 'district'].forEach((role) => {
-      const trigger = overlay.querySelector(`[data-role="${role}-multi-trigger"]`);
-      const menu = overlay.querySelector(`[data-role="${role}-multi-menu"]`);
-      if (trigger && menu) {
-        trigger.addEventListener('click', () => {
-          const isOpen = menu.classList.toggle('is-open');
-          trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        });
-      }
-      overlay.querySelectorAll(`input[data-role="${role}-multi-input"]`).forEach((input) => {
-        input.addEventListener('change', () => {
-          this._syncOverlayMultiLabel(overlay, role, role === 'rooms' ? 'Количество комнат' : 'Район');
-        });
       });
     });
     overlay.querySelector('[data-role="reset"]')?.addEventListener('click', () => {
@@ -7670,34 +7589,6 @@ class VoiceWidget extends HTMLElement {
         padding: 0 10px;
         font-size: .75rem;
       }
-      .vw-filters-multi {
-        display: grid;
-        gap: 4px;
-      }
-      .vw-filters-multi-trigger {
-        width: 100%;
-        min-height: 36px;
-        box-sizing: border-box;
-        border-radius: 6px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: var(--bg-element, rgba(255,255,255,0.12));
-        color: var(--text-primary, #fff);
-        padding: 0 10px;
-        font-size: .75rem;
-        text-align: left;
-        cursor: pointer;
-      }
-      .vw-filters-multi-menu {
-        display: none;
-        border-radius: 6px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
-        background: rgba(0,0,0,0.2);
-        padding: 8px;
-        gap: 6px;
-      }
-      .vw-filters-multi-menu.is-open {
-        display: grid;
-      }
       .vw-filters-range-block {
         display: grid;
         grid-template-columns: minmax(72px, 32%) minmax(0, 1fr);
@@ -7865,30 +7756,24 @@ class VoiceWidget extends HTMLElement {
               </select>
             </div>
             <div class="vw-filters-top-grid">
-              <div class="vw-filters-multi" data-role="district-multi">
-                <button type="button" class="vw-filters-multi-trigger" data-role="district-multi-trigger" aria-expanded="false">
-                  <span data-role="district-multi-label">Район</span>
-                </button>
-                <div class="vw-filters-multi-menu" data-role="district-multi-menu">
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="district-multi-input" data-title="Приморский" value="primorsky"> Приморский</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="district-multi-input" data-title="Киевский" value="kievsky"> Киевский</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="district-multi-input" data-title="Малиновский" value="malinovsky"> Малиновский</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="district-multi-input" data-title="Суворовский" value="suvorovsky"> Суворовский</label>
-                </div>
-              </div>
-              <div class="vw-filters-multi" data-role="rooms-multi">
-                <button type="button" class="vw-filters-multi-trigger" data-role="rooms-multi-trigger" aria-expanded="false">
-                  <span data-role="rooms-multi-label">Количество комнат</span>
-                </button>
-                <div class="vw-filters-multi-menu" data-role="rooms-multi-menu">
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="rooms-multi-input" data-title="Смарт-квартира" value="smart"> Смарт-квартира</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="rooms-multi-input" data-title="1" value="1"> 1</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="rooms-multi-input" data-title="2" value="2"> 2</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="rooms-multi-input" data-title="3" value="3"> 3</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="rooms-multi-input" data-title="4" value="4"> 4</label>
-                  <label class="vw-filters-check-item"><input type="checkbox" data-role="rooms-multi-input" data-title="5+" value="5plus"> 5+</label>
-                </div>
-              </div>
+              <select class="vw-filters-select" aria-label="Район" data-role="district">
+                <option value="" selected disabled>Район</option>
+                <option value="all">Выбрать всё</option>
+                <option value="primorsky">Приморский</option>
+                <option value="kievsky">Киевский</option>
+                <option value="malinovsky">Малиновский</option>
+                <option value="suvorovsky">Суворовский</option>
+              </select>
+              <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
+                <option value="" selected disabled>Количество комнат</option>
+                <option value="all">Выбрать всё</option>
+                <option value="smart">Смарт-квартира</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5plus">5+</option>
+              </select>
             </div>
           </div>
           <hr class="vw-filters-divider">
@@ -11124,8 +11009,7 @@ render() {
       else if (minP != null && price < minP) pushArg('Цена ниже запроса');
     }
 
-    const qRoomsRawSource = Array.isArray(q.rooms) ? q.rooms[0] : q.rooms;
-    const qRooms = String(qRoomsRawSource || '').trim();
+    const qRooms = String(q.rooms || '').trim();
     const rooms = toNum(normalized?.rooms);
     if (qRooms && rooms != null) {
       if ((qRooms === '4plus' && rooms >= 4) || (qRooms === '5plus' && rooms >= 5)) pushArg('Комнатность совпадает');
@@ -11298,8 +11182,7 @@ render() {
     }
 
     // 6) rooms ±1, >1 only at final broad stage
-    const roomsRawSource = Array.isArray(query.rooms) ? query.rooms[0] : query.rooms;
-    const roomsRaw = String(roomsRawSource || '').trim();
+    const roomsRaw = String(query.rooms || '').trim();
     const roomsWanted = toNum(query.__roomsAnchor ?? (roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null)));
     const roomsActual = toNum(item.rooms);
     if (roomsWanted != null && Number.isFinite(roomsWanted)) {
@@ -13317,21 +13200,19 @@ render() {
         checks.push(`${label}: ${pass === 'skip' ? skip(note) : mark(!!pass, note)}`);
       };
 
-      const districtExpected = this._normalizeMultiFilterValues(manualFilters.district).map((v) => String(v || '').toLowerCase());
       addCheck('operation', filterIsSet(manualFilters.operation), operation === String(manualFilters.operation || '').toLowerCase(), `card=${operation || 'n/a'} expected=${manualFilters.operation}`);
       addCheck('type', filterIsSet(manualFilters.type), type === normalizeType(manualFilters.type), `card=${type || 'n/a'} expected=${normalizeType(manualFilters.type)}`);
-      addCheck('district', districtExpected.length > 0, districtExpected.includes(district), `card=${district || 'n/a'} expected=[${districtExpected.join(',')}]`);
+      addCheck('district', filterIsSet(manualFilters.district), district === String(manualFilters.district || '').toLowerCase(), `card=${district || 'n/a'} expected=${manualFilters.district}`);
       if (manualFilters.smart === true) {
         addCheck('smart', true, smartFlat === true, `card=${smartFlat ? 'true' : 'false'}`);
       } else if (filterIsSet(manualFilters.rooms)) {
-        const wants = this._normalizeMultiFilterValues(manualFilters.rooms, { allowSmart: true }).map((v) => String(v || '').toLowerCase());
-        const pass = wants.some((want) => {
-          if (want === '4plus') return roomsNum != null && roomsNum >= 4;
-          if (want === '5plus') return roomsNum != null && roomsNum >= 5;
+        const want = String(manualFilters.rooms || '').trim().toLowerCase();
+        if (want === '4plus') addCheck('rooms', true, roomsNum != null && roomsNum >= 4, `card=${roomsNum ?? 'n/a'} expected=4plus`);
+        else if (want === '5plus') addCheck('rooms', true, roomsNum != null && roomsNum >= 5, `card=${roomsNum ?? 'n/a'} expected=5plus`);
+        else {
           const wantNum = toNum(want);
-          return wantNum != null && roomsNum != null && roomsNum === wantNum;
-        });
-        addCheck('rooms', wants.length > 0, pass, `card=${roomsNum ?? 'n/a'} expected=[${wants.join(',')}]`);
+          addCheck('rooms', true, wantNum != null && roomsNum != null && roomsNum === wantNum, `card=${roomsNum ?? 'n/a'} expected=${wantNum ?? want}`);
+        }
       }
       if (filterIsSet(manualFilters.minPrice) || filterIsSet(manualFilters.maxPrice)) {
         const minP = toNum(manualFilters.minPrice);
