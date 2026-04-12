@@ -11476,19 +11476,19 @@ render() {
       if (Number.isFinite(n) && n > stage) stage = n;
     };
 
-    // 1) balcony soft-off
+    // 1) parking soft-off
+    if (query.parking === true) {
+      const hasParking = boolish(item?.features?.parking) === true || boolish(item?.features?.has_parking) === true;
+      if (!hasParking) requireStage(1);
+    }
+
+    // 2) balcony soft-off
     if (query.balconyLoggia === true) {
       const hasBalcony = boolish(item?.balcony) === true
         || boolish(item?.features?.balcony) === true
         || boolish(item?.features?.has_balcony) === true
         || boolish(item?.features?.loggia) === true;
-      if (!hasBalcony) requireStage(1);
-    }
-
-    // 2) parking soft-off
-    if (query.parking === true) {
-      const hasParking = boolish(item?.features?.parking) === true || boolish(item?.features?.has_parking) === true;
-      if (!hasParking) requireStage(2);
+      if (!hasBalcony) requireStage(2);
     }
 
     // 3) floor soft-off
