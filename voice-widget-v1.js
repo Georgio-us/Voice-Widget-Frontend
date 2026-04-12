@@ -7322,6 +7322,10 @@ class VoiceWidget extends HTMLElement {
         merged.district.map((v) => this._normalizeDistrictForRelax(String(v || ''))).filter(Boolean)
       ));
     }
+    if (merged.arcadia === true || merged.center === true) {
+      // Microdistrict flags are inside Primorsky and override conflicting district choice.
+      merged.district = ['primorsky'];
+    }
     if (String(merged.residentialComplex || '').trim()) {
       // Specific ЖК implies ЖК-only baseline for both strict and similar flows.
       merged.rcOnly = true;
@@ -11440,21 +11444,52 @@ render() {
       if (d === 'peresypskyi') return 'suvorovsky';
       return d;
     };
-    const districtRank = (fromDistrict, candidateDistrict) => {
-      const from = canonicalDistrict(fromDistrict);
+    const normalizeDistrictList = (value) => {
+      const src = Array.isArray(value) ? value : [value];
+      return Array.from(new Set(
+        src
+          .flatMap((entry) => String(entry ?? '').split(','))
+          .map((entry) => canonicalDistrict(entry))
+          .filter(Boolean)
+      ));
+    };
+    const isArcadiaCandidate = (source = {}) => {
+      const neighborhoodRaw = String(source?.neighborhood || '').trim().toLowerCase();
+      const titleRaw = String(source?.title || '').trim().toLowerCase();
+      return neighborhoodRaw.includes('аркад')
+        || neighborhoodRaw.includes('arcad')
+        || titleRaw.includes('аркад')
+        || titleRaw.includes('arcad');
+    };
+    const isCenterCandidate = (source = {}) => {
+      const neighborhoodRaw = String(source?.neighborhood || '').trim().toLowerCase();
+      return neighborhoodRaw === 'центр' || neighborhoodRaw === 'center';
+    };
+    const districtRankFromSet = (baseDistricts = [], candidateDistrict) => {
       const to = canonicalDistrict(candidateDistrict);
-      if (!from || !to) return null;
-      if (from === to) return 0;
+      if (!to) return null;
+      const sourceSet = new Set(normalizeDistrictList(baseDistricts));
+      if (!sourceSet.size) return null;
+      if (sourceSet.has(to)) return 0;
       const orderMap = {
         primorsky: ['kievsky', 'malinovsky', 'suvorovsky'],
-        kievsky: ['primorsky', 'malinovsky', 'suvorovsky'],
+        kievsky: ['malinovsky', 'primorsky', 'suvorovsky'],
         malinovsky: ['kievsky', 'primorsky', 'suvorovsky'],
         suvorovsky: ['primorsky', 'kievsky', 'malinovsky']
       };
-      const order = orderMap[from];
-      if (!Array.isArray(order)) return null;
-      const idx = order.indexOf(to);
-      return idx >= 0 ? (idx + 1) : null;
+      let frontier = new Set(sourceSet);
+      for (let hop = 1; hop <= 3; hop += 1) {
+        const expanded = new Set(frontier);
+        frontier.forEach((district) => {
+          const order = orderMap[district] || [];
+          const next = order[hop - 1];
+          if (next) expanded.add(next);
+        });
+        const ring = new Set([...expanded].filter((district) => !sourceSet.has(district)));
+        if (ring.has(to)) return hop;
+        frontier = expanded;
+      }
+      return 4;
     };
 
     const qOp = canonicalOperation(query.operation);
@@ -11465,7 +11500,10 @@ render() {
     const iType = canonicalType(item.property_type || item.type);
     if (qType && iType && qType !== iType) return null;
 
-    const qDistrict = canonicalDistrict(query.district || '');
+    const qDistrictsRaw = normalizeDistrictList(query.district);
+    const hasArcadia = query.arcadia === true;
+    const hasCenter = query.center === true;
+    const qDistricts = (hasArcadia || hasCenter) ? ['primorsky'] : qDistrictsRaw;
     const iDistrict = canonicalDistrict(item.district || item.neighborhood || item.city || '');
 
     const qRc = text(query.residentialComplex);
@@ -11557,13 +11595,27 @@ render() {
       if (!iRc.includes(qRc)) requireStage(7);
     }
 
-    // 8-10) district expansion order
-    if (qDistrict) {
-      const rank = districtRank(qDistrict, iDistrict);
+    // 8-11) location expansion order (microdistrict layer, then district matrix)
+    if (hasArcadia || hasCenter) {
+      // Arcadia/Center are microdistrict flags inside Primorsky.
+      // They can be selected together and are treated as union.
+      const inArcadia = isArcadiaCandidate(item);
+      const inCenter = isCenterCandidate(item);
+      const inSelectedMicro = (hasArcadia && inArcadia) || (hasCenter && inCenter);
+      if (iDistrict === 'primorsky') {
+        if (!inSelectedMicro) requireStage(8); // fallback from microdistrict to Primorsky
+      } else {
+        const rank = districtRankFromSet(['primorsky'], iDistrict);
+        if (rank === 1) requireStage(9);
+        else if (rank === 2) requireStage(10);
+        else requireStage(11);
+      }
+    } else if (qDistricts.length) {
+      const rank = districtRankFromSet(qDistricts, iDistrict);
       if (rank === 1) requireStage(8);
       else if (rank === 2) requireStage(9);
       else if (rank === 3) requireStage(10);
-      else if (rank !== 0) requireStage(11);
+      else if (rank > 3) requireStage(11);
     }
 
     // 11) drop rcOnly only after district expansion is exhausted
