@@ -7436,6 +7436,14 @@ class VoiceWidget extends HTMLElement {
         this.syncFiltersSelectAllLabels(overlay);
       });
     });
+    // Keep only one dropdown open at a time:
+    // when native <select> gets interaction/focus, close custom multi menus.
+    overlay.querySelectorAll('select').forEach((selectEl) => {
+      const closeCustomMenus = () => this._closeAllFiltersMultiMenus(overlay);
+      selectEl.addEventListener('mousedown', closeCustomMenus);
+      selectEl.addEventListener('touchstart', closeCustomMenus, { passive: true });
+      selectEl.addEventListener('focus', closeCustomMenus);
+    });
     this._bindFiltersMultiControls(overlay);
     overlay.querySelector('[data-role="reset"]')?.addEventListener('click', () => {
       this.resetCatalogFiltersToAll(overlay);
