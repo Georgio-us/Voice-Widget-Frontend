@@ -1331,10 +1331,11 @@ class APIClient {
     for (const k of allowed) {
       const v = params[k];
       if (Array.isArray(v)) {
-        v
+        const joined = v
           .map((item) => String(item ?? '').trim())
           .filter(Boolean)
-          .forEach((item) => url.searchParams.append(k, item));
+          .join(',');
+        if (joined) url.searchParams.set(k, joined);
         continue;
       }
       if (v !== undefined && v !== null && String(v).trim() !== '') {
