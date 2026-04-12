@@ -7728,26 +7728,42 @@ class VoiceWidget extends HTMLElement {
         display: none;
         border-radius: 10px;
         border: 1px solid rgba(60, 60, 67, 0.2);
-        background: #d1d1d6;
+        background: rgba(209, 209, 214, 0.95);
         box-shadow: 0 10px 22px rgba(0,0,0,0.22);
         overflow: hidden;
+      }
+      .vw-filters-multi-head {
+        min-height: 26px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 10px;
+        font-size: .76rem;
+        font-weight: 400;
+        color: rgba(60, 60, 67, 0.52);
+        user-select: none;
+        pointer-events: none;
+      }
+      .vw-filters-multi-head__check {
+        width: 14px;
+        color: rgba(60, 60, 67, 0.42);
+        font-weight: 700;
       }
       .vw-filters-multi.is-open .vw-filters-multi-menu {
         display: block;
       }
       .vw-filters-multi-item {
         width: 100%;
-        min-height: 36px;
+        min-height: 26px;
         border: 0;
-        border-top: 1px solid rgba(60, 60, 67, 0.16);
         background: transparent;
         color: #1c1c1e;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 2px;
         padding: 0 10px;
         font-size: .76rem;
-        font-weight: 500;
+        font-weight: 400;
         text-align: left;
         cursor: pointer;
         transition: background-color .12s ease, color .12s ease;
@@ -7942,6 +7958,9 @@ class VoiceWidget extends HTMLElement {
                   <span data-role="multi-trigger-text">Район</span>
                 </button>
                 <div class="vw-filters-multi-menu" role="listbox" aria-label="Район">
+                  <div class="vw-filters-multi-head" aria-hidden="true">
+                    <span class="vw-filters-multi-head__check">✓</span><span>Район</span>
+                  </div>
                   <button type="button" class="vw-filters-multi-item" data-role="multi-all">
                     <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
                   </button>
@@ -7964,6 +7983,9 @@ class VoiceWidget extends HTMLElement {
                   <span data-role="multi-trigger-text">Количество комнат</span>
                 </button>
                 <div class="vw-filters-multi-menu" role="listbox" aria-label="Количество комнат">
+                  <div class="vw-filters-multi-head" aria-hidden="true">
+                    <span class="vw-filters-multi-head__check">✓</span><span>Количество комнат</span>
+                  </div>
                   <button type="button" class="vw-filters-multi-item" data-role="multi-all">
                     <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
                   </button>
