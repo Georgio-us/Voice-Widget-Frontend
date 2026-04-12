@@ -2873,6 +2873,8 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
+    this._catalogRelaxSmartExhausted = true;
+    this._catalogRelaxSmartFallbackApplied = false;
     this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
@@ -7429,6 +7431,11 @@ class VoiceWidget extends HTMLElement {
       const qRooms = toNum(qRoomsRaw);
       query.__roomsAnchor = qRooms != null ? qRooms : null;
     }
+    if (query.smart === true) {
+      // Smart special mode: rooms is not mandatory while smart layer is active.
+      delete query.rooms;
+      query.__roomsAnchor = null;
+    }
 
     const requestQuery = { ...query };
     delete requestQuery.__budgetAnchor;
@@ -7446,6 +7453,8 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
+    this._catalogRelaxSmartExhausted = true;
+    this._catalogRelaxSmartFallbackApplied = false;
     this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
@@ -11721,51 +11730,87 @@ render() {
       strictSeed.forEach((id) => { if (id) shownGlobal.add(id); });
       const exhaustedLevels = this._catalogRelaxExhaustedLevels instanceof Set ? this._catalogRelaxExhaustedLevels : new Set();
       const query = this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : {};
+      const smartRequested = query.smart === true;
+      const isSmartCandidate = (source = {}) => {
+        const direct = source?.features?.smartFlat;
+        if (direct === true || direct === 'true' || direct === 1 || direct === '1') return true;
+        return false;
+      };
+      let attemptedSmartFallback = false;
 
       let level = Math.max(1, Number(this._catalogRelaxLevel) || 1);
       let extras = [];
-      while (level <= 12 && !extras.length) {
-        if (exhaustedLevels.has(level)) {
-          level += 1;
+      for (;;) {
+        const smartRequired = smartRequested && this._catalogRelaxSmartExhausted !== true;
+        while (level <= 12 && !extras.length) {
+          if (exhaustedLevels.has(level)) {
+            level += 1;
+            continue;
+          }
+          const stageRows = normalized
+            .map((item) => {
+              const id = String(item?.id || '').trim();
+              if (!id || shownGlobal.has(id) || shown.has(id)) return null;
+              const smartMatch = isSmartCandidate(item);
+              if (smartRequired && !smartMatch) return null;
+              const step = this._computeRelaxStepForCandidate(item, query);
+              if (step == null || step !== level) return null;
+              const safeScore = this._computeRelaxDisplayScore(item, step);
+              const price = Number(item?.priceUSD ?? item?.priceEUR ?? item?.price_amount);
+              return {
+                item,
+                step,
+                score: safeScore,
+                smartMatch,
+                price: Number.isFinite(price) ? price : Number.MAX_SAFE_INTEGER
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+              if (a.step !== b.step) return a.step - b.step;
+              // After smart fallback, keep smart as a relevance signal.
+              if (!smartRequired && smartRequested && a.smartMatch !== b.smartMatch) {
+                return a.smartMatch ? -1 : 1;
+              }
+              if (a.score !== b.score) return b.score - a.score;
+              return a.price - b.price;
+            });
+          if (!stageRows.length) {
+            exhaustedLevels.add(level);
+            level += 1;
+            continue;
+          }
+          const pageRows = stageRows.slice(0, 40);
+          extras = pageRows
+            .map((row) => {
+              const strictRaw = Number(row?.item?.strictScore ?? row?.item?._strictScore);
+              const strictSafe = Number.isFinite(strictRaw) ? Math.max(0, Math.min(100, Math.round(strictRaw))) : 0;
+              return {
+                ...row.item,
+                score: row.score,
+                strictScore: Math.min(strictSafe, row.score),
+                matchTier: this._resolveTierByScoreValue(row.score)
+              };
+            });
+          if (pageRows.length >= stageRows.length) {
+            exhaustedLevels.add(level);
+            level += 1;
+          }
+        }
+        if (extras.length) break;
+        if (smartRequired && attemptedSmartFallback !== true) {
+          // Smart layer exhausted: fallback to 1-room and continue in common flow.
+          this._catalogRelaxSmartExhausted = true;
+          this._catalogRelaxSmartFallbackApplied = true;
+          attemptedSmartFallback = true;
+          query.rooms = '1';
+          query.__roomsAnchor = 1;
+          this._catalogStrictQuery = { ...query };
+          level = 1;
+          exhaustedLevels.clear();
           continue;
         }
-        const stageRows = normalized
-          .map((item) => {
-            const id = String(item?.id || '').trim();
-            if (!id || shownGlobal.has(id) || shown.has(id)) return null;
-            const step = this._computeRelaxStepForCandidate(item, query);
-            if (step == null || step !== level) return null;
-            const safeScore = this._computeRelaxDisplayScore(item, step);
-            const price = Number(item?.priceUSD ?? item?.priceEUR ?? item?.price_amount);
-            return { item, step, score: safeScore, price: Number.isFinite(price) ? price : Number.MAX_SAFE_INTEGER };
-          })
-          .filter(Boolean)
-          .sort((a, b) => {
-            if (a.step !== b.step) return a.step - b.step;
-            if (a.score !== b.score) return b.score - a.score;
-            return a.price - b.price;
-          });
-        if (!stageRows.length) {
-          exhaustedLevels.add(level);
-          level += 1;
-          continue;
-        }
-        const pageRows = stageRows.slice(0, 40);
-        extras = pageRows
-          .map((row) => {
-            const strictRaw = Number(row?.item?.strictScore ?? row?.item?._strictScore);
-            const strictSafe = Number.isFinite(strictRaw) ? Math.max(0, Math.min(100, Math.round(strictRaw))) : 0;
-            return {
-              ...row.item,
-              score: row.score,
-              strictScore: Math.min(strictSafe, row.score),
-              matchTier: this._resolveTierByScoreValue(row.score)
-            };
-          });
-        if (pageRows.length >= stageRows.length) {
-          exhaustedLevels.add(level);
-          level += 1;
-        }
+        break;
       }
       if (!extras.length) {
         this._catalogRelaxExhaustedLevels = exhaustedLevels;
@@ -14783,6 +14828,8 @@ render() {
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
+    this._catalogRelaxSmartExhausted = query.smart === true ? false : true;
+    this._catalogRelaxSmartFallbackApplied = false;
     this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
