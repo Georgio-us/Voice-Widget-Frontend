@@ -7727,9 +7727,9 @@ class VoiceWidget extends HTMLElement {
         z-index: 40;
         display: none;
         border-radius: 10px;
-        border: 1px solid var(--border-light, rgba(255,255,255,0.2));
-        background: color-mix(in srgb, var(--bg-card, #1e1d20) 94%, transparent);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.34);
+        border: 1px solid rgba(60, 60, 67, 0.2);
+        background: #d1d1d6;
+        box-shadow: 0 10px 22px rgba(0,0,0,0.22);
         overflow: hidden;
       }
       .vw-filters-multi.is-open .vw-filters-multi-menu {
@@ -7739,24 +7739,33 @@ class VoiceWidget extends HTMLElement {
         width: 100%;
         min-height: 36px;
         border: 0;
-        border-top: 1px solid color-mix(in srgb, var(--border-light, rgba(255,255,255,0.14)) 92%, transparent);
+        border-top: 1px solid rgba(60, 60, 67, 0.16);
         background: transparent;
-        color: var(--text-primary, #fff);
+        color: #1c1c1e;
         display: flex;
         align-items: center;
         gap: 8px;
         padding: 0 10px;
-        font-size: .75rem;
+        font-size: .76rem;
+        font-weight: 500;
         text-align: left;
         cursor: pointer;
+        transition: background-color .12s ease, color .12s ease;
       }
       .vw-filters-multi-item:first-child {
         border-top: 0;
+      }
+      .vw-filters-multi-item:hover,
+      .vw-filters-multi-item:focus-visible {
+        background: #0a84ff;
+        color: #fff;
+        outline: none;
       }
       .vw-filters-multi-item__check {
         width: 14px;
         opacity: 0;
         font-weight: 700;
+        color: currentColor;
       }
       .vw-filters-multi-item.is-selected .vw-filters-multi-item__check {
         opacity: 1;
