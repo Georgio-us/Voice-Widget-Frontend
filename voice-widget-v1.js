@@ -1330,6 +1330,13 @@ class APIClient {
     ];
     for (const k of allowed) {
       const v = params[k];
+      if (Array.isArray(v)) {
+        v
+          .map((item) => String(item ?? '').trim())
+          .filter(Boolean)
+          .forEach((item) => url.searchParams.append(k, item));
+        continue;
+      }
       if (v !== undefined && v !== null && String(v).trim() !== '') {
         url.searchParams.set(k, String(v));
       }
@@ -7040,6 +7047,23 @@ class VoiceWidget extends HTMLElement {
 
   normalizeCatalogFilterOverrides(raw = {}) {
     const source = raw && typeof raw === 'object' ? raw : {};
+    const normalizeMulti = (value) => {
+      if (Array.isArray(value)) {
+        return value.map((v) => String(v ?? '').trim()).filter(Boolean);
+      }
+      const text = String(value ?? '').trim();
+      if (!text) return [];
+      if (text.includes(',')) return text.split(',').map((v) => String(v ?? '').trim()).filter(Boolean);
+      return [text];
+    };
+    const normalizeRoomsToken = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (raw === '5+' || raw === '5plus') return '5plus';
+      if (raw === '4+' || raw === '4plus') return '4plus';
+      if (/^[1-4]$/.test(raw)) return raw;
+      return '';
+    };
     const parseNum = (value) => {
       const text = String(value ?? '').trim();
       if (!text || text.toLowerCase() === 'max') return null;
@@ -7068,14 +7092,25 @@ class VoiceWidget extends HTMLElement {
     if (maxArea != null) out.maxArea = maxArea;
     if (minFloor != null) out.minFloor = minFloor;
     if (maxFloor != null) out.maxFloor = maxFloor;
-    const roomsRaw = String(source.rooms || '').trim();
-    if (roomsRaw === 'smart' || source.smart === true) {
-      out.smart = true;
-    } else if (roomsRaw) {
-      out.rooms = roomsRaw;
+    const roomsMultiRaw = [
+      ...normalizeMulti(source.roomsMulti),
+      ...normalizeMulti(source.rooms)
+    ];
+    const roomsMulti = Array.from(new Set(roomsMultiRaw.map((v) => normalizeRoomsToken(v)).filter(Boolean)));
+    if (roomsMulti.length) {
+      out.rooms = roomsMulti;
     }
-    const district = String(source.district || '').trim();
-    if (district) out.district = district;
+    if (Object.prototype.hasOwnProperty.call(source, 'smart')) out.smart = source.smart === true;
+    const districtMultiRaw = [
+      ...normalizeMulti(source.districtMulti),
+      ...normalizeMulti(source.district)
+    ];
+    const districtMulti = Array.from(new Set(
+      districtMultiRaw
+        .map((v) => this._normalizeDistrictForRelax(String(v || '')))
+        .filter(Boolean)
+    ));
+    if (districtMulti.length) out.district = districtMulti;
     if (Object.prototype.hasOwnProperty.call(source, 'residentialComplex')) {
       out.residentialComplex = String(source.residentialComplex || '').trim();
     }
@@ -7242,6 +7277,14 @@ class VoiceWidget extends HTMLElement {
       ? this._catalogManualFilterOverrides
       : {};
     const merged = { ...base, ...manual };
+    if (Array.isArray(merged.rooms)) {
+      merged.rooms = Array.from(new Set(merged.rooms.map((v) => String(v || '').trim()).filter(Boolean)));
+    }
+    if (Array.isArray(merged.district)) {
+      merged.district = Array.from(new Set(
+        merged.district.map((v) => this._normalizeDistrictForRelax(String(v || ''))).filter(Boolean)
+      ));
+    }
     if (String(merged.residentialComplex || '').trim()) {
       // Specific ЖК implies ЖК-only baseline for both strict and similar flows.
       merged.rcOnly = true;
@@ -7273,6 +7316,12 @@ class VoiceWidget extends HTMLElement {
     const query = this.getCatalogEffectiveSearchParams();
     const opRaw = String(query.operation || '').toLowerCase();
     const op = opRaw === 'sale' || opRaw === 'rent' ? opRaw : '';
+    const roomsMulti = Array.isArray(query.rooms)
+      ? query.rooms.map((v) => String(v || '').trim()).filter(Boolean)
+      : (query.rooms != null ? [String(query.rooms)] : []);
+    const districtMulti = Array.isArray(query.district)
+      ? query.district.map((v) => String(v || '').trim()).filter(Boolean)
+      : (query.district != null ? [String(query.district)] : []);
     return {
       listingMode: op,
       propertyType: query.type != null ? String(query.type) : '',
@@ -7284,9 +7333,11 @@ class VoiceWidget extends HTMLElement {
       floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
       floorNotFirst: query.floorNotFirst === true,
       floorNotLast: query.floorNotLast === true,
-      rooms: query.smart === true ? '' : (query.rooms != null ? String(query.rooms) : ''),
+      rooms: roomsMulti[0] || '',
+      roomsMulti,
       smart: query.smart === true,
-      district: query.district != null ? String(query.district) : '',
+      district: districtMulti[0] || '',
+      districtMulti,
       arcadia: query.arcadia === true,
       exclusive: query.exclusive === true,
       center: query.center === true,
@@ -7329,7 +7380,9 @@ class VoiceWidget extends HTMLElement {
     if (qMinArea != null && qMaxArea != null) query.__areaAnchor = Math.round((qMinArea + qMaxArea) / 2);
     else query.__areaAnchor = qMinArea ?? qMaxArea ?? null;
 
-    const qRoomsRaw = String(query.rooms || '').trim();
+    const qRoomsRaw = Array.isArray(query.rooms)
+      ? String(query.rooms[0] || '').trim()
+      : String(query.rooms || '').trim();
     if (qRoomsRaw === '4plus') query.__roomsAnchor = 4;
     else {
       const qRooms = toNum(qRoomsRaw);
@@ -13447,16 +13500,29 @@ render() {
 
       addCheck('operation', filterIsSet(manualFilters.operation), operation === String(manualFilters.operation || '').toLowerCase(), `card=${operation || 'n/a'} expected=${manualFilters.operation}`);
       addCheck('type', filterIsSet(manualFilters.type), type === normalizeType(manualFilters.type), `card=${type || 'n/a'} expected=${normalizeType(manualFilters.type)}`);
-      addCheck('district', filterIsSet(manualFilters.district), district === String(manualFilters.district || '').toLowerCase(), `card=${district || 'n/a'} expected=${manualFilters.district}`);
+      const manualDistricts = Array.isArray(manualFilters.district)
+        ? manualFilters.district.map((v) => String(v || '').toLowerCase()).filter(Boolean)
+        : (filterIsSet(manualFilters.district) ? [String(manualFilters.district || '').toLowerCase()] : []);
+      addCheck(
+        'district',
+        manualDistricts.length > 0,
+        manualDistricts.includes(district),
+        `card=${district || 'n/a'} expected=${manualDistricts.join('|') || 'n/a'}`
+      );
       if (manualFilters.smart === true) {
         addCheck('smart', true, smartFlat === true, `card=${smartFlat ? 'true' : 'false'}`);
-      } else if (filterIsSet(manualFilters.rooms)) {
-        const want = String(manualFilters.rooms || '').trim().toLowerCase();
-        if (want === '4plus') addCheck('rooms', true, roomsNum != null && roomsNum >= 4, `card=${roomsNum ?? 'n/a'} expected=4plus`);
-        else if (want === '5plus') addCheck('rooms', true, roomsNum != null && roomsNum >= 5, `card=${roomsNum ?? 'n/a'} expected=5plus`);
-        else {
-          const wantNum = toNum(want);
-          addCheck('rooms', true, wantNum != null && roomsNum != null && roomsNum === wantNum, `card=${roomsNum ?? 'n/a'} expected=${wantNum ?? want}`);
+      } else {
+        const roomFilters = Array.isArray(manualFilters.rooms)
+          ? manualFilters.rooms.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
+          : (filterIsSet(manualFilters.rooms) ? [String(manualFilters.rooms || '').trim().toLowerCase()] : []);
+        if (roomFilters.length) {
+          const passRooms = roomFilters.some((want) => {
+            if (want === '4plus') return roomsNum != null && roomsNum >= 4;
+            if (want === '5plus') return roomsNum != null && roomsNum >= 5;
+            const wantNum = toNum(want);
+            return wantNum != null && roomsNum != null && roomsNum === wantNum;
+          });
+          addCheck('rooms', true, passRooms, `card=${roomsNum ?? 'n/a'} expected=${roomFilters.join('|')}`);
         }
       }
       if (filterIsSet(manualFilters.minPrice) || filterIsSet(manualFilters.maxPrice)) {
