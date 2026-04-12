@@ -1063,11 +1063,30 @@ class UIManager {
     this.updateMessageCount();
   }
 
+  addSystemEventMessage(text = '') {
+    const payload = String(text || '').trim();
+    if (!payload) return;
+    const last = this.widget.messages?.[this.widget.messages.length - 1];
+    if (last && last.type === 'system' && String(last.content || '').trim() === payload) return;
+    this.addMessage({ type: 'system', content: payload, timestamp: new Date() });
+  }
+
   _appendBubble(message) {
     const { thread } = this.elements;
     if (!thread) return;
     const wrapper = document.createElement('div');
     wrapper.className = `message ${message.type}`;
+    if (message.type === 'system') {
+      const systemLine = document.createElement('div');
+      systemLine.className = 'system-event-line';
+      const systemText = document.createElement('span');
+      systemText.className = 'system-event-text';
+      systemText.textContent = String(message.content || '');
+      systemLine.appendChild(systemText);
+      wrapper.appendChild(systemLine);
+      thread.appendChild(wrapper);
+      return;
+    }
     // v2 bubble markup
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble ' + (message.type === 'assistant' ? 'widget-bubble' : 'user-bubble');
@@ -7427,6 +7446,11 @@ class VoiceWidget extends HTMLElement {
     try {
       const list = await this.refreshCatalogByEffectiveQuery();
       this.ui?.showNotification?.(`Фильтры применены: ${list.length}`);
+      if (Array.isArray(list) && list.length > 0) {
+        this.ui?.addSystemEventMessage?.(`Подборка обновлена · найдено ${list.length} объектов`);
+      } else {
+        this.ui?.addSystemEventMessage?.('Подборка обновлена · точных совпадений нет');
+      }
     } catch (error) {
       console.error('filters.apply failed:', error);
       this.ui?.showNotification?.('Не удалось применить фильтры');
@@ -7441,6 +7465,7 @@ class VoiceWidget extends HTMLElement {
     try {
       const list = await this.refreshCatalogByEffectiveQuery({});
       this.ui?.showNotification?.(`Фильтры сброшены: ${list.length}`);
+      this.ui?.addSystemEventMessage?.(`Фильтры сброшены · найдено ${list.length} объектов`);
     } catch (error) {
       console.error('filters.reset failed:', error);
       this.ui?.showNotification?.('Не удалось сбросить фильтры');
@@ -10958,9 +10983,15 @@ render() {
         if (!Array.isArray(value) && typeof value === 'string' && value.trim() === '') return;
         mergedInsights[key] = value;
       });
-      this.refreshCatalogByEffectiveQuery(mergedInsights).catch((error) => {
-        console.warn('refreshCatalogByEffectiveQuery failed:', error);
-      });
+      this.refreshCatalogByEffectiveQuery(mergedInsights)
+        .then((list) => {
+          const count = Array.isArray(list) ? list.length : Number(window?.appState?.lastTotalMatches) || 0;
+          if (count > 0) this.ui?.addSystemEventMessage?.(`Подборка обновлена · найдено ${count} объектов`);
+          else this.ui?.addSystemEventMessage?.('Подборка обновлена · точных совпадений нет');
+        })
+        .catch((error) => {
+          console.warn('refreshCatalogByEffectiveQuery failed:', error);
+        });
     }
   }
 

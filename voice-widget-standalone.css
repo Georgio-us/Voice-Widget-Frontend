@@ -160,6 +160,37 @@
   .message{ display:flex; }
   .message.user{ justify-content:flex-end; }
   .message.assistant{ justify-content:flex-start; }
+  .message.system{
+    justify-content:center;
+    width:100%;
+    margin: 4px 0 8px;
+  }
+  .system-event-line{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    color: rgba(255,255,255,0.52);
+    font-size: 11px;
+    line-height: 1.2;
+    user-select:none;
+  }
+  .system-event-line::before,
+  .system-event-line::after{
+    content:'';
+    flex:1;
+    min-width: 28px;
+    height:1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.2) 35%, rgba(255,255,255,0.2) 65%, transparent);
+  }
+  .system-event-text{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width: 72%;
+    text-align:center;
+  }
   .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
   .message.assistant .bubble--full{ background: var(--bg-bubble); }
   .message.assistant .bubble--full{ border-bottom-left-radius:16px; }
