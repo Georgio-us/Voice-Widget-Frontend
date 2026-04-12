@@ -6763,6 +6763,9 @@ class VoiceWidget extends HTMLElement {
       return opts;
     }
     if (type === 'floorMin' || type === 'floorMax') {
+      const floorSteps = [];
+      for (let v = 1; v <= 10; v += 1) floorSteps.push(v);
+      for (let v = 12; v <= 30; v += 2) floorSteps.push(v);
       if (type === 'floorMin') {
         opts.push({ value: '', label: 'От min' });
         opts.push({ value: 'not_first', label: 'Не первый' });
@@ -6771,7 +6774,7 @@ class VoiceWidget extends HTMLElement {
         opts.push({ value: 'max', label: 'До max' });
         opts.push({ value: 'not_last', label: 'Не последний' });
       }
-      for (let v = 0; v <= 30; v += 1) {
+      for (const v of floorSteps) {
         opts.push({ value: String(v), label: String(v) });
       }
       return opts;
