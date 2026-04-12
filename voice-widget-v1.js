@@ -11266,7 +11266,7 @@ render() {
   _resolveTierByScoreValue(score) {
     const safe = Number(score) || 0;
     if (safe >= 80) return 'high';
-    if (safe >= 55) return 'mid';
+    if (safe >= 50) return 'mid';
     return 'low';
   }
 
