@@ -6779,12 +6779,108 @@ class VoiceWidget extends HTMLElement {
 
   syncFiltersSelectAllLabels(overlay) {
     if (!overlay) return;
-    ['propertyType', 'district', 'rooms'].forEach((role) => {
+    ['propertyType'].forEach((role) => {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       const allOption = Array.from(selectEl.options || []).find((opt) => String(opt.value || '').trim() === 'all');
       if (!allOption) return;
       allOption.textContent = String(selectEl.value || '').trim() === 'all' ? 'Выбрано всё' : 'Выбрать всё';
+    });
+  }
+
+  _getFiltersMultiControl(overlay, role) {
+    if (!overlay || !role) return null;
+    return overlay.querySelector(`.vw-filters-multi[data-role="${role}"]`);
+  }
+
+  _getFiltersMultiValues(overlay, role) {
+    const wrap = this._getFiltersMultiControl(overlay, role);
+    if (!wrap) return [];
+    const selected = Array.from(wrap.querySelectorAll('[data-option].is-selected'))
+      .map((el) => String(el.getAttribute('data-value') || '').trim())
+      .filter(Boolean);
+    return selected;
+  }
+
+  _setFiltersMultiValues(overlay, role, values = []) {
+    const wrap = this._getFiltersMultiControl(overlay, role);
+    if (!wrap) return;
+    const selectedSet = new Set((Array.isArray(values) ? values : [values]).map((v) => String(v || '').trim()).filter(Boolean));
+    wrap.querySelectorAll('[data-option]').forEach((opt) => {
+      const value = String(opt.getAttribute('data-value') || '').trim();
+      const checked = selectedSet.has(value);
+      opt.classList.toggle('is-selected', checked);
+      opt.setAttribute('aria-checked', checked ? 'true' : 'false');
+    });
+    this._syncFiltersMultiSummary(overlay, role);
+  }
+
+  _syncFiltersMultiSummary(overlay, role) {
+    const wrap = this._getFiltersMultiControl(overlay, role);
+    if (!wrap) return;
+    const values = this._getFiltersMultiValues(overlay, role);
+    const triggerText = wrap.querySelector('[data-role="multi-trigger-text"]');
+    const title = String(wrap.getAttribute('data-title') || '').trim() || 'Выбор';
+    if (triggerText) {
+      triggerText.textContent = values.length > 0 ? `Выбрано: ${values.length}` : title;
+      triggerText.style.opacity = values.length > 0 ? '1' : '0.76';
+    }
+  }
+
+  _closeAllFiltersMultiMenus(overlay) {
+    if (!overlay) return;
+    overlay.querySelectorAll('.vw-filters-multi.is-open').forEach((el) => {
+      el.classList.remove('is-open');
+      const trigger = el.querySelector('[data-role="multi-trigger"]');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  _bindFiltersMultiControls(overlay) {
+    if (!overlay) return;
+    const controls = Array.from(overlay.querySelectorAll('.vw-filters-multi[data-role]'));
+    if (!controls.length) return;
+    controls.forEach((control) => {
+      const role = String(control.getAttribute('data-role') || '').trim();
+      const trigger = control.querySelector('[data-role="multi-trigger"]');
+      const allBtn = control.querySelector('[data-role="multi-all"]');
+      const options = Array.from(control.querySelectorAll('[data-option]'));
+      if (trigger) {
+        trigger.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const willOpen = !control.classList.contains('is-open');
+          this._closeAllFiltersMultiMenus(overlay);
+          control.classList.toggle('is-open', willOpen);
+          trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+      }
+      if (allBtn) {
+        allBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const allValues = options.map((el) => String(el.getAttribute('data-value') || '').trim()).filter(Boolean);
+          this._setFiltersMultiValues(overlay, role, allValues);
+        });
+      }
+      options.forEach((opt) => {
+        opt.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const value = String(opt.getAttribute('data-value') || '').trim();
+          if (!value) return;
+          const next = new Set(this._getFiltersMultiValues(overlay, role));
+          if (next.has(value)) next.delete(value);
+          else next.add(value);
+          this._setFiltersMultiValues(overlay, role, Array.from(next));
+        });
+      });
+    });
+    overlay.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('.vw-filters-multi')) return;
+      this._closeAllFiltersMultiMenus(overlay);
     });
   }
 
@@ -6823,7 +6919,9 @@ class VoiceWidget extends HTMLElement {
       const val = String(overlay.querySelector(`[data-role="${role}"]`)?.value || '').trim();
       return val === 'all' ? '' : val;
     };
-    const roomsVal = normalizeSelectVal('rooms');
+    const districtSelected = this._getFiltersMultiValues(overlay, 'district');
+    const roomsSelected = this._getFiltersMultiValues(overlay, 'rooms');
+    const roomsVal = roomsSelected[0] || '';
     const smartRoom = roomsVal === 'smart';
     const floorFromRaw = read('floorMin');
     const floorToRaw = read('floorMax');
@@ -6841,8 +6939,10 @@ class VoiceWidget extends HTMLElement {
       floorNotFirst,
       floorNotLast,
       rooms: smartRoom ? '' : roomsVal,
+      roomsMulti: roomsSelected,
       smart: smartRoom,
-      district: normalizeSelectVal('district'),
+      district: districtSelected[0] || '',
+      districtMulti: districtSelected,
       arcadia: !!overlay.querySelector('[data-role="arcadia"]')?.checked,
       exclusive: !!overlay.querySelector('[data-role="exclusive"]')?.checked,
       center: !!overlay.querySelector('[data-role="center"]')?.checked,
@@ -6908,11 +7008,17 @@ class VoiceWidget extends HTMLElement {
     setPicker('floorMin', payload.floorNotFirst === true ? 'not_first' : payload.floorFrom);
     setPicker('floorMax', payload.floorNotLast === true ? 'not_last' : payload.floorTo);
     if (payload.smart === true) {
-      setSelect('rooms', 'smart');
+      this._setFiltersMultiValues(overlay, 'rooms', ['smart']);
     } else {
-      setSelect('rooms', payload.rooms);
+      const roomsMulti = Array.isArray(payload.roomsMulti) && payload.roomsMulti.length
+        ? payload.roomsMulti
+        : (payload.rooms != null && String(payload.rooms).trim() ? [payload.rooms] : []);
+      this._setFiltersMultiValues(overlay, 'rooms', roomsMulti);
     }
-    setSelect('district', payload.district);
+    const districtMulti = Array.isArray(payload.districtMulti) && payload.districtMulti.length
+      ? payload.districtMulti
+      : (payload.district != null && String(payload.district).trim() ? [payload.district] : []);
+    this._setFiltersMultiValues(overlay, 'district', districtMulti);
     setSelect('propertyType', payload.propertyType || payload.type);
     setCheck('arcadia', payload.arcadia);
     setCheck('exclusive', payload.exclusive);
@@ -7288,10 +7394,9 @@ class VoiceWidget extends HTMLElement {
       btn.classList.remove('is-active');
     });
     overlay.querySelectorAll('select[data-picker]').forEach((sel) => { sel.selectedIndex = 0; });
-    const rooms = overlay.querySelector('[data-role="rooms"]');
-    if (rooms) rooms.selectedIndex = 0;
-    const district = overlay.querySelector('[data-role="district"]');
-    if (district) district.selectedIndex = 0;
+    this._setFiltersMultiValues(overlay, 'rooms', []);
+    this._setFiltersMultiValues(overlay, 'district', []);
+    this._closeAllFiltersMultiMenus(overlay);
     const propertyType = overlay.querySelector('[data-role="propertyType"]');
     if (propertyType) propertyType.selectedIndex = 0;
     ['rcOnly', 'arcadia', 'exclusive', 'center', 'parking', 'balconyLoggia'].forEach((role) => {
@@ -7324,13 +7429,14 @@ class VoiceWidget extends HTMLElement {
         this.syncFilterPickerLabels(overlay);
       });
     });
-    ['propertyType', 'district', 'rooms'].forEach((role) => {
+    ['propertyType'].forEach((role) => {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       selectEl.addEventListener('change', () => {
         this.syncFiltersSelectAllLabels(overlay);
       });
     });
+    this._bindFiltersMultiControls(overlay);
     overlay.querySelector('[data-role="reset"]')?.addEventListener('click', () => {
       this.resetCatalogFiltersToAll(overlay);
     });
@@ -7589,6 +7695,72 @@ class VoiceWidget extends HTMLElement {
         padding: 0 10px;
         font-size: .75rem;
       }
+      .vw-filters-multi {
+        position: relative;
+      }
+      .vw-filters-multi-trigger {
+        width: 100%;
+        min-height: 36px;
+        box-sizing: border-box;
+        border-radius: 6px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 10px;
+        font-size: .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        text-align: left;
+        cursor: pointer;
+      }
+      .vw-filters-multi-trigger::after {
+        content: '▾';
+        font-size: .72rem;
+        opacity: .75;
+      }
+      .vw-filters-multi-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        z-index: 40;
+        display: none;
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.2));
+        background: color-mix(in srgb, var(--bg-card, #1e1d20) 94%, transparent);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.34);
+        overflow: hidden;
+      }
+      .vw-filters-multi.is-open .vw-filters-multi-menu {
+        display: block;
+      }
+      .vw-filters-multi-item {
+        width: 100%;
+        min-height: 36px;
+        border: 0;
+        border-top: 1px solid color-mix(in srgb, var(--border-light, rgba(255,255,255,0.14)) 92%, transparent);
+        background: transparent;
+        color: var(--text-primary, #fff);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        font-size: .75rem;
+        text-align: left;
+        cursor: pointer;
+      }
+      .vw-filters-multi-item:first-child {
+        border-top: 0;
+      }
+      .vw-filters-multi-item__check {
+        width: 14px;
+        opacity: 0;
+        font-weight: 700;
+      }
+      .vw-filters-multi-item.is-selected .vw-filters-multi-item__check {
+        opacity: 1;
+      }
       .vw-filters-range-block {
         display: grid;
         grid-template-columns: minmax(72px, 32%) minmax(0, 1fr);
@@ -7756,24 +7928,56 @@ class VoiceWidget extends HTMLElement {
               </select>
             </div>
             <div class="vw-filters-top-grid">
-              <select class="vw-filters-select" aria-label="Район" data-role="district">
-                <option value="" selected disabled>Район</option>
-                <option value="all">Выбрать всё</option>
-                <option value="primorsky">Приморский</option>
-                <option value="kievsky">Киевский</option>
-                <option value="malinovsky">Малиновский</option>
-                <option value="suvorovsky">Суворовский</option>
-              </select>
-              <select class="vw-filters-select" aria-label="Количество комнат" data-role="rooms">
-                <option value="" selected disabled>Количество комнат</option>
-                <option value="all">Выбрать всё</option>
-                <option value="smart">Смарт-квартира</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5plus">5+</option>
-              </select>
+              <div class="vw-filters-multi" data-role="district" data-title="Район">
+                <button type="button" class="vw-filters-multi-trigger" data-role="multi-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Район">
+                  <span data-role="multi-trigger-text">Район</span>
+                </button>
+                <div class="vw-filters-multi-menu" role="listbox" aria-label="Район">
+                  <button type="button" class="vw-filters-multi-item" data-role="multi-all">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="primorsky" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Приморский</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="kievsky" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Киевский</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="malinovsky" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Малиновский</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="suvorovsky" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Суворовский</span>
+                  </button>
+                </div>
+              </div>
+              <div class="vw-filters-multi" data-role="rooms" data-title="Количество комнат">
+                <button type="button" class="vw-filters-multi-trigger" data-role="multi-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Количество комнат">
+                  <span data-role="multi-trigger-text">Количество комнат</span>
+                </button>
+                <div class="vw-filters-multi-menu" role="listbox" aria-label="Количество комнат">
+                  <button type="button" class="vw-filters-multi-item" data-role="multi-all">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="smart" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>Смарт-квартира</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="1" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>1</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="2" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>2</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="3" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>3</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="4" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>4</span>
+                  </button>
+                  <button type="button" class="vw-filters-multi-item" data-option data-value="5plus" aria-checked="false">
+                    <span class="vw-filters-multi-item__check">✓</span><span>5+</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <hr class="vw-filters-divider">
