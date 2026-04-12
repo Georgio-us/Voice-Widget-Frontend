@@ -2867,10 +2867,12 @@ class VoiceWidget extends HTMLElement {
     this._catalogStrictQuery = null;
     this._catalogLastRefineMode = 'filters';
     this._catalogStrictSeedIds = [];
+    this._catalogShownIds = new Set();
     this._catalogRelaxedUnlocked = false;
     this._catalogRelaxLevel = 0;
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
+    this._catalogRelaxExhaustedLevels = new Set();
     this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
@@ -7436,15 +7438,17 @@ class VoiceWidget extends HTMLElement {
     this._catalogStrictFlowActive = this._isStrictFlowQuery(query);
     this._catalogStrictQuery = { ...query };
     this._catalogRelaxedUnlocked = false;
-    this._catalogRelaxLevel = 0;
+    this._catalogRelaxLevel = 1;
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
+    this._catalogRelaxExhaustedLevels = new Set();
     this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
     this._catalogStrictSeedIds = list
       .map((item) => String(this._toCardEngineShape(item)?.id || '').trim())
       .filter(Boolean);
+    this._catalogShownIds = new Set(this._catalogStrictSeedIds);
     this.replacePropertiesCatalog(list);
     if (!window.appState) window.appState = {};
     window.appState.lastTotalMatches = list.length;
@@ -11660,18 +11664,25 @@ render() {
       const seen = new Set(current.map((item) => String(this._toCardEngineShape(item)?.id || '').trim()).filter(Boolean));
       const strictSeed = new Set((Array.isArray(this._catalogStrictSeedIds) ? this._catalogStrictSeedIds : []).map((id) => String(id || '').trim()).filter(Boolean));
       const shown = this._catalogRelaxShownIds instanceof Set ? this._catalogRelaxShownIds : new Set();
+      const shownGlobal = this._catalogShownIds instanceof Set ? this._catalogShownIds : new Set();
+      seen.forEach((id) => { if (id) shownGlobal.add(id); });
+      strictSeed.forEach((id) => { if (id) shownGlobal.add(id); });
+      const exhaustedLevels = this._catalogRelaxExhaustedLevels instanceof Set ? this._catalogRelaxExhaustedLevels : new Set();
       const query = this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : {};
 
-      let level = Math.max(0, Number(this._catalogRelaxLevel) || 0);
+      let level = Math.max(1, Number(this._catalogRelaxLevel) || 1);
       let extras = [];
-      while (level < 12 && !extras.length) {
-        level += 1;
+      while (level <= 12 && !extras.length) {
+        if (exhaustedLevels.has(level)) {
+          level += 1;
+          continue;
+        }
         const stageRows = normalized
           .map((item) => {
             const id = String(item?.id || '').trim();
-            if (!id || seen.has(id) || strictSeed.has(id) || shown.has(id)) return null;
+            if (!id || shownGlobal.has(id) || shown.has(id)) return null;
             const step = this._computeRelaxStepForCandidate(item, query);
-            if (step == null || step > level) return null;
+            if (step == null || step !== level) return null;
             const safeScore = this._computeRelaxDisplayScore(item, step);
             const price = Number(item?.priceUSD ?? item?.priceEUR ?? item?.price_amount);
             return { item, step, score: safeScore, price: Number.isFinite(price) ? price : Number.MAX_SAFE_INTEGER };
@@ -11682,8 +11693,13 @@ render() {
             if (a.score !== b.score) return b.score - a.score;
             return a.price - b.price;
           });
-        extras = stageRows
-          .slice(0, 40)
+        if (!stageRows.length) {
+          exhaustedLevels.add(level);
+          level += 1;
+          continue;
+        }
+        const pageRows = stageRows.slice(0, 40);
+        extras = pageRows
           .map((row) => {
             const strictRaw = Number(row?.item?.strictScore ?? row?.item?._strictScore);
             const strictSafe = Number.isFinite(strictRaw) ? Math.max(0, Math.min(100, Math.round(strictRaw))) : 0;
@@ -11694,8 +11710,14 @@ render() {
               matchTier: this._resolveTierByScoreValue(row.score)
             };
           });
+        if (pageRows.length >= stageRows.length) {
+          exhaustedLevels.add(level);
+          level += 1;
+        }
       }
       if (!extras.length) {
+        this._catalogRelaxExhaustedLevels = exhaustedLevels;
+        this._catalogRelaxLevel = 13;
         this._catalogRelaxExhausted = true;
         return;
       }
@@ -11704,10 +11726,15 @@ render() {
       this._mergeIntoFullCatalogProperties(extras);
       extras.forEach((item) => {
           const id = String(item?.id || '').trim();
-          if (id) shown.add(id);
+          if (id) {
+            shown.add(id);
+            shownGlobal.add(id);
+          }
         });
       this._catalogRelaxShownIds = shown;
-      this._catalogRelaxLevel = level;
+      this._catalogShownIds = shownGlobal;
+      this._catalogRelaxExhaustedLevels = exhaustedLevels;
+      this._catalogRelaxLevel = Math.max(1, Number(level) || 1);
       this._catalogRelaxExhausted = false;
 
       const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
@@ -14698,10 +14725,12 @@ render() {
     this._catalogStrictQuery = null;
     this._catalogLastRefineMode = 'filters';
     this._catalogStrictSeedIds = [];
+    this._catalogShownIds = new Set();
     this._catalogRelaxedUnlocked = false;
     this._catalogRelaxLevel = 0;
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
+    this._catalogRelaxExhaustedLevels = new Set();
     this._catalogRelaxExhausted = false;
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
