@@ -182,15 +182,23 @@
     flex:1;
     min-width: 28px;
     height:1px;
-    background: linear-gradient(to right, transparent, rgba(255,255,255,0.2) 35%, rgba(255,255,255,0.2) 65%, transparent);
+    background: rgb(74, 74, 74);
   }
   .system-event-text{
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
-    max-width: 72%;
+    max-width: 60%;
     text-align:center;
+    cursor: pointer;
   }
+  .system-event-text.is-expanded{
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: 100%;
+  }
+  .thread > .message.system + .card-screen{ margin-top:5px; }
   .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
   .message.assistant .bubble--full{ background: var(--bg-bubble); }
   .message.assistant .bubble--full{ border-bottom-left-radius:16px; }

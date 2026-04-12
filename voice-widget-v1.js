@@ -1082,6 +1082,21 @@ class UIManager {
       const systemText = document.createElement('span');
       systemText.className = 'system-event-text';
       systemText.textContent = String(message.content || '');
+      systemText.setAttribute('role', 'button');
+      systemText.setAttribute('tabindex', '0');
+      systemText.setAttribute('aria-expanded', 'false');
+      systemText.title = 'Нажмите, чтобы раскрыть';
+      const toggleExpanded = () => {
+        const expanded = systemText.classList.toggle('is-expanded');
+        systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      };
+      systemText.addEventListener('click', toggleExpanded);
+      systemText.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleExpanded();
+        }
+      });
       systemLine.appendChild(systemText);
       wrapper.appendChild(systemLine);
       thread.appendChild(wrapper);
