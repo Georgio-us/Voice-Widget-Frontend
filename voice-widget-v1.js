@@ -6933,7 +6933,6 @@ class VoiceWidget extends HTMLElement {
     const districtSelected = this._getFiltersMultiValues(overlay, 'district');
     const roomsSelected = this._getFiltersMultiValues(overlay, 'rooms');
     const roomsVal = roomsSelected[0] || '';
-    const smartRoom = roomsVal === 'smart';
     const floorFromRaw = read('floorMin');
     const floorToRaw = read('floorMax');
     const floorNotFirst = floorFromRaw === 'not_first';
@@ -6949,13 +6948,12 @@ class VoiceWidget extends HTMLElement {
       floorTo: floorNotLast ? 'max' : floorToRaw,
       floorNotFirst,
       floorNotLast,
-      rooms: smartRoom ? '' : roomsVal,
+      rooms: roomsVal,
       roomsMulti: roomsSelected,
-      smart: smartRoom,
+      smart: !!overlay.querySelector('[data-role="smart"]')?.checked,
       district: districtSelected[0] || '',
       districtMulti: districtSelected,
       arcadia: !!overlay.querySelector('[data-role="arcadia"]')?.checked,
-      exclusive: !!overlay.querySelector('[data-role="exclusive"]')?.checked,
       center: !!overlay.querySelector('[data-role="center"]')?.checked,
       parking: !!overlay.querySelector('[data-role="parking"]')?.checked,
       balconyLoggia: !!overlay.querySelector('[data-role="balconyLoggia"]')?.checked,
@@ -7018,21 +7016,17 @@ class VoiceWidget extends HTMLElement {
     setPicker('areaMax', payload.areaTo);
     setPicker('floorMin', payload.floorNotFirst === true ? 'not_first' : payload.floorFrom);
     setPicker('floorMax', payload.floorNotLast === true ? 'not_last' : payload.floorTo);
-    if (payload.smart === true) {
-      this._setFiltersMultiValues(overlay, 'rooms', ['smart']);
-    } else {
-      const roomsMulti = Array.isArray(payload.roomsMulti) && payload.roomsMulti.length
-        ? payload.roomsMulti
-        : (payload.rooms != null && String(payload.rooms).trim() ? [payload.rooms] : []);
-      this._setFiltersMultiValues(overlay, 'rooms', roomsMulti);
-    }
+    const roomsMulti = Array.isArray(payload.roomsMulti) && payload.roomsMulti.length
+      ? payload.roomsMulti
+      : (payload.rooms != null && String(payload.rooms).trim() ? [payload.rooms] : []);
+    this._setFiltersMultiValues(overlay, 'rooms', roomsMulti);
     const districtMulti = Array.isArray(payload.districtMulti) && payload.districtMulti.length
       ? payload.districtMulti
       : (payload.district != null && String(payload.district).trim() ? [payload.district] : []);
     this._setFiltersMultiValues(overlay, 'district', districtMulti);
     setSelect('propertyType', payload.propertyType || payload.type);
+    setCheck('smart', payload.smart);
     setCheck('arcadia', payload.arcadia);
-    setCheck('exclusive', payload.exclusive);
     setCheck('center', payload.center);
     setCheck('parking', payload.parking);
     setCheck('balconyLoggia', payload.balconyLoggia);
@@ -7410,7 +7404,7 @@ class VoiceWidget extends HTMLElement {
     this._closeAllFiltersMultiMenus(overlay);
     const propertyType = overlay.querySelector('[data-role="propertyType"]');
     if (propertyType) propertyType.selectedIndex = 0;
-    ['rcOnly', 'arcadia', 'exclusive', 'center', 'parking', 'balconyLoggia'].forEach((role) => {
+    ['rcOnly', 'smart', 'arcadia', 'center', 'parking', 'balconyLoggia'].forEach((role) => {
       const el = overlay.querySelector(`[data-role="${role}"]`);
       if (el) el.checked = false;
     });
@@ -8008,9 +8002,6 @@ class VoiceWidget extends HTMLElement {
                   <button type="button" class="vw-filters-multi-item" data-role="multi-all">
                     <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
                   </button>
-                  <button type="button" class="vw-filters-multi-item" data-option data-value="smart" aria-checked="false">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Смарт-квартира</span>
-                  </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="1" aria-checked="false">
                     <span class="vw-filters-multi-item__check">✓</span><span>1</span>
                   </button>
@@ -8063,7 +8054,7 @@ class VoiceWidget extends HTMLElement {
             <span class="vw-filters-range-name">Этаж</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="floorMin">От max</span>
+                <span class="vw-filters-picker-label" data-display="floorMin">От min</span>
                 <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
@@ -8076,7 +8067,7 @@ class VoiceWidget extends HTMLElement {
           <hr class="vw-filters-divider">
           <div class="vw-filters-check-grid">
             <label class="vw-filters-check-item"><input type="checkbox" data-role="rcOnly"> Только ЖК</label>
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="exclusive"> Эксклюзивы</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="smart"> Смарт</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="parking"> Есть паркинг</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="arcadia"> Аркадия</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="balconyLoggia"> Балкон/лоджия</label>
