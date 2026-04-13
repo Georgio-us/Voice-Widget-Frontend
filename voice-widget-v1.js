@@ -13906,7 +13906,7 @@ render() {
       if (manualFilters.center === true) addCheck('center', true, isCenter, isCenter ? 'card=yes' : 'card=no');
 
       const passed = checks.filter((line) => line.includes('✅') || line.includes('⏭️')).length;
-      return { checks, passed, total: checks.length, step, stepLabel };
+      return { checks, passed, total: checks.length, step };
     };
     const candidatesTop = visibleCards.length ? visibleCards : dedupCards.slice(0, 3);
     const candidateReports = candidatesTop.map((card, idx) => {
