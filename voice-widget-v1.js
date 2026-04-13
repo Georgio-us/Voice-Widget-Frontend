@@ -11385,11 +11385,11 @@ render() {
     if (q.balconyLoggia === true) pushArg(hasBalcony ? 'Есть балкон/лоджия' : 'Без балкона/лоджии');
     if (q.rcOnly === true) {
       const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
-      pushArg(complex ? 'В жилом комплексе' : 'Без ЖК');
+      pushArg(complex ? 'В ЖК' : 'Не в ЖК');
     }
     if (qDistricts.length) {
       if (iDistrict && qDistricts.includes(iDistrict)) pushArg('Выбранный район');
-      else if (iDistrict) pushArg('Fallback район');
+      else if (iDistrict) pushArg('Соседний район');
     }
 
     const minP = toNum(q.minPrice);
@@ -11415,13 +11415,26 @@ render() {
         return want != null && rooms === want;
       });
       if (roomInSelected) {
-        pushArg('Выбранная комнатность');
+        pushArg('Подходит по комнатам');
       } else {
-        const hasNearby = qRoomsList.some((token) => {
-          const want = toNum(token);
-          return want != null && Math.abs(rooms - want) === 1;
-        });
-        if (hasNearby) pushArg('Fallback по комнатности');
+        const roomBands = Array.from(new Set(
+          qRoomsList.flatMap((token) => {
+            if (token === '5plus') return [5];
+            if (token === '4plus') return [4, 5];
+            const want = toNum(token);
+            return want != null ? [want] : [];
+          })
+        )).sort((a, b) => a - b);
+        const roomBand = rooms >= 5 ? 5 : rooms;
+        const minBand = roomBands.length ? roomBands[0] : null;
+        const maxBand = roomBands.length ? roomBands[roomBands.length - 1] : null;
+        if (minBand != null && roomBand < minBand) {
+          pushArg('Меньше комнат');
+        } else if (maxBand != null && maxBand < 5 && roomBand > maxBand) {
+          pushArg('Больше комнат');
+        } else {
+          pushArg('Комнатность близка');
+        }
       }
     }
     const minA = toNum(q.minArea);
