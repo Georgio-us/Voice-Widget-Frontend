@@ -2878,6 +2878,8 @@ class VoiceWidget extends HTMLElement {
     this._catalogRelaxSmartExhausted = true;
     this._catalogRelaxSmartFallbackApplied = false;
     this._catalogRelaxExhausted = false;
+    this._debugCatalogSelectionHistory = [];
+    this._debugLastSelectionSignature = '';
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
     this._catalogSimilarLoading = false;
@@ -7476,6 +7478,25 @@ class VoiceWidget extends HTMLElement {
     this.updateObjectCount(list.length);
     if (list.length > 0) this._markPillResultsPending({ animate: true });
     else this._markPillNoResults({ animate: true });
+    try {
+      const selectionQuery = { ...requestQuery };
+      delete selectionQuery.limit;
+      const signature = JSON.stringify(selectionQuery);
+      const changed = signature !== String(this._debugLastSelectionSignature || '');
+      const history = Array.isArray(this._debugCatalogSelectionHistory) ? [...this._debugCatalogSelectionHistory] : [];
+      history.push({
+        at: new Date().toISOString(),
+        changedFromPrevious: changed,
+        strictFlow: this._catalogStrictFlowActive === true,
+        resultCount: Array.isArray(list) ? list.length : 0,
+        manualFilters: this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
+          ? JSON.parse(JSON.stringify(this._catalogManualFilterOverrides))
+          : {},
+        effectiveFilters: selectionQuery
+      });
+      this._debugCatalogSelectionHistory = history.slice(-40);
+      this._debugLastSelectionSignature = signature;
+    } catch {}
     return list;
   }
 
@@ -13922,8 +13943,7 @@ render() {
       const passed = checks.filter((line) => line.includes('✅') || line.includes('⏭️')).length;
       return { checks, passed, total: checks.length, step };
     };
-    const candidatesTop = visibleCards.length ? visibleCards : dedupCards.slice(0, 3);
-    const candidateReports = candidatesTop.map((card, idx) => {
+    const buildCandidateReport = (card, idx = 0) => {
       const result = evaluateCandidate(card);
       const id = String(card?.id || card?.external_id || `#${idx + 1}`).trim();
       const title = String(card?.title || '—').trim();
@@ -13944,7 +13964,10 @@ render() {
         passed: result.passed,
         total: result.total
       };
-    });
+    };
+    const candidatesTop = visibleCards.length ? visibleCards : dedupCards.slice(0, 3);
+    const candidateReports = candidatesTop.map((card, idx) => buildCandidateReport(card, idx));
+    const candidateReportsAll = dedupCards.map((card, idx) => buildCandidateReport(card, idx));
     const cardsListHtml = candidateReports.map((row) => {
       const checksHtml = row.checks.length
         ? `<ul class="vw-debug-insights-list">${row.checks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
@@ -13958,6 +13981,33 @@ render() {
         </li>
       `;
     }).join('');
+    const allCandidatesListHtml = candidateReportsAll.map((row, idx) => {
+      const checksHtml = row.checks.length
+        ? `<ul class="vw-debug-insights-list">${row.checks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
+        : '<ul class="vw-debug-insights-list"><li>Нет активных ручных фильтров для проверки</li></ul>';
+      return `
+        <li>
+          <strong>${safeText(`${idx + 1}. ${row.id}`)}:</strong> ${safeText(row.title)}
+          <br><strong>Reason:</strong> ${safeText(`step=${row.step == null ? 'strict-only' : row.step} · source=selected by user / fallback from relaxed`)}
+          <br><strong>Meta:</strong> ${safeText(`op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`)}
+          <br><strong>Match:</strong> ${safeText(`${row.passed}/${row.total}`)}
+          ${checksHtml}
+        </li>
+      `;
+    }).join('');
+    const selectionHistory = Array.isArray(this._debugCatalogSelectionHistory) ? this._debugCatalogSelectionHistory : [];
+    const selectionHistoryHtml = selectionHistory.length
+      ? selectionHistory.map((entry, idx) => {
+          const changedLabel = entry?.changedFromPrevious ? 'условия изменены' : 'условия без изменений';
+          const modeLabel = entry?.strictFlow ? 'strict' : 'browse/relaxed';
+          const at = String(entry?.at || '').replace('T', ' ').replace('Z', ' UTC');
+          const count = Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0;
+          const effective = entry?.effectiveFilters && typeof entry.effectiveFilters === 'object'
+            ? Object.entries(entry.effectiveFilters).map(([k, v]) => `${k}=${pretty(v)}`).join(', ')
+            : '';
+          return `<li><strong>#${idx + 1}</strong> ${safeText(at)} · mode=${safeText(modeLabel)} · count=${safeText(String(count))} · ${safeText(changedLabel)}${effective ? `<br><strong>effective:</strong> ${safeText(effective)}` : ''}</li>`;
+        }).join('')
+      : '';
     const runtimeListHtml = runtimeRows
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
       .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
@@ -14100,7 +14150,34 @@ render() {
         });
       }
       lines.push('');
-      lines.push('7) META');
+      lines.push('7) HISTORY OF SELECTION CHANGES');
+      if (!selectionHistory.length) {
+        lines.push('- no history');
+      } else {
+        selectionHistory.forEach((entry, idx) => {
+          const changedLabel = entry?.changedFromPrevious ? 'условия изменены' : 'условия без изменений';
+          const modeLabel = entry?.strictFlow ? 'strict' : 'browse/relaxed';
+          const at = String(entry?.at || '').replace('T', ' ').replace('Z', ' UTC');
+          const count = Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0;
+          lines.push(`${idx + 1}. ${at} | mode=${modeLabel} | count=${count} | ${changedLabel}`);
+        });
+      }
+      lines.push('');
+      lines.push('8) ALL CURRENT CANDIDATES (FULL ORDER)');
+      lines.push(`- total: ${candidateReportsAll.length}`);
+      if (!candidateReportsAll.length) {
+        lines.push('- no candidates');
+      } else {
+        candidateReportsAll.forEach((row, idx) => {
+          lines.push(`${idx + 1}. ${row.id} | ${row.title}`);
+          lines.push(`   reason=step=${row.step == null ? 'strict-only' : row.step}`);
+          lines.push(`   op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`);
+          lines.push(`   match=${row.passed}/${row.total}`);
+          row.checks.forEach((line) => lines.push(`   - ${line}`));
+        });
+      }
+      lines.push('');
+      lines.push('9) META');
       lines.push(`- source: ${pretty(apiMeta?.source)}`);
       lines.push(`- at: ${pretty(apiMeta?.at)}`);
       lines.push(`- totalMatches: ${pretty(api?.totalMatches)}`);
@@ -14140,16 +14217,25 @@ render() {
           <ul class="vw-debug-insights-list">${cardsListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">7) Тайминги, токены, статус извлечения</div>
+          <div class="vw-debug-insights-section-title">7) История изменений условий/подборок</div>
+          <ul class="vw-debug-insights-list">${selectionHistoryHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">8) Все кандидаты текущей подборки (полный порядок)</div>
+          <ul class="vw-debug-insights-list"><li><strong>total:</strong> ${safeText(String(candidateReportsAll.length))}</li></ul>
+          <ul class="vw-debug-insights-list">${allCandidatesListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">9) Тайминги, токены, статус извлечения</div>
           <ul class="vw-debug-insights-list">${metricsListHtml || '<li>Нет данных</li>'}</ul>
           <ul class="vw-debug-insights-list">${extractionListHtml || ''}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">8) Лог диалога (последний turn)</div>
+          <div class="vw-debug-insights-section-title">10) Лог диалога (последний turn)</div>
           <ul class="vw-debug-insights-list">${dialogListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">9) Copy-ready debug report</div>
+          <div class="vw-debug-insights-section-title">11) Copy-ready debug report</div>
           <pre class="vw-debug-insights-raw">${safeText(copyReport)}</pre>
         </div>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
@@ -15058,6 +15144,8 @@ render() {
     this._catalogRelaxSmartExhausted = query.smart === true ? false : true;
     this._catalogRelaxSmartFallbackApplied = false;
     this._catalogRelaxExhausted = false;
+    this._debugCatalogSelectionHistory = [];
+    this._debugLastSelectionSignature = '';
     this._catalogStrictEndPromptShown = false;
     this._catalogSimilarEndPromptShown = false;
     this._catalogSimilarLoading = false;
