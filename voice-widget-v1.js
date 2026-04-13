@@ -11571,13 +11571,20 @@ render() {
     // 5) budget soft-off
     const qMinPrice = toNum(query.minPrice);
     const qMaxPrice = toNum(query.maxPrice);
+    const qPriceCeiling = (qMaxPrice != null && qMaxPrice > 0)
+      ? Math.round(qMaxPrice * 1.5)
+      : null;
     if (qMinPrice != null || qMaxPrice != null) {
       const iPrice = toNum(item.priceUSD ?? item.priceEUR ?? item.price_amount);
       if (iPrice == null) {
         requireStage(5);
       } else {
         if (qMinPrice != null && iPrice < qMinPrice) requireStage(5);
-        if (qMaxPrice != null && iPrice > qMaxPrice) requireStage(5);
+        if (qMaxPrice != null && iPrice > qMaxPrice) {
+          // Relaxed price expansion has a hard ceiling at +50% of maxPrice.
+          if (qPriceCeiling != null && iPrice > qPriceCeiling) requireStage(12);
+          else requireStage(5);
+        }
       }
     }
 
