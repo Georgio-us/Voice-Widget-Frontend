@@ -7221,6 +7221,19 @@ class VoiceWidget extends HTMLElement {
     return out;
   }
 
+  _hasRealActiveCatalogFilters(source = {}) {
+    if (!source || typeof source !== 'object') return false;
+    return Object.entries(source).some(([key, value]) => {
+      if (key === 'limit') return false;
+      if (key.startsWith('__')) return false;
+      if (value == null) return false;
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'boolean') return value === true;
+      if (typeof value === 'number') return Number.isFinite(value);
+      return String(value).trim() !== '';
+    });
+  }
+
   getCatalogEffectiveSearchParams(insightsSource = null) {
     const parseNum = (value) => {
       if (value == null) return null;
@@ -7546,14 +7559,9 @@ class VoiceWidget extends HTMLElement {
 
   async applyCatalogFilters(payload = {}) {
     const normalized = this.normalizeCatalogFilterOverrides(payload);
-    const previous = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
-      ? this._catalogManualFilterOverrides
-      : null;
     const next = Object.keys(normalized).length ? normalized : null;
-    const changed = JSON.stringify(previous || {}) !== JSON.stringify(next || {});
-    if (changed && this._catalogFilterModeActive !== true) {
-      this._catalogFilterModeActive = true;
-    }
+    // Filter mode is active only when there are real user-selected filters after Apply.
+    this._catalogFilterModeActive = this._hasRealActiveCatalogFilters(next || {});
     this._catalogManualFilterOverrides = next;
     this._catalogLastRefineMode = 'filters';
     try {
@@ -7571,6 +7579,8 @@ class VoiceWidget extends HTMLElement {
   }
 
   async resetCatalogFiltersToAll(overlay = null) {
+    // Full reset restores browse mode.
+    this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = true;
     this._catalogLastRefineMode = 'filters';
