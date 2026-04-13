@@ -11632,9 +11632,10 @@ render() {
       } else {
         if (qMinPrice != null && iPrice < qMinPrice) requireStage(5);
         if (qMaxPrice != null && iPrice > qMaxPrice) {
-          // Relaxed price expansion has a hard ceiling at +50% of maxPrice.
-          if (qPriceCeiling != null && iPrice > qPriceCeiling) requireStage(12);
-          else requireStage(5);
+          // Hard gate: above relaxed ceiling, candidate is excluded from relaxed flow.
+          if (qPriceCeiling != null && iPrice > qPriceCeiling) return null;
+          // Within ceiling, price can be relaxed on price step only.
+          requireStage(5);
         }
       }
     }
