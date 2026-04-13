@@ -2860,6 +2860,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogManualOnlyDiagnostics = true;
     // Runtime relaxed mode is enabled after execution steps 1-7 completion.
     this._catalogStrictOnlyMode = false;
+    this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
     this._strictManualResult = [];
     this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true;
@@ -6994,8 +6995,14 @@ class VoiceWidget extends HTMLElement {
 
   collectFiltersOverlayPayload(overlay) {
     const read = (name) => String(overlay.querySelector(`select[data-picker="${name}"]`)?.value || '');
-    const listingMode = String(overlay.querySelector('[data-role="listingMode"].is-active')?.getAttribute('data-value') || '')
+    const listingModeTouched = String(overlay?.dataset?.listingModeTouched || '0') === '1';
+    const listingModeImplicit = String(overlay?.dataset?.listingModeImplicit || '').trim().toLowerCase();
+    let listingMode = String(overlay.querySelector('[data-role="listingMode"].is-active')?.getAttribute('data-value') || '')
       .toLowerCase();
+    // Browse-mode visual default ("sale") must not become a real filter unless user actually touched it.
+    if (!listingModeTouched && listingMode && listingMode === listingModeImplicit) {
+      listingMode = '';
+    }
     const normalizeSelectVal = (role) => {
       const val = String(overlay.querySelector(`[data-role="${role}"]`)?.value || '').trim();
       return val === 'all' ? '' : val;
@@ -7075,7 +7082,16 @@ class VoiceWidget extends HTMLElement {
       if (el) el.checked = !!checked;
     };
     const rawMode = String(payload.listingMode || payload.operation || '').toLowerCase();
-    const mode = rawMode === 'sale' || rawMode === 'rent' ? rawMode : '';
+    let mode = rawMode === 'sale' || rawMode === 'rent' ? rawMode : '';
+    const browseVisualDefault = this._catalogFilterModeActive !== true;
+    if (!mode && browseVisualDefault) {
+      mode = 'sale';
+      overlay.dataset.listingModeImplicit = 'sale';
+      overlay.dataset.listingModeTouched = '0';
+    } else {
+      overlay.dataset.listingModeImplicit = '';
+      overlay.dataset.listingModeTouched = mode ? '1' : '0';
+    }
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
       const v = String(btn.getAttribute('data-value') || '');
       btn.classList.toggle('is-active', !!mode && v === mode);
@@ -7366,9 +7382,12 @@ class VoiceWidget extends HTMLElement {
       if (typeof value === 'boolean') return value === true;
       return String(value).trim() !== '';
     });
-    if (!String(merged.operation || '').trim() && hasAnyCriteriaExceptOperation) {
-      // Product rule: when user applies any filter but doesn't choose deal type,
-      // default to sale.
+    if (this._catalogFilterModeActive === true) {
+      // After first real filter application, defaults become part of strict filter mode.
+      if (!String(merged.operation || '').trim()) merged.operation = 'sale';
+      if (!String(merged.type || '').trim()) merged.type = 'apartment';
+    } else if (!String(merged.operation || '').trim() && hasAnyCriteriaExceptOperation) {
+      // Backward-safe behavior: if external overrides set criteria before filter mode starts.
       merged.operation = 'sale';
     }
     if (merged.minPrice != null && merged.maxPrice != null && Number(merged.minPrice) > Number(merged.maxPrice)) {
@@ -7386,7 +7405,11 @@ class VoiceWidget extends HTMLElement {
   buildFiltersOverlayPayloadFromEffectiveQuery() {
     const query = this.getCatalogEffectiveSearchParams();
     const opRaw = String(query.operation || '').toLowerCase();
-    const op = opRaw === 'sale' || opRaw === 'rent' ? opRaw : '';
+    let op = opRaw === 'sale' || opRaw === 'rent' ? opRaw : '';
+    if (!op && this._catalogFilterModeActive !== true) {
+      // Browse mode visual default only.
+      op = 'sale';
+    }
     const roomsMulti = Array.isArray(query.rooms)
       ? query.rooms.map((v) => String(v || '').trim()).filter(Boolean)
       : (query.rooms != null ? [String(query.rooms)] : []);
@@ -7523,7 +7546,15 @@ class VoiceWidget extends HTMLElement {
 
   async applyCatalogFilters(payload = {}) {
     const normalized = this.normalizeCatalogFilterOverrides(payload);
-    this._catalogManualFilterOverrides = Object.keys(normalized).length ? normalized : null;
+    const previous = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
+      ? this._catalogManualFilterOverrides
+      : null;
+    const next = Object.keys(normalized).length ? normalized : null;
+    const changed = JSON.stringify(previous || {}) !== JSON.stringify(next || {});
+    if (changed && this._catalogFilterModeActive !== true) {
+      this._catalogFilterModeActive = true;
+    }
+    this._catalogManualFilterOverrides = next;
     this._catalogLastRefineMode = 'filters';
     try {
       const list = await this.refreshCatalogByEffectiveQuery();
@@ -7581,6 +7612,8 @@ class VoiceWidget extends HTMLElement {
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const v = String(btn.getAttribute('data-value') || '');
+        overlay.dataset.listingModeTouched = '1';
+        overlay.dataset.listingModeImplicit = '';
         overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => {
           b.classList.toggle('is-active', String(b.getAttribute('data-value') || '') === v);
         });
@@ -15201,6 +15234,7 @@ render() {
   }
 
   resetCatalogRuntimeState() {
+    this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
     this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true ? true : false;
     this._catalogStrictFlowActive = false;
