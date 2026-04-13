@@ -7137,7 +7137,11 @@ class VoiceWidget extends HTMLElement {
     ];
     const roomsMulti = Array.from(new Set(roomsMultiRaw.map((v) => normalizeRoomsToken(v)).filter(Boolean)));
     if (roomsMulti.length) {
-      out.rooms = roomsMulti;
+      const allRooms = ['1', '2', '3', '4', '5plus'];
+      const selected = new Set(roomsMulti);
+      const isChooseAll = allRooms.every((token) => selected.has(token));
+      // choose-all in rooms means no room restriction, but should still override base rooms.
+      out.rooms = isChooseAll ? [] : roomsMulti;
     }
     if (Object.prototype.hasOwnProperty.call(source, 'smart')) out.smart = source.smart === true;
     const districtMultiRaw = [
@@ -11577,23 +11581,77 @@ render() {
       }
     }
 
-    // 6) rooms ±1, >1 only at final broad stage
-    const roomsRaw = String(query.rooms || '').trim();
-    const roomsWanted = toNum(query.__roomsAnchor ?? (roomsRaw === '4plus' ? 4 : (roomsRaw ? Number(roomsRaw) : null)));
-    const roomsActual = toNum(item.rooms);
-    if (roomsWanted != null && Number.isFinite(roomsWanted)) {
+    // 6) rooms expansion (single/multi) with cautious relaxed growth.
+    const normalizeRoomsToken = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (raw === '5+' || raw === '5plus') return '5plus';
+      if (raw === '4+' || raw === '4plus') return '4plus';
+      if (/^[1-4]$/.test(raw)) return raw;
+      return '';
+    };
+    const roomTokenToBand = (token) => {
+      const t = normalizeRoomsToken(token);
+      if (!t) return null;
+      if (t === '5plus') return 5;
+      if (t === '4plus') return 4;
+      const n = Number(t);
+      return Number.isFinite(n) ? n : null;
+    };
+    const roomsRawList = Array.isArray(query.rooms) ? query.rooms : [query.rooms];
+    const roomsTokens = Array.from(new Set(roomsRawList.map((v) => normalizeRoomsToken(v)).filter(Boolean)));
+    if (roomsTokens.length) {
+      const roomsActual = toNum(item.rooms);
       if (roomsActual == null) {
         requireStage(12);
-      } else if (roomsRaw === '4plus' || roomsRaw === '5plus') {
-        const minWanted = roomsRaw === '5plus' ? 5 : 4;
-        if (roomsActual < minWanted) {
-          if (roomsActual === minWanted - 1) requireStage(6);
-          else requireStage(12);
-        }
       } else {
-        const diff = Math.abs(roomsActual - roomsWanted);
-        if (diff === 1) requireStage(6);
-        else if (diff > 1) requireStage(12);
+        const actualBand = roomsActual >= 5 ? 5 : roomsActual;
+        const selectedBands = Array.from(new Set(
+          roomsTokens
+            .map((token) => roomTokenToBand(token))
+            .filter((band) => band != null)
+        )).sort((a, b) => a - b);
+
+        const hasRoomsRestriction = selectedBands.length > 0;
+        if (hasRoomsRestriction) {
+          const chooseAll = [1, 2, 3, 4, 5].every((band) => selectedBands.includes(band));
+          if (!chooseAll) {
+            const preferred = new Set(selectedBands);
+            const relaxed = new Set(selectedBands);
+            if (selectedBands.length === 1) {
+              // Single-select fallback map:
+              // 1->2, 2->1/3, 3->2/4, 4->3/5+, 5+->4
+              const b = selectedBands[0];
+              if (b === 1) relaxed.add(2);
+              else if (b === 2) { relaxed.add(1); relaxed.add(3); }
+              else if (b === 3) { relaxed.add(2); relaxed.add(4); }
+              else if (b === 4) { relaxed.add(3); relaxed.add(5); }
+              else if (b === 5) relaxed.add(4);
+            } else {
+              // Multi-select:
+              // - first fill internal gaps
+              // - if no gaps, add one outer band (prefer higher side, fallback lower)
+              const minBand = selectedBands[0];
+              const maxBand = selectedBands[selectedBands.length - 1];
+              let hasGap = false;
+              for (let b = minBand; b <= maxBand; b += 1) {
+                if (!preferred.has(b)) {
+                  relaxed.add(b);
+                  hasGap = true;
+                }
+              }
+              if (!hasGap) {
+                if (maxBand < 5) relaxed.add(maxBand + 1);
+                else if (minBand > 1) relaxed.add(minBand - 1);
+              }
+            }
+
+            if (!preferred.has(actualBand)) {
+              if (relaxed.has(actualBand)) requireStage(6);
+              else requireStage(12);
+            }
+          }
+        }
       }
     }
 
