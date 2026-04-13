@@ -2148,11 +2148,6 @@ voice-widget,
   transform: translateX(-50%);
   white-space: nowrap;
   cursor: pointer;
-  z-index: 2;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  pointer-events: auto;
 }
 
 .vw-app .status-dot {

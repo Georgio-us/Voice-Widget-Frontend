@@ -1816,23 +1816,9 @@ class APIClient {
   }
 
   async resolveViewerAccessRole() {
-    const prevRole = String(this.widget?.accessRole || 'user').trim().toLowerCase();
-    const prevFlags = (this.widget?.accessFlags && typeof this.widget.accessFlags === 'object')
-      ? this.widget.accessFlags
-      : { isAdmin: false, isOwner: false, isSuperAdmin: false };
-    const hasPrivilegedAccess = (
-      prevFlags.isSuperAdmin === true
-      || prevFlags.isAdmin === true
-      || prevRole === 'owner'
-      || prevRole === 'super_admin'
-    );
     const tgIdentity = this.getTelegramUserIdentity();
     // Safety baseline for non-Telegram / local browser.
     if (!tgIdentity?.id) {
-      if (hasPrivilegedAccess) {
-        try { this.widget.updateAccessHeaderButton?.(); } catch {}
-        return { accessRole: prevRole, ...prevFlags };
-      }
       this.widget.accessRole = 'user';
       this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
       this.widget.accessSubscription = null;
@@ -1865,10 +1851,6 @@ class APIClient {
       };
     } catch (error) {
       console.warn('resolveViewerAccessRole failed:', error);
-      if (hasPrivilegedAccess) {
-        try { this.widget.updateAccessHeaderButton?.(); } catch {}
-        return { accessRole: prevRole, ...prevFlags };
-      }
       this.widget.accessRole = 'user';
       this.widget.accessFlags = { isAdmin: false, isOwner: false, isSuperAdmin: false };
       this.widget.accessSubscription = null;
@@ -9660,10 +9642,10 @@ render() {
     <div class="content">
       <header class="app-header">
           <button class="app-header-btn header-action-btn" id="appContactButton" type="button">Зв'язатися</button>
-        <button class="app-header-status" id="appDebugButton" type="button" aria-label="Open debug insights">
+        <div class="app-header-status">
           <span class="status-dot" aria-hidden="true"></span>
           <span id="appOnlineText">Online</span>
-        </button>
+        </div>
         <div class="app-header-actions">
           <button class="app-header-btn app-lang-btn" id="appLangButton" type="button">RU</button>
           <button class="app-header-btn app-theme-btn" id="appThemeButton" type="button" aria-label="Open panel">♡</button>
@@ -9811,7 +9793,7 @@ render() {
   this.$byId('appContactButton')?.addEventListener('click', () => {
     try { this.openContactManagerPopup({ source: 'tg_header_main' }); } catch {}
   });
-  this.$byId('appDebugButton')?.addEventListener('click', () => {
+  this.getRoot().querySelector('.app-header-status')?.addEventListener('click', () => {
     try { this.openDebugInsightsPopup(); } catch (error) { console.error('Debug insights popup failed:', error); }
   });
   const objectsPill = this.$byId('objectsCounterPill');
@@ -13582,8 +13564,8 @@ render() {
   }
 
   openDebugInsightsPopup() {
-    const isAdmin = this.accessRole === 'owner' || this.accessRole === 'super_admin' || this.accessFlags?.isAdmin === true;
-    if (!isAdmin) return;
+    const isSuperAdmin = this.accessRole === 'super_admin' || this.accessFlags?.isSuperAdmin === true;
+    if (!isSuperAdmin) return;
     this.closeDebugInsightsPopup();
     this.ensureDebugInsightsPopupStyles();
     const insights = this.getDebugInsightsSnapshot();
