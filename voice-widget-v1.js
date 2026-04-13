@@ -7234,6 +7234,129 @@ class VoiceWidget extends HTMLElement {
     });
   }
 
+  buildCanonicalAiPatch(insights = {}) {
+    // Phase 1 safe rule:
+    // canonical AI patch builder returns only execution-safe fields,
+    // without operation/type auto-commit, defaults, or side effects.
+    const parseNum = (value) => {
+      if (value == null) return null;
+      if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+      const text = String(value).trim();
+      if (!text) return null;
+      const digits = text.replace(/[^\d-]/g, '');
+      if (!digits) return null;
+      const n = Number(digits);
+      return Number.isFinite(n) ? Math.round(n) : null;
+    };
+    const normalizeDistrictSlug = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/примор|промор|primor|promor/.test(raw)) return 'primorsky';
+      if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
+      if (/сувор|suvor/.test(raw)) return 'suvorovsky';
+      if (/малин|malin/.test(raw)) return 'malinovsky';
+      if (/лиман|liman/.test(raw)) return 'kievsky';
+      if (/крыжан|крижан|kryzhan|kryjan/.test(raw)) return 'suvorovsky';
+      if (/аванг|avang/.test(raw)) return 'malinovsky';
+      return '';
+    };
+    const isDistrictLikeLocation = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return false;
+      if (/\bрайон\b/.test(t)) return true;
+      return /(примор|промор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+    };
+    const parseFeaturesTokens = (srcInsights) => {
+      const raw = [];
+      if (Array.isArray(srcInsights?.features)) raw.push(...srcInsights.features);
+      if (typeof srcInsights?.features === 'string') raw.push(srcInsights.features);
+      if (srcInsights?.details != null) raw.push(srcInsights.details);
+      if (srcInsights?.preferences != null) raw.push(srcInsights.preferences);
+      if (srcInsights?.location != null) raw.push(srcInsights.location);
+      if (srcInsights?.floor != null) raw.push(srcInsights.floor);
+      const text = raw.map((v) => String(v || '').toLowerCase()).join(' ');
+      return {
+        text,
+        smart: /(смарт|smart)/i.test(text),
+        arcadia: /(аркад|arcad)/i.test(text),
+        center: /(центр|center|central)/i.test(text),
+        parking: /(паркинг|парковк|parking|garage)/i.test(text),
+        balconyLoggia: /(балкон|лоджи|balcony|loggia)/i.test(text),
+        rcOnly: /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|(?:только|лишь|исключительно)\s+(?:в\s+)?(?:[жз]к|[жз]\/к|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?)|\bв\s*[жз]к\b|\bжил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?\b|\bв\s+жил(?:ом|ых|ой)\s+комплекс(?:е|ах|ов)?\b|residential\s+complex(?:es)?/i.test(text),
+        floorNotFirst: /(не\s*перв|not\s*first)/i.test(text),
+        floorNotLast: /(не\s*послед|не\s*остан|not\s*last)/i.test(text)
+      };
+    };
+    const stripRcPrefixes = (text) => {
+      const s = String(text || '').trim();
+      if (!s) return '';
+      return s.replace(/^(?:жк|зк|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?|жилкомплекс(?:ы|а|у|е|ом|ах|ами|ов)?)\s*[«"']?/i, '').replace(/[»"']$/g, '').trim() || s;
+    };
+    const isGenericCityLocation = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return true;
+      return /^(одесса|одеса|odesa|odessa|украина|україна|ukraine)\b/.test(t);
+    };
+    const hasResidentialComplexMarker = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return false;
+      return /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|\bжил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?\b|residential\s+complex(?:es)?/i.test(t);
+    };
+    const looksLikeComplexName = (text) => {
+      const t = String(text || '').trim().toLowerCase();
+      if (!t) return false;
+      if (isDistrictLikeLocation(t)) return false;
+      if (/\b(район|центр|мор[ея]|возле|рядом|ближе|около|near|district|area)\b/i.test(t)) return false;
+      if (/[;,.!?]/.test(t) && !hasResidentialComplexMarker(t)) return false;
+      return true;
+    };
+    const patch = {};
+    const locRaw = String(insights?.location || '').trim();
+    const districtSlug = normalizeDistrictSlug(locRaw);
+    if (districtSlug) patch.district = districtSlug;
+
+    const roomsNum = parseNum(insights?.rooms);
+    if (roomsNum != null) patch.rooms = roomsNum >= 4 ? '4plus' : String(roomsNum);
+
+    const maxPrice = parseNum(insights?.budgetMax ?? insights?.budget);
+    const minPrice = parseNum(insights?.minPrice);
+    if (minPrice != null) patch.minPrice = minPrice;
+    if (maxPrice != null) patch.maxPrice = maxPrice;
+
+    const minArea = parseNum(insights?.areaMin ?? insights?.area);
+    const maxArea = parseNum(insights?.areaMax);
+    if (minArea != null) patch.minArea = minArea;
+    if (maxArea != null) patch.maxArea = maxArea;
+
+    const rcInsight = String(insights?.residentialComplex || '').trim();
+    if (rcInsight && looksLikeComplexName(rcInsight)) {
+      patch.residentialComplex = rcInsight;
+    } else if (
+      locRaw
+      && hasResidentialComplexMarker(locRaw)
+      && !districtSlug
+      && !isGenericCityLocation(locRaw)
+      && !isDistrictLikeLocation(locRaw)
+    ) {
+      patch.residentialComplex = stripRcPrefixes(locRaw);
+    }
+    if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
+      patch.rcOnly = true;
+    }
+
+    const featureFlags = parseFeaturesTokens(insights);
+    if (featureFlags.smart) patch.smart = true;
+    if (featureFlags.arcadia) patch.arcadia = true;
+    if (featureFlags.center) patch.center = true;
+    if (featureFlags.parking) patch.parking = true;
+    if (featureFlags.balconyLoggia) patch.balconyLoggia = true;
+    if (featureFlags.rcOnly) patch.rcOnly = true;
+    if (featureFlags.floorNotFirst) patch.floorNotFirst = true;
+    if (featureFlags.floorNotLast) patch.floorNotLast = true;
+
+    return patch;
+  }
+
   getCatalogEffectiveSearchParams(insightsSource = null) {
     const parseNum = (value) => {
       if (value == null) return null;
@@ -7325,54 +7448,16 @@ class VoiceWidget extends HTMLElement {
     const insights = insightsSource && typeof insightsSource === 'object' && !useManualOnly
       ? insightsSource
       : (ignoreAssistant ? {} : (this.understanding?.export?.() || {}));
-    const base = {};
-    const operation = normalizeOperationToSearch(insights.operation);
-    if (operation) base.operation = operation;
-    const type = normalizeTypeToSearch(insights.type);
-    if (type) base.type = type;
-    const roomsNum = parseNum(insights.rooms);
-    if (roomsNum != null) base.rooms = roomsNum >= 4 ? '4plus' : String(roomsNum);
-    const budgetMax = parseNum(insights.budgetMax ?? insights.budget);
-    if (budgetMax != null) base.maxPrice = budgetMax;
-    const areaMin = parseNum(insights.areaMin ?? insights.area);
-    const areaMax = parseNum(insights.areaMax);
-    if (areaMin != null) base.minArea = areaMin;
-    if (areaMax != null) base.maxArea = areaMax;
-    const floor = parseNum(insights.floor);
-    if (floor != null) {
-      base.minFloor = floor;
-      base.maxFloor = floor;
-    }
-    const locRaw = String(insights.location || '').trim();
-    const districtSlug = normalizeDistrictSlug(locRaw);
-    if (districtSlug) base.district = districtSlug;
-    const rcInsight = String(insights.residentialComplex || '').trim();
-    if (rcInsight && looksLikeComplexName(rcInsight)) {
-      base.residentialComplex = rcInsight;
-    } else if (
-      locRaw
-      && hasResidentialComplexMarker(locRaw)
-      && !districtSlug
-      && !isGenericCityLocation(locRaw)
-      && !isDistrictLikeLocation(locRaw)
-    ) {
-      base.residentialComplex = stripRcPrefixes(locRaw);
-    }
-    if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
-      base.rcOnly = true;
-    }
-    const featureFlags = parseFeaturesTokens(insights);
-    if (featureFlags.smart) base.smart = true;
-    if (featureFlags.arcadia) base.arcadia = true;
-    if (featureFlags.center) base.center = true;
-    if (featureFlags.exclusive) base.exclusive = true;
-    if (featureFlags.parking) base.parking = true;
-    if (featureFlags.balconyLoggia) base.balconyLoggia = true;
-    if (featureFlags.rcOnly) base.rcOnly = true;
+    const base = this.buildCanonicalAiPatch(insights);
+    // Phase 1 safety belt: never auto-commit base mode switches from AI.
+    delete base.operation;
+    delete base.type;
     const manual = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
       ? this._catalogManualFilterOverrides
       : {};
     const merged = { ...base, ...manual };
+    const manualHasDistrict = Object.prototype.hasOwnProperty.call(manual, 'district');
+    const manualHasRcOnly = Object.prototype.hasOwnProperty.call(manual, 'rcOnly');
     if (Array.isArray(merged.rooms)) {
       merged.rooms = Array.from(new Set(merged.rooms.map((v) => String(v || '').trim()).filter(Boolean)));
     }
@@ -7381,11 +7466,11 @@ class VoiceWidget extends HTMLElement {
         merged.district.map((v) => this._normalizeDistrictForRelax(String(v || ''))).filter(Boolean)
       ));
     }
-    if (merged.arcadia === true || merged.center === true) {
+    if (!manualHasDistrict && (merged.arcadia === true || merged.center === true)) {
       // Microdistrict flags are inside Primorsky and override conflicting district choice.
       merged.district = ['primorsky'];
     }
-    if (String(merged.residentialComplex || '').trim()) {
+    if (!manualHasRcOnly && String(merged.residentialComplex || '').trim()) {
       // Specific ЖК implies ЖК-only baseline for both strict and similar flows.
       merged.rcOnly = true;
     }
@@ -11087,11 +11172,9 @@ render() {
       // "Найдено N объектов" always has a renderable dataset on click.
       this.replacePropertiesCatalog(cards);
     }
-    const hasIncomingOperation = (() => {
-      const raw = String(migratedInsights?.operation || '').trim().toLowerCase();
-      return raw === 'buy' || raw === 'rent' || raw === 'sale';
-    })();
-    const shouldForceConsistencyRefresh = hasIncomingOperation || Boolean(this._catalogManualFilterOverrides?.operation);
+    // Phase 1: incoming AI operation/type must not force auto-commit refresh logic.
+    // Keep force-refresh only for explicit manual operation overrides.
+    const shouldForceConsistencyRefresh = Boolean(this._catalogManualFilterOverrides?.operation);
     if ((shouldApplyAiRefresh || shouldForceConsistencyRefresh) && migratedInsights && typeof migratedInsights === 'object') {
       if (this._catalogManualOnlyDiagnostics === true) {
         return;
