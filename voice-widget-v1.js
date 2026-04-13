@@ -2858,8 +2858,8 @@ class VoiceWidget extends HTMLElement {
     this._lastPillInsightsSnapshot = null;
     // Temporary diagnostics mode: isolate manual filters from AI understanding merge.
     this._catalogManualOnlyDiagnostics = true;
-    // Temporary hard isolation mode: render catalog strictly from latest manual /search result.
-    this._catalogStrictOnlyMode = true;
+    // Runtime relaxed mode is enabled after execution steps 1-7 completion.
+    this._catalogStrictOnlyMode = false;
     this._catalogManualFilterOverrides = null;
     this._strictManualResult = [];
     this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true;
@@ -11318,6 +11318,24 @@ render() {
     return Math.max(0, Math.min(100, Math.round(Math.min(base, cap))));
   }
 
+  _describeRelaxStep(step = 0, query = {}) {
+    const n = Number(step) || 0;
+    if (n === 1) return 'В этой подборке нет новых вариантов с паркингом. Показываем без паркинга.';
+    if (n === 2) return 'В этой подборке нет новых вариантов с балконом/лоджией. Показываем ближайшие без него.';
+    if (n === 3) return 'Расширили условия по этажу.';
+    if (n === 4) return 'Расширили условия по площади.';
+    if (n === 5) return 'Расширили диапазон цены.';
+    if (n === 6) return 'По текущим условиям нет новых вариантов по комнатности. Показываем ближайшие по комнатам.';
+    if (n === 7) return 'Точного совпадения по ЖК больше нет. Показываем ближайшие варианты в ЖК.';
+    if (n === 8) {
+      if (query.arcadia === true || query.center === true) return 'В выбранном микрорайоне нет новых вариантов. Показываем варианты по Приморскому району.';
+      return 'Расширили район поиска на ближайший уровень.';
+    }
+    if (n === 9 || n === 10 || n === 11) return 'Расширили район поиска.';
+    if (n === 12) return 'Показываем самые широкие похожие варианты.';
+    return 'Показаны похожие варианты.';
+  }
+
   _getDynamicFrontBadges(normalized = {}, query = null) {
     const score = Number(normalized?.score);
     const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
@@ -11802,6 +11820,7 @@ render() {
         return false;
       };
       let attemptedSmartFallback = false;
+      let usedLevel = null;
 
       let level = Math.max(1, Number(this._catalogRelaxLevel) || 1);
       let extras = [];
@@ -11857,6 +11876,7 @@ render() {
                 matchTier: this._resolveTierByScoreValue(row.score)
               };
             });
+          usedLevel = level;
           if (pageRows.length >= stageRows.length) {
             exhaustedLevels.add(level);
             level += 1;
@@ -11918,6 +11938,11 @@ render() {
       this._catalogRelaxedUnlocked = true;
       this._catalogStrictEndPromptShown = false;
       this._catalogSimilarEndPromptShown = false;
+      if (attemptedSmartFallback === true) {
+        this.ui?.addSystemEventMessage?.('Смарт-слой исчерпан · показываем 1-комнатные как fallback.');
+      }
+      const relaxNote = this._describeRelaxStep(usedLevel, query);
+      if (relaxNote) this.ui?.addSystemEventMessage?.(relaxNote);
     } catch (error) {
       console.warn('unlockCatalogSimilarMode failed:', error);
       this.showSimilarEndPopup();
