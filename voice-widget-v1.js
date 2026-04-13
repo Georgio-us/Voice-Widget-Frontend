@@ -2856,8 +2856,8 @@ class VoiceWidget extends HTMLElement {
     this._pillState = 'default';
     this._pillBaseCount = 0;
     this._lastPillInsightsSnapshot = null;
-    // Temporary diagnostics mode: isolate manual filters from AI understanding merge.
-    this._catalogManualOnlyDiagnostics = true;
+    // Phase 1: enable real AI -> execution canonical patch flow for manual testing.
+    this._catalogManualOnlyDiagnostics = false;
     // Runtime relaxed mode is enabled after execution steps 1-7 completion.
     this._catalogStrictOnlyMode = false;
     this._catalogFilterModeActive = false;
