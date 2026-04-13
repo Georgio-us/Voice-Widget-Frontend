@@ -2870,6 +2870,8 @@ class VoiceWidget extends HTMLElement {
     this._catalogShownIds = new Set();
     this._catalogRelaxedUnlocked = false;
     this._catalogRelaxLevel = 0;
+    this._catalogLastUsedRelaxStep = 0;
+    this._catalogRelaxStepHistory = [];
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
@@ -7454,6 +7456,8 @@ class VoiceWidget extends HTMLElement {
     this._catalogStrictQuery = { ...query };
     this._catalogRelaxedUnlocked = false;
     this._catalogRelaxLevel = 1;
+    this._catalogLastUsedRelaxStep = 0;
+    this._catalogRelaxStepHistory = [];
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
@@ -11369,7 +11373,11 @@ render() {
       || normalized?.features?.has_balcony === true
       || normalized?.balcony === true
     );
-    const qDistrict = this._normalizeDistrictForRelax(String(q.district || ''));
+    const qDistricts = Array.from(new Set(
+      (Array.isArray(q.district) ? q.district : [q.district])
+        .map((v) => this._normalizeDistrictForRelax(String(v || '')))
+        .filter(Boolean)
+    ));
     const iDistrict = this._normalizeDistrictForRelax(String(normalized?.district || normalized?.neighborhood || normalized?.city || ''));
 
     // Priority: explicit query constraints first, then soft compat reasons.
@@ -11379,9 +11387,9 @@ render() {
       const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
       pushArg(complex ? 'В жилом комплексе' : 'Без ЖК');
     }
-    if (qDistrict) {
-      if (iDistrict && iDistrict === qDistrict) pushArg('Нужный район');
-      else if (iDistrict) pushArg('Соседний район');
+    if (qDistricts.length) {
+      if (iDistrict && qDistricts.includes(iDistrict)) pushArg('Выбранный район');
+      else if (iDistrict) pushArg('Fallback район');
     }
 
     const minP = toNum(q.minPrice);
@@ -11393,15 +11401,27 @@ render() {
       else if (minP != null && price < minP) pushArg('Цена ниже запроса');
     }
 
-    const qRooms = String(q.rooms || '').trim();
+    const qRoomsList = Array.from(new Set(
+      (Array.isArray(q.rooms) ? q.rooms : [q.rooms])
+        .map((v) => String(v || '').trim().toLowerCase())
+        .filter(Boolean)
+    ));
     const rooms = toNum(normalized?.rooms);
-    if (qRooms && rooms != null) {
-      if ((qRooms === '4plus' && rooms >= 4) || (qRooms === '5plus' && rooms >= 5)) pushArg('Комнатность совпадает');
-      const want = toNum(qRooms);
-      if (want != null) {
-        const diff = Math.abs(rooms - want);
-        if (diff === 0) pushArg('Комнатность совпадает');
-        else if (diff === 1) pushArg('Комнатность близка');
+    if (qRoomsList.length && rooms != null) {
+      const roomInSelected = qRoomsList.some((token) => {
+        if (token === '4plus') return rooms >= 4;
+        if (token === '5plus') return rooms >= 5;
+        const want = toNum(token);
+        return want != null && rooms === want;
+      });
+      if (roomInSelected) {
+        pushArg('Выбранная комнатность');
+      } else {
+        const hasNearby = qRoomsList.some((token) => {
+          const want = toNum(token);
+          return want != null && Math.abs(rooms - want) === 1;
+        });
+        if (hasNearby) pushArg('Fallback по комнатности');
       }
     }
     const minA = toNum(q.minArea);
@@ -11936,9 +11956,18 @@ render() {
         this.updateCatalogListNavState();
       }
       this._catalogRelaxedUnlocked = true;
+      this._catalogLastUsedRelaxStep = Number.isFinite(Number(usedLevel)) ? Number(usedLevel) : 0;
+      if (Number.isFinite(Number(usedLevel)) && Number(usedLevel) > 0) {
+        const history = Array.isArray(this._catalogRelaxStepHistory) ? [...this._catalogRelaxStepHistory] : [];
+        history.push(Number(usedLevel));
+        this._catalogRelaxStepHistory = history.slice(-60);
+      }
       this._catalogStrictEndPromptShown = false;
       this._catalogSimilarEndPromptShown = false;
       if (attemptedSmartFallback === true) {
+        const history = Array.isArray(this._catalogRelaxStepHistory) ? [...this._catalogRelaxStepHistory] : [];
+        history.push('smart_fallback_1_room');
+        this._catalogRelaxStepHistory = history.slice(-60);
         this.ui?.addSystemEventMessage?.('Смарт-слой исчерпан · показываем 1-комнатные как fallback.');
       }
       const relaxNote = this._describeRelaxStep(usedLevel, query);
@@ -13623,6 +13652,38 @@ render() {
       ['arcadia', manualFilters.arcadia],
       ['center', manualFilters.center]
     ];
+    const relaxedUnlocked = this._catalogRelaxedUnlocked === true;
+    const strictFlowActive = this._catalogStrictFlowActive === true;
+    const exhaustedLevels = Array.from(this._catalogRelaxExhaustedLevels instanceof Set ? this._catalogRelaxExhaustedLevels : [])
+      .map((v) => Number(v))
+      .filter((v) => Number.isFinite(v) && v > 0)
+      .sort((a, b) => a - b);
+    const lastRelaxStep = Number.isFinite(Number(this._catalogLastUsedRelaxStep))
+      ? Number(this._catalogLastUsedRelaxStep)
+      : 0;
+    const currentRelaxStep = relaxedUnlocked
+      ? (lastRelaxStep > 0 ? lastRelaxStep : (exhaustedLevels[exhaustedLevels.length - 1] || 0))
+      : 0;
+    const relaxStepHistory = Array.isArray(this._catalogRelaxStepHistory) ? this._catalogRelaxStepHistory : [];
+    const isRelaxedAtOrAfter = (step) => relaxedUnlocked && currentRelaxStep >= Number(step);
+    const relaxationStateRows = [
+      ['parking', isRelaxedAtOrAfter(1) ? 'relaxed' : 'strict'],
+      ['balcony', isRelaxedAtOrAfter(2) ? 'relaxed' : 'strict'],
+      ['floor', isRelaxedAtOrAfter(3) ? 'relaxed' : 'strict'],
+      ['area', isRelaxedAtOrAfter(4) ? 'relaxed' : 'strict'],
+      ['price', isRelaxedAtOrAfter(5) ? 'relaxed' : 'strict'],
+      ['rooms', isRelaxedAtOrAfter(6) ? 'relaxed' : 'strict'],
+      ['location', isRelaxedAtOrAfter(8) ? 'relaxed' : 'strict']
+    ];
+    const runtimeRows = [
+      ['mode', relaxedUnlocked ? 'relaxed' : 'strict'],
+      ['strictFlowActive', strictFlowActive],
+      ['relaxedUnlocked', relaxedUnlocked],
+      ['relaxedStep(current)', currentRelaxStep || null],
+      ['relaxedLevel(next)', Number.isFinite(Number(this._catalogRelaxLevel)) ? Number(this._catalogRelaxLevel) : null],
+      ['relaxedExhaustedLevels', exhaustedLevels.length ? exhaustedLevels.join(', ') : null],
+      ['relaxedStepHistory', relaxStepHistory.length ? relaxStepHistory.join(' -> ') : null]
+    ];
     const strictOnly = this._catalogStrictOnlyMode === true;
     const apiCards = strictOnly
       ? []
@@ -13648,6 +13709,14 @@ render() {
       cardSeen.add(key);
       dedupCards.push(card);
     });
+    const visibleIds = this.getCatalogLoadedIdsFromStateOrDom();
+    const visibleCards = (Array.isArray(visibleIds) ? visibleIds : [])
+      .slice(-3)
+      .map((id) => this.findCatalogPropertyById(id))
+      .filter(Boolean);
+    const candidatesSourceLabel = visibleCards.length
+      ? 'catalog/current window'
+      : (catalogCards.length ? 'catalog/manual search' : 'api payload');
     const interpretedListHtml = interpretedInsights
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
       .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
@@ -13716,6 +13785,9 @@ render() {
     };
     const mark = (ok, note = '') => ok ? `✅${note ? ` ${note}` : ''}` : `❌${note ? ` ${note}` : ''}`;
     const skip = (note = '') => `⏭️${note ? ` ${note}` : ''}`;
+    const relaxQueryForDebug = (this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object')
+      ? this._catalogStrictQuery
+      : effectiveFilters;
     const evaluateCandidate = (card) => {
       const normalized = this._toCardEngineShape(card || {});
       const operation = normalizeOperation(normalized.operation || normalized.listingType);
@@ -13758,17 +13830,20 @@ render() {
         if (!enabled) return;
         checks.push(`${label}: ${pass === 'skip' ? skip(note) : mark(!!pass, note)}`);
       };
+      const step = this._computeRelaxStepForCandidate(normalized, relaxQueryForDebug);
 
       addCheck('operation', filterIsSet(manualFilters.operation), operation === String(manualFilters.operation || '').toLowerCase(), `card=${operation || 'n/a'} expected=${manualFilters.operation}`);
       addCheck('type', filterIsSet(manualFilters.type), type === normalizeType(manualFilters.type), `card=${type || 'n/a'} expected=${normalizeType(manualFilters.type)}`);
       const manualDistricts = Array.isArray(manualFilters.district)
-        ? manualFilters.district.map((v) => String(v || '').toLowerCase()).filter(Boolean)
-        : (filterIsSet(manualFilters.district) ? [String(manualFilters.district || '').toLowerCase()] : []);
+        ? manualFilters.district.map((v) => this._normalizeDistrictForRelax(String(v || ''))).filter(Boolean)
+        : (filterIsSet(manualFilters.district) ? [this._normalizeDistrictForRelax(String(manualFilters.district || ''))] : []);
+      const districtSelected = manualDistricts.includes(district);
+      const districtFallback = !districtSelected && manualDistricts.length > 0 && step != null && step >= 8;
       addCheck(
         'district',
         manualDistricts.length > 0,
-        manualDistricts.includes(district),
-        `card=${district || 'n/a'} expected=${manualDistricts.join('|') || 'n/a'}`
+        districtSelected || districtFallback,
+        `card=${district || 'n/a'} expected=${manualDistricts.join('|') || 'n/a'} source=${districtSelected ? 'selected by user' : (districtFallback ? 'fallback from relaxed' : 'no match')}`
       );
       if (manualFilters.smart === true) {
         addCheck('smart', true, smartFlat === true, `card=${smartFlat ? 'true' : 'false'}`);
@@ -13777,13 +13852,19 @@ render() {
           ? manualFilters.rooms.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
           : (filterIsSet(manualFilters.rooms) ? [String(manualFilters.rooms || '').trim().toLowerCase()] : []);
         if (roomFilters.length) {
-          const passRooms = roomFilters.some((want) => {
+          const roomSelected = roomFilters.some((want) => {
             if (want === '4plus') return roomsNum != null && roomsNum >= 4;
             if (want === '5plus') return roomsNum != null && roomsNum >= 5;
             const wantNum = toNum(want);
             return wantNum != null && roomsNum != null && roomsNum === wantNum;
           });
-          addCheck('rooms', true, passRooms, `card=${roomsNum ?? 'n/a'} expected=${roomFilters.join('|')}`);
+          const roomFallback = !roomSelected && step != null && step >= 6;
+          addCheck(
+            'rooms',
+            true,
+            roomSelected || roomFallback,
+            `card=${roomsNum ?? 'n/a'} expected=${roomFilters.join('|')} source=${roomSelected ? 'selected by user' : (roomFallback ? 'fallback from relaxed' : 'no match')}`
+          );
         }
       }
       if (filterIsSet(manualFilters.minPrice) || filterIsSet(manualFilters.maxPrice)) {
@@ -13825,10 +13906,9 @@ render() {
       if (manualFilters.center === true) addCheck('center', true, isCenter, isCenter ? 'card=yes' : 'card=no');
 
       const passed = checks.filter((line) => line.includes('✅') || line.includes('⏭️')).length;
-      return { checks, passed, total: checks.length };
+      return { checks, passed, total: checks.length, step, stepLabel };
     };
-    const candidatesTop = dedupCards.slice(0, 3);
-    const candidatesSourceLabel = catalogCards.length ? 'catalog/manual search' : 'api payload';
+    const candidatesTop = visibleCards.length ? visibleCards : dedupCards.slice(0, 3);
     const candidateReports = candidatesTop.map((card, idx) => {
       const result = evaluateCandidate(card);
       const id = String(card?.id || card?.external_id || `#${idx + 1}`).trim();
@@ -13838,7 +13918,18 @@ render() {
       const rooms = card?.rooms != null ? `${card.rooms}` : '—';
       const priceRaw = card?.priceEUR ?? card?.priceUSD ?? card?.price_amount ?? null;
       const price = priceRaw == null ? '—' : formatPrice(priceRaw);
-      return { id, title, operation, district, rooms, price, checks: result.checks, passed: result.passed, total: result.total };
+      return {
+        id,
+        title,
+        operation,
+        district,
+        rooms,
+        price,
+        step: result.step,
+        checks: result.checks,
+        passed: result.passed,
+        total: result.total
+      };
     });
     const cardsListHtml = candidateReports.map((row) => {
       const checksHtml = row.checks.length
@@ -13847,11 +13938,19 @@ render() {
       return `
         <li>
           <strong>${safeText(row.id)}:</strong> ${safeText(row.title)} (${safeText(row.operation || 'n/a')}, ${safeText(row.district || 'n/a')}, ${safeText(row.rooms)} rooms, ${safeText(row.price)})
+          <br><strong>Reason:</strong> ${safeText(`step=${row.step == null ? 'strict-only' : row.step} · source=selected by user / fallback from relaxed`)}
           <br><strong>Match:</strong> ${safeText(`${row.passed}/${row.total}`)}
           ${checksHtml}
         </li>
       `;
     }).join('');
+    const runtimeListHtml = runtimeRows
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const relaxStateListHtml = relaxationStateRows
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
     const metricsListHtml = [
       ['source', apiMeta?.source],
       ['at', apiMeta?.at],
@@ -13960,20 +14059,34 @@ render() {
         lines.push('- (empty)');
       }
       lines.push('');
-      lines.push('4) TOP CANDIDATES (MATCH BREAKDOWN)');
+      lines.push('4) RUNTIME MODE / RELAXED STEP');
+      if (runtimeRows.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        runtimeRows.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
+      lines.push('');
+      lines.push('5) RELAXED STATE BY FILTER');
+      relaxationStateRows.forEach(([k, v]) => lines.push(`- ${k}: ${pretty(v)}`));
+      lines.push('');
+      lines.push('6) CURRENT CANDIDATES (MATCH BREAKDOWN)');
       lines.push(`- source: ${candidatesSourceLabel}`);
       if (!candidateReports.length) {
         lines.push('- no candidates');
       } else {
         candidateReports.forEach((row, idx) => {
           lines.push(`${idx + 1}. ${row.id} | ${row.title}`);
+          lines.push(`   reason=step=${row.step == null ? 'strict-only' : row.step}`);
           lines.push(`   op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`);
           lines.push(`   match=${row.passed}/${row.total}`);
           row.checks.forEach((line) => lines.push(`   - ${line}`));
         });
       }
       lines.push('');
-      lines.push('5) META');
+      lines.push('7) META');
       lines.push(`- source: ${pretty(apiMeta?.source)}`);
       lines.push(`- at: ${pretty(apiMeta?.at)}`);
       lines.push(`- totalMatches: ${pretty(api?.totalMatches)}`);
@@ -14000,21 +14113,29 @@ render() {
           <ul class="vw-debug-insights-list">${mappingListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">4) Топ-3 кандидата и совпадения</div>
+          <div class="vw-debug-insights-section-title">4) Режим и шаг Relaxed</div>
+          <ul class="vw-debug-insights-list">${runtimeListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">5) Что уже ослаблено</div>
+          <ul class="vw-debug-insights-list">${relaxStateListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">6) Текущая порция кандидатов и совпадения</div>
           <ul class="vw-debug-insights-list"><li><strong>source:</strong> ${safeText(candidatesSourceLabel)}</li></ul>
           <ul class="vw-debug-insights-list">${cardsListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">5) Тайминги, токены, статус извлечения</div>
+          <div class="vw-debug-insights-section-title">7) Тайминги, токены, статус извлечения</div>
           <ul class="vw-debug-insights-list">${metricsListHtml || '<li>Нет данных</li>'}</ul>
           <ul class="vw-debug-insights-list">${extractionListHtml || ''}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">6) Лог диалога (последний turn)</div>
+          <div class="vw-debug-insights-section-title">8) Лог диалога (последний turn)</div>
           <ul class="vw-debug-insights-list">${dialogListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">7) Copy-ready debug report</div>
+          <div class="vw-debug-insights-section-title">9) Copy-ready debug report</div>
           <pre class="vw-debug-insights-raw">${safeText(copyReport)}</pre>
         </div>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
@@ -14915,6 +15036,8 @@ render() {
     this._catalogShownIds = new Set();
     this._catalogRelaxedUnlocked = false;
     this._catalogRelaxLevel = 0;
+    this._catalogLastUsedRelaxStep = 0;
+    this._catalogRelaxStepHistory = [];
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
