@@ -7485,6 +7485,7 @@ class VoiceWidget extends HTMLElement {
       const changed = signature !== String(this._debugLastSelectionSignature || '');
       const history = Array.isArray(this._debugCatalogSelectionHistory) ? [...this._debugCatalogSelectionHistory] : [];
       history.push({
+        event: 'selection_applied',
         at: new Date().toISOString(),
         changedFromPrevious: changed,
         strictFlow: this._catalogStrictFlowActive === true,
@@ -11997,12 +11998,38 @@ render() {
         history.push(Number(usedLevel));
         this._catalogRelaxStepHistory = history.slice(-60);
       }
+      try {
+        const history = Array.isArray(this._debugCatalogSelectionHistory) ? [...this._debugCatalogSelectionHistory] : [];
+        history.push({
+          event: 'relaxed_step',
+          at: new Date().toISOString(),
+          changedFromPrevious: false,
+          strictFlow: this._catalogStrictFlowActive === true,
+          relaxedStep: Number.isFinite(Number(usedLevel)) ? Number(usedLevel) : null,
+          unlockedCount: Array.isArray(extras) ? extras.length : 0,
+          resultCount: Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties.length : 0
+        });
+        this._debugCatalogSelectionHistory = history.slice(-80);
+      } catch {}
       this._catalogStrictEndPromptShown = false;
       this._catalogSimilarEndPromptShown = false;
       if (attemptedSmartFallback === true) {
         const history = Array.isArray(this._catalogRelaxStepHistory) ? [...this._catalogRelaxStepHistory] : [];
         history.push('smart_fallback_1_room');
         this._catalogRelaxStepHistory = history.slice(-60);
+        try {
+          const debugHistory = Array.isArray(this._debugCatalogSelectionHistory) ? [...this._debugCatalogSelectionHistory] : [];
+          debugHistory.push({
+            event: 'smart_fallback_1_room',
+            at: new Date().toISOString(),
+            changedFromPrevious: false,
+            strictFlow: this._catalogStrictFlowActive === true,
+            relaxedStep: Number.isFinite(Number(usedLevel)) ? Number(usedLevel) : null,
+            unlockedCount: Array.isArray(extras) ? extras.length : 0,
+            resultCount: Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties.length : 0
+          });
+          this._debugCatalogSelectionHistory = debugHistory.slice(-80);
+        } catch {}
         this.ui?.addSystemEventMessage?.('Смарт-слой исчерпан · показываем 1-комнатные как fallback.');
       }
       const relaxNote = this._describeRelaxStep(usedLevel, query);
@@ -13727,11 +13754,10 @@ render() {
         ...(Array.isArray(api.cards) ? api.cards : [])
       ];
     const strictCards = Array.isArray(this._strictManualResult) ? this._strictManualResult : [];
+    const appStateCards = Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : [];
     const catalogCards = strictOnly
       ? strictCards
-      : (strictCards.length
-      ? strictCards
-      : (Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []));
+      : (appStateCards.length ? appStateCards : strictCards);
     const cards = catalogCards.length
       ? [...catalogCards, ...apiCards]
       : apiCards;
@@ -13967,7 +13993,10 @@ render() {
     };
     const candidatesTop = visibleCards.length ? visibleCards : dedupCards.slice(0, 3);
     const candidateReports = candidatesTop.map((card, idx) => buildCandidateReport(card, idx));
-    const candidateReportsAll = dedupCards.map((card, idx) => buildCandidateReport(card, idx));
+    const orderedAllCards = strictOnly
+      ? dedupCards
+      : (appStateCards.length ? appStateCards : dedupCards);
+    const candidateReportsAll = orderedAllCards.map((card, idx) => buildCandidateReport(card, idx));
     const cardsListHtml = candidateReports.map((row) => {
       const checksHtml = row.checks.length
         ? `<ul class="vw-debug-insights-list">${row.checks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
@@ -14002,10 +14031,19 @@ render() {
           const modeLabel = entry?.strictFlow ? 'strict' : 'browse/relaxed';
           const at = String(entry?.at || '').replace('T', ' ').replace('Z', ' UTC');
           const count = Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0;
+          const event = String(entry?.event || '').trim();
+          const relaxedStep = Number.isFinite(Number(entry?.relaxedStep)) ? Number(entry.relaxedStep) : null;
+          const unlockedCount = Number.isFinite(Number(entry?.unlockedCount)) ? Number(entry.unlockedCount) : null;
+          const eventLabel = event === 'selection_applied'
+            ? 'подборка пересчитана'
+            : (event === 'relaxed_step'
+              ? `relaxed step ${relaxedStep ?? '?'}`
+              : (event === 'smart_fallback_1_room' ? 'smart fallback -> 1 room' : 'event'));
           const effective = entry?.effectiveFilters && typeof entry.effectiveFilters === 'object'
             ? Object.entries(entry.effectiveFilters).map(([k, v]) => `${k}=${pretty(v)}`).join(', ')
             : '';
-          return `<li><strong>#${idx + 1}</strong> ${safeText(at)} · mode=${safeText(modeLabel)} · count=${safeText(String(count))} · ${safeText(changedLabel)}${effective ? `<br><strong>effective:</strong> ${safeText(effective)}` : ''}</li>`;
+          const unlockedPart = unlockedCount != null ? ` · unlocked=${unlockedCount}` : '';
+          return `<li><strong>#${idx + 1}</strong> ${safeText(at)} · mode=${safeText(modeLabel)} · ${safeText(eventLabel)} · count=${safeText(String(count))}${safeText(unlockedPart)} · ${safeText(changedLabel)}${effective ? `<br><strong>effective:</strong> ${safeText(effective)}` : ''}</li>`;
         }).join('')
       : '';
     const runtimeListHtml = runtimeRows
@@ -14159,7 +14197,16 @@ render() {
           const modeLabel = entry?.strictFlow ? 'strict' : 'browse/relaxed';
           const at = String(entry?.at || '').replace('T', ' ').replace('Z', ' UTC');
           const count = Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0;
-          lines.push(`${idx + 1}. ${at} | mode=${modeLabel} | count=${count} | ${changedLabel}`);
+          const event = String(entry?.event || '').trim();
+          const relaxedStep = Number.isFinite(Number(entry?.relaxedStep)) ? Number(entry.relaxedStep) : null;
+          const unlockedCount = Number.isFinite(Number(entry?.unlockedCount)) ? Number(entry.unlockedCount) : null;
+          const eventLabel = event === 'selection_applied'
+            ? 'selection_applied'
+            : (event === 'relaxed_step'
+              ? `relaxed_step_${relaxedStep ?? '?'}`
+              : (event === 'smart_fallback_1_room' ? 'smart_fallback_1_room' : (event || 'event')));
+          const unlockedPart = unlockedCount != null ? ` | unlocked=${unlockedCount}` : '';
+          lines.push(`${idx + 1}. ${at} | mode=${modeLabel} | event=${eventLabel} | count=${count}${unlockedPart} | ${changedLabel}`);
         });
       }
       lines.push('');
