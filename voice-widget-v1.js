@@ -11705,7 +11705,8 @@ render() {
       if (iPrice == null) {
         requireStage(5);
       } else {
-        if (qMinPrice != null && iPrice < qMinPrice) requireStage(5);
+        // Product rule: relaxed price never expands below strict lower bound.
+        if (qMinPrice != null && iPrice < qMinPrice) return null;
         if (qMaxPrice != null && iPrice > qMaxPrice) {
           // Hard gate: above relaxed ceiling, candidate is excluded from relaxed flow.
           if (qPriceCeiling != null && iPrice > qPriceCeiling) return null;
