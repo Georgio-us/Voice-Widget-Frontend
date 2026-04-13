@@ -11996,18 +11996,18 @@ render() {
       this._catalogRelaxExhausted = false;
 
       const loadedIds = this.getCatalogLoadedIdsFromStateOrDom();
+      const previousActiveId = this._catalogActiveId && loadedIds.includes(String(this._catalogActiveId))
+        ? String(this._catalogActiveId)
+        : null;
       const first = extras[0];
       const firstId = String(first?.id || '').trim();
       const queueTail = extras.slice(1);
       this._catalogOverflowQueue = [...(Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : []), ...queueTail];
       if (firstId && !loadedIds.includes(firstId)) {
         this._catalogVisibleIds = [...loadedIds, firstId];
-        this._catalogActiveId = firstId;
+        // Keep user focus on current card; relaxed additions should only extend the tail.
+        this._catalogActiveId = previousActiveId || (loadedIds.length ? loadedIds[loadedIds.length - 1] : firstId);
         this.rebuildCatalogLayoutFromVisibleIds();
-        if (this._catalogDisplayMode !== 'list') {
-          const idx = this._catalogVisibleIds.indexOf(firstId);
-          if (idx >= 0) this.scrollToSlideIndex(idx);
-        }
       } else {
         this.updateCatalogListNavState();
       }
@@ -12443,21 +12443,28 @@ render() {
     try {
       if (this._catalogStrictOnlyMode === true) return;
       if (this._catalogDisplayMode === 'list') return;
+      const now = Date.now();
+      const unlockGuardUntil = Number(this._catalogUnlockGuardUntil) || 0;
+      const unlockGuardActive = now < unlockGuardUntil;
       const queue = Array.isArray(this._catalogOverflowQueue) ? this._catalogOverflowQueue : [];
       if (!queue.length) {
         if (
           this._catalogStrictFlowActive === true
           && this._catalogRelaxedUnlocked !== true
+          && !unlockGuardActive
           && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
         ) {
+          this._catalogUnlockGuardUntil = now + 320;
           this.unlockCatalogSimilarMode().catch((error) => {
             console.warn('unlockCatalogSimilarMode failed:', error);
           });
         } else if (
           this._catalogRelaxedUnlocked === true
+          && !unlockGuardActive
           && Number(activeIdx) >= Math.max(0, Number(totalSlides) - 1)
           && this._catalogRelaxExhausted !== true
         ) {
+          this._catalogUnlockGuardUntil = now + 320;
           this.unlockCatalogSimilarMode().catch((error) => {
             console.warn('unlockCatalogSimilarMode failed:', error);
           });
