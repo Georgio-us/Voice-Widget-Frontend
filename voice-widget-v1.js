@@ -6882,8 +6882,28 @@ class VoiceWidget extends HTMLElement {
     const values = this._getFiltersMultiValues(overlay, role);
     const triggerText = wrap.querySelector('[data-role="multi-trigger-text"]');
     const title = String(wrap.getAttribute('data-title') || '').trim() || 'Выбор';
+    const formatSingleValueLabel = (selectedValue) => {
+      const selectedEl = wrap.querySelector(`[data-option][data-value="${String(selectedValue || '').replace(/"/g, '\\"')}"] span:last-child`);
+      const rawLabel = String(selectedEl?.textContent || selectedValue || '').trim();
+      if (!rawLabel) return '';
+      if (role === 'rooms') {
+        const token = rawLabel.toLowerCase();
+        if (token === '5+' || token === '5plus') return '5+ комнат';
+        const n = Number(rawLabel);
+        if (Number.isFinite(n)) {
+          if (n === 1) return '1 комната';
+          if (n >= 2 && n <= 4) return `${n} комнаты`;
+          return `${n} комнат`;
+        }
+      }
+      return rawLabel;
+    };
     if (triggerText) {
-      triggerText.textContent = values.length > 0 ? `Выбрано: ${values.length}` : title;
+      if (values.length === 1) {
+        triggerText.textContent = formatSingleValueLabel(values[0]) || `Выбрано: ${values.length}`;
+      } else {
+        triggerText.textContent = values.length > 0 ? `Выбрано: ${values.length}` : title;
+      }
       triggerText.style.opacity = values.length > 0 ? '1' : '0.76';
     }
   }
