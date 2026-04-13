@@ -11344,7 +11344,7 @@ render() {
     const showInterpretation = this._isStrictFlowQuery(q);
     const primary = tier === 'high' || safeScore >= 80
       ? 'Точное попадание'
-      : ((tier === 'mid' || safeScore >= 55) ? 'Похожее' : 'Альтернатива');
+      : ((tier === 'mid' || safeScore >= 50) ? 'Похожее' : 'Альтернатива');
     const toNum = (v) => {
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
