@@ -7260,7 +7260,7 @@ class VoiceWidget extends HTMLElement {
     const normalizeDistrictSlug = (value) => {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
-      if (/примор|промор|primor|promor/.test(raw)) return 'primorsky';
+      if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
       if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
@@ -7277,26 +7277,28 @@ class VoiceWidget extends HTMLElement {
         .map((part) => String(part || '').trim())
         .filter(Boolean);
     };
-    const normalizeRoomsToken = (value) => {
+    const extractRoomsTokens = (value) => {
       const raw = String(value || '').trim().toLowerCase();
-      if (!raw) return '';
-      if (/^(4\+|4plus)$/i.test(raw)) return '4';
-      if (/^(5|5\+|5plus)$/i.test(raw)) return '5plus';
-      if (/(однуш|one bedroom|1 bedroom)/i.test(raw)) return '1';
-      if (/(двуш|two bedroom|2 bedroom)/i.test(raw)) return '2';
-      if (/(треш|трёш|three bedroom|3 bedroom)/i.test(raw)) return '3';
-      if (/(четыр|four bedroom|4 bedroom)/i.test(raw)) return '4';
+      if (!raw) return [];
+      const found = new Set();
+      if (/(5\+|5plus|\bпят(и|ь)\b|\bпятикомнат|\b5\s*комн|\bfive\b)/i.test(raw)) found.add('5plus');
+      if (/(4\+|4plus|\bчетыр(е|ё|ех|ёх)\b|\bчетырехкомнат|\bчетырёхкомнат|\b4\s*комн|\bfour\b)/i.test(raw)) found.add('4');
+      if (/(тр(е|ё)шка|\bтрехкомнат|\bтрёхкомнат|\b3\s*комн|\bthree\b|\bтр(е|ё)х\b)/i.test(raw)) found.add('3');
+      if (/(двушка|\bдвухкомнат|\b2\s*комн|\btwo\b|\bдвух\b|\bдву\b)/i.test(raw)) found.add('2');
+      if (/(однушка|\bоднокомнат|\b1\s*комн|\bone\b|studio|студия|смарт)/i.test(raw)) found.add('1');
+      if (found.size) return Array.from(found);
       const parsed = parseNum(raw);
-      if (parsed == null) return '';
-      if (parsed >= 5) return '5plus';
-      if (parsed >= 4) return '4';
-      return String(parsed);
+      if (parsed == null) return [];
+      if (parsed >= 5) return ['5plus'];
+      if (parsed >= 4) return ['4'];
+      if (parsed >= 1) return [String(parsed)];
+      return [];
     };
     const isDistrictLikeLocation = (text) => {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
       if (/\bрайон\b/.test(t)) return true;
-      return /(примор|промор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const parseFeaturesTokens = (srcInsights) => {
       const raw = [];
@@ -7369,13 +7371,27 @@ class VoiceWidget extends HTMLElement {
     const locRaw = districtTokens[0] || String(insights?.location || '').trim();
 
     const roomTokens = splitMulti(insights?.rooms);
-    const roomsMulti = Array.from(new Set(roomTokens.map((token) => normalizeRoomsToken(token)).filter(Boolean)));
+    const roomsMulti = Array.from(new Set(roomTokens.flatMap((token) => extractRoomsTokens(token)).filter(Boolean)));
     if (roomsMulti.length) patch.rooms = roomsMulti;
 
-    const maxPrice = parseNum(insights?.budgetMax ?? insights?.budget);
-    const minPrice = parseNum(insights?.minPrice);
-    if (minPrice != null) patch.minPrice = minPrice;
-    if (maxPrice != null) patch.maxPrice = maxPrice;
+    // Price policy v1 (AI fields -> execution-safe price fields):
+    // - single/upper amount => maxPrice only
+    // - explicit range => minPrice + maxPrice
+    // - lower-only (budget only, no budgetMax) => no auto-commit
+    const budget = parseNum(insights?.budget);
+    const budgetMax = parseNum(insights?.budgetMax);
+    const explicitMinPrice = parseNum(insights?.minPrice);
+    if (explicitMinPrice != null) patch.minPrice = explicitMinPrice;
+    if (budget != null && budgetMax != null) {
+      if (budget < budgetMax) {
+        patch.minPrice = budget;
+        patch.maxPrice = budgetMax;
+      } else {
+        patch.maxPrice = Math.max(budget, budgetMax);
+      }
+    } else if (budgetMax != null) {
+      patch.maxPrice = budgetMax;
+    } // budget-only => lower-only extracted signal, no auto-commit
 
     const minArea = parseNum(insights?.areaMin ?? insights?.area);
     const maxArea = parseNum(insights?.areaMax);
@@ -7428,7 +7444,7 @@ class VoiceWidget extends HTMLElement {
     const normalizeDistrictSlug = (value) => {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
-      if (/примор|промор|primor|promor/.test(raw)) return 'primorsky';
+      if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
       if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
@@ -7441,7 +7457,7 @@ class VoiceWidget extends HTMLElement {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
       if (/\bрайон\b/.test(t)) return true;
-      return /(примор|промор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const normalizeOperationToSearch = (value) => {
       const raw = String(value || '').trim().toLowerCase();
@@ -11502,7 +11518,7 @@ render() {
   _normalizeDistrictForRelax(value) {
     const raw = String(value || '').trim().toLowerCase();
     if (!raw) return '';
-    if (/примор|промор|primor|promor/.test(raw)) return 'primorsky';
+    if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
     if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
     if (/сувор|suvor/.test(raw)) return 'suvorovsky';
     if (/малин|malin/.test(raw)) return 'malinovsky';
