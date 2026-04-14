@@ -7725,6 +7725,25 @@ class VoiceWidget extends HTMLElement {
 
     let requestQuery = { ...query };
     requestQuery = await this.api?._validateResidentialComplexInQuery?.(requestQuery) || requestQuery;
+    try {
+      // Keep UI/debug in sync with validated RC value (or its removal),
+      // so raw AI garbage does not stay visible in filters state.
+      const requestedRc = String(query?.residentialComplex || '').trim();
+      const validatedRc = String(requestQuery?.residentialComplex || '').trim();
+      if (requestedRc !== validatedRc) {
+        const manualRc = String(this._catalogManualFilterOverrides?.residentialComplex || '').trim();
+        const currentInsights = (this.understanding?.export?.() && typeof this.understanding.export() === 'object')
+          ? this.understanding.export()
+          : null;
+        const currentRc = String(currentInsights?.residentialComplex || '').trim();
+        if (currentInsights && !manualRc && currentRc && currentRc === requestedRc) {
+          this.understanding.import({
+            ...currentInsights,
+            residentialComplex: validatedRc || null
+          });
+        }
+      }
+    } catch {}
     delete requestQuery.__budgetAnchor;
     delete requestQuery.__priceAnchor;
     delete requestQuery.__areaAnchor;
