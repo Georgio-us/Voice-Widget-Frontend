@@ -1424,16 +1424,30 @@ class APIClient {
     files.forEach((file) => {
       if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
     });
-    const res = await fetch(base, {
-      method: 'POST',
-      headers: this.buildTelegramAuthHeaders(),
-      body: formData
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data?.ok === false) {
-      throw new Error(String(data?.error || `ADMIN_CREATE_FAILED_${res.status}`));
+    const timeoutMs = 45000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort('admin_publish_timeout'), timeoutMs);
+    try {
+      const res = await fetch(base, {
+        method: 'POST',
+        headers: this.buildTelegramAuthHeaders(),
+        body: formData,
+        signal: controller.signal
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) {
+        throw new Error(String(data?.error || `ADMIN_CREATE_FAILED_${res.status}`));
+      }
+      return data;
+    } catch (error) {
+      const name = String(error?.name || '');
+      const message = String(error?.message || '');
+      if (name === 'AbortError') throw new Error('ADMIN_PUBLISH_TIMEOUT');
+      if (message.toLowerCase().includes('failed to fetch')) throw new Error('ADMIN_PUBLISH_NETWORK');
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return data;
   }
 
   async updateManualProperty(externalId, payload = {}, imageFiles = []) {
@@ -1462,16 +1476,30 @@ class APIClient {
     files.forEach((file) => {
       if (file instanceof File) formData.append('images', file, file.name || 'image.jpg');
     });
-    const res = await fetch(base, {
-      method: 'PUT',
-      headers: this.buildTelegramAuthHeaders(),
-      body: formData
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data?.ok === false) {
-      throw new Error(String(data?.error || `ADMIN_UPDATE_FAILED_${res.status}`));
+    const timeoutMs = 45000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort('admin_publish_timeout'), timeoutMs);
+    try {
+      const res = await fetch(base, {
+        method: 'PUT',
+        headers: this.buildTelegramAuthHeaders(),
+        body: formData,
+        signal: controller.signal
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) {
+        throw new Error(String(data?.error || `ADMIN_UPDATE_FAILED_${res.status}`));
+      }
+      return data;
+    } catch (error) {
+      const name = String(error?.name || '');
+      const message = String(error?.message || '');
+      if (name === 'AbortError') throw new Error('ADMIN_PUBLISH_TIMEOUT');
+      if (message.toLowerCase().includes('failed to fetch')) throw new Error('ADMIN_PUBLISH_NETWORK');
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return data;
   }
 
   async deleteManualProperty(externalId, options = {}) {
@@ -6496,13 +6524,15 @@ class VoiceWidget extends HTMLElement {
           const maxImageMb = imageTooLargeMatch?.[1] ? Number(imageTooLargeMatch[1]) : null;
           const hint = msg.includes('FORBIDDEN_ADMIN_ONLY')
             ? 'Нет прав администратора для публикации'
+            : ((msg.includes('ADMIN_PUBLISH_TIMEOUT') || msg.includes('ADMIN_PUBLISH_NETWORK'))
+              ? 'Не удалось опубликовать, сервер временно недоступен. Попробуйте позже'
             : (imageTooLargeMatch
               ? `Фото > ${Number.isFinite(maxImageMb) ? maxImageMb : 5}MB. Уменьшите размер`
               : (msg.includes('_413')
                 ? 'Слишком большой общий размер загрузки. Уменьшите количество/размер фото'
                 : 'Не удалось опубликовать объект'
               )
-            );
+            ));
           this.ui?.showNotification?.(hint);
         } finally {
           if (publishBtn) {
