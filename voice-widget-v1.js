@@ -1630,7 +1630,7 @@ class APIClient {
     const hasCached = this._residentialComplexCatalog && this._residentialComplexCatalog.has(normalized);
     if (!hasCached) {
       try {
-        const list = await this.api?.fetchResidentialComplexes?.({ q: rcRaw, limit: 80 });
+        const list = await this.fetchResidentialComplexes({ q: rcRaw, limit: 80 });
         this._rememberResidentialComplexes(list);
       } catch {}
     }
@@ -7724,7 +7724,7 @@ class VoiceWidget extends HTMLElement {
     }
 
     let requestQuery = { ...query };
-    requestQuery = await this._validateResidentialComplexInQuery(requestQuery);
+    requestQuery = await this.api?._validateResidentialComplexInQuery?.(requestQuery) || requestQuery;
     delete requestQuery.__budgetAnchor;
     delete requestQuery.__priceAnchor;
     delete requestQuery.__areaAnchor;
