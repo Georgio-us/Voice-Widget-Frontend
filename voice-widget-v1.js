@@ -4220,7 +4220,15 @@ class VoiceWidget extends HTMLElement {
     const locale = this.getCurrentLocale();
     const powered = String(locale.footerPoweredBy || 'Разработано').trim() || 'Разработано';
     const wantOwn = String(locale.footerWantOwn || 'Хотите такого бота?').trim() || 'Хотите такого бота?';
-    const viaUrl = String(locale.footerViaLink || 'https://via.ai').trim() || 'https://via.ai';
+    const viaUrl = (() => {
+      const fromShareBase = String(VW_SHARE_BASE_URL || '').trim();
+      if (fromShareBase) return fromShareBase;
+      try {
+        const fromWindow = String(window?.location?.origin || '').trim();
+        if (fromWindow) return fromWindow;
+      } catch {}
+      return String(locale.footerViaLink || 'https://via.ai').trim() || 'https://via.ai';
+    })();
     const isSuperAdmin = this.accessRole === 'super_admin' || this.accessFlags?.isSuperAdmin === true;
     const viaPart = isSuperAdmin
       ? `<a class="app-footer-link" data-role="footer-via-link" href="${viaUrl}" target="_blank" rel="noopener noreferrer">VIA.AI</a>`
@@ -4571,6 +4579,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   openAccessSubOverlay(section = 'stats', options = {}) {
+    this.ensureAccessOverlayStyles();
     this.closeAccessSubOverlay();
     const now = new Date();
     const nextMonth = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
@@ -10320,7 +10329,10 @@ render() {
     try { this.openAccessOverlay(); } catch {}
   });
   this.getRoot().querySelector('.app-footer-brand')?.addEventListener('click', (event) => {
-    const target = event?.target instanceof Element ? event.target : null;
+    const rawTarget = event?.target;
+    const target = rawTarget instanceof Element
+      ? rawTarget
+      : (rawTarget && rawTarget.parentElement instanceof Element ? rawTarget.parentElement : null);
     if (!target) return;
     const viaLink = target.closest('[data-role="footer-via-link"]');
     if (viaLink) {
@@ -10331,6 +10343,7 @@ render() {
     const wantOwnLink = target.closest('[data-role="footer-want-own"]');
     if (wantOwnLink) {
       event.preventDefault();
+      try { this.closeAccessOverlay(); } catch {}
       try { this.openAccessSubOverlay('want-bot'); } catch {}
     }
   });
