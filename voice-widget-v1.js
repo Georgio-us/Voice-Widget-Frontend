@@ -1594,6 +1594,55 @@ class APIClient {
     return u;
   }
 
+  _normalizeResidentialComplexName(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/^(?:жк|зк|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?|жилкомплекс(?:ы|а|у|е|ом|ах|ами|ов)?)\s*/i, '')
+      .replace(/[«»"'`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  _rememberResidentialComplexes(items = []) {
+    if (!this._residentialComplexCatalog) this._residentialComplexCatalog = new Map();
+    const arr = Array.isArray(items) ? items : [];
+    arr.forEach((row) => {
+      const raw = String(row?.name || '').trim();
+      if (!raw) return;
+      const normalized = this._normalizeResidentialComplexName(raw);
+      if (!normalized) return;
+      if (!this._residentialComplexCatalog.has(normalized)) {
+        this._residentialComplexCatalog.set(normalized, raw);
+      }
+    });
+  }
+
+  async _validateResidentialComplexInQuery(query = {}) {
+    const out = { ...(query && typeof query === 'object' ? query : {}) };
+    const rcRaw = String(out.residentialComplex || '').trim();
+    if (!rcRaw) return out;
+    const normalized = this._normalizeResidentialComplexName(rcRaw);
+    if (!normalized) {
+      delete out.residentialComplex;
+      return out;
+    }
+    const hasCached = this._residentialComplexCatalog && this._residentialComplexCatalog.has(normalized);
+    if (!hasCached) {
+      try {
+        const list = await this.api?.fetchResidentialComplexes?.({ q: rcRaw, limit: 80 });
+        this._rememberResidentialComplexes(list);
+      } catch {}
+    }
+    if (this._residentialComplexCatalog && this._residentialComplexCatalog.has(normalized)) {
+      out.residentialComplex = this._residentialComplexCatalog.get(normalized) || rcRaw;
+      return out;
+    }
+    // Keep rcOnly fallback behavior, but do not commit invalid specific complex name.
+    delete out.residentialComplex;
+    return out;
+  }
+
   async fetchResidentialComplexes(params = {}) {
     const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/cards');
     const u = new URL(`${base}/residential-complexes`);
@@ -1605,7 +1654,9 @@ class APIClient {
     if (!res.ok || data?.ok === false) {
       throw new Error(String(data?.error || `RC_LIST_${res.status}`));
     }
-    return Array.isArray(data.items) ? data.items : [];
+    const items = Array.isArray(data.items) ? data.items : [];
+    this._rememberResidentialComplexes(items);
+    return items;
   }
 
   async createResidentialComplex(name) {
@@ -7393,10 +7444,23 @@ class VoiceWidget extends HTMLElement {
       patch.maxPrice = budgetMax;
     } // budget-only => lower-only extracted signal, no auto-commit
 
-    const minArea = parseNum(insights?.areaMin ?? insights?.area);
-    const maxArea = parseNum(insights?.areaMax);
-    if (minArea != null) patch.minArea = minArea;
-    if (maxArea != null) patch.maxArea = maxArea;
+    // Area policy v1:
+    // - "до X м²" / "X м²" => maxArea = X
+    // - "X-Y м²" / "от X до Y" => minArea + maxArea
+    // - "от X м²" => minArea = X
+    const area = parseNum(insights?.area);
+    const areaMin = parseNum(insights?.areaMin);
+    const areaMax = parseNum(insights?.areaMax);
+    if (areaMin != null && areaMax != null) {
+      patch.minArea = Math.min(areaMin, areaMax);
+      patch.maxArea = Math.max(areaMin, areaMax);
+    } else if (areaMax != null) {
+      patch.maxArea = areaMax;
+    } else if (area != null) {
+      patch.maxArea = area;
+    } else if (areaMin != null) {
+      patch.minArea = areaMin;
+    }
 
     const rcInsight = String(insights?.residentialComplex || '').trim();
     if (rcInsight && looksLikeComplexName(rcInsight)) {
@@ -7659,7 +7723,8 @@ class VoiceWidget extends HTMLElement {
       query.__roomsAnchor = null;
     }
 
-    const requestQuery = { ...query };
+    let requestQuery = { ...query };
+    requestQuery = await this._validateResidentialComplexInQuery(requestQuery);
     delete requestQuery.__budgetAnchor;
     delete requestQuery.__priceAnchor;
     delete requestQuery.__areaAnchor;
@@ -7829,11 +7894,16 @@ class VoiceWidget extends HTMLElement {
     const rcHidden = overlay.querySelector('[data-role="filters-rc-hidden"]');
     const rcTrigger = overlay.querySelector('[data-role="filters-rc-trigger"]');
     const rcLabel = overlay.querySelector('[data-role="filters-rc-label"]');
+    const rcClear = overlay.querySelector('[data-role="filters-rc-clear"]');
     const syncLabel = () => {
       if (!rcLabel) return;
       const v = String(rcHidden?.value || '').trim();
       rcLabel.textContent = v || 'Поиск по ЖК';
       rcLabel.style.opacity = v ? '1' : '0.62';
+      if (rcClear) {
+        rcClear.classList.toggle('is-hidden', !v);
+        rcClear.disabled = !v;
+      }
     };
     overlay._syncFiltersRcLabel = syncLabel;
     syncLabel();
@@ -7953,6 +8023,12 @@ class VoiceWidget extends HTMLElement {
       }
     };
     rcTrigger?.addEventListener('click', () => openRcPicker());
+    rcClear?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (rcHidden) rcHidden.value = '';
+      syncLabel();
+    });
     overlay._filtersRcCleanup = () => {
       try { clearTimeout(rcSearchTimer); rcSearchTimer = null; } catch {}
       try {
@@ -8234,7 +8310,9 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-filters-rc-wrap {
         display: grid;
-        gap: 6px;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
       }
       .vw-filters-rc-trigger {
         width: 100%;
@@ -8255,6 +8333,25 @@ class VoiceWidget extends HTMLElement {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .vw-filters-rc-clear {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-secondary, rgba(255,255,255,0.82));
+        font-size: 18px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .vw-filters-rc-clear.is-hidden {
+        visibility: hidden;
+        pointer-events: none;
       }
       .vw-access-rc-panel.vw-filters-rc-panel {
         grid-template-rows: auto auto minmax(0, 1fr);
@@ -8441,6 +8538,7 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-filters-rc-trigger" data-role="filters-rc-trigger" aria-haspopup="listbox" aria-expanded="false">
               <span class="vw-filters-rc-trigger__label" data-role="filters-rc-label">Поиск по ЖК</span>
             </button>
+            <button type="button" class="vw-filters-rc-clear" data-role="filters-rc-clear" aria-label="Очистить ЖК" title="Очистить ЖК">×</button>
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-actions">
