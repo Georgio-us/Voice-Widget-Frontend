@@ -2602,6 +2602,9 @@ const LOCALES = {
     accessUserBotConsultCta: 'Консультация',
     accessUserConsult: 'Консультация',
     accessUserRemove: 'Убрать',
+    footerPoweredBy: 'Разработано',
+    footerWantOwn: 'Хотите такого бота?',
+    footerViaLink: 'https://via.ai',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
     privacyPolicy: 'Политика конфиденциальности',
     send: 'Отправить',
@@ -2782,6 +2785,9 @@ const LOCALES = {
     accessUserBotConsultCta: 'Консультація',
     accessUserConsult: 'Консультація',
     accessUserRemove: 'Прибрати',
+    footerPoweredBy: 'Розроблено',
+    footerWantOwn: 'Хочете такого бота?',
+    footerViaLink: 'https://via.ai',
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
     privacyPolicy: 'Політика конфіденційності',
     send: 'Надіслати',
@@ -3783,6 +3789,7 @@ class VoiceWidget extends HTMLElement {
     setTitle('sendButton', locale.sendTitle);
     root.querySelectorAll('.header-action.header-right').forEach((el) => el.setAttribute('title', locale.closeWidgetTitle));
     root.querySelectorAll('.header-action.header-left').forEach((el) => el.setAttribute('title', locale.statsTitle));
+    this.updateFooterBrand();
 
     const consentTextNodes = root.querySelectorAll('.in-dialog-lead__consent-text');
     consentTextNodes.forEach((node) => {
@@ -4153,6 +4160,27 @@ class VoiceWidget extends HTMLElement {
     }
     btn.setAttribute('title', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
     btn.setAttribute('aria-label', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
+    this.updateFooterBrand();
+  }
+
+  buildFooterBrandHtml() {
+    const locale = this.getCurrentLocale();
+    const powered = String(locale.footerPoweredBy || 'Разработано').trim() || 'Разработано';
+    const wantOwn = String(locale.footerWantOwn || 'Хотите такого бота?').trim() || 'Хотите такого бота?';
+    const viaUrl = String(locale.footerViaLink || 'https://via.ai').trim() || 'https://via.ai';
+    const isSuperAdmin = this.accessRole === 'super_admin' || this.accessFlags?.isSuperAdmin === true;
+    const viaPart = isSuperAdmin
+      ? `<a class="app-footer-link" data-role="footer-via-link" href="${viaUrl}" target="_blank" rel="noopener noreferrer">VIA.AI</a>`
+      : '<span class="app-footer-text">VIA.AI</span>';
+    const wantPart = `<a class="app-footer-link" data-role="footer-want-own" href="#">${wantOwn}</a>`;
+    return `${powered} ${viaPart} • ${wantPart}`;
+  }
+
+  updateFooterBrand() {
+    const root = this.getRoot();
+    const brand = root?.querySelector?.('.app-footer-brand');
+    if (!brand) return;
+    brand.innerHTML = this.buildFooterBrandHtml();
   }
 
   updateAdminWishlistMenuBadge(overlay) {
@@ -10151,7 +10179,7 @@ render() {
               </div>
               </div>
             </div>
-            <div class="app-footer-brand">Powered by <a href="#" target="_blank">VIA.AI</a> • Want your own?</div>
+            <div class="app-footer-brand">${this.buildFooterBrandHtml()}</div>
             </div>
         </div>
           </div>
@@ -10233,6 +10261,21 @@ render() {
   });
   this.$byId('appThemeButton')?.addEventListener('click', () => {
     try { this.openAccessOverlay(); } catch {}
+  });
+  this.getRoot().querySelector('.app-footer-brand')?.addEventListener('click', (event) => {
+    const target = event?.target instanceof Element ? event.target : null;
+    if (!target) return;
+    const viaLink = target.closest('[data-role="footer-via-link"]');
+    if (viaLink) {
+      const isSuperAdmin = this.accessRole === 'super_admin' || this.accessFlags?.isSuperAdmin === true;
+      if (!isSuperAdmin) event.preventDefault();
+      return;
+    }
+    const wantOwnLink = target.closest('[data-role="footer-want-own"]');
+    if (wantOwnLink) {
+      event.preventDefault();
+      try { this.openAccessSubOverlay('want-bot'); } catch {}
+    }
   });
   // Reserved button slot (no action yet).
   this.$byId('appContactButton')?.addEventListener('click', () => {
