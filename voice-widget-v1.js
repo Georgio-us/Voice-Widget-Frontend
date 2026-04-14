@@ -460,12 +460,15 @@ class UnderstandingManager {
       budget: null,
       budgetMax: null,
       type: null,
+      district: null,
       location: null,
       rooms: null,
       area: null,
       areaMin: null,
       areaMax: null,
       floor: null,
+      floorNotFirst: null,
+      floorNotLast: null,
       features: null,
       details: null,
       preferences: null,
@@ -526,12 +529,15 @@ class UnderstandingManager {
       budget: 7,
       budgetMax: 7,
       type: 7,
+      district: 7,
       location: 7,
       rooms: 7,
       area: 7,
       areaMin: 7,
       areaMax: 7,
       floor: 7,
+      floorNotFirst: 7,
+      floorNotLast: 7,
       features: 7,
       details: 7,
       preferences: 7
@@ -628,12 +634,15 @@ class UnderstandingManager {
       budget: pick('budget'),
       budgetMax: pick('budgetMax'),
       type: pick('type', 'propertyType'),
+      district: pick('district', 'location'),
       location: pick('location', 'district'),
       rooms: pick('rooms'),
       area: pick('area'),
       areaMin: pick('areaMin'),
       areaMax: pick('areaMax'),
       floor: pick('floor'),
+      floorNotFirst: pick('floorNotFirst'),
+      floorNotLast: pick('floorNotLast'),
       features: pick('features'),
       details: pick('details', 'locationDetails'),
       preferences: pick('preferences', 'additional'),
@@ -7260,6 +7269,29 @@ class VoiceWidget extends HTMLElement {
       if (/аванг|avang/.test(raw)) return 'malinovsky';
       return '';
     };
+    const splitMulti = (value) => {
+      if (value == null) return [];
+      const arr = Array.isArray(value) ? value : [value];
+      return arr
+        .flatMap((item) => String(item || '').split(/\s*(?:,|\/|\\|\||\s+или\s+|\s+либо\s+|;|&)\s*/i))
+        .map((part) => String(part || '').trim())
+        .filter(Boolean);
+    };
+    const normalizeRoomsToken = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/^(4\+|4plus)$/i.test(raw)) return '4';
+      if (/^(5|5\+|5plus)$/i.test(raw)) return '5plus';
+      if (/(однуш|one bedroom|1 bedroom)/i.test(raw)) return '1';
+      if (/(двуш|two bedroom|2 bedroom)/i.test(raw)) return '2';
+      if (/(треш|трёш|three bedroom|3 bedroom)/i.test(raw)) return '3';
+      if (/(четыр|four bedroom|4 bedroom)/i.test(raw)) return '4';
+      const parsed = parseNum(raw);
+      if (parsed == null) return '';
+      if (parsed >= 5) return '5plus';
+      if (parsed >= 4) return '4';
+      return String(parsed);
+    };
     const isDistrictLikeLocation = (text) => {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
@@ -7302,6 +7334,21 @@ class VoiceWidget extends HTMLElement {
       if (!t) return false;
       return /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|\bжил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?\b|residential\s+complex(?:es)?/i.test(t);
     };
+    const extractResidentialComplexFromLocation = (text) => {
+      const source = String(text || '').trim();
+      if (!source || !hasResidentialComplexMarker(source)) return '';
+      // Prefer explicit tail after ЖК marker even when location also includes district/city.
+      const markerMatch = source.match(
+        /(?:^|[\s,;:()\-])(?:[жз]к|[жз]\/к|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?|residential\s+complex(?:es)?)\s*[«"']?([^,;.!?()\-]+)/i
+      );
+      if (markerMatch && markerMatch[1]) {
+        const candidate = String(markerMatch[1] || '').replace(/[»"']$/g, '').trim();
+        if (candidate && looksLikeComplexName(candidate)) return candidate;
+      }
+      const stripped = stripRcPrefixes(source);
+      if (stripped && looksLikeComplexName(stripped)) return stripped;
+      return '';
+    };
     const looksLikeComplexName = (text) => {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
@@ -7311,12 +7358,19 @@ class VoiceWidget extends HTMLElement {
       return true;
     };
     const patch = {};
-    const locRaw = String(insights?.location || '').trim();
-    const districtSlug = normalizeDistrictSlug(locRaw);
-    if (districtSlug) patch.district = districtSlug;
+    const districtTokens = [
+      ...splitMulti(insights?.district),
+      ...splitMulti(insights?.location) // legacy fallback input
+    ];
+    const districtMulti = Array.from(new Set(
+      districtTokens.map((token) => normalizeDistrictSlug(token)).filter(Boolean)
+    ));
+    if (districtMulti.length) patch.district = districtMulti;
+    const locRaw = districtTokens[0] || String(insights?.location || '').trim();
 
-    const roomsNum = parseNum(insights?.rooms);
-    if (roomsNum != null) patch.rooms = roomsNum >= 4 ? '4plus' : String(roomsNum);
+    const roomTokens = splitMulti(insights?.rooms);
+    const roomsMulti = Array.from(new Set(roomTokens.map((token) => normalizeRoomsToken(token)).filter(Boolean)));
+    if (roomsMulti.length) patch.rooms = roomsMulti;
 
     const maxPrice = parseNum(insights?.budgetMax ?? insights?.budget);
     const minPrice = parseNum(insights?.minPrice);
@@ -7331,18 +7385,21 @@ class VoiceWidget extends HTMLElement {
     const rcInsight = String(insights?.residentialComplex || '').trim();
     if (rcInsight && looksLikeComplexName(rcInsight)) {
       patch.residentialComplex = rcInsight;
-    } else if (
-      locRaw
-      && hasResidentialComplexMarker(locRaw)
-      && !districtSlug
-      && !isGenericCityLocation(locRaw)
-      && !isDistrictLikeLocation(locRaw)
-    ) {
-      patch.residentialComplex = stripRcPrefixes(locRaw);
+    } else {
+      const rcFromLocation = extractResidentialComplexFromLocation(locRaw);
+      if (
+        rcFromLocation
+        && !isGenericCityLocation(rcFromLocation)
+        && !isDistrictLikeLocation(rcFromLocation)
+      ) {
+        patch.residentialComplex = rcFromLocation;
+      }
     }
     if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
       patch.rcOnly = true;
     }
+    if (insights?.floorNotFirst === true) patch.floorNotFirst = true;
+    if (insights?.floorNotLast === true) patch.floorNotLast = true;
 
     const featureFlags = parseFeaturesTokens(insights);
     if (featureFlags.smart) patch.smart = true;

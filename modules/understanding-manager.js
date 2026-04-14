@@ -16,6 +16,7 @@ export class UnderstandingManager {
 
       // Блок 2: Параметры недвижимости (33.3%)
       type: null,        // 11%
+      district: null,
       location: null,    // 11%
       rooms: null,       // 11%
 
@@ -74,6 +75,7 @@ export class UnderstandingManager {
       budget: 11,
       // Блок 2
       type: 11,
+      district: 11,
       location: 11,
       rooms: 11,
       // Блок 3
@@ -190,6 +192,7 @@ export class UnderstandingManager {
 
       // Параметры недвижимости
       type: pick('type', 'propertyType'),
+      district: pick('district', 'location'),
       location: pick('location', 'district'),
       rooms: pick('rooms'),
 
