@@ -3223,6 +3223,11 @@ class VoiceWidget extends HTMLElement {
     this.clearPropertiesSlider();
     try {
       this.showChatScreen();
+      this.logEntryFlow('PROPERTY_GREETING_DECISION', { shouldShow: true, id: String(propId || '').trim() });
+      this.showGreetingMessage({
+        force: true,
+        source: 'deep_link_property'
+      });
       this.showMockCardWithActions(this._toCardEngineShape(item), { suppressAutoscroll: false });
       this._isDeepLinkMode = true;
       this._deepLinkModeType = 'property';
@@ -15765,16 +15770,12 @@ render() {
   ensureInitialGreetingAndFreshState() {
     const hasVisible = this.hasVisibleThreadMessages();
     const hasPersisted = this.hasPersistedThreadMessages();
-    const hasMessages = hasVisible || hasPersisted;
+    const hasMessages = hasVisible;
     this.logEntryFlow('INITIAL_GREETING_CHECK', {
       hasVisible,
       hasPersisted,
       alreadyShown: this._entryGreetingShown === true
     });
-    if (this._entryGreetingShown === true) {
-      this.logEntryFlow('GREETING_SKIPPED', { source: 'initial_bootstrap', reason: 'already_shown' });
-      return;
-    }
     if (hasMessages) {
       this.logEntryFlow('GREETING_SKIPPED', { source: 'initial_bootstrap', reason: 'messages_present' });
       return;
