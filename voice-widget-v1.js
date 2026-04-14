@@ -15726,7 +15726,7 @@ render() {
     this._catalogRelaxPool = null;
     this._catalogRelaxShownIds = new Set();
     this._catalogRelaxExhaustedLevels = new Set();
-    this._catalogRelaxSmartExhausted = query.smart === true ? false : true;
+    this._catalogRelaxSmartExhausted = true;
     this._catalogRelaxSmartFallbackApplied = false;
     this._catalogRelaxExhausted = false;
     this._debugCatalogSelectionHistory = [];
