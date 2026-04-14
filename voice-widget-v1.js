@@ -2713,7 +2713,9 @@ const LOCALES = {
     stagePrimarySelection: 'Готов к первичному подбору',
     stageDetails: 'Уточнение деталей',
     stagePreciseSelection: 'Готов к точному подбору',
-    assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!'
+    assistantGreeting: 'Привет! Я подберу любые объекты под твой запрос. Чем подробнее расскажешь, что ищешь, тем точнее будет выбор. Готов начать? Поехали!',
+    assistantSharePropertyGreeting: 'Здравствуйте! Для вас подготовлен объект. Листайте карточку, а если захотите увидеть больше объектов - я здесь что бы помочь!',
+    assistantShareSelectionGreeting: 'Здравствуйте! Для вас подготовлена подборка из {count} объектов. Листайте карточки, а если захотите увидеть больше объектов - я здесь что бы помочь!'
   },
   UA: {
     inputPlaceholder: 'Поставте запитання...',
@@ -2896,7 +2898,9 @@ const LOCALES = {
     stagePrimarySelection: 'Готовий до первинного підбору',
     stageDetails: 'Уточнення деталей',
     stagePreciseSelection: 'Готовий до точного підбору',
-    assistantGreeting: 'Привіт! Я підберу будь-які об’єкти під ваш запит. Чим детальніше розкажете, що шукаєте, тим точніший буде підбір. Готові почати? Поїхали!'
+    assistantGreeting: 'Привіт! Я підберу будь-які об’єкти під ваш запит. Чим детальніше розкажете, що шукаєте, тим точніший буде підбір. Готові почати? Поїхали!',
+    assistantSharePropertyGreeting: 'Вітаємо! Для вас підготовлено обʼєкт. Гортайте картку, а якщо захочете побачити більше обʼєктів - я тут, щоб допомогти!',
+    assistantShareSelectionGreeting: 'Вітаємо! Для вас підготовлено добірку з {count} обʼєктів. Гортайте картки, а якщо захочете побачити більше обʼєктів - я тут, щоб допомогти!'
   }
 };
 
@@ -2943,6 +2947,7 @@ class VoiceWidget extends HTMLElement {
     this._deepLinkModeType = null;
     this._entryGreetingShown = false;
     this._lastSelectionGreetingSignature = '';
+    this._lastPropertyGreetingId = '';
     this._sliderCheckpointShown = { 10: false, 20: false };
     /** @type {'slider'|'list'} */
     this._catalogDisplayMode = 'slider';
@@ -3223,11 +3228,17 @@ class VoiceWidget extends HTMLElement {
     this.clearPropertiesSlider();
     try {
       this.showChatScreen();
-      this.logEntryFlow('PROPERTY_GREETING_DECISION', { shouldShow: true, id: String(propId || '').trim() });
-      this.showGreetingMessage({
-        force: true,
-        source: 'deep_link_property'
-      });
+      const propertyId = String(propId || '').trim();
+      const shouldShowPropertyGreeting = this._lastPropertyGreetingId !== propertyId;
+      this.logEntryFlow('PROPERTY_GREETING_DECISION', { shouldShow: shouldShowPropertyGreeting, id: propertyId });
+      if (shouldShowPropertyGreeting) {
+        this.showGreetingMessage({
+          force: true,
+          source: 'deep_link_property',
+          mode: 'property'
+        });
+        this._lastPropertyGreetingId = propertyId;
+      }
       this.showMockCardWithActions(this._toCardEngineShape(item), { suppressAutoscroll: false });
       this._isDeepLinkMode = true;
       this._deepLinkModeType = 'property';
@@ -3277,6 +3288,7 @@ class VoiceWidget extends HTMLElement {
         this.showGreetingMessage({
           force: true,
           source: 'deep_link_selection',
+          mode: 'selection',
           count: normalizedIds.length
         });
         this._lastSelectionGreetingSignature = signature;
@@ -9919,6 +9931,7 @@ class VoiceWidget extends HTMLElement {
   initializeUI() {
     this._entryGreetingShown = false;
     this._lastSelectionGreetingSignature = '';
+    this._lastPropertyGreetingId = '';
     this.logEntryFlow('BOOT_START', { hasSessionId: Boolean(this.sessionId) });
     this.ui.initializeUI();
     const finalizeBootstrapFlow = () => {
@@ -10612,14 +10625,18 @@ render() {
   // Expose helpers
   this.showScreen = showScreen;
   this.showChatScreen = () => showScreen('dialog');
-  this.getEntryGreetingMessage = () => {
-    const selectionIdsFromUrl = this.getDeepLinkSelectionIdsFromUrl();
-    const deepLinkSelectionActive = this._isDeepLinkMode === true && this._deepLinkModeType === 'selection';
-    const count = selectionIdsFromUrl.length > 0
-      ? selectionIdsFromUrl.length
-      : (deepLinkSelectionActive && Array.isArray(this._deepLinkSelectionIds) ? this._deepLinkSelectionIds.length : 0);
-    if (count > 0 && (selectionIdsFromUrl.length > 0 || deepLinkSelectionActive)) {
-      return `Здравствуйте! Для вас подготовлена подборка из ${count} объектов. Листайте карточки, а если захотите увидеть больше объектов - я здесь что бы помочь!`;
+  this.getEntryGreetingMessage = (mode = 'default', options = {}) => {
+    const safeMode = String(mode || 'default').trim().toLowerCase();
+    const countRaw = Number(options?.count);
+    const count = Number.isFinite(countRaw) ? Math.max(1, Math.round(countRaw)) : 0;
+    if (safeMode === 'selection') {
+      const resolvedCount = count > 0 ? count : (Array.isArray(this._deepLinkSelectionIds) ? this._deepLinkSelectionIds.length : 0);
+      return this.t('assistantShareSelectionGreeting', { count: resolvedCount > 0 ? resolvedCount : 1 })
+        || `Здравствуйте! Для вас подготовлена подборка из ${resolvedCount > 0 ? resolvedCount : 1} объектов. Листайте карточки, а если захотите увидеть больше объектов - я здесь что бы помочь!`;
+    }
+    if (safeMode === 'property') {
+      return this.t('assistantSharePropertyGreeting')
+        || 'Здравствуйте! Для вас подготовлен объект. Листайте карточку, а если захотите увидеть больше объектов - я здесь что бы помочь!';
     }
     return this.t('assistantGreeting') || '';
   };
@@ -10628,9 +10645,22 @@ render() {
     const source = String(safe.source || 'bootstrap').trim() || 'bootstrap';
     const force = safe.force === true;
     const count = Number.isFinite(Number(safe.count)) ? Number(safe.count) : null;
-    const content = this.getEntryGreetingMessage();
+    const mode = String(safe.mode || 'default').trim().toLowerCase() || 'default';
+    const content = this.getEntryGreetingMessage(mode, { count });
     if (!content) {
       this.logEntryFlow('GREETING_SKIPPED', { source, reason: 'empty_content' });
+      return false;
+    }
+    const lastMessage = Array.isArray(this.messages) && this.messages.length
+      ? this.messages[this.messages.length - 1]
+      : null;
+    if (
+      lastMessage &&
+      lastMessage.type === 'assistant' &&
+      lastMessage.greeting === true &&
+      String(lastMessage.content || '').trim() === String(content || '').trim()
+    ) {
+      this.logEntryFlow('GREETING_SKIPPED', { source, mode, reason: 'duplicate_last_message' });
       return false;
     }
     if (!force && this.hasVisibleThreadMessages()) {
@@ -10640,7 +10670,7 @@ render() {
     try {
       this.ui?.addMessage?.({ type: 'assistant', content, timestamp: new Date(), greeting: true });
       this._entryGreetingShown = true;
-      this.logEntryFlow('GREETING_RENDERED', { source, count });
+      this.logEntryFlow('GREETING_RENDERED', { source, mode, count });
       return true;
     } catch {
       this.logEntryFlow('GREETING_SKIPPED', { source, reason: 'ui_add_message_failed' });
@@ -15771,11 +15801,17 @@ render() {
     const hasVisible = this.hasVisibleThreadMessages();
     const hasPersisted = this.hasPersistedThreadMessages();
     const hasMessages = hasVisible;
+    const hasPendingDeepLink = Boolean(this._deepLinkPropId) || (Array.isArray(this._deepLinkSelectionIds) && this._deepLinkSelectionIds.length > 0);
     this.logEntryFlow('INITIAL_GREETING_CHECK', {
       hasVisible,
       hasPersisted,
-      alreadyShown: this._entryGreetingShown === true
+      alreadyShown: this._entryGreetingShown === true,
+      hasPendingDeepLink
     });
+    if (hasPendingDeepLink || (this._isDeepLinkMode === true && (this._deepLinkModeType === 'property' || this._deepLinkModeType === 'selection'))) {
+      this.logEntryFlow('GREETING_SKIPPED', { source: 'initial_bootstrap', reason: 'deep_link_active' });
+      return;
+    }
     if (hasMessages) {
       this.logEntryFlow('GREETING_SKIPPED', { source: 'initial_bootstrap', reason: 'messages_present' });
       return;
@@ -15783,7 +15819,7 @@ render() {
     this.resetSessionIdentity();
     this.understanding?.reset?.();
     this.resetCatalogRuntimeState();
-    this.showGreetingMessage({ source: 'initial_bootstrap' });
+    this.showGreetingMessage({ source: 'initial_bootstrap', mode: 'default' });
     try { sessionStorage.setItem('vw_greeting_shown', '1'); } catch {}
   }
 
@@ -15799,7 +15835,7 @@ render() {
     }
 
     this.showChatScreen();
-    this.showGreetingMessage({ source: 'clear_session' });
+    this.showGreetingMessage({ source: 'clear_session', mode: 'default' });
 
     console.log('🗑️ Сессия очищена, sessionId сброшен (ожидаем новый от сервера)');
   }
