@@ -2948,6 +2948,21 @@ class VoiceWidget extends HTMLElement {
     this._entryGreetingShown = false;
     this._lastSelectionGreetingSignature = '';
     this._lastPropertyGreetingId = '';
+    this._debugShareState = {
+      at: null,
+      source: null,
+      mode: null,
+      status: null,
+      reason: null,
+      count: null,
+      propId: null,
+      inlineQuery: null,
+      preferNative: null,
+      hasTelegramWebApp: null,
+      initDataPresent: null,
+      methods: null,
+      notice: null
+    };
     this._sliderCheckpointShown = { 10: false, 20: false };
     /** @type {'slider'|'list'} */
     this._catalogDisplayMode = 'slider';
@@ -3348,6 +3363,19 @@ class VoiceWidget extends HTMLElement {
     } catch {}
   }
 
+  setDebugShareState(patch = {}) {
+    const next = patch && typeof patch === 'object' ? patch : {};
+    const prev = this._debugShareState && typeof this._debugShareState === 'object' ? this._debugShareState : {};
+    this._debugShareState = {
+      ...prev,
+      ...next,
+      at: new Date().toISOString()
+    };
+    try {
+      console.log('[SHARE_DEBUG]', this._debugShareState);
+    } catch {}
+  }
+
   buildTelegramPropertyLink(propId) {
     const safeId = this.normalizeDeepLinkPropId(propId);
     if (!safeId) return '';
@@ -3363,6 +3391,7 @@ class VoiceWidget extends HTMLElement {
   showShareNotice(message) {
     const text = String(message || '').trim();
     if (!text) return;
+    this.setDebugShareState({ notice: text });
     try {
       const tg = window?.Telegram?.WebApp;
       if (tg && typeof tg.showAlert === 'function') {
@@ -3469,16 +3498,35 @@ class VoiceWidget extends HTMLElement {
     const preferNative = safeOptions.preferNative === true;
     const tg = window?.Telegram?.WebApp;
     const initDataPresent = Boolean(String(tg?.initData || '').trim());
+    this.setDebugShareState({
+      source: 'selection_share',
+      mode: normalized.length === 1 ? 'property' : 'selection',
+      status: 'started',
+      reason: '',
+      count: normalized.length,
+      propId: normalized.length === 1 ? normalized[0] : null,
+      inlineQuery: null,
+      preferNative,
+      hasTelegramWebApp: Boolean(tg),
+      initDataPresent,
+      methods: {
+        switchInlineQuery: typeof tg?.switchInlineQuery === 'function',
+        switchInlineQueryChosenChat: typeof tg?.switchInlineQueryChosenChat === 'function'
+      }
+    });
     if (!preferNative && tg && initDataPresent) {
       try {
         if (normalized.length === 1) {
           const inlineQuery = `share_prop_${normalized[0]}`;
+          this.setDebugShareState({ inlineQuery, status: 'inline_try' });
           if (typeof tg?.switchInlineQuery === 'function') {
             try {
               tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+              this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQuery_filters' });
               return true;
             } catch {
               tg.switchInlineQuery(inlineQuery);
+              this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQuery_no_filters' });
               return true;
             }
           }
@@ -3488,18 +3536,22 @@ class VoiceWidget extends HTMLElement {
               allow_group_chats: true,
               allow_channel_chats: true
             });
+            this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQueryChosenChat' });
             return true;
           }
         } else {
           const token = this.encodeDeepLinkSelectionIds(normalized);
           if (token) {
             const inlineQuery = `share_sel_${token}`;
+            this.setDebugShareState({ inlineQuery, status: 'inline_try' });
             if (typeof tg?.switchInlineQuery === 'function') {
               try {
                 tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
+                this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQuery_filters' });
                 return true;
               } catch {
                 tg.switchInlineQuery(inlineQuery);
+                this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQuery_no_filters' });
                 return true;
               }
             }
@@ -3509,12 +3561,14 @@ class VoiceWidget extends HTMLElement {
                 allow_group_chats: true,
                 allow_channel_chats: true
               });
+              this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQueryChosenChat' });
               return true;
             }
           }
         }
       } catch (error) {
         console.warn('[TG Inline] selection share failed, fallback to native share:', error);
+        this.setDebugShareState({ status: 'inline_failed_fallback_native', reason: String(error?.message || 'inline_error') });
       }
     }
     const shareUrl = normalized.length === 1
@@ -3531,18 +3585,22 @@ class VoiceWidget extends HTMLElement {
     try {
       if (navigator?.share) {
         await navigator.share(payload);
+        this.setDebugShareState({ status: 'native_share_success', reason: 'navigator_share' });
         this.showShareNotice('Успешно отправлено ✓');
         return true;
       }
     } catch (error) {
       if (error && error.name === 'AbortError') return false;
       console.warn('navigator.share failed, using clipboard fallback:', error);
+      this.setDebugShareState({ status: 'native_share_failed_clipboard_fallback', reason: String(error?.message || 'navigator_share_error') });
     }
     const copied = await this.copyTextToClipboard(shareUrl);
     if (copied) {
+      this.setDebugShareState({ status: 'clipboard_success', reason: 'copy_link' });
       this.showShareNotice('Ссылка скопирована ✓');
       return true;
     }
+    this.setDebugShareState({ status: 'share_failed', reason: 'clipboard_failed' });
     this.showShareNotice('Не удалось поделиться');
     return false;
   }
@@ -3552,6 +3610,12 @@ class VoiceWidget extends HTMLElement {
     const propId = card?.getAttribute('data-variant-id') || '';
     if (!propId) {
       console.warn('[TG Inline] missing property id for slide:', slide);
+      this.setDebugShareState({
+        source: 'slider_inline_button',
+        mode: 'property',
+        status: 'failed',
+        reason: 'missing_property_id'
+      });
       return false;
     }
     const inlineTargetId = String(propId).trim();
@@ -3562,8 +3626,26 @@ class VoiceWidget extends HTMLElement {
     const initDataPresent = Boolean(String(tg?.initData || '').trim());
     const chatType = tg?.initDataUnsafe?.chat_type || 'unknown';
     const queryId = tg?.initDataUnsafe?.query_id || '';
+    this.setDebugShareState({
+      source: 'slider_inline_button',
+      mode: 'property',
+      status: 'inline_try',
+      reason: '',
+      count: 1,
+      propId: inlineTargetId,
+      inlineQuery,
+      preferNative: false,
+      hasTelegramWebApp: Boolean(tg),
+      initDataPresent,
+      methods: {
+        switchInlineQuery: typeof tg?.switchInlineQuery === 'function',
+        switchInlineQueryChosenChat: typeof tg?.switchInlineQueryChosenChat === 'function',
+        switchInlineQueryCurrentChat: typeof tg?.switchInlineQueryCurrentChat === 'function'
+      }
+    });
     console.log('[TG Inline] context:', { initDataPresent, chatType, hasQueryId: Boolean(queryId) });
     if (!tg || !initDataPresent) {
+      this.setDebugShareState({ status: 'failed', reason: !tg ? 'telegram_webapp_missing' : 'init_data_missing' });
       this.showShareNotice('Inline share works only inside Telegram Mini App');
       return false;
     }
@@ -3575,11 +3657,13 @@ class VoiceWidget extends HTMLElement {
         try {
           tg.switchInlineQuery(inlineQuery, ['users', 'groups', 'channels']);
           console.log('[TG Inline] switchInlineQuery invoked successfully (with chooser filters)');
+          this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQuery_filters' });
           return true;
         } catch (withFiltersError) {
           console.warn('[TG Inline] switchInlineQuery with filters failed:', withFiltersError);
           tg.switchInlineQuery(inlineQuery);
           console.log('[TG Inline] switchInlineQuery invoked successfully (fallback no filters)');
+          this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQuery_no_filters' });
           return true;
         }
       }
@@ -3590,11 +3674,13 @@ class VoiceWidget extends HTMLElement {
           allow_channel_chats: true
         });
         console.log('[TG Inline] switchInlineQueryChosenChat invoked successfully');
+        this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQueryChosenChat' });
         return true;
       }
       if (typeof tg?.switchInlineQueryCurrentChat === 'function') {
         tg.switchInlineQueryCurrentChat(inlineQuery);
         console.log('[TG Inline] switchInlineQueryCurrentChat invoked successfully');
+        this.setDebugShareState({ status: 'inline_switched', reason: 'switchInlineQueryCurrentChat' });
         return true;
       }
       const methodsState = {
@@ -3603,11 +3689,13 @@ class VoiceWidget extends HTMLElement {
         currentChat: typeof tg?.switchInlineQueryCurrentChat
       };
       console.warn('[TG Inline] no inline switch method available:', methodsState);
+      this.setDebugShareState({ status: 'failed', reason: 'inline_api_unavailable', methods: methodsState });
       this.showShareNotice(`Inline API unavailable (v${webAppVersion})`);
       return false;
     } catch (error) {
       const reason = error?.message || 'unknown error';
       console.warn('[TG Inline] inline switch call failed:', error);
+      this.setDebugShareState({ status: 'failed', reason: String(reason) });
       this.showShareNotice(`Inline share failed (v${webAppVersion}): ${reason}`);
       return false;
     }
@@ -9932,6 +10020,21 @@ class VoiceWidget extends HTMLElement {
     this._entryGreetingShown = false;
     this._lastSelectionGreetingSignature = '';
     this._lastPropertyGreetingId = '';
+    this._debugShareState = {
+      at: null,
+      source: null,
+      mode: null,
+      status: null,
+      reason: null,
+      count: null,
+      propId: null,
+      inlineQuery: null,
+      preferNative: null,
+      hasTelegramWebApp: null,
+      initDataPresent: null,
+      methods: null,
+      notice: null
+    };
     this.logEntryFlow('BOOT_START', { hasSessionId: Boolean(this.sessionId) });
     this.ui.initializeUI();
     const finalizeBootstrapFlow = () => {
@@ -14659,6 +14762,25 @@ render() {
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
       .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
       .join('');
+    const shareDebug = this._debugShareState && typeof this._debugShareState === 'object' ? this._debugShareState : {};
+    const shareDebugListHtml = [
+      ['at', shareDebug.at],
+      ['source', shareDebug.source],
+      ['mode', shareDebug.mode],
+      ['status', shareDebug.status],
+      ['reason', shareDebug.reason],
+      ['count', shareDebug.count],
+      ['propId', shareDebug.propId],
+      ['inlineQuery', shareDebug.inlineQuery],
+      ['preferNative', shareDebug.preferNative],
+      ['hasTelegramWebApp', shareDebug.hasTelegramWebApp],
+      ['initDataPresent', shareDebug.initDataPresent],
+      ['methods', shareDebug.methods],
+      ['lastNotice', shareDebug.notice]
+    ]
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
     const rawSourceInsights = (() => {
       const src = (typeof this.getUnderstanding === 'function')
         ? (this.getUnderstanding() || {})
@@ -14797,6 +14919,26 @@ render() {
       lines.push(`- totalMatches: ${pretty(api?.totalMatches)}`);
       lines.push(`- strictMatches: ${pretty(api?.strictMatches)}`);
       lines.push(`- relaxedMatches: ${pretty(api?.relaxedMatches)}`);
+      lines.push('');
+      lines.push('10) SHARE / INLINE DEBUG');
+      [
+        ['at', shareDebug.at],
+        ['source', shareDebug.source],
+        ['mode', shareDebug.mode],
+        ['status', shareDebug.status],
+        ['reason', shareDebug.reason],
+        ['count', shareDebug.count],
+        ['propId', shareDebug.propId],
+        ['inlineQuery', shareDebug.inlineQuery],
+        ['preferNative', shareDebug.preferNative],
+        ['hasTelegramWebApp', shareDebug.hasTelegramWebApp],
+        ['initDataPresent', shareDebug.initDataPresent],
+        ['methods', shareDebug.methods],
+        ['lastNotice', shareDebug.notice]
+      ].forEach(([k, v]) => {
+        if (v === null || v === undefined || String(v).trim() === '') return;
+        lines.push(`- ${k}: ${pretty(v)}`);
+      });
       return lines.join('\n');
     })();
     const overlay = document.createElement('div');
@@ -14849,7 +14991,11 @@ render() {
           <ul class="vw-debug-insights-list">${dialogListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">11) Copy-ready debug report</div>
+          <div class="vw-debug-insights-section-title">11) Share / Inline debug</div>
+          <ul class="vw-debug-insights-list">${shareDebugListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">12) Copy-ready debug report</div>
           <pre class="vw-debug-insights-raw">${safeText(copyReport)}</pre>
         </div>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
