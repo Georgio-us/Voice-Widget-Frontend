@@ -2590,15 +2590,16 @@ const LOCALES = {
     accessUserWishlist: 'Моя подборка',
     accessUserWantBot: 'Хочу такого бота!',
     accessUserBotSectionTitle: 'Хочу такого бота!',
-    accessUserBotIntro: 'Вы риэлтор, агентство недвижимости или занимаетесь недвижимостью? Подайте заявку на интеграцию и получите бесплатную 7-дневную подписку, чтобы оценить все преимущества.',
+    accessUserBotIntro: 'Вы риэлтор, агентство недвижимости или работаете в недвижимости?',
+    accessUserBotSubtitle: 'Подайте заявку на интеграцию и получите бесплатную 7-дневную подписку, чтобы оценить все преимущества.',
     accessUserBotBenefit1: 'Полная интеграция с вашей базой объектов (включая OLX).',
     accessUserBotBenefit2: 'Добавление и редактирование объектов прямо в боте.',
     accessUserBotBenefit3: 'Быстрое формирование подборок для ваших клиентов.',
     accessUserBotBenefit4: 'ИИ-ассистент работает с клиентами, даже когда вас нет онлайн.',
     accessUserBotBenefit5: 'Полная аналитика активности: знайте, что хотят ваши клиенты.',
     accessUserBotBenefit6: 'CRM внутри бота и моментальные заявки прямо в Telegram.',
-    accessUserBotTrialCta: 'Получить бесплатный 7-дневный тест',
-    accessUserBotConsultCta: 'Консультация по интеграции',
+    accessUserBotTrialCta: '7-дневный тест',
+    accessUserBotConsultCta: 'Консультация',
     accessUserConsult: 'Консультация',
     accessUserRemove: 'Убрать',
     consentText: 'Я согласен(а) на обработку моих данных для обработки этого запроса и связи со мной по недвижимости.',
@@ -2769,15 +2770,16 @@ const LOCALES = {
     accessUserWishlist: 'Моя добірка',
     accessUserWantBot: 'Хочу такого бота!',
     accessUserBotSectionTitle: 'Хочу такого бота!',
-    accessUserBotIntro: 'Ви рієлтор, агентство нерухомості або працюєте в нерухомості? Подайте заявку на інтеграцію і отримайте безкоштовну 7-денну підписку, щоб оцінити всі переваги.',
+    accessUserBotIntro: 'Ви рієлтор, агентство нерухомості або працюєте в нерухомості?',
+    accessUserBotSubtitle: 'Подайте заявку на інтеграцію і отримайте безкоштовну 7-денну підписку, щоб оцінити всі переваги.',
     accessUserBotBenefit1: 'Повна інтеграція з вашою базою обʼєктів (включно з OLX).',
     accessUserBotBenefit2: 'Додавання та редагування обʼєктів прямо в боті.',
     accessUserBotBenefit3: 'Швидке формування добірок для ваших клієнтів.',
     accessUserBotBenefit4: 'AI-асистент працює з клієнтами навіть коли вас немає онлайн.',
     accessUserBotBenefit5: 'Повна аналітика активності: знайте, чого хочуть ваші клієнти.',
     accessUserBotBenefit6: 'CRM всередині бота та миттєві заявки прямо в Telegram.',
-    accessUserBotTrialCta: 'Отримати безкоштовний 7-денний тест',
-    accessUserBotConsultCta: 'Консультація щодо інтеграції',
+    accessUserBotTrialCta: '7-денний тест',
+    accessUserBotConsultCta: 'Консультація',
     accessUserConsult: 'Консультація',
     accessUserRemove: 'Прибрати',
     consentText: "Я погоджуюся на обробку моїх даних для обробки цього запиту та зв'язку зі мною щодо нерухомості.",
@@ -4803,18 +4805,21 @@ class VoiceWidget extends HTMLElement {
       }
       if (safeSection === 'want-bot') {
         return `
-          <div class="vw-access-sub-list">
-            <div class="vw-access-sub-item">${locale.accessUserBotIntro || ''}</div>
-            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit1 || ''}</div>
-            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit2 || ''}</div>
-            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit3 || ''}</div>
-            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit4 || ''}</div>
-            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit5 || ''}</div>
-            <div class="vw-access-sub-item">• ${locale.accessUserBotBenefit6 || ''}</div>
+          <div class="vw-want-bot">
+            <div class="vw-want-bot__title">${locale.accessUserBotIntro || ''}</div>
+            <div class="vw-want-bot__subtitle">${locale.accessUserBotSubtitle || ''}</div>
+            <div class="vw-want-bot__list">
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🔶</span><span>${locale.accessUserBotBenefit1 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">✍️</span><span>${locale.accessUserBotBenefit2 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">⚡</span><span>${locale.accessUserBotBenefit3 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🤖</span><span>${locale.accessUserBotBenefit4 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📊</span><span>${locale.accessUserBotBenefit5 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📩</span><span>${locale.accessUserBotBenefit6 || ''}</span></div>
+            </div>
           </div>
-          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--stack" style="margin-top: 12px;">
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-bot-trial">${locale.accessUserBotTrialCta || 'Получить бесплатный 7-дневный тест'}</button>
-            <button type="button" class="vw-access-sub-btn" data-role="want-bot-consult">${locale.accessUserBotConsultCta || 'Консультация по интеграции'}</button>
+          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--want-bot">
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-bot-trial">${locale.accessUserBotTrialCta || '7-дневный тест'}</button>
+            <button type="button" class="vw-access-sub-btn" data-role="want-bot-consult">${locale.accessUserBotConsultCta || 'Консультация'}</button>
           </div>
         `;
       }
@@ -8823,6 +8828,56 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         grid-template-columns: 1fr;
         gap: 8px;
+      }
+      .vw-access-sub-toolbar--want-bot {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        align-items: center;
+        margin-top: 14px;
+      }
+      .vw-access-sub-toolbar--want-bot .vw-access-sub-btn {
+        min-height: 40px;
+        width: 100%;
+        padding: 0 10px;
+        font-size: .83rem;
+        text-align: center;
+      }
+      .vw-want-bot {
+        display: grid;
+        gap: 10px;
+      }
+      .vw-want-bot__title {
+        font-size: .94rem;
+        font-weight: 700;
+        line-height: 1.35;
+        color: var(--text-primary, #fff);
+      }
+      .vw-want-bot__subtitle {
+        font-size: .84rem;
+        line-height: 1.4;
+        color: var(--text-secondary, rgba(255,255,255,0.66));
+      }
+      .vw-want-bot__list {
+        display: grid;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      .vw-want-bot__item {
+        display: grid;
+        grid-template-columns: 20px 1fr;
+        align-items: start;
+        gap: 8px;
+        font-size: .86rem;
+        line-height: 1.4;
+        color: var(--text-primary, #fff);
+      }
+      .vw-want-bot__emoji {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        line-height: 1;
       }
       .vw-access-sub-input {
         width: 100%;
