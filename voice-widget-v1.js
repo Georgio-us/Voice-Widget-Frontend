@@ -2941,6 +2941,8 @@ class VoiceWidget extends HTMLElement {
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
     this._deepLinkModeType = null;
+    this._entryGreetingShown = false;
+    this._lastSelectionGreetingSignature = '';
     this._sliderCheckpointShown = { 10: false, 20: false };
     /** @type {'slider'|'list'} */
     this._catalogDisplayMode = 'slider';
@@ -3209,6 +3211,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   async renderSinglePropertyById(propId) {
+    this.logEntryFlow('PROPERTY_RENDER_START', { id: String(propId || '').trim() });
     let item = this.getCatalogPropertyById(propId);
     if (!item) {
       try {
@@ -3225,8 +3228,10 @@ class VoiceWidget extends HTMLElement {
       this._deepLinkModeType = 'property';
       this._activeDeepLinkPropId = String(propId).trim();
       this._deepLinkSelectionIds = [];
+      this.logEntryFlow('PROPERTY_RENDER_DONE', { id: String(propId || '').trim() });
       return true;
     } catch {
+      this.logEntryFlow('PROPERTY_RENDER_FAILED', { id: String(propId || '').trim() });
       return false;
     }
   }
@@ -3240,6 +3245,7 @@ class VoiceWidget extends HTMLElement {
       )
     );
     if (!normalizedIds.length) return false;
+    this.logEntryFlow('SELECTION_RENDER_START', { requested: normalizedIds.length });
     const selected = [];
     for (let i = 0; i < normalizedIds.length; i += 1) {
       const id = normalizedIds[i];
@@ -3256,6 +3262,20 @@ class VoiceWidget extends HTMLElement {
     this.clearPropertiesSlider();
     try {
       this.showChatScreen();
+      const signature = normalizedIds.join(',');
+      const shouldShowSelectionGreeting = this._lastSelectionGreetingSignature !== signature;
+      this.logEntryFlow('SELECTION_GREETING_DECISION', {
+        shouldShow: shouldShowSelectionGreeting,
+        count: normalizedIds.length
+      });
+      if (shouldShowSelectionGreeting) {
+        this.showGreetingMessage({
+          force: true,
+          source: 'deep_link_selection',
+          count: normalizedIds.length
+        });
+        this._lastSelectionGreetingSignature = signature;
+      }
       selected.forEach((item) => {
         this.showMockCardWithActions(this._toCardEngineShape(item), { suppressAutoscroll: true });
       });
@@ -3263,23 +3283,31 @@ class VoiceWidget extends HTMLElement {
       this._deepLinkModeType = 'selection';
       this._activeDeepLinkPropId = null;
       this._deepLinkSelectionIds = normalizedIds;
+      this.logEntryFlow('SELECTION_RENDER_DONE', { rendered: selected.length });
       return true;
     } catch {
+      this.logEntryFlow('SELECTION_RENDER_FAILED', { count: normalizedIds.length });
       return false;
     }
   }
 
   async tryOpenDeepLinkedProperty() {
+    this.logEntryFlow('DEEPLINK_CHECK_START', {});
     const propId = this._deepLinkPropId || this.getDeepLinkPropIdFromUrl();
     this._deepLinkPropId = propId || null;
     if (propId) {
+      this.logEntryFlow('DEEPLINK_DETECTED', { type: 'property', id: propId });
       return await this.renderSinglePropertyById(propId);
     }
     const selectionIds = Array.isArray(this._deepLinkSelectionIds) && this._deepLinkSelectionIds.length
       ? this._deepLinkSelectionIds
       : this.getDeepLinkSelectionIdsFromUrl();
     this._deepLinkSelectionIds = Array.isArray(selectionIds) ? selectionIds : [];
-    if (!this._deepLinkSelectionIds.length) return false;
+    if (!this._deepLinkSelectionIds.length) {
+      this.logEntryFlow('DEEPLINK_DETECTED', { type: 'none' });
+      return false;
+    }
+    this.logEntryFlow('DEEPLINK_DETECTED', { type: 'selection', count: this._deepLinkSelectionIds.length });
     return await this.renderSelectionByIds(this._deepLinkSelectionIds);
   }
 
@@ -3293,6 +3321,14 @@ class VoiceWidget extends HTMLElement {
     if (clearUrl) this.clearDeepLinkParamInUrl();
     this.renderPropertiesFromCatalog().catch(() => {});
     return true;
+  }
+
+  logEntryFlow(eventName, payload = {}) {
+    const tag = String(eventName || '').trim() || 'UNKNOWN';
+    const data = payload && typeof payload === 'object' ? payload : {};
+    try {
+      console.log(`[ENTRY_FLOW] ${tag}`, data);
+    } catch {}
   }
 
   buildTelegramPropertyLink(propId) {
@@ -9876,6 +9912,9 @@ class VoiceWidget extends HTMLElement {
 
   // ---------- UI init ----------
   initializeUI() {
+    this._entryGreetingShown = false;
+    this._lastSelectionGreetingSignature = '';
+    this.logEntryFlow('BOOT_START', { hasSessionId: Boolean(this.sessionId) });
     this.ui.initializeUI();
     const finalizeBootstrapFlow = () => {
       try { this.ensureInitialGreetingAndFreshState(); } catch {}
@@ -10579,8 +10618,29 @@ render() {
     }
     return this.t('assistantGreeting') || '';
   };
-  this.showGreetingMessage = () => {
-    try { this.ui?.addMessage?.({ type: 'assistant', content: this.getEntryGreetingMessage(), timestamp: new Date(), greeting: true }); } catch {}
+  this.showGreetingMessage = (options = {}) => {
+    const safe = options && typeof options === 'object' ? options : {};
+    const source = String(safe.source || 'bootstrap').trim() || 'bootstrap';
+    const force = safe.force === true;
+    const count = Number.isFinite(Number(safe.count)) ? Number(safe.count) : null;
+    const content = this.getEntryGreetingMessage();
+    if (!content) {
+      this.logEntryFlow('GREETING_SKIPPED', { source, reason: 'empty_content' });
+      return false;
+    }
+    if (!force && this.hasVisibleThreadMessages()) {
+      this.logEntryFlow('GREETING_SKIPPED', { source, reason: 'visible_messages_present' });
+      return false;
+    }
+    try {
+      this.ui?.addMessage?.({ type: 'assistant', content, timestamp: new Date(), greeting: true });
+      this._entryGreetingShown = true;
+      this.logEntryFlow('GREETING_RENDERED', { source, count });
+      return true;
+    } catch {
+      this.logEntryFlow('GREETING_SKIPPED', { source, reason: 'ui_add_message_failed' });
+      return false;
+    }
   };
   // (legacy) this.showDetailsScreen was used for v1 Details screen — removed
   
@@ -15703,12 +15763,26 @@ render() {
   }
 
   ensureInitialGreetingAndFreshState() {
-    const hasMessages = this.hasVisibleThreadMessages() || this.hasPersistedThreadMessages();
-    if (hasMessages) return;
+    const hasVisible = this.hasVisibleThreadMessages();
+    const hasPersisted = this.hasPersistedThreadMessages();
+    const hasMessages = hasVisible || hasPersisted;
+    this.logEntryFlow('INITIAL_GREETING_CHECK', {
+      hasVisible,
+      hasPersisted,
+      alreadyShown: this._entryGreetingShown === true
+    });
+    if (this._entryGreetingShown === true) {
+      this.logEntryFlow('GREETING_SKIPPED', { source: 'initial_bootstrap', reason: 'already_shown' });
+      return;
+    }
+    if (hasMessages) {
+      this.logEntryFlow('GREETING_SKIPPED', { source: 'initial_bootstrap', reason: 'messages_present' });
+      return;
+    }
     this.resetSessionIdentity();
     this.understanding?.reset?.();
     this.resetCatalogRuntimeState();
-    this.showGreetingMessage();
+    this.showGreetingMessage({ source: 'initial_bootstrap' });
     try { sessionStorage.setItem('vw_greeting_shown', '1'); } catch {}
   }
 
@@ -15724,7 +15798,7 @@ render() {
     }
 
     this.showChatScreen();
-    this.showGreetingMessage();
+    this.showGreetingMessage({ source: 'clear_session' });
 
     console.log('🗑️ Сессия очищена, sessionId сброшен (ожидаем новый от сервера)');
   }
