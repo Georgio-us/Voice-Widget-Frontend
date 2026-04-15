@@ -4138,6 +4138,19 @@ class VoiceWidget extends HTMLElement {
     }
     this.setAccessButtonBusy(button, true);
     this.setAccessButtonLabel(button, this.t('accessAdminOlxConnectOpening') || 'Opening OLX...');
+    // OLX OAuth can fail inside Telegram Mini App webview.
+    // Prefer opening external browser context via Telegram bridge.
+    try {
+      const tg = window?.Telegram?.WebApp;
+      if (tg && typeof tg.openLink === 'function') {
+        tg.openLink(url, { try_instant_view: false });
+        return;
+      }
+    } catch {}
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    } catch {}
     window.location.href = url;
   }
 
