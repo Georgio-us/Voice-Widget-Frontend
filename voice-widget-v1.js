@@ -4168,13 +4168,11 @@ class VoiceWidget extends HTMLElement {
     this.setAccessButtonBusy(button, true);
     this.setAccessButtonLabel(button, this.t('accessAdminOlxConnectOpening') || 'Opening OLX...');
     
-    const finalUrl = url + '#';
-    
     // Open in external browser instead of current WebApp window to bypass Telegram internal browser quirks
     if (window?.Telegram?.WebApp?.openLink) {
-      window.Telegram.WebApp.openLink(finalUrl);
+      window.Telegram.WebApp.openLink(url);
     } else {
-      window.open(finalUrl, '_blank');
+      window.open(url, '_blank');
     }
     
     // Reset button state after a short delay since we don't control the external window
