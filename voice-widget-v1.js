@@ -4186,6 +4186,7 @@ class VoiceWidget extends HTMLElement {
       return;
     }
 
+    let importedSuccessfully = false;
     this.setAccessButtonBusy(button, true);
     this.setAccessButtonLabel(button, locale.accessAdminOlxSyncing || 'Syncing OLX adverts...');
     this.ui?.showNotification?.(`⏳ ${locale.accessAdminOlxSyncing || 'Syncing OLX adverts...'}`);
