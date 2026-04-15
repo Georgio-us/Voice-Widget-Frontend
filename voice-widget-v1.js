@@ -4204,6 +4204,7 @@ class VoiceWidget extends HTMLElement {
       const imported = Number(payload?.imported || 0);
       const label = this.t('accessAdminOlxSyncDone', { count: imported }) || `OLX import: ${imported} adverts`;
       this.ui?.showNotification?.(`✅ ${label}`);
+      this.openOlxImportResultModal({ imported });
       importedSuccessfully = imported > 0;
       try {
         await this.initializePropertiesCatalog?.();
@@ -4456,6 +4457,96 @@ class VoiceWidget extends HTMLElement {
       const overlay = this.getRoot().querySelector('#vwSubscriptionActivationResultOverlay');
       if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
     } catch {}
+  }
+
+  ensureOlxImportResultStyles() {
+    if (document.getElementById('vw-olx-import-result-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-olx-import-result-styles';
+    style.textContent = `
+      .vw-olx-import-result-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10070;
+        background: rgba(0,0,0,.62);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .vw-olx-import-result-modal {
+        width: min(420px, 100%);
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,.14));
+        background: var(--bg-card, #1e1d20);
+        color: var(--text-primary, #fff);
+        box-shadow: 0 16px 48px rgba(0,0,0,.42);
+        padding: 16px 16px 14px;
+      }
+      .vw-olx-import-result-title {
+        font-size: .98rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: #7bf0a6;
+      }
+      .vw-olx-import-result-text {
+        font-size: .9rem;
+        line-height: 1.35;
+        color: var(--text-secondary, rgba(255,255,255,.86));
+      }
+      .vw-olx-import-result-actions {
+        margin-top: 14px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .vw-olx-import-result-btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 9px 14px;
+        font-size: .86rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #fff;
+        background: linear-gradient(135deg, #4f8bff, #6a6dff);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  closeOlxImportResultModal() {
+    try {
+      const overlay = this.getRoot().querySelector('#vwOlxImportResultOverlay');
+      if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
+    } catch {}
+  }
+
+  openOlxImportResultModal(payload = {}) {
+    this.closeOlxImportResultModal();
+    this.ensureOlxImportResultStyles();
+    const imported = Number(payload?.imported || 0);
+    const isUa = this.getLangCode() === 'ua';
+    const title = isUa ? 'Імпорт OLX завершено' : 'Импорт OLX завершен';
+    const text = isUa
+      ? `Імпортовано обʼєктів: ${imported}`
+      : `Импортировано объектов: ${imported}`;
+    const okText = isUa ? 'Окей' : 'Окей';
+    const overlay = document.createElement('div');
+    overlay.id = 'vwOlxImportResultOverlay';
+    overlay.className = 'vw-olx-import-result-overlay';
+    overlay.innerHTML = `
+      <div class="vw-olx-import-result-modal" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="vw-olx-import-result-title">${title}</div>
+        <div class="vw-olx-import-result-text">${text}</div>
+        <div class="vw-olx-import-result-actions">
+          <button type="button" class="vw-olx-import-result-btn" data-role="close">${okText}</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeOlxImportResultModal());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeOlxImportResultModal();
+    });
   }
 
   _mapSubscriptionPlanLabel(planRaw) {
