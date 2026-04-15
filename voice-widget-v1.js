@@ -4168,7 +4168,9 @@ class VoiceWidget extends HTMLElement {
     this.setAccessButtonBusy(button, true);
     this.setAccessButtonLabel(button, this.t('accessAdminOlxConnectOpening') || 'Opening OLX...');
     // Product requirement: keep OLX flow inside Telegram Mini App context.
-    window.location.href = url;
+    // Append an empty hash to prevent the browser from preserving the Telegram Mini App hash (#tgWebAppData=...)
+    // across redirects, which breaks the OLX SPA router and causes a 404 "Страница не найдена".
+    window.location.href = url + '#';
   }
 
   async syncOlxAdverts(button = null) {
