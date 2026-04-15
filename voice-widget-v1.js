@@ -4056,13 +4056,16 @@ class VoiceWidget extends HTMLElement {
     } catch {}
   }
 
-  buildOlxConnectUrl() {
+  buildOlxConnectUrl({ reauth = false } = {}) {
     const backendBase = this.getBackendBaseUrl();
     if (!backendBase) return '';
     const tgUser = this.getCurrentTelegramUser();
     const url = new URL(`${backendBase}/api/olx/connect`);
     if (tgUser?.id) {
       url.searchParams.set('tgUserId', tgUser.id);
+    }
+    if (reauth) {
+      url.searchParams.set('reauth', '1');
     }
     this.attachTelegramInitDataToUrl(url);
     try {
@@ -4109,6 +4112,7 @@ class VoiceWidget extends HTMLElement {
       });
       const payload = await response.json().catch(() => ({}));
       const connected = Boolean(response.ok && payload?.ok && payload?.connected);
+      button.dataset.olxConnected = connected ? '1' : '0';
       this.setAccessButtonLabel(button, connected
         ? (locale.accessAdminOlxConnected || 'OLX connected (reconnect)')
         : (locale.accessAdminOlxConnect || 'Connect OLX'));
@@ -4120,6 +4124,7 @@ class VoiceWidget extends HTMLElement {
       return connected;
     } catch {
       this.setAccessButtonLabel(button, locale.accessAdminOlxConnect || 'Connect OLX');
+      button.dataset.olxConnected = '0';
       button.disabled = false;
       if (syncButton) {
         syncButton.disabled = false;
@@ -4131,7 +4136,8 @@ class VoiceWidget extends HTMLElement {
   }
 
   openOlxConnectFlow(button = null) {
-    const url = this.buildOlxConnectUrl();
+    const isReconnect = String(button?.dataset?.olxConnected || '') === '1';
+    const url = this.buildOlxConnectUrl({ reauth: isReconnect });
     if (!url) {
       this.ui?.showNotification?.('⚠️ OLX URL is not configured');
       return;
