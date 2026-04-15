@@ -4310,6 +4310,155 @@ class VoiceWidget extends HTMLElement {
     try { this.setMobileViewportLock(false); } catch {}
   }
 
+  ensureSubscriptionActivationResultStyles() {
+    if (document.getElementById('vw-subscription-result-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-subscription-result-styles';
+    style.textContent = `
+      .vw-subscription-result-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10060;
+        background: rgba(0,0,0,.62);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .vw-subscription-result-modal {
+        width: min(460px, 100%);
+        border-radius: 14px;
+        border: 1px solid var(--border-light, rgba(255,255,255,.14));
+        background: var(--bg-card, #1e1d20);
+        color: var(--text-primary, #fff);
+        box-shadow: 0 16px 48px rgba(0,0,0,.42);
+        padding: 16px 16px 14px;
+      }
+      .vw-subscription-result-title {
+        font-size: .98rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .vw-subscription-result-title--ok { color: #7bf0a6; }
+      .vw-subscription-result-title--error { color: #ff8f8f; }
+      .vw-subscription-result-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .vw-subscription-result-list li {
+        font-size: .88rem;
+        color: var(--text-secondary, rgba(255,255,255,.84));
+        line-height: 1.35;
+      }
+      .vw-subscription-result-list strong {
+        color: var(--text-primary, #fff);
+        font-weight: 600;
+      }
+      .vw-subscription-result-actions {
+        margin-top: 14px;
+        display: flex;
+        justify-content: flex-end;
+      }
+      .vw-subscription-result-btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 9px 14px;
+        font-size: .86rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #fff;
+        background: linear-gradient(135deg, #4f8bff, #6a6dff);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  closeSubscriptionActivationResultModal() {
+    try {
+      const overlay = this.getRoot().querySelector('#vwSubscriptionActivationResultOverlay');
+      if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
+    } catch {}
+  }
+
+  _mapSubscriptionPlanLabel(planRaw) {
+    const plan = String(planRaw || '').trim().toLowerCase();
+    if (plan === 'trial_7') return 'Пробный 7 дней';
+    if (plan === 'month_30') return 'Месяц (30 дней)';
+    if (plan === 'year_365') return 'Год (365 дней)';
+    if (plan === 'lifetime') return 'Безлимит';
+    return plan || '—';
+  }
+
+  _mapSubscriptionRedeemError(codeRaw) {
+    const code = String(codeRaw || '').trim().toUpperCase();
+    if (!code) return 'Неизвестная ошибка активации';
+    if (code.includes('ACTIVATION_KEY_REQUIRED')) return 'Введите ключ активации';
+    if (code.includes('FORBIDDEN_OWNER_ONLY')) return 'Доступ к активации только для владельца/супер-админа';
+    if (code.includes('KEY_NOT_FOUND')) return 'Ключ не найден';
+    if (code.includes('KEY_DISABLED')) return 'Ключ отключен';
+    if (code.includes('KEY_NOT_ACTIVE_YET')) return 'Ключ еще не активен';
+    if (code.includes('KEY_EXPIRED')) return 'Срок действия ключа истек';
+    if (code.includes('KEY_ISSUED_TO_OTHER_OWNER')) return 'Ключ выпущен для другого владельца';
+    if (code.includes('KEY_REDEMPTIONS_EXHAUSTED')) return 'Ключ уже использован максимальное количество раз';
+    if (code.includes('OWNER_TG_ID_REQUIRED')) return 'На сервере не задан ID владельца';
+    if (code.includes('SUBSCRIPTION_KEY_PEPPER_REQUIRED')) return 'На сервере не задан SUBSCRIPTION_KEY_PEPPER';
+    if (code.includes('SUBSCRIPTION_ENDPOINT_NOT_FOUND') || code.includes('SUBSCRIPTION_REDEEM_FAILED_404')) return 'Сервер не поддерживает активацию ключей';
+    return `Ошибка активации (${code})`;
+  }
+
+  openSubscriptionActivationResultModal(payload = {}) {
+    this.closeSubscriptionActivationResultModal();
+    this.ensureSubscriptionActivationResultStyles();
+    const data = payload && typeof payload === 'object' ? payload : {};
+    const ok = data.ok === true;
+    const subscription = data.subscription && typeof data.subscription === 'object' ? data.subscription : {};
+    const ownerTgId = String(data.ownerTgId || subscription.owner_tg_id || subscription.ownerTgId || '—').trim() || '—';
+    const activatedBy = String(data.activatedByTgId || subscription.activated_by_tg_id || subscription.activatedByTgId || '—').trim() || '—';
+    const startsAtRaw = subscription.starts_at || subscription.startsAt || null;
+    const endsAtRaw = subscription.ends_at || subscription.endsAt || null;
+    const formatDt = (value) => {
+      if (!value) return '—';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      try { return d.toLocaleString('ru-RU'); } catch { return d.toISOString(); }
+    };
+    const title = ok ? 'Подписка успешно активирована' : 'Подписка не активирована';
+    const errorCode = String(data.errorCode || data.code || '').trim();
+    const reason = this._mapSubscriptionRedeemError(errorCode);
+    const detailsHtml = ok
+      ? [
+          `<li><strong>Подписка:</strong> ${this._mapSubscriptionPlanLabel(subscription.plan)}</li>`,
+          `<li><strong>Активирована:</strong> ${formatDt(startsAtRaw)}</li>`,
+          `<li><strong>Действует до:</strong> ${endsAtRaw ? formatDt(endsAtRaw) : 'Без ограничений'}</li>`,
+          `<li><strong>Кем активирована:</strong> ${activatedBy}</li>`,
+          `<li><strong>Закреплена за Owner ID:</strong> ${ownerTgId}</li>`
+        ].join('')
+      : [
+          `<li><strong>Код ошибки:</strong> ${errorCode || 'UNKNOWN'}</li>`,
+          `<li><strong>Причина:</strong> ${reason}</li>`
+        ].join('');
+    const overlay = document.createElement('div');
+    overlay.id = 'vwSubscriptionActivationResultOverlay';
+    overlay.className = 'vw-subscription-result-overlay';
+    overlay.innerHTML = `
+      <div class="vw-subscription-result-modal" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="vw-subscription-result-title ${ok ? 'vw-subscription-result-title--ok' : 'vw-subscription-result-title--error'}">${title}</div>
+        <ul class="vw-subscription-result-list">${detailsHtml}</ul>
+        <div class="vw-subscription-result-actions">
+          <button type="button" class="vw-subscription-result-btn" data-role="close">Окей</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeSubscriptionActivationResultModal());
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeSubscriptionActivationResultModal();
+    });
+  }
+
   _getFullCatalogProperties() {
     const full = Array.isArray(window?.appState?.fullCatalogProperties) ? window.appState.fullCatalogProperties : [];
     return full;
@@ -5456,23 +5605,21 @@ class VoiceWidget extends HTMLElement {
         const originalText = activateBtn?.textContent || 'Активировать ключ';
         if (activateBtn) activateBtn.textContent = 'Активация...';
         try {
-          await this.api?.redeemSubscriptionActivationKey?.(key);
-          this.ui?.showNotification?.('Ключ активирован');
+          const result = await this.api?.redeemSubscriptionActivationKey?.(key);
+          this.openSubscriptionActivationResultModal({
+            ok: true,
+            ownerTgId: result?.ownerTgId || null,
+            activatedByTgId: result?.activatedByTgId || null,
+            subscription: result?.subscription && typeof result.subscription === 'object' ? result.subscription : {}
+          });
           try { await this.api.resolveViewerAccessRole(); } catch {}
           this.openAccessSubOverlay('subscription');
         } catch (error) {
           const code = String(error?.message || '');
-          if (
-            code.includes('404') ||
-            code.includes('SUBSCRIPTION_REDEEM_FAILED_404') ||
-            code.includes('SUBSCRIPTION_ENDPOINT_NOT_FOUND')
-          ) {
-            this.ui?.showNotification?.('Активация ключа пока не подключена на сервере');
-          } else if (code.includes('ACTIVATION_KEY_REQUIRED')) {
-            this.ui?.showNotification?.('Введите ключ активации');
-          } else {
-            this.ui?.showNotification?.(`Не удалось активировать ключ (${code || 'UNKNOWN'})`);
-          }
+          this.openSubscriptionActivationResultModal({
+            ok: false,
+            errorCode: code || 'UNKNOWN'
+          });
         } finally {
           updateBusy(false);
           if (activateBtn) activateBtn.textContent = originalText;
