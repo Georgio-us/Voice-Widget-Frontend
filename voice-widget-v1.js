@@ -4204,7 +4204,7 @@ class VoiceWidget extends HTMLElement {
       const imported = Number(payload?.imported || 0);
       const label = this.t('accessAdminOlxSyncDone', { count: imported }) || `OLX import: ${imported} adverts`;
       this.ui?.showNotification?.(`✅ ${label}`);
-      this.openOlxImportResultModal({ imported });
+      this.openOlxImportResultModal({ mode: 'import', imported });
       importedSuccessfully = imported > 0;
       try {
         await this.initializePropertiesCatalog?.();
@@ -4249,6 +4249,7 @@ class VoiceWidget extends HTMLElement {
       const cleared = Number(payload?.cleared || 0);
       const label = this.t('accessAdminOlxClearDone', { count: cleared }) || `Cleared imported adverts: ${cleared}`;
       this.ui?.showNotification?.(`✅ ${label}`);
+      this.openOlxImportResultModal({ mode: 'clear', cleared });
       try {
         await this.initializePropertiesCatalog?.();
       } catch {}
@@ -4524,11 +4525,16 @@ class VoiceWidget extends HTMLElement {
     this.closeOlxImportResultModal();
     this.ensureOlxImportResultStyles();
     const imported = Number(payload?.imported || 0);
+    const cleared = Number(payload?.cleared || 0);
+    const mode = String(payload?.mode || 'import').toLowerCase();
+    const isClearMode = mode === 'clear';
     const isUa = this.getLangCode() === 'ua';
-    const title = isUa ? 'Імпорт OLX завершено' : 'Импорт OLX завершен';
-    const text = isUa
-      ? `Імпортовано обʼєктів: ${imported}`
-      : `Импортировано объектов: ${imported}`;
+    const title = isClearMode
+      ? (isUa ? 'Імпортовані обʼєкти очищено' : 'Импортированные объекты очищены')
+      : (isUa ? 'Імпорт OLX завершено' : 'Импорт OLX завершен');
+    const text = isClearMode
+      ? (isUa ? `Видалено імпортованих обʼєктів: ${cleared}` : `Удалено импортированных объектов: ${cleared}`)
+      : (isUa ? `Імпортовано обʼєктів: ${imported}` : `Импортировано объектов: ${imported}`);
     const okText = isUa ? 'Окей' : 'Окей';
     const overlay = document.createElement('div');
     overlay.id = 'vwOlxImportResultOverlay';
