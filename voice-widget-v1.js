@@ -473,6 +473,12 @@ class UnderstandingManager {
       details: null,
       preferences: null,
       residentialComplex: null,
+      rcOnly: null,
+      parking: null,
+      balconyLoggia: null,
+      arcadia: null,
+      center: null,
+      smart: null,
       progress: 0
     };
   }
@@ -647,6 +653,12 @@ class UnderstandingManager {
       details: pick('details', 'locationDetails'),
       preferences: pick('preferences', 'additional'),
       residentialComplex: pick('residentialComplex'),
+      rcOnly: pick('rcOnly', 'residentialComplexOnly'),
+      parking: pick('parking'),
+      balconyLoggia: pick('balconyLoggia'),
+      arcadia: pick('arcadia'),
+      center: pick('center'),
+      smart: pick('smart'),
       progress: oldInsights.progress ?? src?.progress ?? 0
     };
 
@@ -7861,6 +7873,9 @@ class VoiceWidget extends HTMLElement {
       return true;
     };
     const patch = {};
+    if (insights?.operation) patch.operation = insights.operation;
+    if (insights?.type) patch.type = insights.type;
+    
     const districtTokens = [
       ...splitMulti(insights?.district),
       ...splitMulti(insights?.location) // legacy fallback input
@@ -7928,6 +7943,11 @@ class VoiceWidget extends HTMLElement {
     if (insights?.rcOnly === true || insights?.residentialComplexOnly === true) {
       patch.rcOnly = true;
     }
+    if (insights?.parking === true) patch.parking = true;
+    if (insights?.balconyLoggia === true) patch.balconyLoggia = true;
+    if (insights?.arcadia === true) patch.arcadia = true;
+    if (insights?.center === true) patch.center = true;
+    if (insights?.smart === true) patch.smart = true;
     if (insights?.floorNotFirst === true) patch.floorNotFirst = true;
     if (insights?.floorNotLast === true) patch.floorNotLast = true;
 
@@ -8135,8 +8155,13 @@ class VoiceWidget extends HTMLElement {
     const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 2000 };
     
     // Phase 2 Smart Overwrite Policy: lock global operation/type after first use.
-    if (query.operation) this._catalogAiLockedOperation = query.operation;
-    if (query.type) this._catalogAiLockedType = query.type;
+    // Only lock if the user explicitly triggered this (AI request or manual filter apply).
+    // Ignore background queries (like initial load or reset) where insightsSource is empty and filter mode is inactive.
+    const isExplicitUserAction = (insightsSource && Object.keys(insightsSource).length > 0) || this._catalogFilterModeActive === true;
+    if (isExplicitUserAction) {
+      if (query.operation) this._catalogAiLockedOperation = query.operation;
+      if (query.type) this._catalogAiLockedType = query.type;
+    }
 
     const toNum = (value) => {
       const n = Number(value);
