@@ -7309,20 +7309,26 @@ class VoiceWidget extends HTMLElement {
     return num.toLocaleString('ru-RU');
   }
 
-  buildFilterPickerOptions(type) {
+  buildFilterPickerOptions(type, operation = 'sale') {
     const opts = [];
-    const scaleSteps = [
+    const areaSteps = [
       5, 10, 15, 20, 25, 30, 35, 40,
       50, 60, 70, 80, 90, 100,
       110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
       220, 240, 260, 280, 300,
       400, 500, 700, 1000
     ];
+    const saleSteps = areaSteps.map(k => k * 1000);
+    const rentSteps = [
+      100, 200, 300, 400, 500, 600, 700, 800, 1000,
+      1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000
+    ];
+
     if (type === 'priceMin' || type === 'priceMax') {
       if (type === 'priceMin') opts.push({ value: '', label: 'От min' });
       if (type === 'priceMax') opts.push({ value: 'max', label: 'До max' });
-      for (const k of scaleSteps) {
-        const v = k * 1000;
+      const steps = operation === 'rent' ? rentSteps : saleSteps;
+      for (const v of steps) {
         opts.push({ value: String(v), label: this.formatPickerNumber(v) });
       }
       return opts;
@@ -7330,7 +7336,7 @@ class VoiceWidget extends HTMLElement {
     if (type === 'areaMin' || type === 'areaMax') {
       if (type === 'areaMin') opts.push({ value: '', label: 'От min' });
       if (type === 'areaMax') opts.push({ value: 'max', label: 'До max' });
-      for (const v of scaleSteps) {
+      for (const v of areaSteps) {
         opts.push({ value: String(v), label: `${v} м²` });
       }
       return opts;
@@ -7355,9 +7361,9 @@ class VoiceWidget extends HTMLElement {
     return opts;
   }
 
-  fillFilterPickerSelect(selectEl, type) {
+  fillFilterPickerSelect(selectEl, type, operation = 'sale') {
     if (!selectEl) return;
-    const options = this.buildFilterPickerOptions(type);
+    const options = this.buildFilterPickerOptions(type, operation);
     selectEl.innerHTML = options.map((opt) => `<option value="${String(opt.value).replace(/"/g, '&quot;')}">${String(opt.label)}</option>`).join('');
   }
 
@@ -7890,13 +7896,45 @@ class VoiceWidget extends HTMLElement {
     const roomsMulti = Array.from(new Set(roomTokens.flatMap((token) => extractRoomsTokens(token)).filter(Boolean)));
     if (roomsMulti.length) patch.rooms = roomsMulti;
 
+    const snapBudget = (val, operation, isMax) => {
+      if (val == null) return null;
+      if (operation === 'sale' && val < 5000) return null; // Ignore whisper typos
+      const areaSteps = [
+        5, 10, 15, 20, 25, 30, 35, 40,
+        50, 60, 70, 80, 90, 100,
+        110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
+        220, 240, 260, 280, 300,
+        400, 500, 700, 1000
+      ];
+      const saleSteps = areaSteps.map(k => k * 1000);
+      const rentSteps = [
+        100, 200, 300, 400, 500, 600, 700, 800, 1000,
+        1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000
+      ];
+      const steps = operation === 'rent' ? rentSteps : saleSteps;
+      if (val <= steps[0]) return steps[0];
+      if (val >= steps[steps.length - 1]) return steps[steps.length - 1];
+      
+      for (let i = 0; i < steps.length - 1; i++) {
+        if (val >= steps[i] && val <= steps[i+1]) {
+          if (val === steps[i]) return steps[i];
+          if (val === steps[i+1]) return steps[i+1];
+          // Snap based on isMax: max rounds up, min rounds down
+          return isMax ? steps[i+1] : steps[i];
+        }
+      }
+      return val;
+    };
+
     // Price policy v1 (AI fields -> execution-safe price fields):
     // - single/upper amount => maxPrice only
     // - explicit range => minPrice + maxPrice
     // - lower-only (budget only, no budgetMax) => no auto-commit
-    const budget = parseNum(insights?.budget);
-    const budgetMax = parseNum(insights?.budgetMax);
-    const explicitMinPrice = parseNum(insights?.minPrice);
+    const op = patch.operation || 'sale';
+    let budget = snapBudget(parseNum(insights?.budget), op, false);
+    let budgetMax = snapBudget(parseNum(insights?.budgetMax), op, true);
+    let explicitMinPrice = snapBudget(parseNum(insights?.minPrice), op, false);
+
     if (explicitMinPrice != null) patch.minPrice = explicitMinPrice;
     if (budget != null && budgetMax != null) {
       if (budget < budgetMax) {
@@ -8356,6 +8394,31 @@ class VoiceWidget extends HTMLElement {
         overlay.querySelectorAll('[data-role="listingMode"]').forEach((b) => {
           b.classList.toggle('is-active', String(b.getAttribute('data-value') || '') === v);
         });
+        
+        // Re-fill price selects with correct scale for rent/sale
+        const priceMinSel = overlay.querySelector('select[data-picker="priceMin"]');
+        const priceMaxSel = overlay.querySelector('select[data-picker="priceMax"]');
+        if (priceMinSel) {
+          const currentMin = priceMinSel.value;
+          this.fillFilterPickerSelect(priceMinSel, 'priceMin', v);
+          // Try to keep value if it exists in new scale, else reset
+          if (Array.from(priceMinSel.options).some(opt => opt.value === currentMin)) {
+            priceMinSel.value = currentMin;
+          } else {
+            priceMinSel.value = '';
+          }
+        }
+        if (priceMaxSel) {
+          const currentMax = priceMaxSel.value;
+          this.fillFilterPickerSelect(priceMaxSel, 'priceMax', v);
+          if (Array.from(priceMaxSel.options).some(opt => opt.value === currentMax)) {
+            priceMaxSel.value = currentMax;
+          } else {
+            priceMaxSel.value = 'max';
+          }
+        }
+        this.normalizeFilterRangePair(overlay, 'price', 'priceMin');
+        this.syncFilterPickerLabels(overlay);
       });
     });
     overlay.querySelectorAll('select[data-picker]').forEach((selectEl) => {
@@ -9057,11 +9120,13 @@ class VoiceWidget extends HTMLElement {
     this.getRoot().appendChild(overlay);
     this._filtersOverlayOpen = true;
     this.$byId('pillFiltersButton')?.setAttribute('aria-expanded', 'true');
+    const payload = this.buildFiltersOverlayPayloadFromEffectiveQuery();
+    const currentOp = payload.listingMode || 'sale';
     overlay.querySelectorAll('select[data-picker]').forEach((sel) => {
       const pickerType = String(sel.getAttribute('data-picker') || '');
-      this.fillFilterPickerSelect(sel, pickerType);
+      this.fillFilterPickerSelect(sel, pickerType, currentOp);
     });
-    this.applyFiltersOverlayPayload(overlay, this.buildFiltersOverlayPayloadFromEffectiveQuery());
+    this.applyFiltersOverlayPayload(overlay, payload);
     this.bindFiltersOverlayEvents(overlay);
     this.bindFiltersResidentialComplexPicker(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
