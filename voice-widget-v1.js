@@ -7785,8 +7785,9 @@ class VoiceWidget extends HTMLElement {
     const normalizeDistrictSlug = (value) => {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
+      if (/аль\s*-?\s*таир|^альтаир/i.test(raw)) return '';
       if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
-      if (/киев|kiev|kyiv|київ|kievskyi|kyivskyi/.test(raw)) return 'kievsky';
+      if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
       if (/лиман|liman/.test(raw)) return 'kievsky';
@@ -7822,8 +7823,9 @@ class VoiceWidget extends HTMLElement {
     const isDistrictLikeLocation = (text) => {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
+      if (/аль\s*-?\s*таир|^альтаир/i.test(t)) return false;
       if (/\bрайон\b/.test(t)) return true;
-      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const parseFeaturesTokens = (srcInsights) => {
       const raw = [];
@@ -8029,8 +8031,9 @@ class VoiceWidget extends HTMLElement {
     const normalizeDistrictSlug = (value) => {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
+      if (/аль\s*-?\s*таир|^альтаир/i.test(raw)) return '';
       if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
-      if (/киев|kiev|kyiv|київ|kievskyi|kyivskyi/.test(raw)) return 'kievsky';
+      if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
       if (/лиман|liman/.test(raw)) return 'kievsky';
@@ -8041,8 +8044,9 @@ class VoiceWidget extends HTMLElement {
     const isDistrictLikeLocation = (text) => {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
+      if (/аль\s*-?\s*таир|^альтаир/i.test(t)) return false;
       if (/\bрайон\b/.test(t)) return true;
-      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const normalizeOperationToSearch = (value) => {
       const raw = String(value || '').trim().toLowerCase();
@@ -12348,8 +12352,9 @@ render() {
   _normalizeDistrictForRelax(value) {
     const raw = String(value || '').trim().toLowerCase();
     if (!raw) return '';
+    if (/аль\s*-?\s*таир|^альтаир/i.test(raw)) return raw;
     if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
-    if (/киев|kiev|kyiv|київ|kievskyi|kyivskyi/.test(raw)) return 'kievsky';
+    if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
     if (/сувор|suvor/.test(raw)) return 'suvorovsky';
     if (/малин|malin/.test(raw)) return 'malinovsky';
     if (/хаджиб|hadzhib|hadji/.test(raw)) return 'hadzhibeyskyi';
