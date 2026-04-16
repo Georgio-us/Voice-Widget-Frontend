@@ -7965,11 +7965,18 @@ class VoiceWidget extends HTMLElement {
       patch.minArea = areaMin;
     }
 
-    const rcInsight = String(insights?.residentialComplex || '').trim();
+    let rcInsight = String(insights?.residentialComplex || '').trim();
+    if (rcInsight) {
+      // Normalize common whisper typos for known complexes
+      rcInsight = rcInsight.replace(/Аль-Таир/i, 'Альтаир');
+    }
     if (rcInsight && looksLikeComplexName(rcInsight)) {
       patch.residentialComplex = rcInsight;
     } else {
-      const rcFromLocation = extractResidentialComplexFromLocation(locRaw);
+      let rcFromLocation = extractResidentialComplexFromLocation(locRaw);
+      if (rcFromLocation) {
+        rcFromLocation = rcFromLocation.replace(/Аль-Таир/i, 'Альтаир');
+      }
       if (
         rcFromLocation
         && !isGenericCityLocation(rcFromLocation)
@@ -8198,8 +8205,15 @@ class VoiceWidget extends HTMLElement {
     // Ignore background queries (like initial load or reset) where insightsSource is empty and filter mode is inactive.
     const isExplicitUserAction = (insightsSource && Object.keys(insightsSource).length > 0) || this._catalogFilterModeActive === true;
     if (isExplicitUserAction) {
-      if (query.operation) this._catalogAiLockedOperation = query.operation;
-      if (query.type) this._catalogAiLockedType = query.type;
+      const manual = this._catalogManualFilterOverrides || {};
+      const insights = insightsSource && typeof insightsSource === 'object' ? insightsSource : (this.understanding?.export?.() || {});
+      const base = this.buildCanonicalAiPatch(insights);
+      
+      const explicitOp = base.operation || manual.operation;
+      if (explicitOp) this._catalogAiLockedOperation = explicitOp;
+      
+      const explicitType = base.type || manual.type;
+      if (explicitType) this._catalogAiLockedType = explicitType;
     }
 
     const toNum = (value) => {
