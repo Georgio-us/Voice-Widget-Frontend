@@ -2973,6 +2973,8 @@ class VoiceWidget extends HTMLElement {
     this._catalogStrictOnlyMode = false;
     this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
+    this._catalogAiLockedOperation = null;
+    this._catalogAiLockedType = null;
     this._strictManualResult = [];
     this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true;
     this._catalogStrictFlowActive = false;
@@ -8034,9 +8036,13 @@ class VoiceWidget extends HTMLElement {
       ? insightsSource
       : (ignoreAssistant ? {} : (this.understanding?.export?.() || {}));
     const base = this.buildCanonicalAiPatch(insights);
-    // Phase 1 safety belt: never auto-commit base mode switches from AI.
-    delete base.operation;
-    delete base.type;
+    // Phase 2 Smart Overwrite Policy: lock global operation/type after first use.
+    if (this._catalogAiLockedOperation) {
+      delete base.operation;
+    }
+    if (this._catalogAiLockedType) {
+      delete base.type;
+    }
     const manual = this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object'
       ? this._catalogManualFilterOverrides
       : {};
@@ -8127,6 +8133,11 @@ class VoiceWidget extends HTMLElement {
 
   async refreshCatalogByEffectiveQuery(insightsSource = null) {
     const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 2000 };
+    
+    // Phase 2 Smart Overwrite Policy: lock global operation/type after first use.
+    if (query.operation) this._catalogAiLockedOperation = query.operation;
+    if (query.type) this._catalogAiLockedType = query.type;
+
     const toNum = (value) => {
       const n = Number(value);
       return Number.isFinite(n) ? n : null;
@@ -8272,6 +8283,8 @@ class VoiceWidget extends HTMLElement {
     // Full reset restores browse mode.
     this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
+    this._catalogAiLockedOperation = null;
+    this._catalogAiLockedType = null;
     this._catalogIgnoreAssistantBaseFilters = true;
     this._catalogLastRefineMode = 'filters';
     if (overlay) this.resetFiltersOverlayForm(overlay);
@@ -16079,6 +16092,8 @@ render() {
   resetCatalogRuntimeState() {
     this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
+    this._catalogAiLockedOperation = null;
+    this._catalogAiLockedType = null;
     this._catalogIgnoreAssistantBaseFilters = this._catalogManualOnlyDiagnostics === true ? true : false;
     this._catalogStrictFlowActive = false;
     this._catalogStrictQuery = null;
