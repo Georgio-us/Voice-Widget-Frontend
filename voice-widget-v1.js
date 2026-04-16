@@ -11960,8 +11960,11 @@ render() {
       this.replacePropertiesCatalog(cards);
     }
     // Phase 1: incoming AI operation/type must not force auto-commit refresh logic.
-    // Keep force-refresh only for explicit manual operation overrides.
-    const shouldForceConsistencyRefresh = Boolean(this._catalogManualFilterOverrides?.operation);
+    // Phase 2: AI can change operation/type if locks are not yet set.
+    const aiWantsToChangeBase = migratedInsights?.operation || migratedInsights?.type;
+    const isBaseLocked = this._catalogAiLockedOperation || this._catalogAiLockedType;
+    const shouldForceConsistencyRefresh = Boolean(this._catalogManualFilterOverrides?.operation) || (aiWantsToChangeBase && !isBaseLocked);
+    
     if ((shouldApplyAiRefresh || shouldForceConsistencyRefresh) && migratedInsights && typeof migratedInsights === 'object') {
       if (this._catalogManualOnlyDiagnostics === true) {
         return;
