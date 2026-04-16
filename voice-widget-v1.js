@@ -1232,6 +1232,14 @@ class UIManager {
   }
 
   _setSessionIdAndDisplay(sessionId) {
+    const prev = this.widget.sessionId || null;
+    const next = sessionId || null;
+    if (prev !== next) {
+      try {
+        this.widget._catalogAiLockedOperation = null;
+        this.widget._catalogAiLockedType = null;
+      } catch {}
+    }
     this.widget.sessionId = sessionId;
 
     // синхронизируем localStorage — и для других модулей, и для консольных тестов
@@ -2114,6 +2122,7 @@ class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       this.storeLastApiPayload(data, 'sendTextMessage');
+      if (data.insights) this.widget.understanding.update(data.insights);
       this.syncBackendDrivenState(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
@@ -2133,8 +2142,6 @@ class APIClient {
 
       this.widget.ui.hideThinkingIndicator(thinkingEl);
       this.widget.ui.updateMessageCount();
-
-      if (data.insights) this.widget.understanding.update(data.insights);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
@@ -2229,6 +2236,7 @@ class APIClient {
 
       const data = await response.json().catch(() => ({}));
       this.storeLastApiPayload(data, 'sendMessage');
+      if (data.insights) this.widget.understanding.update(data.insights);
       this.syncBackendDrivenState(data);
 
       // ✅ подхватываем новую sessionId с сервера
@@ -2262,8 +2270,6 @@ class APIClient {
           }
         }
       }
-
-      if (data.insights) this.widget.understanding.update(data.insights);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
@@ -7780,7 +7786,7 @@ class VoiceWidget extends HTMLElement {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
       if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
-      if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
+      if (/киев|kiev|kyiv|київ|kievskyi|kyivskyi/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
       if (/лиман|liman/.test(raw)) return 'kievsky';
@@ -7817,7 +7823,7 @@ class VoiceWidget extends HTMLElement {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
       if (/\bрайон\b/.test(t)) return true;
-      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const parseFeaturesTokens = (srcInsights) => {
       const raw = [];
@@ -8024,7 +8030,7 @@ class VoiceWidget extends HTMLElement {
       const raw = String(value || '').trim().toLowerCase();
       if (!raw) return '';
       if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
-      if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
+      if (/киев|kiev|kyiv|київ|kievskyi|kyivskyi/.test(raw)) return 'kievsky';
       if (/сувор|suvor/.test(raw)) return 'suvorovsky';
       if (/малин|malin/.test(raw)) return 'malinovsky';
       if (/лиман|liman/.test(raw)) return 'kievsky';
@@ -8036,7 +8042,7 @@ class VoiceWidget extends HTMLElement {
       const t = String(text || '').trim().toLowerCase();
       if (!t) return false;
       if (/\bрайон\b/.test(t)) return true;
-      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|таир|tairo|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
+      return /(примор|промор|прымор|primor|promor|киев|kiev|kyiv|сувор|suvor|малин|malin|хаджиб|hadzhib|пересып|peresyp)/i.test(t);
     };
     const normalizeOperationToSearch = (value) => {
       const raw = String(value || '').trim().toLowerCase();
@@ -8101,6 +8107,33 @@ class VoiceWidget extends HTMLElement {
       ? insightsSource
       : (ignoreAssistant ? {} : (this.understanding?.export?.() || {}));
     const base = this.buildCanonicalAiPatch(insights);
+    const normLockedOp = () => {
+      const t = String(this._catalogAiLockedOperation || '').trim().toLowerCase();
+      if (t === 'rent' || t === 'sale') return t;
+      return '';
+    };
+    const normLockedType = () => {
+      const t = String(this._catalogAiLockedType || '').trim().toLowerCase();
+      if (['apartment', 'house', 'land', 'commercial'].includes(t)) return t;
+      return '';
+    };
+    const normPatchOp = () => {
+      const t = String(base.operation || '').trim().toLowerCase();
+      if (t === 'rent' || t === 'sale') return t;
+      return '';
+    };
+    const normPatchType = () => {
+      const t = String(base.type || '').trim().toLowerCase();
+      if (['apartment', 'house', 'land', 'commercial'].includes(t)) return t;
+      return '';
+    };
+    // Stale WebView RAM / old lock: if this turn's AI patch disagrees with locked deal or property class, drop that lock once.
+    const po = normPatchOp();
+    const lo = normLockedOp();
+    if (po && lo && po !== lo) this._catalogAiLockedOperation = null;
+    const pt = normPatchType();
+    const lt = normLockedType();
+    if (pt && lt && pt !== lt) this._catalogAiLockedType = null;
     // Phase 2 Smart Overwrite Policy: lock global operation/type after first use.
     if (this._catalogAiLockedOperation) {
       delete base.operation;
@@ -12316,7 +12349,7 @@ render() {
     const raw = String(value || '').trim().toLowerCase();
     if (!raw) return '';
     if (/примор|промор|прымор|primor|promor/.test(raw)) return 'primorsky';
-    if (/киев|kiev|kyiv|таир|tairo/.test(raw)) return 'kievsky';
+    if (/киев|kiev|kyiv|київ|kievskyi|kyivskyi/.test(raw)) return 'kievsky';
     if (/сувор|suvor/.test(raw)) return 'suvorovsky';
     if (/малин|malin/.test(raw)) return 'malinovsky';
     if (/хаджиб|hadzhib|hadji/.test(raw)) return 'hadzhibeyskyi';
@@ -14438,6 +14471,7 @@ render() {
     const empty = {
       operation: null,
       type: null,
+      district: null,
       location: null,
       rooms: null,
       budget: null,
@@ -14676,13 +14710,15 @@ render() {
     const envelope = this._lastApiPayload && typeof this._lastApiPayload === 'object' ? this._lastApiPayload : {};
     const api = (envelope.payload && typeof envelope.payload === 'object') ? envelope.payload : envelope;
     const apiMeta = (envelope.meta && typeof envelope.meta === 'object') ? envelope.meta : (this._lastApiPayloadMeta || {});
-    const effectiveFilters = this.getCatalogEffectiveSearchParams(insights);
+    // Live effective query (same as catalog); do not pass debug snapshot here — it is a partial object and would mis-merge with locks/defaults.
+    const effectiveFilters = this.getCatalogEffectiveSearchParams();
     const manualFilters = (this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object')
       ? this._catalogManualFilterOverrides
       : {};
     const interpretedInsights = [
       ['Operation', insights.operation],
       ['Type', insights.type],
+      ['District', insights.district],
       ['Location', insights.location],
       ['Rooms', insights.rooms],
       ['Budget', insights.budget],
