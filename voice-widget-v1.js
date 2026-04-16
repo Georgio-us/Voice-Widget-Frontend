@@ -8095,9 +8095,10 @@ class VoiceWidget extends HTMLElement {
       // After first real filter application, defaults become part of strict filter mode.
       if (!String(merged.operation || '').trim()) merged.operation = 'sale';
       if (!String(merged.type || '').trim()) merged.type = 'apartment';
-    } else if (!String(merged.operation || '').trim() && hasAnyCriteriaExceptOperation) {
+    } else if (hasAnyCriteriaExceptOperation) {
       // Backward-safe behavior: if external overrides set criteria before filter mode starts.
-      merged.operation = 'sale';
+      if (!String(merged.operation || '').trim()) merged.operation = 'sale';
+      if (!String(merged.type || '').trim()) merged.type = 'apartment';
     }
     if (merged.minPrice != null && merged.maxPrice != null && Number(merged.minPrice) > Number(merged.maxPrice)) {
       merged.maxPrice = merged.minPrice;
