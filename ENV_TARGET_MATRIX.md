@@ -20,7 +20,8 @@ This means client isolation depends on correct API URL wiring at publish/runtime
 | Variable | Class | Required | Example | Notes |
 |---|---|---|---|---|
 | `PORT` | STATIC | Auto | Railway managed | Service port only. |
-| `WIDGET_API_URL` | CLIENT | Recommended | `https://client-backend.up.railway.app/api/audio/upload` | Target single source for widget backend endpoint. |
+| `WIDGET_API_URL` | CLIENT | Yes | `https://client-backend.up.railway.app/api/audio/upload` | Injected by `/runtime-config.js` into `window.__VW_API_URL__`. |
+| `WIDGET_ASSETS_BASE` | CLIENT | Optional | `https://client-frontend.up.railway.app/assets/` | Injected by `/runtime-config.js` into `window.__VW_ASSETS_BASE__`. |
 
 ## Target Behavior (To implement/maintain)
 

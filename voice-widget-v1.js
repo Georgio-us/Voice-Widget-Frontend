@@ -398,7 +398,7 @@ class VoiceWidget extends HTMLElement {
     this.currentLang = this.defaultLanguage;
 
     // параметры
-    const attrApi = this.getAttribute('api-url') || 'https://voice-widget-backend-split.up.railway.app/api/audio/upload';
+    const attrApi = this.getAttribute('api-url') || '';
     const resolveApiUrl = (fallback) => {
       try {
         const fromQuery = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('vwApi') : null;
@@ -411,9 +411,12 @@ class VoiceWidget extends HTMLElement {
         if (fromStorage) return fromStorage;
         if (isLocal) return 'http://localhost:3001/api/audio/upload';
       } catch {}
-      return fallback;
+      return fallback || '';
     };
     this.apiUrl = resolveApiUrl(attrApi);
+    if (!this.apiUrl) {
+      console.warn('⚠️ API URL is empty. Set <voice-widget api-url=\"...\"> or window.__VW_API_URL__.');
+    }
     this.fieldName = this.getAttribute('field-name') || 'audio';
     this.responseField = this.getAttribute('response-field') || 'response';
 

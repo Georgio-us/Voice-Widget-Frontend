@@ -14,6 +14,7 @@ if (window.VoiceWidgetDemoLoaded) {
 
 // ⚠️ ВАЖНО: Замените URL на ваш домен!
 const WIDGET_URL = 'https://georgio-us.github.io/Voice-Widget-Frontend';
+const WIDGET_API_URL = (typeof window !== 'undefined' && window.__VW_API_URL__) || '';
 
 // Функция загрузки виджета
 async function loadVoiceWidget() {
@@ -74,7 +75,7 @@ async function loadVoiceWidget() {
     
     container.innerHTML = `
       <voice-widget
-        api-url="https://voice-widget-backend-split.up.railway.app/api/audio/upload"
+        api-url="${WIDGET_API_URL}"
         field-name="audio"
         response-field="response">
       </voice-widget>
@@ -127,6 +128,7 @@ console.log(`
 
 ⚠️  ВАЖНО: Перед использованием замените URL в коде на ваш домен!
 Текущий URL: ${WIDGET_URL}
+API URL: ${WIDGET_API_URL || '(not set, configure window.__VW_API_URL__)'}
 
 🚀 Для загрузки выполните: loadVoiceWidget()
 `);
