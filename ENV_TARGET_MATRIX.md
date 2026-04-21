@@ -7,6 +7,12 @@ Branch: `Split`
 
 Define frontend-side target configuration for client-isolated Railway deployment.
 
+## Current Deployment Snapshot (Estyle, non-secret)
+
+- Frontend URL: `https://voice-widget-frontend-estyle.up.railway.app`
+- `WIDGET_API_URL`: `https://voice-widget-backend-estyle.up.railway.app/api/audio/upload`
+- `WIDGET_ASSETS_BASE`: `https://voice-widget-frontend-estyle.up.railway.app/assets/`
+
 ## Current Reality
 
 Frontend currently uses:
