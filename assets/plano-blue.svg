@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="25.161" height="27.409" viewBox="0 0 25.161 27.409">
+    <defs>
+        <clipPath id="zmpln61j4a">
+            <path data-name="Rectángulo 3308" style="fill:none;stroke:#293896" d="M0 0h25.161v27.409H0z"/>
+        </clipPath>
+    </defs>
+    <g data-name="Grupo 6412">
+        <g data-name="Grupo 6408">
+            <g data-name="Grupo 6407" style="clip-path:url(#zmpln61j4a)">
+                <path data-name="Trazado 10072" d="M24.666 23.478v1.357a2.1 2.1 0 0 1-2.1 2.1H2.6a2.1 2.1 0 0 1-2.1-2.1V6.289a2.1 2.1 0 0 1 2.1-2.1h17.95" transform="translate(-.003 -.024)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+                <path data-name="Trazado 10073" d="M24.782 2.287v22.391a2.239 2.239 0 0 0-2.234-2.234h-1.883V.5H23a1.783 1.783 0 0 1 1.783 1.785z" transform="translate(-.119 -.003)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+                <path data-name="Línea 1034" transform="translate(10.964 8.019)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0v5.81"/>
+                <path data-name="Línea 1035" transform="translate(4.574 13.829)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0h2.503"/>
+                <path data-name="Línea 1036" transform="translate(14.851 13.829)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0h2.503"/>
+                <path data-name="Línea 1037" transform="translate(9.605 13.829)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0h2.976"/>
+                <path data-name="Trazado 10074" d="M8.083 22.49H4.6V8.065h12.78V22.49h-5.436v-4.475a3.86 3.86 0 0 0-3.861 3.861z" transform="translate(-.026 -.046)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+            </g>
+        </g>
+    </g>
+</svg>

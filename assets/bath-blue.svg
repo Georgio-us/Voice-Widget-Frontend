@@ -1,0 +1,17 @@
+<svg data-name="Grupo 6410" xmlns="http://www.w3.org/2000/svg" width="30.912" height="27.488" viewBox="0 0 30.912 27.488">
+    <defs>
+        <clipPath id="6bvxybw7la">
+            <path data-name="Rectángulo 3309" style="fill:none;stroke:#293896" d="M0 0h30.912v27.488H0z"/>
+        </clipPath>
+    </defs>
+    <g data-name="Grupo 6409" style="clip-path:url(#6bvxybw7la)">
+        <path data-name="Trazado 10075" d="M23.9 22.169H6.321a3.645 3.645 0 0 1-3.611-3.153l-.818-6.106h26.435l-.818 6.106a3.644 3.644 0 0 1-3.609 3.153z" transform="translate(.346 2.358)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+        <path data-name="Trazado 10076" d="M28.536 13.415H2.193a1.65 1.65 0 1 1-.085-3.3h26.428a1.65 1.65 0 1 1 .085 3.3h-.085z" transform="translate(.091 1.848)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+        <path data-name="Trazado 10077" d="M6.555 23.108s0-2.369 1.228-2.369" transform="translate(1.198 3.789)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+        <path data-name="Trazado 10078" d="M19.417 23.108s0-2.369-1.226-2.369" transform="translate(3.323 3.789)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+        <path data-name="Trazado 10079" d="M2.877 11.076a4.951 4.951 0 0 1 9.288-3.325 4.594 4.594 0 0 1 5.8 2.928c.043.13.079.263.111.4" transform="translate(.496 .888)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+        <circle data-name="Elipse 556" cx="2.583" cy="2.583" transform="translate(10.791 .591)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" r="2.583"/>
+        <circle data-name="Elipse 557" cx="1.58" cy="1.58" transform="translate(18.057 5.758)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" r="1.58"/>
+        <path data-name="Trazado 10080" d="M18.191 2.723A2.224 2.224 0 0 1 20.414.5h1.226a2.223 2.223 0 0 1 2.222 2.223v9.15" transform="translate(3.323 .091)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+    </g>
+</svg>

@@ -1172,6 +1172,26 @@ render() {
   .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
   .card-screen .cs-sub{ font-size:12px; color:var(--color-text); opacity:.75; }
   .card-screen .cs-title,.card-screen .cs-sub{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-screen .cs-icons-row{
+    display:flex;
+    align-items:flex-end;
+    gap:14px;
+    padding:2px 12px 6px;
+    min-height:56px;
+  }
+  .card-screen .cs-icon-item{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    min-width:32px;
+    gap:4px;
+    color:var(--color-text);
+    font-size:12px;
+    line-height:1;
+  }
+  .card-screen .cs-icon-item img{ width:24px; height:24px; object-fit:contain; display:block; }
+  .card-screen .cs-icon-check{ font-size:14px; font-weight:700; color:var(--color-accent); line-height:1; }
   .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
   
 
@@ -5245,6 +5265,26 @@ render() {
     if (normalized.image && !gallery.includes(normalized.image)) gallery.unshift(normalized.image);
     const canSwitchImage = gallery.length > 1;
     const coverImage = gallery[0] || normalized.image || '';
+    const iconItems = [];
+    if (normalized.area_m2 != null) {
+      iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}house-blue.svg" alt="Area"><span>${normalized.area_m2}m²</span></div>`);
+    }
+    if (normalized.plot_m2 != null) {
+      iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}plano-blue.svg" alt="Plot"><span>${normalized.plot_m2}m²</span></div>`);
+    }
+    if (normalized.rooms && Number(normalized.rooms) > 0) {
+      iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}bed-blue.svg" alt="Bedrooms"><span>${normalized.rooms}</span></div>`);
+    }
+    if (normalized.bathrooms && Number(normalized.bathrooms) > 0) {
+      iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}bath-blue.svg" alt="Bathrooms"><span>${normalized.bathrooms}</span></div>`);
+    }
+    if (normalized.has_parking === true) {
+      iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}garaje-blue.svg" alt="Parking"><span class="cs-icon-check">&#10003;</span></div>`);
+    }
+    if (normalized.has_pool === true) {
+      iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}pool-blue.svg" alt="Pool"><span class="cs-icon-check">&#10003;</span></div>`);
+    }
+    const iconsRowHtml = iconItems.length ? `<div class="cs-icons-row">${iconItems.join('')}</div>` : '';
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
@@ -5269,6 +5309,7 @@ render() {
             <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
             <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
           </div>
+          ${iconsRowHtml}
           <div class="card-actions-wrap">
             <div class="card-actions-panel">
               <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
@@ -5829,10 +5870,17 @@ render() {
       const n = String(v).replace(/[^0-9]/g, '');
       return n ? parseInt(n, 10) : null;
     };
+    const toBool = (v) => {
+      if (v === true || v === false) return v;
+      if (v == null) return false;
+      const s = String(v).trim().toLowerCase();
+      return s === 'true' || s === '1' || s === 'yes';
+    };
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
     const areaNum = toInt(raw.area_m2);
+    const plotNum = toInt(raw.plot_m2);
     const pricePerM2Num = toInt(raw.price_per_m2);
     const bathroomsNum = toInt(raw.bathrooms);
     const city = raw.city || raw.location || '';
@@ -5883,8 +5931,11 @@ render() {
       floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
       floorLabel,
       area_m2: areaNum != null ? areaNum : (raw.area_m2 ?? null),
+      plot_m2: plotNum != null ? plotNum : (raw.plot_m2 ?? null),
       price_per_m2: pricePerM2Num != null ? pricePerM2Num : (raw.price_per_m2 ?? null),
       bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
+      has_parking: toBool(raw.has_parking),
+      has_pool: toBool(raw.has_pool),
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel
     };

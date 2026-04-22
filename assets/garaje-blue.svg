@@ -1,0 +1,20 @@
+<svg data-name="Grupo 6415" xmlns="http://www.w3.org/2000/svg" width="27.39" height="26.388" viewBox="0 0 27.39 26.388">
+    <defs>
+        <clipPath id="g5ob403gpa">
+            <path data-name="Rectángulo 3305" style="fill:none;stroke:#293896" d="M0 0h27.39v26.388H0z"/>
+        </clipPath>
+    </defs>
+    <g data-name="Grupo 6402">
+        <g data-name="Grupo 6401" style="clip-path:url(#g5ob403gpa)">
+            <path data-name="Trazado 10062" d="M26.783 23.4V5.316A4.815 4.815 0 0 0 21.967.5H5.316A4.815 4.815 0 0 0 .5 5.316V23.4" transform="translate(.054 .053)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+            <path data-name="Línea 1026" transform="translate(.554 4.866)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0h26.283"/>
+            <path data-name="Línea 1027" transform="translate(.554 8.111)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0h26.283"/>
+            <path data-name="Trazado 10063" d="M20.766 21H6.067a2.4 2.4 0 0 1-2.4-2.4v-1.15a2.4 2.4 0 0 1 1.861-2.342l.569-.131a32.381 32.381 0 0 1 14.425-.038l.777.176a2.4 2.4 0 0 1 1.871 2.345v1.132A2.4 2.4 0 0 1 20.766 21z" transform="translate(.393 1.517)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+            <path data-name="Trazado 10064" d="M8.483 20.565v1.7a1.619 1.619 0 0 1-1.617 1.621H5.283a1.62 1.62 0 0 1-1.62-1.619v-4.106" transform="translate(.393 1.948)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+            <path data-name="Trazado 10065" d="M16.927 20.565v1.7a1.619 1.619 0 0 0 1.617 1.621h1.586a1.619 1.619 0 0 0 1.619-1.619v-4.106" transform="translate(1.816 1.948)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+            <path data-name="Trazado 10066" d="m22.551 16.355-2.384-4.389a3.621 3.621 0 0 0-3.187-1.879H9.745a3.621 3.621 0 0 0-3.187 1.879l-2.384 4.389" transform="translate(.448 1.082)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896"/>
+            <path data-name="Línea 1028" transform="translate(7.043 19.088)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M0 0h4.874"/>
+            <path data-name="Línea 1029" transform="translate(15.703 19.088)" style="stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:#293896" d="M4.874 0H0"/>
+        </g>
+    </g>
+</svg>
