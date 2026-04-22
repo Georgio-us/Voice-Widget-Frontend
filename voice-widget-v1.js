@@ -5216,10 +5216,10 @@ class VoiceWidget extends HTMLElement {
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>Отменить</button>
               ${isShareDualModeEnabled
                 ? `
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
+                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
                     <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
                   </button>
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
+                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
                     <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
                   </button>
                 `
@@ -5266,10 +5266,10 @@ class VoiceWidget extends HTMLElement {
               <button type="button" class="vw-access-sub-btn" data-role="remove-selected" disabled>${locale.accessUserRemove || 'Убрать'}</button>
               ${isShareDualModeEnabled
                 ? `
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
+                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
                     <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
                   </button>
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
+                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
                     <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
                   </button>
                 `
@@ -10190,12 +10190,27 @@ class VoiceWidget extends HTMLElement {
         border-radius: 12px;
       }
       .vw-access-share-icon-btn {
-        width: 44px;
-        min-width: 44px;
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        min-height: 40px;
         padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        border-radius: 8px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.2));
+        background: var(--border-light, rgba(255,255,255,0.2));
+        color: var(--color-text, #fff);
+        transition: background-color .18s ease, transform .18s ease, opacity .18s ease;
+      }
+      .vw-access-share-icon-btn:hover:not(:disabled) {
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        transform: translateY(-1px);
+      }
+      .vw-access-share-icon-btn:active:not(:disabled) {
+        transform: translateY(0);
+        opacity: .88;
       }
       .vw-access-share-icon-btn img {
         width: 20px;
@@ -10203,8 +10218,6 @@ class VoiceWidget extends HTMLElement {
         display: block;
         object-fit: contain;
         pointer-events: none;
-        filter: brightness(0) invert(1);
-        opacity: 1;
       }
       .vw-access-objects-total {
         font-size: .83rem;
