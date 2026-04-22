@@ -1190,8 +1190,8 @@ render() {
     font-size:12px;
     line-height:1;
   }
-  .card-screen .cs-icon-item img{ width:24px; height:24px; object-fit:contain; display:block; }
-  .card-screen .cs-icon-check{ font-size:14px; font-weight:700; color:var(--color-accent); line-height:1; }
+  .card-screen .cs-icon-item img{ width:24px; height:24px; object-fit:contain; display:block; filter: brightness(0) invert(1); }
+  .card-screen .cs-icon-check{ font-size:14px; font-weight:700; color:#FFFFFF; line-height:1; }
   .card-screen .cs-price{ font-weight:700; color:var(--color-accent); }
   
 
@@ -1714,6 +1714,14 @@ render() {
                 :host([data-theme="light"]) .card-screen .cs-price,
                 :host([theme="light"]) .card-screen .cs-price {
                   color: #000000;
+                }
+                :host([data-theme="light"]) .card-screen .cs-icon-item img,
+                :host([theme="light"]) .card-screen .cs-icon-item img {
+                  filter: none;
+                }
+                :host([data-theme="light"]) .card-screen .cs-icon-check,
+                :host([theme="light"]) .card-screen .cs-icon-check {
+                  color: var(--color-accent);
                 }
                 :host([data-theme="light"]) .menu-language-dropdown,
                 :host([theme="light"]) .menu-language-dropdown {
