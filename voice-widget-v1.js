@@ -3402,7 +3402,7 @@ class VoiceWidget extends HTMLElement {
       `;
     }
     return `
-      <button type="button" class="card-back-icon-btn card-back-text-share" data-action="tg-share-property" aria-label="Поделиться" title="Поделиться">Поделиться</button>
+      <button type="button" class="card-back-guest-share-btn" data-action="tg-share-property" aria-label="Поделиться" title="Поделиться">Поделиться</button>
     `;
   }
 
@@ -11740,7 +11740,11 @@ render() {
     } else if (e.target.closest('.card-back-icon-btn[data-action="share-property"]')) {
       const slide = e.target.closest('.card-slide');
       try { await this.sharePropertyFromSlide(slide); } catch {}
-    } else if (e.target.closest('.card-back-icon-btn[data-action="tg-share-property"]')) {
+    } else if (
+      e.target.closest('.card-back-icon-btn[data-action="tg-share-property"]') ||
+      e.target.closest('.card-back-guest-share-btn[data-action="tg-share-property"]') ||
+      e.target.closest('[data-action="tg-share-property"]')
+    ) {
       const slide = e.target.closest('.card-slide');
       try {
         const ok = this.sharePropertyToTelegram(slide);

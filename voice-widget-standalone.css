@@ -678,6 +678,23 @@
   .card-back-description-btn:active{ opacity:.86; }
   .card-back-description-btn:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; border-radius:6px; }
   .card-back-actions .btn-open-form{ margin-top:0; flex:1 1 auto; min-width:0; height:40px; padding:0 14px; font-size:var(--fs-body); font-weight:600; color:var(--text-on-accent); background:var(--color-accent); border:1px solid var(--color-accent); border-radius:8px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card-back-guest-share-btn{
+    margin-top:0;
+    flex:1 1 auto;
+    min-width:0;
+    height:40px;
+    padding:0 14px;
+    font-size:var(--fs-body);
+    font-weight:600;
+    color:var(--text-on-accent);
+    background:var(--color-accent);
+    border:1px solid var(--color-accent);
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .card-back-icon-btn{ width:40px; height:40px; flex:0 0 40px; border:1px solid var(--border-light); background:var(--border-light); color:var(--color-text); border-radius:8px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; line-height:1; transition: background-color .18s ease, transform .18s ease, opacity .18s ease; }
   .card-back-icon-btn img{ width:20px; height:20px; display:block; object-fit:contain; pointer-events:none; }
   .card-back-icon-btn:hover{ background:var(--bg-element); transform:translateY(-1px); }
@@ -697,7 +714,8 @@
     text-overflow:ellipsis;
   }
   .card-back-actions__row.card-back-actions__row--guest-share .card-back-primary-action,
-  .card-back-actions__row.card-back-actions__row--guest-share .card-back-text-share{
+  .card-back-actions__row.card-back-actions__row--guest-share .card-back-text-share,
+  .card-back-actions__row.card-back-actions__row--guest-share .card-back-guest-share-btn{
     width:100%;
     min-width:0;
     flex:1 1 auto;
@@ -3475,6 +3493,17 @@ voice-widget,
   font-size: .85rem;
 }
 
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-guest-share-btn {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: .85rem;
+}
+
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-description-btn {
   width: auto;
   min-width: 0;
@@ -3520,7 +3549,8 @@ voice-widget,
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share .card-back-primary-action,
-.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share .card-back-text-share {
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share .card-back-text-share,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share .card-back-guest-share-btn {
   width: 100%;
   min-width: 0;
   flex: 1 1 auto;
