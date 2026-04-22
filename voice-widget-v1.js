@@ -15059,7 +15059,7 @@ render() {
     const relaxQueryForDebug = (this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object')
       ? this._catalogStrictQuery
       : effectiveFilters;
-    const evaluateCandidate = (card) => {
+    const evaluateCandidate = (card, filtersForMatch = {}) => {
       const normalized = this._toCardEngineShape(card || {});
       const operation = normalizeOperation(normalized.operation || normalized.listingType);
       const type = normalizeType(normalized.property_type || normalized.type);
@@ -15103,11 +15103,11 @@ render() {
       };
       const step = this._computeRelaxStepForCandidate(normalized, relaxQueryForDebug);
 
-      addCheck('operation', filterIsSet(manualFilters.operation), operation === String(manualFilters.operation || '').toLowerCase(), `card=${operation || 'n/a'} expected=${manualFilters.operation}`);
-      addCheck('type', filterIsSet(manualFilters.type), type === normalizeType(manualFilters.type), `card=${type || 'n/a'} expected=${normalizeType(manualFilters.type)}`);
-      const manualDistricts = Array.isArray(manualFilters.district)
-        ? manualFilters.district.map((v) => this._normalizeDistrictForRelax(String(v || ''))).filter(Boolean)
-        : (filterIsSet(manualFilters.district) ? [this._normalizeDistrictForRelax(String(manualFilters.district || ''))] : []);
+      addCheck('operation', filterIsSet(filtersForMatch.operation), operation === String(filtersForMatch.operation || '').toLowerCase(), `card=${operation || 'n/a'} expected=${filtersForMatch.operation}`);
+      addCheck('type', filterIsSet(filtersForMatch.type), type === normalizeType(filtersForMatch.type), `card=${type || 'n/a'} expected=${normalizeType(filtersForMatch.type)}`);
+      const manualDistricts = Array.isArray(filtersForMatch.district)
+        ? filtersForMatch.district.map((v) => this._normalizeDistrictForRelax(String(v || ''))).filter(Boolean)
+        : (filterIsSet(filtersForMatch.district) ? [this._normalizeDistrictForRelax(String(filtersForMatch.district || ''))] : []);
       const districtSelected = manualDistricts.includes(district);
       const districtFallback = !districtSelected && manualDistricts.length > 0 && step != null && step >= 8;
       addCheck(
@@ -15116,12 +15116,12 @@ render() {
         districtSelected || districtFallback,
         `card=${district || 'n/a'} expected=${manualDistricts.join('|') || 'n/a'} source=${districtSelected ? 'selected by user' : (districtFallback ? 'fallback from relaxed' : 'no match')}`
       );
-      if (manualFilters.smart === true) {
+      if (filtersForMatch.smart === true) {
         addCheck('smart', true, smartFlat === true, `card=${smartFlat ? 'true' : 'false'}`);
       } else {
-        const roomFilters = Array.isArray(manualFilters.rooms)
-          ? manualFilters.rooms.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
-          : (filterIsSet(manualFilters.rooms) ? [String(manualFilters.rooms || '').trim().toLowerCase()] : []);
+        const roomFilters = Array.isArray(filtersForMatch.rooms)
+          ? filtersForMatch.rooms.map((v) => String(v || '').trim().toLowerCase()).filter(Boolean)
+          : (filterIsSet(filtersForMatch.rooms) ? [String(filtersForMatch.rooms || '').trim().toLowerCase()] : []);
         if (roomFilters.length) {
           const roomSelected = roomFilters.some((want) => {
             if (want === '4plus') return roomsNum != null && roomsNum >= 4;
@@ -15138,49 +15138,50 @@ render() {
           );
         }
       }
-      if (filterIsSet(manualFilters.minPrice) || filterIsSet(manualFilters.maxPrice)) {
-        const minP = toNum(manualFilters.minPrice);
-        const maxP = toNum(manualFilters.maxPrice);
+      if (filterIsSet(filtersForMatch.minPrice) || filterIsSet(filtersForMatch.maxPrice)) {
+        const minP = toNum(filtersForMatch.minPrice);
+        const maxP = toNum(filtersForMatch.maxPrice);
         const pass = priceNum != null && (minP == null || priceNum >= minP) && (maxP == null || priceNum <= maxP);
         addCheck('price', true, pass, `card=${priceNum ?? 'n/a'} expected=${minP ?? '-'}..${maxP ?? '-'}`);
       }
-      if (filterIsSet(manualFilters.minArea) || filterIsSet(manualFilters.maxArea)) {
-        const minA = toNum(manualFilters.minArea);
-        const maxA = toNum(manualFilters.maxArea);
+      if (filterIsSet(filtersForMatch.minArea) || filterIsSet(filtersForMatch.maxArea)) {
+        const minA = toNum(filtersForMatch.minArea);
+        const maxA = toNum(filtersForMatch.maxArea);
         const pass = areaNum != null && (minA == null || areaNum >= minA) && (maxA == null || areaNum <= maxA);
         addCheck('area', true, pass, `card=${areaNum ?? 'n/a'} expected=${minA ?? '-'}..${maxA ?? '-'}`);
       }
-      if (filterIsSet(manualFilters.minFloor) || filterIsSet(manualFilters.maxFloor)) {
-        const minF = toNum(manualFilters.minFloor);
-        const maxF = toNum(manualFilters.maxFloor);
+      if (filterIsSet(filtersForMatch.minFloor) || filterIsSet(filtersForMatch.maxFloor)) {
+        const minF = toNum(filtersForMatch.minFloor);
+        const maxF = toNum(filtersForMatch.maxFloor);
         const pass = floorNum != null && (minF == null || floorNum >= minF) && (maxF == null || floorNum <= maxF);
         addCheck('floor', true, pass, `card=${floorNum ?? 'n/a'} expected=${minF ?? '-'}..${maxF ?? '-'}`);
       }
-      if (manualFilters.floorNotFirst === true) {
+      if (filtersForMatch.floorNotFirst === true) {
         if (floorNum == null) addCheck('floorNotFirst', true, false, 'card floor unknown');
         else addCheck('floorNotFirst', true, floorNum > 1, `card=${floorNum}`);
       }
-      if (manualFilters.floorNotLast === true) {
+      if (filtersForMatch.floorNotLast === true) {
         if (floorNum == null) addCheck('floorNotLast', true, false, 'card floor unknown');
         else if (totalFloors == null) addCheck('floorNotLast', true, 'skip', 'total floors unknown (filter not applied)');
         else addCheck('floorNotLast', true, floorNum < totalFloors, `card=${floorNum}/${totalFloors}`);
       }
-      if (manualFilters.rcOnly === true) addCheck('rcOnly', true, hasComplex, hasComplex ? `card=ЖК(${complexName})` : 'card=без ЖК');
-      if (filterIsSet(manualFilters.residentialComplex)) {
-        const wantComplex = normalizeRcName(manualFilters.residentialComplex);
+      if (filtersForMatch.rcOnly === true) addCheck('rcOnly', true, hasComplex, hasComplex ? `card=ЖК(${complexName})` : 'card=без ЖК');
+      if (filterIsSet(filtersForMatch.residentialComplex)) {
+        const wantComplex = normalizeRcName(filtersForMatch.residentialComplex);
         addCheck('residentialComplex', true, !!wantComplex && complexName === wantComplex, `card=${complexName || 'n/a'} expected=${wantComplex || 'n/a'}`);
       }
-      if (manualFilters.parking === true) addCheck('parking', true, hasParking, hasParking ? 'card=yes' : 'card=no');
-      if (manualFilters.balconyLoggia === true) addCheck('balconyLoggia', true, hasBalconyLoggia, hasBalconyLoggia ? 'card=yes' : 'card=no');
-      if (manualFilters.exclusive === true) addCheck('exclusive', true, isExclusive, isExclusive ? 'card=yes' : 'card=no');
-      if (manualFilters.arcadia === true) addCheck('arcadia', true, isArcadia, isArcadia ? 'card=yes' : 'card=no');
-      if (manualFilters.center === true) addCheck('center', true, isCenter, isCenter ? 'card=yes' : 'card=no');
+      if (filtersForMatch.parking === true) addCheck('parking', true, hasParking, hasParking ? 'card=yes' : 'card=no');
+      if (filtersForMatch.balconyLoggia === true) addCheck('balconyLoggia', true, hasBalconyLoggia, hasBalconyLoggia ? 'card=yes' : 'card=no');
+      if (filtersForMatch.exclusive === true) addCheck('exclusive', true, isExclusive, isExclusive ? 'card=yes' : 'card=no');
+      if (filtersForMatch.arcadia === true) addCheck('arcadia', true, isArcadia, isArcadia ? 'card=yes' : 'card=no');
+      if (filtersForMatch.center === true) addCheck('center', true, isCenter, isCenter ? 'card=yes' : 'card=no');
 
       const passed = checks.filter((line) => line.includes('✅') || line.includes('⏭️')).length;
       return { checks, passed, total: checks.length, step };
     };
     const buildCandidateReport = (card, idx = 0) => {
-      const result = evaluateCandidate(card);
+      const manualResult = evaluateCandidate(card, manualFilters || {});
+      const effectiveResult = evaluateCandidate(card, effectiveFilters || {});
       const id = String(card?.id || card?.external_id || `#${idx + 1}`).trim();
       const title = String(card?.title || '—').trim();
       const operation = String(card?.operation || '').trim();
@@ -15195,10 +15196,13 @@ render() {
         district,
         rooms,
         price,
-        step: result.step,
-        checks: result.checks,
-        passed: result.passed,
-        total: result.total
+        step: effectiveResult.step ?? manualResult.step,
+        manualChecks: manualResult.checks,
+        manualPassed: manualResult.passed,
+        manualTotal: manualResult.total,
+        effectiveChecks: effectiveResult.checks,
+        effectivePassed: effectiveResult.passed,
+        effectiveTotal: effectiveResult.total
       };
     };
     const candidatesTop = visibleCards.length ? visibleCards : dedupCards.slice(0, 3);
@@ -15208,29 +15212,39 @@ render() {
       : (appStateCards.length ? appStateCards : dedupCards);
     const candidateReportsAll = orderedAllCards.map((card, idx) => buildCandidateReport(card, idx));
     const cardsListHtml = candidateReports.map((row) => {
-      const checksHtml = row.checks.length
-        ? `<ul class="vw-debug-insights-list">${row.checks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
+      const manualChecksHtml = row.manualChecks.length
+        ? `<ul class="vw-debug-insights-list">${row.manualChecks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
         : '<ul class="vw-debug-insights-list"><li>Нет активных ручных фильтров для проверки</li></ul>';
+      const effectiveChecksHtml = row.effectiveChecks.length
+        ? `<ul class="vw-debug-insights-list">${row.effectiveChecks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
+        : '<ul class="vw-debug-insights-list"><li>Нет активных effective фильтров для проверки</li></ul>';
       return `
         <li>
           <strong>${safeText(row.id)}:</strong> ${safeText(row.title)} (${safeText(row.operation || 'n/a')}, ${safeText(row.district || 'n/a')}, ${safeText(row.rooms)} rooms, ${safeText(row.price)})
           <br><strong>Reason:</strong> ${safeText(`step=${row.step == null ? 'strict-only' : row.step} · source=selected by user / fallback from relaxed`)}
-          <br><strong>Match:</strong> ${safeText(`${row.passed}/${row.total}`)}
-          ${checksHtml}
+          <br><strong>Match (manual):</strong> ${safeText(`${row.manualPassed}/${row.manualTotal}`)}
+          ${manualChecksHtml}
+          <br><strong>Match (effective):</strong> ${safeText(`${row.effectivePassed}/${row.effectiveTotal}`)}
+          ${effectiveChecksHtml}
         </li>
       `;
     }).join('');
     const allCandidatesListHtml = candidateReportsAll.map((row, idx) => {
-      const checksHtml = row.checks.length
-        ? `<ul class="vw-debug-insights-list">${row.checks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
+      const manualChecksHtml = row.manualChecks.length
+        ? `<ul class="vw-debug-insights-list">${row.manualChecks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
         : '<ul class="vw-debug-insights-list"><li>Нет активных ручных фильтров для проверки</li></ul>';
+      const effectiveChecksHtml = row.effectiveChecks.length
+        ? `<ul class="vw-debug-insights-list">${row.effectiveChecks.map((c) => `<li>${safeText(c)}</li>`).join('')}</ul>`
+        : '<ul class="vw-debug-insights-list"><li>Нет активных effective фильтров для проверки</li></ul>';
       return `
         <li>
           <strong>${safeText(`${idx + 1}. ${row.id}`)}:</strong> ${safeText(row.title)}
           <br><strong>Reason:</strong> ${safeText(`step=${row.step == null ? 'strict-only' : row.step} · source=selected by user / fallback from relaxed`)}
           <br><strong>Meta:</strong> ${safeText(`op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`)}
-          <br><strong>Match:</strong> ${safeText(`${row.passed}/${row.total}`)}
-          ${checksHtml}
+          <br><strong>Match (manual):</strong> ${safeText(`${row.manualPassed}/${row.manualTotal}`)}
+          ${manualChecksHtml}
+          <br><strong>Match (effective):</strong> ${safeText(`${row.effectivePassed}/${row.effectiveTotal}`)}
+          ${effectiveChecksHtml}
         </li>
       `;
     }).join('');
@@ -15474,8 +15488,10 @@ render() {
           lines.push(`${idx + 1}. ${row.id} | ${row.title}`);
           lines.push(`   reason=step=${row.step == null ? 'strict-only' : row.step}`);
           lines.push(`   op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`);
-          lines.push(`   match=${row.passed}/${row.total}`);
-          row.checks.forEach((line) => lines.push(`   - ${line}`));
+          lines.push(`   match_manual=${row.manualPassed}/${row.manualTotal}`);
+          row.manualChecks.forEach((line) => lines.push(`   - manual: ${line}`));
+          lines.push(`   match_effective=${row.effectivePassed}/${row.effectiveTotal}`);
+          row.effectiveChecks.forEach((line) => lines.push(`   - effective: ${line}`));
         });
       }
       lines.push('');
@@ -15510,8 +15526,10 @@ render() {
           lines.push(`${idx + 1}. ${row.id} | ${row.title}`);
           lines.push(`   reason=step=${row.step == null ? 'strict-only' : row.step}`);
           lines.push(`   op=${row.operation || 'n/a'}, district=${row.district || 'n/a'}, rooms=${row.rooms}, price=${row.price}`);
-          lines.push(`   match=${row.passed}/${row.total}`);
-          row.checks.forEach((line) => lines.push(`   - ${line}`));
+          lines.push(`   match_manual=${row.manualPassed}/${row.manualTotal}`);
+          row.manualChecks.forEach((line) => lines.push(`   - manual: ${line}`));
+          lines.push(`   match_effective=${row.effectivePassed}/${row.effectiveTotal}`);
+          row.effectiveChecks.forEach((line) => lines.push(`   - effective: ${line}`));
         });
       }
       lines.push('');
