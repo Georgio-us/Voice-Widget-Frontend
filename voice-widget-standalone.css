@@ -677,6 +677,25 @@
   .card-back-icon-btn img{ width:20px; height:20px; display:block; object-fit:contain; pointer-events:none; }
   .card-back-icon-btn:hover{ background:var(--bg-element); transform:translateY(-1px); }
   .card-back-icon-btn:active{ transform:translateY(0); opacity:.88; }
+  .card-back-icon-btn.card-back-text-share{
+    width:auto;
+    min-width:0;
+    flex:1 1 auto;
+    padding:0 14px;
+    color:var(--text-on-accent);
+    background:var(--color-accent);
+    border-color:var(--color-accent);
+    font-size:var(--fs-body);
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .card-back-icon-btn.card-back-text-share:hover{
+    background:var(--color-accent);
+    border-color:var(--color-accent);
+    opacity:.95;
+  }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
@@ -3433,6 +3452,16 @@ voice-widget,
   min-width: 32px;
   flex: 0 0 32px;
   border-radius: 8px;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-icon-btn.card-back-text-share {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 auto;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: .85rem;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-description-btn {

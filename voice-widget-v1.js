@@ -3402,7 +3402,7 @@ class VoiceWidget extends HTMLElement {
       `;
     }
     return `
-      <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться" title="Поделиться"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Поделиться"></button>
+      <button type="button" class="card-back-icon-btn card-back-text-share" data-action="tg-share-property" aria-label="Поделиться" title="Поделиться">Поделиться</button>
     `;
   }
 
@@ -5208,12 +5208,16 @@ class VoiceWidget extends HTMLElement {
             <div class="vw-access-objects-scroll">
               <div class="vw-access-obj-list">${rows}</div>
             </div>
-            <div class="vw-access-objects-bottombar">
+            <div class="vw-access-objects-bottombar${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>Отменить</button>
               ${isShareDualModeEnabled
                 ? `
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-global" disabled>Share Global</button>
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Share Inline</button>
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
+                    <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
+                  </button>
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
+                    <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
+                  </button>
                 `
                 : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Поделиться</button>`
               }
@@ -5254,12 +5258,16 @@ class VoiceWidget extends HTMLElement {
                 ${rows || `<div class="vw-access-sub-item">${locale.accessUserEmpty || "Здесь появятся объекты, которые вы добавите в избранное (Wishlist)"}</div>`}
               </div>
             </div>
-            <div class="vw-access-objects-bottombar vw-access-objects-bottombar--wishlist">
+            <div class="vw-access-objects-bottombar vw-access-objects-bottombar--wishlist${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
               <button type="button" class="vw-access-sub-btn" data-role="remove-selected" disabled>${locale.accessUserRemove || 'Убрать'}</button>
               ${isShareDualModeEnabled
                 ? `
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-global" disabled>Share Global</button>
-                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Share Inline</button>
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
+                    <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
+                  </button>
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
+                    <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
+                  </button>
                 `
                 : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Поделиться</button>`
               }
@@ -10168,11 +10176,29 @@ class VoiceWidget extends HTMLElement {
         margin-top: 10px;
         padding: 0 6px 4px;
       }
+      .vw-access-objects-bottombar--dual-share {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
       .vw-access-objects-bottombar .vw-access-sub-btn,
       .vw-access-objects-bottombar--wishlist .vw-access-sub-btn {
         min-height: 44px;
         font-size: .95rem;
         border-radius: 12px;
+      }
+      .vw-access-share-icon-btn {
+        width: 44px;
+        min-width: 44px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .vw-access-share-icon-btn img {
+        width: 20px;
+        height: 20px;
+        display: block;
+        object-fit: contain;
+        pointer-events: none;
       }
       .vw-access-objects-total {
         font-size: .83rem;
