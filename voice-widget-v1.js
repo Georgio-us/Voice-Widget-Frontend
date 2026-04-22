@@ -10221,23 +10221,23 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-app .vw-access-objects-bottombar .vw-access-share-icon-btn,
       .vw-app .vw-access-objects-bottombar--wishlist .vw-access-share-icon-btn {
-        width: 40px !important;
-        min-width: 40px !important;
-        max-width: 40px !important;
-        height: 40px !important;
-        min-height: 40px !important;
-        max-height: 40px !important;
-        padding: 0 !important;
+        width: 40px;
+        min-width: 40px;
+        max-width: 40px;
+        height: 40px;
+        min-height: 40px;
+        max-height: 40px;
+        padding: 0;
       }
       .vw-app .vw-access-objects-bottombar .vw-access-share-icon-btn img,
       .vw-app .vw-access-objects-bottombar--wishlist .vw-access-share-icon-btn img {
-        width: 20px !important;
-        min-width: 20px !important;
-        max-width: 20px !important;
-        height: 20px !important;
-        min-height: 20px !important;
-        max-height: 20px !important;
-        flex: 0 0 20px !important;
+        width: 20px;
+        min-width: 20px;
+        max-width: 20px;
+        height: 20px;
+        min-height: 20px;
+        max-height: 20px;
+        flex: 0 0 20px;
       }
       .vw-access-objects-total {
         font-size: .83rem;
