@@ -650,6 +650,11 @@
   .card-back-asset.is-thumb .card-back-asset__label{ display:none; }
   .card-back-actions{ margin-top:20px; flex-shrink:0; display:flex; flex-direction:column; align-items:stretch; gap:8px; }
   .card-back-actions__row{ display:flex; align-items:center; gap:8px; }
+  .card-back-actions__row.card-back-actions__row--guest-share{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:8px;
+  }
   .card-back-description-btn{
     width:100%;
     min-height:32px;
@@ -683,17 +688,23 @@
     flex:1 1 auto;
     padding:0 14px;
     color:var(--text-on-accent);
-    background:var(--color-accent);
-    border-color:var(--color-accent);
+    background:color-mix(in srgb, var(--color-accent) 86%, #ffffff 14%);
+    border-color:color-mix(in srgb, var(--color-accent) 86%, #ffffff 14%);
     font-size:var(--fs-body);
     font-weight:600;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
   }
+  .card-back-actions__row.card-back-actions__row--guest-share .card-back-primary-action,
+  .card-back-actions__row.card-back-actions__row--guest-share .card-back-text-share{
+    width:100%;
+    min-width:0;
+    flex:1 1 auto;
+  }
   .card-back-icon-btn.card-back-text-share:hover{
-    background:var(--color-accent);
-    border-color:var(--color-accent);
+    background:color-mix(in srgb, var(--color-accent) 86%, #ffffff 14%);
+    border-color:color-mix(in srgb, var(--color-accent) 86%, #ffffff 14%);
     opacity:.95;
   }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
@@ -3500,6 +3511,19 @@ voice-widget,
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row {
   justify-content: center;
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share {
+  justify-content: initial;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share .card-back-primary-action,
+.vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-actions__row.card-back-actions__row--guest-share .card-back-text-share {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .vw-app .cards-slider-host.catalog-layout-list .cards-list-row .card-slide.list-card-slide .list-card-full .card-back-specs__item {

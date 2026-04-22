@@ -3406,6 +3406,10 @@ class VoiceWidget extends HTMLElement {
     `;
   }
 
+  buildCardActionsRowClass() {
+    return this.isShareDualModeEnabled() ? '' : ' card-back-actions__row--guest-share';
+  }
+
   showShareNotice(message) {
     const text = String(message || '').trim();
     if (!text) return;
@@ -10199,6 +10203,8 @@ class VoiceWidget extends HTMLElement {
         display: block;
         object-fit: contain;
         pointer-events: none;
+        filter: brightness(0) invert(1);
+        opacity: 1;
       }
       .vw-access-objects-total {
         font-size: .83rem;
@@ -13447,7 +13453,7 @@ render() {
               <span class="card-back-description-btn__icon" aria-hidden="true">📄</span>
               <span class="card-back-description-btn__text">${locale.cardReadDescription || 'Читать описание'}</span>
             </button>
-            <div class="card-back-actions__row">
+            <div class="card-back-actions__row${this.buildCardActionsRowClass()}">
               <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
               ${this.buildCardShareButtonsHtml()}
             </div>
@@ -14042,7 +14048,7 @@ render() {
         </div>
         <div class="card-back-actions">
           <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
-          <div class="card-back-actions__row">
+          <div class="card-back-actions__row${this.buildCardActionsRowClass()}">
             <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
             ${this.buildCardShareButtonsHtml()}
           </div>
