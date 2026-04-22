@@ -5273,6 +5273,8 @@ render() {
     if (normalized.image && !gallery.includes(normalized.image)) gallery.unshift(normalized.image);
     const canSwitchImage = gallery.length > 1;
     const coverImage = gallery[0] || normalized.image || '';
+    const locationLine = [normalized.city, normalized.province].filter(Boolean).join(' / ');
+    const typeStatusLine = [normalized.property_type, normalized.listing_status].filter(Boolean).join('. ');
     const iconItems = [];
     if (normalized.area_m2 != null) {
       iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}house-blue.svg" alt="Area"><span>${normalized.area_m2}m²</span></div>`);
@@ -5295,7 +5297,7 @@ render() {
     const iconsRowHtml = iconItems.length ? `<div class="cs-icons-row">${iconItems.join('')}</div>` : '';
     slide.innerHTML = `
       <div class="card-slide-front">
-        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.province}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
             <div class="cs-image-nav">
               <button type="button" class="cs-image-nav-btn${canSwitchImage ? '' : ' is-hidden'}" data-action="image-prev" aria-label="Previous image">&#8249;</button>
@@ -5310,11 +5312,11 @@ render() {
               </button>
               -->
             </div>
-            <div class="cs-image-media">${coverImage ? `<img src="${coverImage}" alt="${normalized.city} ${normalized.district}" loading="lazy">` : 'Put image here'}</div>
+            <div class="cs-image-media">${coverImage ? `<img src="${coverImage}" alt="${normalized.city} ${normalized.province}" loading="lazy">` : 'Put image here'}</div>
           </div>
           <div class="cs-body">
-            <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
-            <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
+            <div class="cs-row"><div class="cs-title">${locationLine}</div><div class="cs-title">${normalized.priceLabel}</div></div>
+            <div class="cs-row"><div class="cs-sub">${typeStatusLine}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
             <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
           </div>
           ${iconsRowHtml}
@@ -5884,6 +5886,7 @@ render() {
       const s = String(v).trim().toLowerCase();
       return s === 'true' || s === '1' || s === 'yes';
     };
+    const toLabel = (v) => String(v || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
@@ -5892,8 +5895,13 @@ render() {
     const pricePerM2Num = toInt(raw.price_per_m2);
     const bathroomsNum = toInt(raw.bathrooms);
     const city = raw.city || raw.location || '';
-    const district = raw.district || raw.area || '';
+    const province = raw.province || raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
+    const propertyType = toLabel(raw.property_type);
+    const listingStatusRaw = toLabel(raw.listing_status);
+    const operationRaw = String(raw.operation || '').trim().toLowerCase();
+    const isNewBuild = toBool(raw.is_new_build);
+    const listingStatus = listingStatusRaw || (operationRaw === 'rent' ? 'RENT' : (isNewBuild ? 'NEW BUILD' : 'RESALE'));
     const image = raw.image || raw.imageUrl || '';
     const readList = (src) => {
       if (Array.isArray(src)) return src;
@@ -5931,8 +5939,10 @@ render() {
       image: coverImage,
       imageGallery,
       city,
-      district,
+      province,
       neighborhood,
+      property_type: propertyType ? propertyType.toUpperCase() : '',
+      listing_status: listingStatus ? listingStatus.toUpperCase() : '',
       description: raw.description || '',
       rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || ''),
       roomsLabel,
