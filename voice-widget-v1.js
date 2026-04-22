@@ -1292,10 +1292,29 @@ render() {
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
   .cards-slider::-webkit-scrollbar-track{ background:transparent; }
   .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
-  /* dots row inside actions area (blue theme) */
-  .cards-dots-row{ display:flex; justify-content:center; gap:8px; margin:4px 0 10px; }
-  .cards-dot{ width:12px; height:6px; border-radius:6px; background:var(--color-accent); opacity:.5; border:1px solid var(--color-accent); transition: width .2s ease, opacity .2s ease, background .2s ease; cursor:pointer; }
-  .cards-dot.active{ width:24px; background:var(--color-accent); opacity:1; }
+  /* slider navigation row (replaces dots) */
+  .cards-nav-row{ display:flex; justify-content:center; gap:12px; margin:4px 0 10px; }
+  .cards-nav-btn{
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    border:1.25px solid var(--color-accent);
+    background:transparent;
+    color:var(--color-accent);
+    font-size:20px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    transition:all .18s ease;
+  }
+  .cards-nav-btn:hover:not(:disabled){ background:rgba(65,120,207,.12); transform:translateY(-1px); }
+  .cards-nav-btn:disabled{
+    opacity:.35;
+    cursor:not-allowed;
+    transform:none;
+  }
   /* actions container for clearer boundaries */
   .card-actions-wrap{ margin:8px; padding:10px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); }
   .card-slide .cs{ width:100%; }
@@ -4833,16 +4852,17 @@ render() {
       const container = e.target.closest('.card-screen');
       if (container) container.remove();
       this.events.emit('continue_dialog');
-    } else if (e.target.matches('.cards-dot')) {
-      // Навигация по слайдеру через точки
-      const dot = e.target;
-      const row = dot.closest('.cards-dots-row');
+    } else if (e.target.closest('.cards-nav-btn')) {
+      const navBtn = e.target.closest('.cards-nav-btn');
+      if (!navBtn || navBtn.disabled) return;
       const slider = this.shadowRoot.querySelector('.cards-slider');
-      if (!row || !slider) return;
-      const dots = Array.from(row.querySelectorAll('.cards-dot'));
-      const idx = dots.indexOf(dot);
+      if (!slider) return;
       const slides = slider.querySelectorAll('.card-slide');
-      if (idx >= 0 && slides[idx]) {
+      if (!slides.length) return;
+      const currentIdx = Math.max(0, Array.from(slides).findIndex((s) => s.classList.contains('active')));
+      const delta = navBtn.getAttribute('data-action') === 'slide-prev' ? -1 : 1;
+      const idx = currentIdx + delta;
+      if (idx >= 0 && idx < slides.length) {
         const left = slides[idx].offsetLeft;
         slider.scrollTo({ left, behavior: 'smooth' });
         try { this.updateActiveCardSlide(); } catch {}
@@ -5227,7 +5247,10 @@ render() {
             <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
             <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
           </div>
-          <div class="cards-dots-row"></div>
+          <div class="cards-nav-row">
+            <button type="button" class="cards-nav-btn" data-action="slide-prev" aria-label="Previous slide">&#8592;</button>
+            <button type="button" class="cards-nav-btn" data-action="slide-next" aria-label="Next slide">&#8594;</button>
+          </div>
           <div class="card-actions-wrap">
             <div class="card-actions-panel">
               <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
@@ -5310,17 +5333,10 @@ render() {
         const allSlides = slider ? slider.querySelectorAll('.card-slide') : [];
         allSlides.forEach(s => s.classList.remove('active'));
         slide.classList.add('active');
-        // обновим dots: активная — последний индекс
-        const rows = slider ? slider.querySelectorAll('.cards-dots-row') : [];
-        const activeIdx = allSlides.length ? allSlides.length - 1 : 0;
-        rows.forEach(row => {
-          const dots = row.querySelectorAll('.cards-dot');
-          dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
-        });
       } catch {}
       // прокрутить именно контейнер сообщений до карточки
       try { this.scrollCardHostIntoView(); } catch {}
-      try { this.renderSliderDots(); } catch {}
+      try { this.updateActiveCardSlide(); } catch {}
     });
   }
 
@@ -5438,28 +5454,14 @@ render() {
     }
     
     const activeIdx = Array.from(slides).indexOf(closest);
-    // update each slide dots row
-    const rows = slider.querySelectorAll('.cards-dots-row');
+    // update prev/next slider navigation state
+    const rows = slider.querySelectorAll('.cards-nav-row');
     rows.forEach(row => {
-      const dots = row.querySelectorAll('.cards-dot');
-      dots.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+      const prev = row.querySelector('.cards-nav-btn[data-action="slide-prev"]');
+      const next = row.querySelector('.cards-nav-btn[data-action="slide-next"]');
+      if (prev) prev.disabled = activeIdx <= 0;
+      if (next) next.disabled = activeIdx >= slides.length - 1;
     });
-  }
-
-  // Build dots per slide count
-  renderSliderDots() {
-    const slider = this.shadowRoot.querySelector('.cards-slider');
-    if (!slider) return;
-    const slides = slider.querySelectorAll('.card-slide');
-    const count = slides.length;
-    const rows = slider.querySelectorAll('.cards-dots-row');
-    rows.forEach((wrap) => {
-      const existing = wrap.querySelectorAll('.cards-dot').length;
-      if (existing !== count) {
-        wrap.innerHTML = new Array(count).fill(0).map((_,i)=>`<span class="cards-dot${i===count-1?' active':''}"></span>`).join('');
-      }
-    });
-    try { this.updateActiveCardSlide(); } catch {}
   }
 
   // ---------- ПРЕДЛОЖЕНИЕ ПОКАЗАТЬ КАРТОЧКУ ----------
