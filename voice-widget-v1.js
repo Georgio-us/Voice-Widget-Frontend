@@ -1107,6 +1107,35 @@ render() {
   .card-screen .cs-image{ aspect-ratio:1/1; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
   .card-screen .cs-image > *{ grid-area:stack; }
   .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  .card-screen .cs-image .cs-image-nav{
+    z-index:2;
+    width:100%;
+    height:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 12px;
+    box-sizing:border-box;
+    pointer-events:none;
+  }
+  .card-screen .cs-image .cs-image-nav-btn{
+    pointer-events:auto;
+    width:40px;
+    height:40px;
+    border-radius:999px;
+    border:none;
+    background:rgba(255,255,255,.72);
+    color:#3c3c3c;
+    font-size:28px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    user-select:none;
+  }
+  .card-screen .cs-image .cs-image-nav-btn:hover{ background:rgba(255,255,255,.88); }
+  .card-screen .cs-image .cs-image-nav-btn.is-hidden{ visibility:hidden; pointer-events:none; }
   /* overlay: растягиваем на всю плоскость изображения и прижимаем контент вправо-вверх (без absolute) */
   .card-screen .cs-image .cs-image-overlay{
     z-index:1;
@@ -1257,31 +1286,6 @@ render() {
   .card-back-specs__item{ margin:0; }
   .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
   .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
-  .card-back-assets{ display:flex; gap:12px; margin-top:12px; flex-shrink:0; justify-content:center; }
-  .card-back-asset{
-    width:60px; height:60px; border-radius:12px; flex-shrink:0;
-    border:1px solid rgba(65,120,207,.2);
-    background-color:var(--color-sub-surface);
-    background-position:center;
-    background-repeat:no-repeat;
-    background-size:cover;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:12px;
-    font-weight:700;
-    color:#a2a2a2;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, opacity .2s ease, background-color .2s ease;
-  }
-  .card-back-asset:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(0,0,0,.18); border-color:var(--color-accent); }
-  .card-back-asset:active{ transform:translateY(0); opacity:.92; }
-  .card-back-asset:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-back-asset.is-fallback{
-    background-image:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px);
-  }
-  .card-back-asset__label{ text-transform:uppercase; letter-spacing:.35px; font-size:11px; }
-  .card-back-asset.is-thumb .card-back-asset__label{ display:none; }
   .card-slide-back .btn-open-form{ margin-top:auto; flex-shrink:0; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
@@ -4049,13 +4053,7 @@ render() {
     } catch { return ''; }
   };
   this._onImageClick = (e) => {
-    // 0) back-side asset thumbnails (delegate)
-    const assetEl = e.target.closest('.card-back-asset');
-    if (assetEl) {
-      const assetUrl = assetEl.getAttribute('data-full-image') || this._extractBgUrl(assetEl);
-      if (assetUrl) { this.openImageOverlay(assetUrl); return; }
-    }
-    // ignore clicks on other buttons/icons
+    // ignore clicks on buttons/icons
     if (e.target.closest('button')) return;
     // 1) direct <img> inside card screen
     const imgEl = e.target.closest('.card-screen .cs-image img');
@@ -4685,7 +4683,24 @@ render() {
 
   // Card events
   this.shadowRoot.addEventListener('click', async (e) => {
-    if (e.target.matches('.card-btn[data-action="like"]')) {
+    if (e.target.closest('.cs-image-nav-btn')) {
+      const navBtn = e.target.closest('.cs-image-nav-btn');
+      const imageRoot = navBtn ? navBtn.closest('.cs-image') : null;
+      if (!imageRoot) return;
+      const gallery = Array.isArray(imageRoot.__gallery) ? imageRoot.__gallery : [];
+      if (gallery.length < 2) return;
+      const delta = navBtn.getAttribute('data-action') === 'image-prev' ? -1 : 1;
+      let idx = Number(imageRoot.__index || 0) + delta;
+      if (idx < 0) idx = gallery.length - 1;
+      if (idx >= gallery.length) idx = 0;
+      imageRoot.__index = idx;
+      const img = imageRoot.querySelector('.cs-image-media img');
+      if (img) {
+        img.loading = 'lazy';
+        img.src = gallery[idx];
+      }
+      return;
+    } else if (e.target.matches('.card-btn[data-action="like"]')) {
       // UI toggle (фиксируем состояние сердечка). При отключении — без side-effects.
       try {
         e.target.classList.toggle('is-liked');
@@ -5182,21 +5197,20 @@ render() {
     const locale = this.getCurrentLocale();
     const slide = document.createElement('div');
     slide.className = 'card-slide';
-    const fallbackAssetOpenUrl = this.getCardAssetFallbackDataUrl();
-    const assetSlots = Array.isArray(normalized.assetImages) ? normalized.assetImages.slice(0, 4) : [];
-    while (assetSlots.length < 4) assetSlots.push('');
-    const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
-      const safeUrl = String(assetUrl || '').trim();
-      const isThumb = !!safeUrl;
-      const openUrl = safeUrl || fallbackAssetOpenUrl;
-      const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
-      const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
-      return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}><span class="card-back-asset__label">img</span></button>`;
-    }).join('');
+    let gallery = Array.isArray(normalized.imageGallery)
+      ? normalized.imageGallery.map((v) => String(v || '').trim()).filter(Boolean)
+      : [];
+    if (normalized.image && !gallery.includes(normalized.image)) gallery.unshift(normalized.image);
+    const canSwitchImage = gallery.length > 1;
+    const coverImage = gallery[0] || normalized.image || '';
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
+            <div class="cs-image-nav">
+              <button type="button" class="cs-image-nav-btn${canSwitchImage ? '' : ' is-hidden'}" data-action="image-prev" aria-label="Previous image">&#8249;</button>
+              <button type="button" class="cs-image-nav-btn${canSwitchImage ? '' : ' is-hidden'}" data-action="image-next" aria-label="Next image">&#8250;</button>
+            </div>
             <div class="cs-image-overlay">
               <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
               <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
@@ -5206,7 +5220,7 @@ render() {
               </button>
               -->
             </div>
-            <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${normalized.city} ${normalized.district}">` : 'Put image here'}</div>
+            <div class="cs-image-media">${coverImage ? `<img src="${coverImage}" alt="${normalized.city} ${normalized.district}" loading="lazy">` : 'Put image here'}</div>
           </div>
           <div class="cs-body">
             <div class="cs-row"><div class="cs-title">${normalized.city}</div><div class="cs-title">${normalized.priceLabel}</div></div>
@@ -5240,7 +5254,6 @@ render() {
           <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
           <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
         </div>
-        <div class="card-back-assets">${assetTilesHtml}</div>
         <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
       </div>
       <div class="card-slide-form">
@@ -5255,15 +5268,16 @@ render() {
       </div>`;
     track.appendChild(slide);
     try {
-      slide.querySelectorAll('.card-back-asset.is-thumb').forEach((assetBtn) => {
-        const thumbUrl = assetBtn.getAttribute('data-thumb-image');
-        if (thumbUrl) assetBtn.style.backgroundImage = `url("${thumbUrl}")`;
-      });
+      const imageRoot = slide.querySelector('.cs-image');
+      if (imageRoot) {
+        imageRoot.__gallery = gallery;
+        imageRoot.__index = 0;
+      }
     } catch {}
     try {
       const backBg = slide.querySelector('.card-slide-back__bg');
-      if (backBg && normalized.image) {
-        backBg.style.backgroundImage = `url("${normalized.image}")`;
+      if (backBg && coverImage) {
+        backBg.style.backgroundImage = `url("${coverImage}")`;
       }
     } catch {}
     try { this.bindInDialogLeadForm(slide.querySelector('.card-slide-form .in-dialog-lead'), '_' + normalized.id); } catch {}
@@ -5877,7 +5891,8 @@ render() {
       .map(v => String(v || '').trim())
       .filter(Boolean);
     if (image && !assetPool.includes(image)) assetPool.unshift(image);
-    const assetImages = assetPool.slice(0, 4);
+    const imageGallery = assetPool;
+    const coverImage = image || imageGallery[0] || '';
 
     const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
@@ -5885,8 +5900,8 @@ render() {
 
     return {
       id: raw.id || '',
-      image,
-      assetImages,
+      image: coverImage,
+      imageGallery,
       city,
       district,
       neighborhood,
@@ -5901,11 +5916,6 @@ render() {
       priceEUR: priceNum != null ? priceNum : null,
       priceLabel
     };
-  }
-
-  getCardAssetFallbackDataUrl() {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><defs><pattern id="p" width="48" height="48" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="24" height="48" fill="#e9e9e9"/><rect x="24" width="24" height="48" fill="#f5f5f5"/></pattern></defs><rect width="1200" height="900" fill="url(#p)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="72" font-weight="700">IMG NOT FOUND</text></svg>`;
-    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 
   // ---------- УТИЛИТЫ ----------
