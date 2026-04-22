@@ -7933,9 +7933,27 @@ class VoiceWidget extends HTMLElement {
       if (/[;,.!?]/.test(t) && !hasResidentialComplexMarker(t)) return false;
       return true;
     };
+    const normalizeOperationToSearch = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/(buy|sale|sell|purchase|покуп|купит|продаж)/i.test(raw)) return 'sale';
+      if (/(rent|lease|аренд|оренд|снять)/i.test(raw)) return 'rent';
+      return '';
+    };
+    const normalizeTypeToSearch = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (/(apartment|flat|квартир|апартамент|апарты)/i.test(raw)) return 'apartment';
+      if (/(house|villa|home|дом|таунхаус|таун)/i.test(raw)) return 'house';
+      if (/(land|plot|участок|земл)/i.test(raw)) return 'land';
+      if (/(commercial|office|retail|склад|коммер|офис|нежил)/i.test(raw)) return 'commercial';
+      return '';
+    };
     const patch = {};
-    if (insights?.operation) patch.operation = insights.operation;
-    if (insights?.type) patch.type = insights.type;
+    const normalizedOperation = normalizeOperationToSearch(insights?.operation);
+    if (normalizedOperation) patch.operation = normalizedOperation;
+    const normalizedType = normalizeTypeToSearch(insights?.type);
+    if (normalizedType) patch.type = normalizedType;
     
     const districtTokens = [
       ...splitMulti(insights?.district),
