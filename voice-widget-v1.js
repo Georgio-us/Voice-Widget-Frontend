@@ -1125,7 +1125,7 @@ render() {
     border-radius:999px;
     border:none;
     background:rgba(255,255,255,.72);
-    color:#3c3c3c;
+    color:var(--color-accent);
     font-size:28px;
     line-height:1;
     display:flex;
