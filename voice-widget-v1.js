@@ -1292,8 +1292,8 @@ render() {
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
   .cards-slider::-webkit-scrollbar-track{ background:transparent; }
   .cards-slider::-webkit-scrollbar-thumb{ background:transparent; }
-  /* slider navigation row (replaces dots) */
-  .cards-nav-row{ display:flex; justify-content:center; gap:12px; margin:4px 0 10px; }
+  /* slider navigation row (outside slider body) */
+  .cards-host-nav{ display:flex; justify-content:center; gap:12px; margin:10px 0 8px; }
   .cards-nav-btn{
     width:40px;
     height:40px;
@@ -4692,7 +4692,6 @@ render() {
           <div class="card-price">\${property.price || 'Цена не указана'}</div>
           <div class="card-actions">
             <button class="card-btn like" data-action="like" data-variant-id="\${property.id || ''}">Мне нравится!</button>
-            <button class="card-btn next" data-action="next" data-variant-id="\${property.id || ''}">Ещё вариант</button>
           </div>
         </div>
       </div>
@@ -4741,24 +4740,6 @@ render() {
       });
       
       this.events.emit('like', { variantId });
-    } else if (e.target.matches('.card-btn[data-action="next"]')) {
-      const variantId = e.target.getAttribute('data-variant-id');
-      
-      // Логируем card_next
-      const track = this.shadowRoot.querySelector('.cards-slider .cards-track');
-      const slides = track ? track.querySelectorAll('.card-slide') : [];
-      const currentIndex = Array.from(slides).findIndex(slide => 
-        slide.querySelector(`[data-variant-id="${variantId}"]`)
-      );
-      
-      logTelemetry(TelemetryEventTypes.CARD_NEXT, {
-        propertyId: variantId,
-        index: currentIndex >= 0 ? currentIndex : null,
-        totalInSlider: slides.length,
-        source: 'recommendation'
-      });
-      
-      this.events.emit('next_option', { variantId });
     } else if (e.target.matches('.card-btn[data-action="select"]')) {
       // Flip: визуальный тест — показываем back сторону карточки
       const slide = e.target.closest('.card-slide');
@@ -4859,13 +4840,41 @@ render() {
       if (!slider) return;
       const slides = slider.querySelectorAll('.card-slide');
       if (!slides.length) return;
-      const currentIdx = Math.max(0, Array.from(slides).findIndex((s) => s.classList.contains('active')));
-      const delta = navBtn.getAttribute('data-action') === 'slide-prev' ? -1 : 1;
-      const idx = currentIdx + delta;
-      if (idx >= 0 && idx < slides.length) {
-        const left = slides[idx].offsetLeft;
-        slider.scrollTo({ left, behavior: 'smooth' });
-        try { this.updateActiveCardSlide(); } catch {}
+      const active = slider.querySelector('.card-slide.active') || slides[slides.length - 1];
+      const currentIdx = Math.max(0, Array.from(slides).indexOf(active));
+      const action = navBtn.getAttribute('data-action');
+      if (action === 'slide-prev') {
+        const idx = currentIdx - 1;
+        if (idx >= 0 && slides[idx]) {
+          const left = slides[idx].offsetLeft;
+          slider.scrollTo({ left, behavior: 'smooth' });
+          try { this.updateActiveCardSlide(); } catch {}
+        }
+      } else {
+        const idx = currentIdx + 1;
+        // Queue-aware right navigation:
+        // - if next slide already rendered: go to it
+        // - otherwise (only at rendered tail): request and append one more card
+        if (idx < slides.length && slides[idx]) {
+          const left = slides[idx].offsetLeft;
+          slider.scrollTo({ left, behavior: 'smooth' });
+          try { this.updateActiveCardSlide(); } catch {}
+        } else {
+          if (this._isGeneratingNext) return;
+          const variantId = active?.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
+          if (!variantId) return;
+          this._isGeneratingNext = true;
+          try { this.updateActiveCardSlide(); } catch {}
+
+          logTelemetry(TelemetryEventTypes.CARD_NEXT, {
+            propertyId: variantId,
+            index: currentIdx,
+            totalInSlider: slides.length,
+            source: 'recommendation'
+          });
+
+          this.events.emit('next_option', { variantId });
+        }
       }
     }
   });
@@ -4950,6 +4959,12 @@ render() {
       console.log('⏭️ Next option clicked:', data.variantId);
       // Send variant ID back to backend
       this.api.sendCardInteraction('next', data.variantId);
+    });
+    this.events.on('cardInteractionSent', ({ action }) => {
+      if (action === 'next') {
+        this._isGeneratingNext = false;
+        try { this.updateActiveCardSlide(); } catch {}
+      }
     });
 
     // ошибки/нотификации/лоадеры
@@ -5183,9 +5198,14 @@ render() {
         <div class="cs" style="background:transparent; box-shadow:none;">
           <div class="cards-slider">
             <div class="cards-track"></div>
-        </div>
+          </div>
+          <div class="cards-host-nav">
+            <button type="button" class="cards-nav-btn" data-action="slide-prev" aria-label="Previous slide">&#8592;</button>
+            <button type="button" class="cards-nav-btn" data-action="slide-next" aria-label="Next slide">&#8594;</button>
+          </div>
       </div>`;
       thread.appendChild(host);
+      if (typeof this._isGeneratingNext !== 'boolean') this._isGeneratingNext = false;
       
       // 🆕 Sprint IV: отправляем ui_slider_started при создании slider host (вход в slider-режим)
       if (this.api) {
@@ -5247,16 +5267,10 @@ render() {
             <div class="cs-row"><div class="cs-sub">${normalized.district}${normalized.neighborhood ? (', ' + normalized.neighborhood) : ''}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
             <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
           </div>
-          <div class="cards-nav-row">
-            <button type="button" class="cards-nav-btn" data-action="slide-prev" aria-label="Previous slide">&#8592;</button>
-            <button type="button" class="cards-nav-btn" data-action="slide-next" aria-label="Next slide">&#8594;</button>
-          </div>
           <div class="card-actions-wrap">
             <div class="card-actions-panel">
               <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
-              <button class="card-btn next" data-action="next" data-variant-id="${normalized.id}">${locale.cardNext || 'Ещё одну'}</button>
             </div>
-            <div class="card-dynamic-comment" style="margin:8px 0 0 0; font-size: 14px; line-height: 1.35; opacity: 0.85;"></div>
             </div>
           </div>
         </div>
@@ -5352,53 +5366,6 @@ render() {
     this.addCardSlide(normalized);
   }
 
-  // Обновить/установить динамический комментарий под активной карточкой
-  setCardComment(text = '') {
-    try {
-      const slider = this.shadowRoot.querySelector('.cards-slider');
-      if (!slider) return;
-      const apply = () => {
-        const active = slider.querySelector('.card-slide.active');
-        const host = active || slider.querySelector('.card-slide:last-child');
-        if (!host) return;
-        const wrap = host.querySelector('.card-dynamic-comment');
-        if (wrap) wrap.textContent = text || '';
-      };
-      // моментально на последний слайд
-      apply();
-      // повторим после layout/активации
-      requestAnimationFrame(apply);
-    } catch {}
-  }
-
-  // Рендер “пузыря” ассистента, синхронизированного с карточкой (не сохраняем в историю)
-  renderCardCommentBubble(text = '') {
-    try {
-      const thread = this.shadowRoot.getElementById('thread');
-      const host = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
-      if (!thread || !host) return;
-      // Удалим предыдущий пузырь
-      const prev = this.shadowRoot.querySelector('.message.assistant.dynamic-card-comment');
-      if (prev && prev.parentElement) prev.parentElement.removeChild(prev);
-      if (!text) return;
-      // Определим связанный variantId активной карточки
-      const active = this.shadowRoot.querySelector('.cards-slider .card-slide.active .cs');
-      const variantId = active ? active.getAttribute('data-variant-id') : '';
-      // Построим пузырь с той же разметкой, что и обычный assistant
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message assistant dynamic-card-comment';
-      if (variantId) wrapper.setAttribute('data-variant-id', variantId);
-      const bubble = document.createElement('div');
-      bubble.className = 'message-bubble widget-bubble';
-      bubble.textContent = text;
-      wrapper.appendChild(bubble);
-      // Вставим сразу после слайдера
-      host.insertAdjacentElement('afterend', wrapper);
-      // И прокрутим контейнер сообщений так, чтобы карточка и пузырь были видны
-      this.scrollCardHostIntoView();
-    } catch {}
-  }
-
   // Прокрутка контейнера сообщений так, чтобы карточка была полностью видна
   scrollCardHostIntoView() {
     try {
@@ -5454,13 +5421,14 @@ render() {
     }
     
     const activeIdx = Array.from(slides).indexOf(closest);
-    // update prev/next slider navigation state
-    const rows = slider.querySelectorAll('.cards-nav-row');
+    // update global prev/next slider controls state
+    const navHost = this.shadowRoot.querySelector('.cards-host-nav');
+    const rows = navHost ? [navHost] : [];
     rows.forEach(row => {
       const prev = row.querySelector('.cards-nav-btn[data-action="slide-prev"]');
       const next = row.querySelector('.cards-nav-btn[data-action="slide-next"]');
       if (prev) prev.disabled = activeIdx <= 0;
-      if (next) next.disabled = activeIdx >= slides.length - 1;
+      if (next) next.disabled = this._isGeneratingNext === true;
     });
   }
 

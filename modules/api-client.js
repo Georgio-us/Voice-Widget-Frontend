@@ -725,17 +725,15 @@ export class APIClient {
           }
         }
 
-        if (data && data.assistantMessage) {
-          try { this.widget.renderCardCommentBubble(data.assistantMessage); } catch {}
-        }
-
         // Emit event for successful interaction
         this.widget.events.emit('cardInteractionSent', { action, variantId, data });
       } else {
         console.error('Failed to send card interaction:', response.status);
+        this.widget.events.emit('cardInteractionSent', { action, variantId, error: true, status: response.status });
       }
     } catch (error) {
       console.error('Error sending card interaction:', error);
+      this.widget.events.emit('cardInteractionSent', { action, variantId, error: true, exception: true });
     }
   }
 }
