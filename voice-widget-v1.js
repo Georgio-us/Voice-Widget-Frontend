@@ -14822,6 +14822,17 @@ render() {
     const manualFilters = (this._catalogManualFilterOverrides && typeof this._catalogManualFilterOverrides === 'object')
       ? this._catalogManualFilterOverrides
       : {};
+    const understandingSource = (typeof this.getUnderstanding === 'function')
+      ? (this.getUnderstanding() || {})
+      : (this.understanding?.export?.() || {});
+    const sessionInsights = (this?.session?.insights && typeof this.session.insights === 'object')
+      ? this.session.insights
+      : {};
+    const aiSourceInsights = Object.keys(understandingSource || {}).length
+      ? understandingSource
+      : sessionInsights;
+    const canonicalAiPatch = this.buildCanonicalAiPatch(aiSourceInsights || {});
+    const preValidationQuery = this.getCatalogEffectiveSearchParams(aiSourceInsights || {});
     const interpretedInsights = [
       ['Operation', insights.operation],
       ['Type', insights.type],
@@ -15192,6 +15203,61 @@ render() {
       `;
     }).join('');
     const selectionHistory = Array.isArray(this._debugCatalogSelectionHistory) ? this._debugCatalogSelectionHistory : [];
+    const lastSelectionEntry = selectionHistory.length ? selectionHistory[selectionHistory.length - 1] : null;
+    const postValidationQuery = (lastSelectionEntry?.effectiveFilters && typeof lastSelectionEntry.effectiveFilters === 'object')
+      ? lastSelectionEntry.effectiveFilters
+      : null;
+    const guardRows = [
+      ['_catalogManualOnlyDiagnostics', this._catalogManualOnlyDiagnostics === true],
+      ['_catalogIgnoreAssistantBaseFilters', this._catalogIgnoreAssistantBaseFilters === true],
+      ['_catalogFilterModeActive', this._catalogFilterModeActive === true],
+      ['_catalogStrictOnlyMode', this._catalogStrictOnlyMode === true],
+      ['_catalogAiLockedOperation', this._catalogAiLockedOperation || null],
+      ['_catalogAiLockedType', this._catalogAiLockedType || null]
+    ];
+    const aiPatchRows = [
+      ['source.operation', aiSourceInsights?.operation],
+      ['source.type', aiSourceInsights?.type],
+      ['source.location', aiSourceInsights?.location],
+      ['source.district', aiSourceInsights?.district],
+      ['source.rooms', aiSourceInsights?.rooms],
+      ['source.budget', aiSourceInsights?.budget],
+      ['source.budgetMax', aiSourceInsights?.budgetMax],
+      ['source.area', aiSourceInsights?.area],
+      ['source.areaMin', aiSourceInsights?.areaMin],
+      ['source.areaMax', aiSourceInsights?.areaMax],
+      ['source.floor', aiSourceInsights?.floor],
+      ['source.floorNotFirst', aiSourceInsights?.floorNotFirst],
+      ['source.floorNotLast', aiSourceInsights?.floorNotLast],
+      ['source.residentialComplex', aiSourceInsights?.residentialComplex],
+      ['source.rcOnly', aiSourceInsights?.rcOnly],
+      ['canonicalPatch', canonicalAiPatch],
+      ['preValidationQuery', preValidationQuery],
+      ['postValidationQuery(last applied)', postValidationQuery]
+    ];
+    const rcAiRaw = String(aiSourceInsights?.residentialComplex || '').trim();
+    const rcCanonical = String(canonicalAiPatch?.residentialComplex || '').trim();
+    const rcPreValidation = String(preValidationQuery?.residentialComplex || '').trim();
+    const rcPostValidation = String(postValidationQuery?.residentialComplex || '').trim();
+    const rcManual = String(manualFilters?.residentialComplex || '').trim();
+    const rcOnlyAi = canonicalAiPatch?.rcOnly === true || aiSourceInsights?.rcOnly === true;
+    const rcOnlyPre = preValidationQuery?.rcOnly === true;
+    const rcOnlyPost = postValidationQuery?.rcOnly === true;
+    const rcDroppedByValidation = !!rcPreValidation && !rcPostValidation;
+    const rcPreserved = !!rcPreValidation && !!rcPostValidation && rcPreValidation === rcPostValidation;
+    const rcChainRows = [
+      ['ai.residentialComplex(raw)', rcAiRaw || null],
+      ['canonicalPatch.residentialComplex', rcCanonical || null],
+      ['preValidationQuery.residentialComplex', rcPreValidation || null],
+      ['postValidationQuery.residentialComplex', rcPostValidation || null],
+      ['manualOverride.residentialComplex', rcManual || null],
+      ['ai.rcOnly', rcOnlyAi],
+      ['preValidationQuery.rcOnly', rcOnlyPre],
+      ['postValidationQuery.rcOnly', rcOnlyPost],
+      ['decision.rcDroppedByValidation', rcDroppedByValidation],
+      ['decision.rcPreserved', rcPreserved],
+      ['decision.rcOnlyFallbackApplied', rcDroppedByValidation && rcOnlyPost]
+    ];
     const selectionHistoryHtml = selectionHistory.length
       ? selectionHistory.map((entry, idx) => {
           const changedLabel = entry?.changedFromPrevious ? 'условия изменены' : 'условия без изменений';
@@ -15217,6 +15283,27 @@ render() {
       .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
       .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
       .join('');
+    const aiPatchListHtml = aiPatchRows
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const rcChainListHtml = rcChainRows
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const guardListHtml = guardRows
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+      .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
+      .join('');
+    const rawCanonicalPatch = (() => {
+      try { return safeText(JSON.stringify(canonicalAiPatch || {}, null, 2)); } catch { return safeText(String(canonicalAiPatch || '{}')); }
+    })();
+    const rawPreValidationQuery = (() => {
+      try { return safeText(JSON.stringify(preValidationQuery || {}, null, 2)); } catch { return safeText(String(preValidationQuery || '{}')); }
+    })();
+    const rawPostValidationQuery = (() => {
+      try { return safeText(JSON.stringify(postValidationQuery || {}, null, 2)); } catch { return safeText(String(postValidationQuery || '{}')); }
+    })();
     const relaxStateListHtml = relaxationStateRows
       .map(([label, value]) => `<li><strong>${safeText(label)}:</strong> ${safeText(pretty(value))}</li>`)
       .join('');
@@ -15397,6 +15484,36 @@ render() {
       lines.push(`- totalMatches: ${pretty(api?.totalMatches)}`);
       lines.push(`- strictMatches: ${pretty(api?.strictMatches)}`);
       lines.push(`- relaxedMatches: ${pretty(api?.relaxedMatches)}`);
+      lines.push('');
+      lines.push('10) AI PATCH CHAIN');
+      if (aiPatchRows.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        aiPatchRows.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
+      lines.push('');
+      lines.push('11) RC VALIDATION CHAIN');
+      if (rcChainRows.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        rcChainRows.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
+      lines.push('');
+      lines.push('12) RUNTIME GUARDS');
+      if (guardRows.some(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')) {
+        guardRows.forEach(([k, v]) => {
+          if (v === null || v === undefined || String(v).trim() === '') return;
+          lines.push(`- ${k}: ${pretty(v)}`);
+        });
+      } else {
+        lines.push('- (empty)');
+      }
       return lines.join('\n');
     })();
     const overlay = document.createElement('div');
@@ -15449,9 +15566,27 @@ render() {
           <ul class="vw-debug-insights-list">${dialogListHtml || '<li>Нет данных</li>'}</ul>
         </div>
         <div class="vw-debug-insights-section">
-          <div class="vw-debug-insights-section-title">11) Copy-ready debug report</div>
+          <div class="vw-debug-insights-section-title">11) AI -> Canonical Patch -> Query chain</div>
+          <ul class="vw-debug-insights-list">${aiPatchListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">12) RC validation chain</div>
+          <ul class="vw-debug-insights-list">${rcChainListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">13) Runtime guards / flags</div>
+          <ul class="vw-debug-insights-list">${guardListHtml || '<li>Нет данных</li>'}</ul>
+        </div>
+        <div class="vw-debug-insights-section">
+          <div class="vw-debug-insights-section-title">14) Copy-ready debug report</div>
           <pre class="vw-debug-insights-raw">${safeText(copyReport)}</pre>
         </div>
+        <div class="vw-debug-insights-raw-title">Raw Canonical AI Patch JSON</div>
+        <pre class="vw-debug-insights-raw">${rawCanonicalPatch}</pre>
+        <div class="vw-debug-insights-raw-title">Raw Pre-validation Query JSON</div>
+        <pre class="vw-debug-insights-raw">${rawPreValidationQuery}</pre>
+        <div class="vw-debug-insights-raw-title">Raw Post-validation Query JSON</div>
+        <pre class="vw-debug-insights-raw">${rawPostValidationQuery}</pre>
         <div class="vw-debug-insights-raw-title">Raw Source Insights JSON</div>
         <pre class="vw-debug-insights-raw">${rawSourceInsights}</pre>
         <div class="vw-debug-insights-raw-title">Raw API JSON (compact)</div>
