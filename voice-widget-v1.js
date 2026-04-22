@@ -3388,6 +3388,24 @@ class VoiceWidget extends HTMLElement {
     return `${VW_SHARE_BASE_URL}/s/s/${encodeURIComponent(token)}`;
   }
 
+  isShareDualModeEnabled() {
+    return this.accessRole === 'owner'
+      || this.accessRole === 'super_admin'
+      || this.accessFlags?.isAdmin === true;
+  }
+
+  buildCardShareButtonsHtml() {
+    if (this.isShareDualModeEnabled()) {
+      return `
+        <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Share Global" title="Share Global"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global"></button>
+        <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Share Inline" title="Share Inline"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline"></button>
+      `;
+    }
+    return `
+      <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться" title="Поделиться"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Поделиться"></button>
+    `;
+  }
+
   showShareNotice(message) {
     const text = String(message || '').trim();
     if (!text) return;
@@ -4899,14 +4917,12 @@ class VoiceWidget extends HTMLElement {
     const checks = rows.map((row) => row.querySelector('[data-role="row-check"]')).filter(Boolean);
     const selected = checks.filter((check) => check.checked).length;
     const total = checks.length;
-    const shareBtn = overlay.querySelector('[data-role="share"]');
+    const shareButtons = Array.from(overlay.querySelectorAll('[data-role="share"], [data-role="share-inline"], [data-role="share-global"]'));
     const cancelBtn = overlay.querySelector('[data-role="cancel-selected"]');
     const removeBtn = overlay.querySelector('[data-role="remove-selected"]');
     const selectAllBtn = overlay.querySelector('[data-role="select-all"]');
     const totalValue = overlay.querySelector('[data-role="list-total"]');
-    if (shareBtn) {
-      shareBtn.disabled = selected <= 0;
-    }
+    shareButtons.forEach((btn) => { btn.disabled = selected <= 0; });
     if (cancelBtn) {
       cancelBtn.disabled = selected <= 0;
     }
@@ -4933,6 +4949,7 @@ class VoiceWidget extends HTMLElement {
     };
     const locale = this.getCurrentLocale();
     const safeSection = String(section || '').trim().toLowerCase();
+    const isShareDualModeEnabled = this.isShareDualModeEnabled();
     const safeOptions = options && typeof options === 'object' ? options : {};
     const adminViewOptions = {
       onlyLiked: safeOptions.onlyLiked === true || String(safeOptions.onlyLiked || '').toLowerCase() === 'true',
@@ -5193,7 +5210,13 @@ class VoiceWidget extends HTMLElement {
             </div>
             <div class="vw-access-objects-bottombar">
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>Отменить</button>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
+              ${isShareDualModeEnabled
+                ? `
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-global" disabled>Share Global</button>
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Share Inline</button>
+                `
+                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Поделиться</button>`
+              }
             </div>
           </div>
         `;
@@ -5233,7 +5256,13 @@ class VoiceWidget extends HTMLElement {
             </div>
             <div class="vw-access-objects-bottombar vw-access-objects-bottombar--wishlist">
               <button type="button" class="vw-access-sub-btn" data-role="remove-selected" disabled>${locale.accessUserRemove || 'Убрать'}</button>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share" disabled>Поделиться</button>
+              ${isShareDualModeEnabled
+                ? `
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-global" disabled>Share Global</button>
+                  <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Share Inline</button>
+                `
+                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Поделиться</button>`
+              }
             </div>
           </div>
         `;
@@ -5689,13 +5718,16 @@ class VoiceWidget extends HTMLElement {
           });
         });
       });
-      overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
+      const shareSelection = (preferNative = false) => {
         const selectedIds = getSelectedIds();
         if (!selectedIds.length) return;
-        this.sharePropertiesSelectionByIds(selectedIds, { preferNative: true }).catch(() => {
+        this.sharePropertiesSelectionByIds(selectedIds, { preferNative: preferNative === true }).catch(() => {
           this.ui?.showNotification?.('Не удалось поделиться подборкой');
         });
-      });
+      };
+      overlay.querySelector('[data-role="share-global"]')?.addEventListener('click', () => shareSelection(true));
+      overlay.querySelector('[data-role="share-inline"]')?.addEventListener('click', () => shareSelection(false));
+      overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => shareSelection(false));
       overlay.querySelector('[data-role="cancel-selected"]')?.addEventListener('click', () => {
         setAllSelected(false);
       });
@@ -5765,13 +5797,16 @@ class VoiceWidget extends HTMLElement {
         if (totalEl) totalEl.textContent = String(remain);
         if (!remain) this.openAccessSubOverlay('wishlist');
       });
-      overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => {
+      const shareSelection = (preferNative = false) => {
         const selectedIds = getSelectedIds();
         if (!selectedIds.length) return;
-        this.sharePropertiesSelectionByIds(selectedIds).catch(() => {
+        this.sharePropertiesSelectionByIds(selectedIds, { preferNative: preferNative === true }).catch(() => {
           this.ui?.showNotification?.('Не удалось поделиться подборкой');
         });
-      });
+      };
+      overlay.querySelector('[data-role="share-global"]')?.addEventListener('click', () => shareSelection(true));
+      overlay.querySelector('[data-role="share-inline"]')?.addEventListener('click', () => shareSelection(false));
+      overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => shareSelection(false));
       this.updateAdminObjectsSelectionState(overlay);
     }
     if (safeSection === 'want-bot') {
@@ -13388,8 +13423,7 @@ render() {
             </button>
             <div class="card-back-actions__row">
               <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
-              <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
-              <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+              ${this.buildCardShareButtonsHtml()}
             </div>
           </div>
         </div>
@@ -13984,8 +14018,7 @@ render() {
           <button type="button" class="card-back-description-btn" data-action="read-description" aria-label="${locale.cardReadDescription || 'Читать описание'}">${locale.cardReadDescription || 'Читать описание'}</button>
           <div class="card-back-actions__row">
             <button type="button" class="btn-open-form card-back-primary-action" data-action="contact-manager">${locale.cardBackContact || locale.appHeaderContact || 'Связаться'}</button>
-            <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Поделиться ссылкой" title="Поделиться ссылкой"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share link"></button>
-            <button type="button" class="card-back-icon-btn" data-action="tg-share-property" aria-label="Поделиться в Telegram" title="Поделиться в Telegram"><img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share in Telegram"></button>
+            ${this.buildCardShareButtonsHtml()}
           </div>
         </div>
         <div class="cs-description-overlay" data-role="description-overlay" aria-hidden="true">
