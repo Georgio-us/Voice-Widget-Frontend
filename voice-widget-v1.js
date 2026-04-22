@@ -8361,6 +8361,15 @@ class VoiceWidget extends HTMLElement {
       delete query.rooms;
       query.__roomsAnchor = null;
     }
+    try {
+      const preValidationDebug = { ...query };
+      delete preValidationDebug.limit;
+      delete preValidationDebug.__budgetAnchor;
+      delete preValidationDebug.__priceAnchor;
+      delete preValidationDebug.__areaAnchor;
+      delete preValidationDebug.__roomsAnchor;
+      this._debugLastPreValidationQuery = preValidationDebug;
+    } catch {}
 
     let requestQuery = { ...query };
     requestQuery = await this.api?._validateResidentialComplexInQuery?.(requestQuery) || requestQuery;
@@ -8387,6 +8396,11 @@ class VoiceWidget extends HTMLElement {
     delete requestQuery.__priceAnchor;
     delete requestQuery.__areaAnchor;
     delete requestQuery.__roomsAnchor;
+    try {
+      const postValidationDebug = { ...requestQuery };
+      delete postValidationDebug.limit;
+      this._debugLastPostValidationQuery = postValidationDebug;
+    } catch {}
     const cards = await this.api?.fetchCardsSearch?.(requestQuery);
     const listRaw = Array.isArray(cards) ? cards : [];
     const list = listRaw;
@@ -15222,9 +15236,11 @@ render() {
     }).join('');
     const selectionHistory = Array.isArray(this._debugCatalogSelectionHistory) ? this._debugCatalogSelectionHistory : [];
     const lastSelectionEntry = selectionHistory.length ? selectionHistory[selectionHistory.length - 1] : null;
-    const postValidationQuery = (lastSelectionEntry?.effectiveFilters && typeof lastSelectionEntry.effectiveFilters === 'object')
-      ? lastSelectionEntry.effectiveFilters
-      : null;
+    const postValidationQuery = (this._debugLastPostValidationQuery && typeof this._debugLastPostValidationQuery === 'object')
+      ? this._debugLastPostValidationQuery
+      : ((lastSelectionEntry?.effectiveFilters && typeof lastSelectionEntry.effectiveFilters === 'object')
+        ? lastSelectionEntry.effectiveFilters
+        : null);
     const guardRows = [
       ['_catalogManualOnlyDiagnostics', this._catalogManualOnlyDiagnostics === true],
       ['_catalogIgnoreAssistantBaseFilters', this._catalogIgnoreAssistantBaseFilters === true],
@@ -15233,6 +15249,9 @@ render() {
       ['_catalogAiLockedOperation', this._catalogAiLockedOperation || null],
       ['_catalogAiLockedType', this._catalogAiLockedType || null]
     ];
+    const preValidationChainQuery = (this._debugLastPreValidationQuery && typeof this._debugLastPreValidationQuery === 'object')
+      ? this._debugLastPreValidationQuery
+      : preValidationQuery;
     const aiPatchRows = [
       ['source.operation', aiSourceInsights?.operation],
       ['source.type', aiSourceInsights?.type],
@@ -15250,16 +15269,16 @@ render() {
       ['source.residentialComplex', aiSourceInsights?.residentialComplex],
       ['source.rcOnly', aiSourceInsights?.rcOnly],
       ['canonicalPatch', canonicalAiPatch],
-      ['preValidationQuery', preValidationQuery],
+      ['preValidationQuery', preValidationChainQuery],
       ['postValidationQuery(last applied)', postValidationQuery]
     ];
     const rcAiRaw = String(aiSourceInsights?.residentialComplex || '').trim();
     const rcCanonical = String(canonicalAiPatch?.residentialComplex || '').trim();
-    const rcPreValidation = String(preValidationQuery?.residentialComplex || '').trim();
+    const rcPreValidation = String(preValidationChainQuery?.residentialComplex || '').trim();
     const rcPostValidation = String(postValidationQuery?.residentialComplex || '').trim();
     const rcManual = String(manualFilters?.residentialComplex || '').trim();
     const rcOnlyAi = canonicalAiPatch?.rcOnly === true || aiSourceInsights?.rcOnly === true;
-    const rcOnlyPre = preValidationQuery?.rcOnly === true;
+    const rcOnlyPre = preValidationChainQuery?.rcOnly === true;
     const rcOnlyPost = postValidationQuery?.rcOnly === true;
     const rcDroppedByValidation = !!rcPreValidation && !rcPostValidation;
     const rcPreserved = !!rcPreValidation && !!rcPostValidation && rcPreValidation === rcPostValidation;
@@ -15317,7 +15336,7 @@ render() {
       try { return safeText(JSON.stringify(canonicalAiPatch || {}, null, 2)); } catch { return safeText(String(canonicalAiPatch || '{}')); }
     })();
     const rawPreValidationQuery = (() => {
-      try { return safeText(JSON.stringify(preValidationQuery || {}, null, 2)); } catch { return safeText(String(preValidationQuery || '{}')); }
+      try { return safeText(JSON.stringify(preValidationChainQuery || {}, null, 2)); } catch { return safeText(String(preValidationChainQuery || '{}')); }
     })();
     const rawPostValidationQuery = (() => {
       try { return safeText(JSON.stringify(postValidationQuery || {}, null, 2)); } catch { return safeText(String(postValidationQuery || '{}')); }
