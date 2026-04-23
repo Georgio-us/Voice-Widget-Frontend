@@ -14593,6 +14593,10 @@ render() {
       ...payload,
       sessionId: ensureSessionId()
     };
+    const tgIdentity = this.getTelegramUserIdentity();
+    if ((finalPayload.tgUserId == null || finalPayload.tgUserId === '') && tgIdentity?.id) {
+      finalPayload.tgUserId = String(tgIdentity.id).trim();
+    }
     const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
     const response = await fetch(leadsApiUrl, {
       method: 'POST',
