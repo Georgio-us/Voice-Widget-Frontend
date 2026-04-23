@@ -14593,9 +14593,19 @@ render() {
       ...payload,
       sessionId: ensureSessionId()
     };
-    const tgIdentity = this.getTelegramUserIdentity();
-    if ((finalPayload.tgUserId == null || finalPayload.tgUserId === '') && tgIdentity?.id) {
-      finalPayload.tgUserId = String(tgIdentity.id).trim();
+    let resolvedTgUserId = '';
+    try {
+      if (typeof this?.getTelegramUserIdentity === 'function') {
+        const tgIdentity = this.getTelegramUserIdentity();
+        resolvedTgUserId = tgIdentity?.id ? String(tgIdentity.id).trim() : '';
+      }
+      if (!resolvedTgUserId) {
+        const fallbackId = window?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        resolvedTgUserId = fallbackId == null ? '' : String(fallbackId).trim();
+      }
+    } catch {}
+    if ((finalPayload.tgUserId == null || finalPayload.tgUserId === '') && resolvedTgUserId) {
+      finalPayload.tgUserId = resolvedTgUserId;
     }
     const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
     const response = await fetch(leadsApiUrl, {
