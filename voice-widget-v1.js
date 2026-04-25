@@ -1396,10 +1396,47 @@ render() {
     max-width:70%;
   }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
-  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex:1 1 auto; min-height:0; font-size:13px; font-weight:500; color:var(--color-text); align-items:center; margin-top:12px; }
-  .card-back-specs__item{ margin:0; }
-  .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
-  .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
+  .card-back-specs{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px 12px;
+    flex:1 1 auto;
+    min-height:0;
+    margin-top:12px;
+    align-content:start;
+  }
+  .card-back-specs__item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+  }
+  .card-back-specs__icon{
+    width:18px;
+    height:18px;
+    flex:0 0 18px;
+    object-fit:contain;
+    display:block;
+  }
+  .card-back-specs__text{
+    min-width:0;
+    display:grid;
+    gap:1px;
+    line-height:1.15;
+  }
+  .card-back-specs__label{
+    font-size:10px;
+    opacity:.75;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+  }
+  .card-back-specs__value{
+    font-size:12px;
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .card-back-actions{ margin-top:auto; display:flex; gap:10px; width:100%; }
   .card-slide-back .btn-open-form,
   .card-slide-back .btn-open-description{
@@ -5475,6 +5512,44 @@ render() {
       iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}pool-blue.svg" alt="Pool"><span class="cs-icon-check">&#10003;</span></div>`);
     }
     const iconsRowHtml = iconItems.length ? `<div class="cs-icons-row">${iconItems.join('')}</div>` : '';
+    const featurePrimary = [
+      { key: 'bedrooms', label: 'Bedrooms', icon: `${ASSETS_BASE}bed-blue.svg`, value: normalized.roomsNum != null && normalized.roomsNum > 0 ? String(normalized.roomsNum) : null },
+      { key: 'bathrooms', label: 'Bathrooms', icon: `${ASSETS_BASE}bath-blue.svg`, value: normalized.bathroomsNum != null && normalized.bathroomsNum > 0 ? String(normalized.bathroomsNum) : null },
+      { key: 'built_area', label: 'Built area', icon: `${ASSETS_BASE}house-blue.svg`, value: normalized.areaNum != null && normalized.areaNum > 0 ? `${normalized.areaNum} m²` : null },
+      { key: 'plot_area', label: 'Plot area', icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.plotNum != null && normalized.plotNum > 0 ? `${normalized.plotNum} m²` : null },
+      { key: 'floor', label: 'Floor', icon: `${ASSETS_BASE}floor-blue.svg`, value: normalized.floorNum != null && normalized.floorNum > 0 ? String(normalized.floorNum) : null },
+      { key: 'parking', label: 'Parking', icon: `${ASSETS_BASE}garaje-blue.svg`, value: normalized.has_parking === true ? 'Yes' : null },
+      { key: 'pool', label: 'Pool', icon: `${ASSETS_BASE}pool-blue.svg`, value: normalized.has_pool === true ? 'Yes' : null },
+      { key: 'year_built', label: 'Year built', icon: `${ASSETS_BASE}year-blue.svg`, value: normalized.yearBuiltNum != null && normalized.yearBuiltNum > 0 ? String(normalized.yearBuiltNum) : null },
+      { key: 'orientation', label: 'Orientation', icon: `${ASSETS_BASE}orientation-blue.svg`, value: normalized.orientationText || null },
+      { key: 'distance_beach', label: 'Beach', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceBeachNum != null && normalized.distanceBeachNum > 0 ? `${normalized.distanceBeachNum} m` : null }
+    ];
+    const featureSecondary = [
+      { key: 'distance_airport', label: 'Airport', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceAirportNum != null && normalized.distanceAirportNum > 0 ? `${normalized.distanceAirportNum} m` : null },
+      { key: 'distance_golf', label: 'Golf', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceGolfNum != null && normalized.distanceGolfNum > 0 ? `${normalized.distanceGolfNum} m` : null },
+      { key: 'distance_amenities', label: 'Amenities', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceAmenitiesNum != null && normalized.distanceAmenitiesNum > 0 ? `${normalized.distanceAmenitiesNum} m` : null }
+    ];
+    const features = [];
+    for (const item of featurePrimary) {
+      if (!item.value) continue;
+      features.push(item);
+      if (features.length >= 10) break;
+    }
+    if (features.length < 10) {
+      for (const item of featureSecondary) {
+        if (!item.value) continue;
+        features.push(item);
+        if (features.length >= 10) break;
+      }
+    }
+    const backSpecsHtml = features.map((item) => `
+          <div class="card-back-specs__item" data-feature="${item.key}">
+            <img class="card-back-specs__icon" src="${item.icon}" alt="${item.label}">
+            <div class="card-back-specs__text">
+              <span class="card-back-specs__label">${item.label}</span>
+              <span class="card-back-specs__value">${item.value}</span>
+            </div>
+          </div>`).join('');
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.province}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
@@ -5526,12 +5601,7 @@ render() {
           <span class="card-back-header__ref-badge">REF: ${normalized.id || '-'}</span>
         </div>
         <div class="card-back-separator"></div>
-        <div class="card-back-specs">
-          <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
-          <span class="card-back-specs__item">Price/m²: ${normalized.price_per_m2 || 'null'} €</span>
-          <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
-          <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
-        </div>
+        <div class="card-back-specs">${backSpecsHtml}</div>
         <div class="card-back-actions">
           <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
           <button type="button" class="btn-open-description">${locale.cardDescription || 'Описание'}</button>
@@ -6120,6 +6190,11 @@ render() {
     const plotNum = toInt(raw.plot_m2);
     const pricePerM2Num = toInt(raw.price_per_m2);
     const bathroomsNum = toInt(raw.bathrooms);
+    const yearBuiltNum = toInt(raw.year_built);
+    const distanceBeachNum = toInt(raw.distance_beach);
+    const distanceAirportNum = toInt(raw.distance_airport);
+    const distanceGolfNum = toInt(raw.distance_golf);
+    const distanceAmenitiesNum = toInt(raw.distance_amenities);
     const city = raw.city || raw.location || '';
     const province = raw.province || raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
@@ -6161,6 +6236,7 @@ render() {
           ? raw.tags.split(',').map((v) => v.trim()).filter(Boolean)
           : []);
     const tags = Array.from(new Set(rawTags.map(normalizeTag).filter(Boolean))).slice(0, 4);
+    const orientationText = toLabel(raw.orientation || '');
 
     const priceOldNum = toInt(raw.price_old ?? raw.priceOld ?? raw.old_price ?? raw.oldPrice);
     const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
@@ -6183,6 +6259,17 @@ render() {
       roomsLabel,
       floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
       floorLabel,
+      roomsNum,
+      floorNum,
+      areaNum,
+      plotNum,
+      bathroomsNum,
+      yearBuiltNum,
+      distanceBeachNum,
+      distanceAirportNum,
+      distanceGolfNum,
+      distanceAmenitiesNum,
+      orientationText,
       area_m2: areaNum != null ? areaNum : (raw.area_m2 ?? null),
       plot_m2: plotNum != null ? plotNum : (raw.plot_m2 ?? null),
       price_per_m2: pricePerM2Num != null ? pricePerM2Num : (raw.price_per_m2 ?? null),
