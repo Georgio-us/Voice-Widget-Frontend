@@ -89,6 +89,7 @@ const LOCALES = {
     dataStorageTitle: 'Хранение и шифрование данных',
     dataStorageBody: 'Мы храним данные на защищенных серверах в ЕС. Передача защищена современными TLS и HSTS; данные в хранилище зашифрованы (AES-256). Доступ строго ограничен и аудитируется. Мы не продаем ваши персональные данные. Вы можете запросить удаление в любой момент через поддержку.',
     footerWhatData: 'Какие данные мы знаем?',
+    footerViral: 'Разработано VIA AI, хочу такой же виджет',
     methodWhatsApp: 'WhatsApp',
     methodTelegram: 'Telegram',
     methodPhoneCall: 'Звонок',
@@ -207,6 +208,7 @@ const LOCALES = {
     dataStorageTitle: 'Data storage & encrypting',
     dataStorageBody: 'We store your data on secure EU-based servers. Data in transit is protected with modern TLS and HSTS; data at rest is encrypted (AES-256). Access is strictly limited and audited. We never sell your personal information. You can request deletion at any time via Support.',
     footerWhatData: 'What data do we know?',
+    footerViral: 'Powered by VIA AI, I want the same widget',
     methodWhatsApp: 'WhatsApp',
     methodTelegram: 'Telegram',
     methodPhoneCall: 'Phone Call',
@@ -325,6 +327,7 @@ const LOCALES = {
     dataStorageTitle: 'Almacenamiento y cifrado de datos',
     dataStorageBody: 'Guardamos tus datos en servidores seguros de la UE. Los datos en transito estan protegidos con TLS y HSTS modernos; los datos en reposo estan cifrados (AES-256). El acceso es estrictamente limitado y auditado. Nunca vendemos tu informacion personal. Puedes solicitar la eliminacion en cualquier momento a traves de Soporte.',
     footerWhatData: 'Que datos conocemos?',
+    footerViral: 'Desarrollado por VIA AI, quiero el mismo widget',
     methodWhatsApp: 'WhatsApp',
     methodTelegram: 'Telegram',
     methodPhoneCall: 'Llamada',
@@ -594,7 +597,8 @@ class VoiceWidget extends HTMLElement {
     if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
     setText('#whatDataUnderstoodBtn', locale.understood);
     setText('#dataUnderstoodBtn', locale.understood);
-    setText('.footer-text', locale.footerWhatData);
+    setText('#whatDataTrigger', locale.footerWhatData);
+    setTextAll('.viral-link-text', locale.footerViral);
 
     setText('#reqContactError', locale.requestContactError);
     setText('#reqConsentError', locale.requestConsentError);
@@ -2615,6 +2619,10 @@ render() {
                 .footer-text {
                     position: relative;
                     margin: 0 auto;
+                    display: inline-block;
+                    padding: 0;
+                    border: 0;
+                    background: transparent;
                     font-family: var(--ff);
                     font-size: 10px;
                     font-weight: 400;
@@ -2624,6 +2632,11 @@ render() {
                     transition: transform .15s ease, opacity .15s ease;
                 }
                 .footer-text:hover{ transform: scale(1.1); opacity:.9; }
+                .footer-text.viral-link-text{
+                    display: inline-block;
+                    text-decoration: none;
+                    -webkit-tap-highlight-color: transparent;
+                }
                 
                 /* Декоративная линия для ContextScreen */
                 .context-gradient-line {
@@ -3222,6 +3235,7 @@ render() {
               <button class="input-btn" id="sendButton" type="button" title="Отправить"><img src="${ASSETS_BASE}${this.getSendIconByTheme()}" alt="Send"></button>
         </div>
       </div>
+          <a class="footer-text viral-link-text" id="dialogViralLink" href="#">Разработано VIA AI, хочу такой же виджет</a>
         </div>
           </div>
 
@@ -3259,6 +3273,7 @@ render() {
             <div class="main-message" id="ctxStageMessage">Well done! You've fulfilled the system with the data that will make search much closer to your goal!</div>
             <div class="context-gradient-line"></div>
             <div class="hint-text">You can leave the request to make manager start working by your case immediately</div>
+            <button class="footer-text" id="whatDataTrigger" type="button">What data do we know?</button>
             <div class="context-leave-request-button"><button class="context-leave-request-btn" id="ctxLeaveReqBtn">Leave request</button></div>
             <div class="ctx-request-form" id="ctxRequestForm">
               <div class="ctx-field">
@@ -3366,7 +3381,7 @@ render() {
               </div>
             </div>
           </div>
-            <div class="footer-text">What data do we know?</div>
+            <a class="footer-text viral-link-text" id="contextViralLink" href="#">Powered by VIA AI, I want the same widget</a>
             <button class="ctx-send-btn" id="ctxThemeToggleBtn" type="button">Dark mode</button>
             </div>
           </div>
@@ -3440,6 +3455,7 @@ render() {
                 <button class="request-cancel-btn">Cancel</button>
         </div>
         </div>
+            <a class="footer-text viral-link-text" id="requestViralLink" href="#">Powered by VIA AI, I want the same widget</a>
         </div>
         </div>
       <!-- Request Thanks Popup -->
@@ -4908,7 +4924,7 @@ render() {
   
   // Context: "What data do we know?" popup (insights)
   this.setupWhatDataPopup = () => {
-    const trigger = this.shadowRoot.querySelector('#contextScreen .footer-text');
+    const trigger = this.shadowRoot.querySelector('#whatDataTrigger');
     const overlay = this.shadowRoot.getElementById('whatDataOverlay');
     const body = this.shadowRoot.getElementById('whatDataBody');
     const btn = this.shadowRoot.getElementById('whatDataUnderstoodBtn');
@@ -4940,6 +4956,17 @@ render() {
     btn?.addEventListener('click', () => { if (overlay) overlay.style.display = 'none'; });
   };
   try { this.setupWhatDataPopup(); } catch {}
+
+  this.setupViralLinks = () => {
+    const links = this.shadowRoot.querySelectorAll('.viral-link-text');
+    links.forEach((link) => {
+      if (!link) return;
+      link.addEventListener('click', (e) => {
+        if (String(link.getAttribute('href') || '') === '#') e.preventDefault();
+      });
+    });
+  };
+  try { this.setupViralLinks(); } catch {}
 
   // Request: Privacy Policy confirm
   this.setupPrivacyConfirm = () => {
