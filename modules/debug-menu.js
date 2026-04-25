@@ -132,7 +132,11 @@ export class DebugMenuManager {
 
     if (query.location) {
       const actual = `${candidate.city || ''} ${candidate.district || ''}`.trim().toLowerCase();
-      const expected = String(query.location).toLowerCase();
+      const expected = String(
+        (typeof query.location === 'object' && query.location !== null)
+          ? (query.location.normalized || query.location.raw || '')
+          : query.location
+      ).toLowerCase();
       pushCheck('location', actual ? (actual.includes(expected) ? 'pass' : 'fail') : 'skip', actual || '-', expected);
     } else pushCheck('location', 'skip', '-', '-');
 
@@ -157,9 +161,14 @@ export class DebugMenuManager {
   }
 
   buildSnapshot() {
-    const insights = this.widget.getUnderstanding();
-    const canonicalPatch = this.buildCanonicalPatch(insights);
-    const effectiveQuery = this.getEffectiveSearchParams(insights);
+    const serverTrace = this.lastApiPayload?.queryTraceV1 || null;
+    const insights = serverTrace?.sourceInsights || this.widget.getUnderstanding();
+    const canonicalPatch = serverTrace?.canonicalPatch || this.buildCanonicalPatch(insights);
+    const effectiveQuery = serverTrace?.postValidationQuery || this.getEffectiveSearchParams(insights);
+    const preValidationQuery = serverTrace?.preValidationQuery || null;
+    const droppedFields = Array.isArray(serverTrace?.droppedFields) ? serverTrace.droppedFields : [];
+    const missingFields = Array.isArray(serverTrace?.missingFields) ? serverTrace.missingFields : [];
+    const matchedCount = Number.isFinite(serverTrace?.matchedCount) ? serverTrace.matchedCount : null;
     const candidates = this._collectCandidatePool();
     const match = candidates.slice(0, 12).map((c) => {
       const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery);
@@ -177,10 +186,12 @@ export class DebugMenuManager {
       timing: this.lastApiPayload?.timing || null,
       tokens: this.lastApiPayload?.tokens || null,
       stage: this.lastApiPayload?.stage || null,
+      serverQueryTrace: !!serverTrace,
+      matchedCount,
       cardsCount: Array.isArray(this.lastApiPayload?.cards) ? this.lastApiPayload.cards.length : 0,
       historyTail: this.selectionHistory.slice(-20)
     };
-    return { insights, canonicalPatch, effectiveQuery, candidates, match, apiMeta, dialog };
+    return { insights, canonicalPatch, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
   }
 
   buildReportText(snapshot) {
@@ -197,7 +208,12 @@ export class DebugMenuManager {
     lines.push(this._toPretty(s.canonicalPatch));
     lines.push('');
     lines.push('[Effective query]');
-    lines.push(this._toPretty(s.effectiveQuery));
+    lines.push(this._toPretty({
+      preValidationQuery: s.preValidationQuery,
+      postValidationQuery: s.effectiveQuery,
+      droppedFields: s.droppedFields,
+      missingFields: s.missingFields
+    }));
     lines.push('');
     lines.push('[Candidate pool]');
     lines.push(`count: ${s.candidates.length}`);
@@ -221,9 +237,15 @@ export class DebugMenuManager {
     };
     set('debugInsightsPre', this._toPretty(s.insights));
     set('debugCanonicalPre', this._toPretty(s.canonicalPatch));
-    set('debugQueryPre', this._toPretty(s.effectiveQuery));
+    set('debugQueryPre', this._toPretty({
+      preValidationQuery: s.preValidationQuery,
+      postValidationQuery: s.effectiveQuery,
+      droppedFields: s.droppedFields,
+      missingFields: s.missingFields
+    }));
     set('debugCandidatesPre', this._toPretty({
       count: s.candidates.length,
+      matchedCount: s.matchedCount,
       ids: s.candidates.map((c) => c.id).filter(Boolean),
       sample: s.candidates.slice(0, 8)
     }));
@@ -239,7 +261,10 @@ export class DebugMenuManager {
     set('debugRawPre', this._toPretty({
       sourceInsights: s.insights,
       canonicalPatch: s.canonicalPatch,
-      effectiveQuery: s.effectiveQuery,
+      preValidationQuery: s.preValidationQuery,
+      postValidationQuery: s.effectiveQuery,
+      droppedFields: s.droppedFields,
+      missingFields: s.missingFields,
       lastApiPayloadCompact: this.lastApiPayload
         ? {
             sessionId: this.lastApiPayload.sessionId || null,
@@ -271,4 +296,3 @@ export class DebugMenuManager {
     }
   }
 }
-
