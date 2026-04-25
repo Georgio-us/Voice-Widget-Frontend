@@ -5483,6 +5483,61 @@ render() {
     const track = this.ensureCardsSlider();
     if (!track) return;
     const locale = this.getCurrentLocale();
+    const langCode = this.getLangCode();
+    const specI18n = {
+      ru: {
+        bedrooms: 'Спальни',
+        bathrooms: 'Ванные',
+        built_area: 'Площадь дома',
+        plot_area: 'Участок',
+        terrace: 'Терраса',
+        floor: 'Этаж',
+        parking: 'Паркинг',
+        pool: 'Бассейн',
+        year_built: 'Год постройки',
+        orientation: 'Ориентация',
+        beach: 'Пляж',
+        airport: 'Аэропорт',
+        golf: 'Гольф',
+        amenities: 'Удобства',
+        yes: 'Да'
+      },
+      es: {
+        bedrooms: 'Dormitorios',
+        bathrooms: 'Baños',
+        built_area: 'Área construida',
+        plot_area: 'Parcela',
+        terrace: 'Terraza',
+        floor: 'Planta',
+        parking: 'Parking',
+        pool: 'Piscina',
+        year_built: 'Año',
+        orientation: 'Orientación',
+        beach: 'Playa',
+        airport: 'Aeropuerto',
+        golf: 'Golf',
+        amenities: 'Servicios',
+        yes: 'Sí'
+      },
+      en: {
+        bedrooms: 'Bedrooms',
+        bathrooms: 'Bathrooms',
+        built_area: 'Built area',
+        plot_area: 'Plot area',
+        terrace: 'Terrace',
+        floor: 'Floor',
+        parking: 'Parking',
+        pool: 'Pool',
+        year_built: 'Year built',
+        orientation: 'Orientation',
+        beach: 'Beach',
+        airport: 'Airport',
+        golf: 'Golf',
+        amenities: 'Amenities',
+        yes: 'Yes'
+      }
+    };
+    const specText = specI18n[langCode] || specI18n.en;
     const formatNumeric = (value) => {
       const n = Number(value);
       if (!Number.isFinite(n)) return '';
@@ -5533,22 +5588,22 @@ render() {
     }
     const iconsRowHtml = iconItems.length ? `<div class="cs-icons-row">${iconItems.join('')}</div>` : '';
     const featurePrimary = [
-      { key: 'bedrooms', label: 'Bedrooms', icon: `${ASSETS_BASE}bed-blue.svg`, value: normalized.roomsNum != null && normalized.roomsNum > 0 ? String(normalized.roomsNum) : null },
-      { key: 'bathrooms', label: 'Bathrooms', icon: `${ASSETS_BASE}bath-blue.svg`, value: normalized.bathroomsNum != null && normalized.bathroomsNum > 0 ? String(normalized.bathroomsNum) : null },
-      { key: 'built_area', label: 'Built area', icon: `${ASSETS_BASE}house-blue.svg`, value: normalized.areaNum != null && normalized.areaNum > 0 ? `${normalized.areaNum} m²` : null },
-      { key: 'plot_area', label: 'Plot area', icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.plotNum != null && normalized.plotNum > 0 ? `${normalized.plotNum} m²` : null },
-      { key: 'terrace', label: 'Terrace', icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.terraceNum != null && normalized.terraceNum > 0 ? `${normalized.terraceNum} m²` : null },
-      { key: 'floor', label: 'Floor', icon: `${ASSETS_BASE}floor-blue.svg`, value: normalized.floorNum != null && normalized.floorNum > 0 ? String(normalized.floorNum) : null },
-      { key: 'parking', label: 'Parking', icon: `${ASSETS_BASE}garaje-blue.svg`, value: normalized.has_parking === true ? 'Yes' : null },
-      { key: 'pool', label: 'Pool', icon: `${ASSETS_BASE}pool-blue.svg`, value: normalized.has_pool === true ? 'Yes' : null },
-      { key: 'year_built', label: 'Year built', icon: `${ASSETS_BASE}year-blue.svg`, value: normalized.yearBuiltNum != null && normalized.yearBuiltNum > 0 ? String(normalized.yearBuiltNum) : null },
-      { key: 'orientation', label: 'Orientation', icon: `${ASSETS_BASE}orientation-blue.svg`, value: normalized.orientationText || null },
-      { key: 'distance_beach', label: 'Beach', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceBeachNum, normalized.distanceBeachMed) }
+      { key: 'bedrooms', label: specText.bedrooms, icon: `${ASSETS_BASE}bed-blue.svg`, value: normalized.roomsNum != null && normalized.roomsNum > 0 ? String(normalized.roomsNum) : null },
+      { key: 'bathrooms', label: specText.bathrooms, icon: `${ASSETS_BASE}bath-blue.svg`, value: normalized.bathroomsNum != null && normalized.bathroomsNum > 0 ? String(normalized.bathroomsNum) : null },
+      { key: 'built_area', label: specText.built_area, icon: `${ASSETS_BASE}house-blue.svg`, value: normalized.areaNum != null && normalized.areaNum > 0 ? `${normalized.areaNum} m²` : null },
+      { key: 'plot_area', label: specText.plot_area, icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.plotNum != null && normalized.plotNum > 0 ? `${normalized.plotNum} m²` : null },
+      { key: 'terrace', label: specText.terrace, icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.terraceNum != null && normalized.terraceNum > 0 ? `${normalized.terraceNum} m²` : null },
+      { key: 'floor', label: specText.floor, icon: `${ASSETS_BASE}floor-blue.svg`, value: normalized.floorNum != null && normalized.floorNum > 0 ? String(normalized.floorNum) : null },
+      { key: 'parking', label: specText.parking, icon: `${ASSETS_BASE}garaje-blue.svg`, value: normalized.has_parking === true ? specText.yes : null },
+      { key: 'pool', label: specText.pool, icon: `${ASSETS_BASE}pool-blue.svg`, value: normalized.has_pool === true ? specText.yes : null },
+      { key: 'year_built', label: specText.year_built, icon: `${ASSETS_BASE}year-blue.svg`, value: normalized.yearBuiltNum != null && normalized.yearBuiltNum > 0 ? String(normalized.yearBuiltNum) : null },
+      { key: 'orientation', label: specText.orientation, icon: `${ASSETS_BASE}orientation-blue.svg`, value: normalized.orientationText || null },
+      { key: 'distance_beach', label: specText.beach, icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceBeachNum, normalized.distanceBeachMed) }
     ];
     const featureSecondary = [
-      { key: 'distance_airport', label: 'Airport', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceAirportNum, normalized.distanceAirportMed) },
-      { key: 'distance_golf', label: 'Golf', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceGolfNum, normalized.distanceGolfMed) },
-      { key: 'distance_amenities', label: 'Amenities', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceAmenitiesNum, normalized.distanceAmenitiesMed) }
+      { key: 'distance_airport', label: specText.airport, icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceAirportNum, normalized.distanceAirportMed) },
+      { key: 'distance_golf', label: specText.golf, icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceGolfNum, normalized.distanceGolfMed) },
+      { key: 'distance_amenities', label: specText.amenities, icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceAmenitiesNum, normalized.distanceAmenitiesMed) }
     ];
     const features = [];
     for (const item of featurePrimary) {

@@ -29,6 +29,14 @@ export class APIClient {
     } catch { return false; }
   }
 
+  _getUiLang() {
+    try {
+      return String(this.widget?.getLangCode?.() || 'ru').toLowerCase();
+    } catch {
+      return 'ru';
+    }
+  }
+
   // ---------- Cards API helpers ----------
   _deriveCardsBaseUrl() {
     // this.apiUrl обычно: https://.../api/audio/upload
@@ -47,6 +55,7 @@ export class APIClient {
   async fetchCardsSearch(params = {}) {
     const base = this._deriveCardsBaseUrl();
     const url = new URL(base + '/search');
+    url.searchParams.set('lang', this._getUiLang());
 
     const allowed = ['city', 'district', 'rooms', 'type', 'minPrice', 'maxPrice', 'limit'];
     for (const k of allowed) {
@@ -64,8 +73,9 @@ export class APIClient {
 
   async fetchCardById(id) {
     const base = this._deriveCardsBaseUrl();
-    const url = `${base}/${encodeURIComponent(id)}`;
-    const res = await fetch(url);
+    const url = new URL(`${base}/${encodeURIComponent(id)}`);
+    url.searchParams.set('lang', this._getUiLang());
+    const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`Card fetch failed: ${res.status}`);
     return await res.json().catch(() => null);
   }
@@ -584,7 +594,8 @@ export class APIClient {
         body: JSON.stringify({
           action: 'ui_card_rendered',
           variantId: cardId,
-          sessionId: this.widget.sessionId
+          sessionId: this.widget.sessionId,
+          lang: this._getUiLang()
         })
       });
 
@@ -612,7 +623,8 @@ export class APIClient {
         },
         body: JSON.stringify({
           action: 'ui_slider_started',
-          sessionId: this.widget.sessionId
+          sessionId: this.widget.sessionId,
+          lang: this._getUiLang()
         })
       });
 
@@ -640,7 +652,8 @@ export class APIClient {
         },
         body: JSON.stringify({
           action: 'ui_slider_ended',
-          sessionId: this.widget.sessionId
+          sessionId: this.widget.sessionId,
+          lang: this._getUiLang()
         })
       });
 
@@ -669,7 +682,8 @@ export class APIClient {
         body: JSON.stringify({
           action: 'ui_focus_changed',
           cardId: cardId,
-          sessionId: this.widget.sessionId
+          sessionId: this.widget.sessionId,
+          lang: this._getUiLang()
         })
       });
 
@@ -702,7 +716,8 @@ export class APIClient {
         body: JSON.stringify({
           action: action, // 'like' or 'next' or 'show'
           variantId: variantId,
-          sessionId: this.widget.sessionId || ''
+          sessionId: this.widget.sessionId || '',
+          lang: this._getUiLang()
         })
       });
 
