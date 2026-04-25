@@ -1,6 +1,6 @@
 # ENV Target Matrix (Frontend)
 
-Last updated: 2026-04-21
+Last updated: 2026-04-25
 Branch: `Split`
 
 ## Goal
@@ -28,6 +28,7 @@ This means client isolation depends on correct API URL wiring at publish/runtime
 | `PORT` | STATIC | Auto | Railway managed | Service port only. |
 | `WIDGET_API_URL` | CLIENT | Yes | `https://client-backend.up.railway.app/api/audio/upload` | Injected by `/runtime-config.js` into `window.__VW_API_URL__`. |
 | `WIDGET_ASSETS_BASE` | CLIENT | Optional | `https://client-frontend.up.railway.app/assets/` | Injected by `/runtime-config.js` into `window.__VW_ASSETS_BASE__`. |
+| `WIDGET_DEFAULT_THEME` | CLIENT | Optional | `0` or `1` | Injected by `/runtime-config.js` into `window.__VW_DEFAULT_THEME__`. `0 = light`, `1 = dark`. Startup priority: `localStorage(vw_theme)` first, then this variable. |
 
 ## Target Behavior (To implement/maintain)
 

@@ -1,6 +1,6 @@
 # ENV AS-IS Snapshot (Frontend)
 
-Last updated: 2026-04-21
+Last updated: 2026-04-25
 Branch: `Split`
 
 ## Scope
@@ -21,8 +21,9 @@ This document captures current frontend configuration behavior "as is":
 | Variable | Where used | Current behavior / fallback | Required in prod |
 |---|---|---|---|
 | `PORT` | `server.js` | Fallback `3000` | Yes (Railway usually injects) |
-
-No other `process.env.*` usage is currently present in frontend source.
+| `WIDGET_API_URL` | `server.js` | Runtime config value for `window.__VW_API_URL__` | Yes |
+| `WIDGET_ASSETS_BASE` | `server.js` | Runtime config value for `window.__VW_ASSETS_BASE__` | Optional |
+| `WIDGET_DEFAULT_THEME` | `server.js` | Runtime config value for `window.__VW_DEFAULT_THEME__` (`0=light`,`1=dark`) | Optional |
 
 ## API URL Resolution (Widget Runtime)
 

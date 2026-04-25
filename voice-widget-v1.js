@@ -15,6 +15,17 @@ const ASSETS_BASE = (() => {
   }
 })();
 
+const DEFAULT_THEME = (() => {
+  try {
+    const raw = typeof window !== 'undefined' ? window.__VW_DEFAULT_THEME__ : null;
+    if (raw === 0 || raw === '0' || raw === 'light') return 'light';
+    if (raw === 1 || raw === '1' || raw === 'dark') return 'dark';
+    return null;
+  } catch (e) {
+    return null;
+  }
+})();
+
 import { AudioRecorder } from './modules/audio-recorder.js';
 import { UnderstandingManager } from './modules/understanding-manager.js';
 import { UIManager } from './modules/ui-manager.js';
@@ -818,7 +829,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   initTheme() {
-    let theme = 'dark';
+    let theme = DEFAULT_THEME || 'dark';
     try {
       const saved = localStorage.getItem('vw_theme');
       if (saved === 'light' || saved === 'dark') theme = saved;
