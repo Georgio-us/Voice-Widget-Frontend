@@ -1431,45 +1431,44 @@ render() {
     display:none;
     align-items:center;
     justify-content:center;
-    padding:14px;
-    background:rgba(0,0,0,.46);
+    padding:16px;
+    background:rgba(0,0,0,.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     box-sizing:border-box;
   }
   .card-desc-modal.is-open{ display:flex; }
   .card-desc-modal__dialog{
     width:100%;
+    max-width:306px;
     max-height:100%;
     display:flex;
     flex-direction:column;
-    gap:10px;
-    border-radius:10px;
-    background:var(--bg-card);
-    border:1px solid rgba(65,120,207,.35);
-    padding:12px;
+    gap:12px;
+    border-radius:16px;
+    background:rgba(23,22,24,.95);
+    border:1px solid rgba(106,108,155,.30);
+    padding:14px;
     box-sizing:border-box;
   }
   .card-desc-modal__text{
-    flex:1 1 auto;
-    min-height:80px;
-    max-height:220px;
+    max-height:230px;
     overflow-y:auto;
     font-size:12px;
     line-height:1.45;
-    color:var(--color-text);
-    background:var(--color-sub-surface);
-    border-radius:8px;
-    padding:10px;
+    color:#FFFFFF;
     white-space:pre-line;
+    text-align:left;
   }
+  .card-desc-modal__actions{ display:flex; justify-content:center; }
   .card-desc-modal__ok{
-    align-self:flex-end;
-    min-width:88px;
-    padding:8px 12px;
-    border-radius:8px;
-    border:1px solid var(--color-accent);
+    min-width: var(--btn-min-w);
+    padding: var(--btn-py) var(--btn-px);
+    border-radius: var(--btn-radius);
+    border:1.25px solid var(--color-accent);
     background:var(--color-accent);
     color:#fff;
-    font-size:13px;
+    font-size:12px;
     font-weight:600;
     cursor:pointer;
   }
@@ -5455,7 +5454,7 @@ render() {
     const tagBadgesHtml = Array.isArray(normalized.tags) && normalized.tags.length
       ? `<div class="cs-image-tags">${normalized.tags.map((t) => `<button type="button" class="cs-image-tag" tabindex="-1" aria-hidden="true">${t}</button>`).join('')}</div>`
       : '';
-    const descriptionText = (normalized.description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const descriptionText = normalized.descriptionPlain || '-';
     const iconItems = [];
     if (normalized.area_m2 != null) {
       iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}house-blue.svg" alt="Area"><span>${normalized.area_m2}m²</span></div>`);
@@ -5540,7 +5539,9 @@ render() {
         <div class="card-desc-modal" aria-hidden="true">
           <div class="card-desc-modal__dialog" role="dialog" aria-modal="true" aria-label="${locale.cardDescription || 'Описание'}">
             <div class="card-desc-modal__text">${descriptionText || '-'}</div>
-            <button type="button" class="card-desc-modal__ok">${locale.cardDescriptionOk || 'OK'}</button>
+            <div class="card-desc-modal__actions">
+              <button type="button" class="card-desc-modal__ok">${locale.cardDescriptionOk || 'OK'}</button>
+            </div>
           </div>
         </div>
       </div>
@@ -6086,6 +6087,32 @@ render() {
     };
     const toLabel = (v) => String(v || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
     const normalizeTag = (v) => String(v || '').replace(/<[^>]+>/g, ' ').trim().replace(/\s+/g, ' ').toUpperCase();
+    const toPlainDescription = (v) => {
+      const input = String(v || '').trim();
+      if (!input) return '';
+      let s = input
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<li[^>]*>/gi, '- ')
+        .replace(/<[^>]+>/g, ' ');
+
+      s = s
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>');
+
+      s = s
+        .split('\n')
+        .map((line) => line.replace(/\s+/g, ' ').trim())
+        .filter((line, i, arr) => line.length > 0 || (i > 0 && arr[i - 1].length > 0))
+        .join('\n')
+        .trim();
+      return s;
+    };
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
@@ -6151,6 +6178,7 @@ render() {
       property_type: propertyType ? propertyType.toUpperCase() : '',
       listing_status: listingStatus ? listingStatus.toUpperCase() : '',
       description: raw.description || '',
+      descriptionPlain: toPlainDescription(raw.description || ''),
       rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || ''),
       roomsLabel,
       floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
