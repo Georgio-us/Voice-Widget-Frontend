@@ -1104,9 +1104,9 @@ render() {
   .thread > .card-screen:first-child{ margin-top:0; }
   .thread > .card-screen:last-child{ margin-bottom:0; }
   .card-screen .cs{ background:var(--bg-card); color:var(--color-text); border-radius:14px; margin-bottom:12px; box-shadow:none; overflow:hidden; width:100%; height:100%; display:flex; flex-direction:column; }
-  .card-screen .cs-image{ height:260px; flex:0 0 260px; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
+  .card-screen .cs-image{ height:260px; flex:0 0 260px; width:100%; display:grid; grid-template-areas:"stack"; align-items:stretch; justify-items:stretch; overflow:hidden; position:relative; background:repeating-linear-gradient(45deg,#e9e9e9,#e9e9e9 12px,#f5f5f5 12px,#f5f5f5 24px); color:#8a8a8a; font-weight:600; letter-spacing:.2px; }
   .card-screen .cs-image > *{ grid-area:stack; }
-  .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  .card-screen .cs-image .cs-image-media{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; overflow:hidden; }
   .card-screen .cs-image .cs-image-nav{
     z-index:2;
     width:100%;
@@ -1166,7 +1166,8 @@ render() {
   .card-screen .cs-image .card-btn.like[data-action="like"]:active svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image .card-btn.like[data-action="like"].is-liked svg path{ fill:var(--color-accent); stroke:var(--color-accent); }
   .card-screen .cs-image img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .card-screen .cs-body{ flex:1 1 auto; min-height:0; padding:10px 12px; display:grid; gap:6px; }
+  .card-screen .cs-content{ flex:0 0 180px; min-height:180px; max-height:180px; display:flex; flex-direction:column; background:var(--bg-card); }
+  .card-screen .cs-body{ flex:0 0 auto; min-height:0; padding:10px 12px; display:grid; gap:6px; background:var(--bg-card); }
   .card-screen .cs-row{ display:flex; justify-content:space-between; gap:12px; }
   .card-screen .cs-row > *{ min-width:0; }
   .card-screen .cs-title{ font-weight:700; color:var(--color-text); }
@@ -1174,10 +1175,12 @@ render() {
   .card-screen .cs-title,.card-screen .cs-sub{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .card-screen .cs-icons-row{
     display:flex;
+    flex:1 1 auto;
     align-items:flex-end;
     gap:14px;
     padding:2px 12px 6px;
     min-height:56px;
+    background:var(--bg-card);
   }
   .card-screen .cs-icon-item{
     display:flex;
@@ -1375,7 +1378,7 @@ render() {
     transform:none;
   }
   /* actions container for clearer boundaries */
-  .card-actions-wrap{ margin:0 8px 8px; padding:8px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:rgba(71, 105, 165, 0); }
+  .card-actions-wrap{ margin:0 8px 8px; padding:8px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:var(--bg-card); }
   .card-slide .cs{ width:100%; }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
@@ -5352,25 +5355,26 @@ render() {
             </div>
             <div class="cs-image-media">${coverImage ? `<img src="${coverImage}" alt="${normalized.city} ${normalized.province}" loading="lazy">` : 'Put image here'}</div>
           </div>
-          <div class="cs-body">
-            <div class="cs-row"><div class="cs-title">${locationLine}</div></div>
-            <div class="cs-row"><div class="cs-sub">${typeStatusLine}</div></div>
-          </div>
-          ${iconsRowHtml}
-          <div class="card-actions-wrap">
-            <div class="card-actions-panel card-actions-panel--split">
-              <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
-              <button
-                type="button"
-                class="card-price-action"
-                data-action="select"
-                data-variant-id="${normalized.id}"
-                aria-label="${locale.cardSelect || 'Выбрать'}"
-              >
-                ${normalized.priceOldLabel ? `<span class="card-price-old">${normalized.priceOldLabel}</span>` : ''}
-                <span class="card-price-current">${normalized.priceLabel || ''}</span>
-              </button>
+          <div class="cs-content">
+            <div class="cs-body">
+              <div class="cs-row"><div class="cs-title">${locationLine}</div></div>
+              <div class="cs-row"><div class="cs-sub">${typeStatusLine}</div></div>
             </div>
+            ${iconsRowHtml}
+            <div class="card-actions-wrap">
+              <div class="card-actions-panel card-actions-panel--split">
+                <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
+                <button
+                  type="button"
+                  class="card-price-action"
+                  data-action="select"
+                  data-variant-id="${normalized.id}"
+                  aria-label="${locale.cardSelect || 'Выбрать'}"
+                >
+                  ${normalized.priceOldLabel ? `<span class="card-price-old">${normalized.priceOldLabel}</span>` : ''}
+                  <span class="card-price-current">${normalized.priceLabel || ''}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
