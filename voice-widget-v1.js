@@ -31,6 +31,7 @@ import { UnderstandingManager } from './modules/understanding-manager.js';
 import { UIManager } from './modules/ui-manager.js';
 import { APIClient } from './modules/api-client.js';
 import { EventManager } from './modules/event-manager.js';
+import { DebugMenuManager } from './modules/debug-menu.js';
 import { initTelemetry, setConsent as setTelemetryConsent, log as logTelemetry, EventTypes as TelemetryEventTypes } from './modules/telemetryClient.js';
 
 const LOCALES = {
@@ -449,9 +450,6 @@ class VoiceWidget extends HTMLElement {
     this.stream = null;
     this.audioBlob = null;
     this.recordedChunks = [];
-    this._debugSelectionHistory = [];
-    this._debugLastApiPayload = null;
-    this._debugLastApiMeta = null;
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -491,6 +489,7 @@ class VoiceWidget extends HTMLElement {
     this.understanding = new UnderstandingManager(this);
     this.ui = new UIManager(this);
     this.api = new APIClient(this);
+    this.debugMenu = new DebugMenuManager(this);
 
     // Инициализация телеметрии
     const baseUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '');
@@ -6812,267 +6811,27 @@ render() {
   }
 
   _pushDebugHistory(event, payload = {}) {
-    try {
-      const row = {
-        ts: new Date().toISOString(),
-        event: String(event || 'event'),
-        payload
-      };
-      this._debugSelectionHistory.push(row);
-      if (this._debugSelectionHistory.length > 120) {
-        this._debugSelectionHistory = this._debugSelectionHistory.slice(-120);
-      }
-    } catch {}
+    this.debugMenu?.pushHistory?.(event, payload);
   }
 
   storeLastApiPayload(payload, meta = {}) {
-    this._debugLastApiPayload = payload || null;
-    this._debugLastApiMeta = {
-      ts: new Date().toISOString(),
-      source: meta?.source || 'unknown',
-      requestType: meta?.requestType || 'unknown'
-    };
-    const cardsCount = Array.isArray(payload?.cards) ? payload.cards.length : 0;
-    this._pushDebugHistory('candidates_received', {
-      source: this._debugLastApiMeta.source,
-      requestType: this._debugLastApiMeta.requestType,
-      cardsCount
-    });
-    try { this.refreshDebugMenu(); } catch {}
-  }
-
-  _parseFirstNumber(v) {
-    if (v === null || v === undefined) return null;
-    if (typeof v === 'number' && Number.isFinite(v)) return v;
-    const s = String(v).replace(/\s/g, '');
-    const m = s.match(/-?\d+(?:[.,]\d+)?/);
-    if (!m) return null;
-    const n = Number(m[0].replace(',', '.'));
-    return Number.isFinite(n) ? n : null;
+    this.debugMenu?.storeLastApiPayload?.(payload, meta);
   }
 
   buildDebugCanonicalPatch(insights = {}) {
-    const src = insights || {};
-    const operationRaw = String(src.operation || '').toLowerCase();
-    let operation = null;
-    if (/rent|аренд|alquil/.test(operationRaw)) operation = 'rent';
-    else if (operationRaw) operation = 'sale';
-    const canonical = {
-      operation,
-      type: src.type || null,
-      location: src.location || null,
-      rooms: this._parseFirstNumber(src.rooms),
-      maxPrice: this._parseFirstNumber(src.budget),
-      maxArea: this._parseFirstNumber(src.area),
-      details: src.details || null,
-      preferences: src.preferences || null
-    };
-    Object.keys(canonical).forEach((k) => {
-      if (canonical[k] === null || canonical[k] === '' || canonical[k] === undefined) delete canonical[k];
-    });
-    return canonical;
+    return this.debugMenu?.buildCanonicalPatch?.(insights || {}) || {};
   }
 
   getDebugEffectiveSearchParams(insights = {}) {
-    const patch = this.buildDebugCanonicalPatch(insights);
-    return {
-      ...patch,
-      lang: this.getLangCode(),
-      sessionId: this.sessionId || null
-    };
-  }
-
-  _collectDebugCandidatePool() {
-    const fromDom = [];
-    try {
-      const nodes = this.shadowRoot.querySelectorAll('.cards-slider .card-slide .cs[data-variant-id]');
-      nodes.forEach((node, idx) => {
-        fromDom.push({
-          id: node.getAttribute('data-variant-id') || null,
-          city: node.getAttribute('data-city') || null,
-          district: node.getAttribute('data-district') || null,
-          rooms: this._parseFirstNumber(node.getAttribute('data-rooms')),
-          priceEUR: this._parseFirstNumber(node.getAttribute('data-price-eur')),
-          source: `dom#${idx + 1}`
-        });
-      });
-    } catch {}
-
-    const apiCards = Array.isArray(this.api?.lastProposedCards) ? this.api.lastProposedCards : [];
-    const fromApiMemory = apiCards.map((c, idx) => ({ ...c, source: `api.memory#${idx + 1}` }));
-    const payloadCards = Array.isArray(this._debugLastApiPayload?.cards) ? this._debugLastApiPayload.cards : [];
-    const fromPayload = payloadCards.map((c, idx) => ({ ...c, source: `api.payload#${idx + 1}` }));
-
-    const merged = [...fromDom, ...fromApiMemory, ...fromPayload];
-    const seen = new Set();
-    const deduped = [];
-    merged.forEach((item) => {
-      const key = item?.id ? `id:${item.id}` : `k:${item?.city || ''}|${item?.district || ''}|${item?.rooms || ''}|${item?.priceEUR || ''}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      deduped.push(item);
-    });
-    return deduped;
-  }
-
-  _evaluateCandidateAgainstQuery(candidate = {}, query = {}) {
-    const checks = [];
-    const pushCheck = (name, status, actual, expected) => checks.push({ name, status, actual, expected });
-
-    if (query.operation) {
-      const actual = String(candidate.operation || '').toLowerCase();
-      pushCheck('operation', actual ? (actual === query.operation ? 'pass' : 'fail') : 'skip', actual || '-', query.operation);
-    } else pushCheck('operation', 'skip', '-', '-');
-
-    if (query.type) {
-      const actual = String(candidate.type || candidate.property_type || '').toLowerCase();
-      const expected = String(query.type).toLowerCase();
-      pushCheck('type', actual ? (actual.includes(expected) ? 'pass' : 'fail') : 'skip', actual || '-', expected);
-    } else pushCheck('type', 'skip', '-', '-');
-
-    if (query.location) {
-      const actual = `${candidate.city || ''} ${candidate.district || ''}`.trim().toLowerCase();
-      const expected = String(query.location).toLowerCase();
-      pushCheck('location', actual ? (actual.includes(expected) ? 'pass' : 'fail') : 'skip', actual || '-', expected);
-    } else pushCheck('location', 'skip', '-', '-');
-
-    if (typeof query.rooms === 'number') {
-      const actual = this._parseFirstNumber(candidate.rooms);
-      pushCheck('rooms', typeof actual === 'number' ? (actual === query.rooms ? 'pass' : 'fail') : 'skip', actual ?? '-', query.rooms);
-    } else pushCheck('rooms', 'skip', '-', '-');
-
-    if (typeof query.maxPrice === 'number') {
-      const actual = this._parseFirstNumber(candidate.priceEUR ?? candidate.price);
-      pushCheck('maxPrice', typeof actual === 'number' ? (actual <= query.maxPrice ? 'pass' : 'fail') : 'skip', actual ?? '-', query.maxPrice);
-    } else pushCheck('maxPrice', 'skip', '-', '-');
-
-    if (typeof query.maxArea === 'number') {
-      const actual = this._parseFirstNumber(candidate.area_m2 ?? candidate.built_area ?? candidate.area);
-      pushCheck('maxArea', typeof actual === 'number' ? (actual <= query.maxArea ? 'pass' : 'fail') : 'skip', actual ?? '-', query.maxArea);
-    } else pushCheck('maxArea', 'skip', '-', '-');
-
-    const considered = checks.filter((c) => c.status !== 'skip').length;
-    const passed = checks.filter((c) => c.status === 'pass').length;
-    return { checks, considered, passed };
-  }
-
-  _buildDebugSnapshot() {
-    const insights = this.getUnderstanding();
-    const canonicalPatch = this.buildDebugCanonicalPatch(insights);
-    const effectiveQuery = this.getDebugEffectiveSearchParams(insights);
-    const candidates = this._collectDebugCandidatePool();
-    const match = candidates.slice(0, 12).map((c) => {
-      const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery);
-      return { candidate: c, ...m };
-    });
-    const user = [...this.messages].reverse().find((m) => m?.type === 'user');
-    const assistant = [...this.messages].reverse().find((m) => m?.type === 'assistant');
-    const dialog = {
-      user: user?.content || null,
-      assistant: assistant?.content || null
-    };
-    const apiMeta = {
-      ...this._debugLastApiMeta,
-      role: this.role || null,
-      timing: this._debugLastApiPayload?.timing || null,
-      tokens: this._debugLastApiPayload?.tokens || null,
-      stage: this._debugLastApiPayload?.stage || null,
-      cardsCount: Array.isArray(this._debugLastApiPayload?.cards) ? this._debugLastApiPayload.cards.length : 0,
-      historyTail: this._debugSelectionHistory.slice(-20)
-    };
-    return { insights, canonicalPatch, effectiveQuery, candidates, match, apiMeta, dialog };
-  }
-
-  _toPretty(value) {
-    try { return JSON.stringify(value, null, 2); } catch { return String(value); }
-  }
-
-  _buildDebugReportText(snapshot) {
-    const s = snapshot || this._buildDebugSnapshot();
-    const lines = [];
-    lines.push('=== DEBUG REPORT ===');
-    lines.push(`time: ${new Date().toISOString()}`);
-    lines.push(`sessionId: ${this.sessionId || '-'}`);
-    lines.push('');
-    lines.push('[AI understanding]');
-    lines.push(this._toPretty(s.insights));
-    lines.push('');
-    lines.push('[Canonical patch]');
-    lines.push(this._toPretty(s.canonicalPatch));
-    lines.push('');
-    lines.push('[Effective query]');
-    lines.push(this._toPretty(s.effectiveQuery));
-    lines.push('');
-    lines.push('[Candidate pool]');
-    lines.push(`count: ${s.candidates.length}`);
-    lines.push(`ids: ${s.candidates.map((c) => c.id).filter(Boolean).join(', ') || '-'}`);
-    lines.push('');
-    lines.push('[Last model/API metadata]');
-    lines.push(this._toPretty(s.apiMeta));
-    lines.push('');
-    lines.push('[Last dialog turn]');
-    lines.push(this._toPretty(s.dialog));
-    return lines.join('\n');
-  }
-
-  refreshDebugMenu() {
-    const debugScreen = this.shadowRoot?.getElementById('debugScreen');
-    if (!debugScreen) return;
-    const s = this._buildDebugSnapshot();
-    const set = (id, text) => {
-      const el = this.shadowRoot.getElementById(id);
-      if (el) el.textContent = text;
-    };
-    set('debugInsightsPre', this._toPretty(s.insights));
-    set('debugCanonicalPre', this._toPretty(s.canonicalPatch));
-    set('debugQueryPre', this._toPretty(s.effectiveQuery));
-    set('debugCandidatesPre', this._toPretty({
-      count: s.candidates.length,
-      ids: s.candidates.map((c) => c.id).filter(Boolean),
-      sample: s.candidates.slice(0, 8)
-    }));
-    const matchLines = s.match.map((m) => {
-      const id = m?.candidate?.id || '-';
-      const ratio = m.considered ? `${m.passed}/${m.considered}` : 'n/a';
-      const checks = m.checks.map((c) => `${c.status === 'pass' ? '✅' : c.status === 'fail' ? '❌' : '⏭️'} ${c.name}: ${c.actual} -> ${c.expected}`).join('\n');
-      return `#${id} (${ratio})\n${checks}`;
-    });
-    set('debugMatchPre', matchLines.join('\n\n') || '-');
-    set('debugMetaPre', this._toPretty(s.apiMeta));
-    set('debugDialogPre', this._toPretty(s.dialog));
-    set('debugRawPre', this._toPretty({
-      sourceInsights: s.insights,
-      canonicalPatch: s.canonicalPatch,
-      effectiveQuery: s.effectiveQuery,
-      lastApiPayloadCompact: this._debugLastApiPayload
-        ? {
-            sessionId: this._debugLastApiPayload.sessionId || null,
-            stage: this._debugLastApiPayload.stage || null,
-            cardsCount: Array.isArray(this._debugLastApiPayload.cards) ? this._debugLastApiPayload.cards.length : 0,
-            insights: this._debugLastApiPayload.insights || null
-          }
-        : null
-    }));
-    this._debugLastReportText = this._buildDebugReportText(s);
+    return this.debugMenu?.getEffectiveSearchParams?.(insights || {}) || {};
   }
 
   async copyDebugReport() {
-    const text = this._debugLastReportText || this._buildDebugReportText(this._buildDebugSnapshot());
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
-      this.ui?.showNotification?.(this.t('debugCopied') || 'Copied');
-    } catch {
-      this.ui?.showNotification?.('Copy failed');
-    }
+    return this.debugMenu?.copyReport?.();
+  }
+
+  refreshDebugMenu() {
+    return this.debugMenu?.refresh?.();
   }
 
   onStateChange(cb) {
