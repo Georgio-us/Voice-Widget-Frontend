@@ -266,6 +266,7 @@ export class APIClient {
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
+      try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -354,6 +355,7 @@ export class APIClient {
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
+      try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -482,6 +484,7 @@ export class APIClient {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json().catch(() => ({}));
+      try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -723,6 +726,7 @@ export class APIClient {
 
       if (response.ok) {
         const data = await response.json();
+        try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/interaction', requestType: `interaction_${action}` }); } catch {}
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
 
         // 🆕 Sprint I: сохраняем role из server response (read-only)

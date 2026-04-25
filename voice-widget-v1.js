@@ -48,8 +48,21 @@ const LOCALES = {
     menuBackToDialog: 'Назад к диалогу',
     menuSelectedRequest: 'Оставить заявку',
     menuSelectedContext: 'Дополнительно',
+    menuSelectedDebug: 'Debug меню',
     menuThemeToLight: 'Светлая тема',
     menuThemeToDark: 'Тёмная тема',
+    debugTitle: 'Debug меню',
+    debugRefresh: 'Обновить',
+    debugCopy: 'Скопировать отчёт',
+    debugCopied: 'Отчёт скопирован',
+    debugSectionInsights: '1) AI understanding',
+    debugSectionCanonical: '2) Canonical patch',
+    debugSectionQuery: '3) Effective query',
+    debugSectionCandidates: '4) Candidate pool summary',
+    debugSectionMatch: '5) Candidate match breakdown',
+    debugSectionMeta: '6) Last model/API metadata',
+    debugSectionDialog: '7) Last dialog turn',
+    debugSectionRaw: '8) Raw JSON',
     requestTitle: 'Оставить заявку',
     requestNameLabel: 'Имя',
     requestContactLabel: 'Контакт (телефон / WhatsApp / e-mail)',
@@ -167,8 +180,21 @@ const LOCALES = {
     menuBackToDialog: 'Back to dialogue',
     menuSelectedRequest: 'Leave request',
     menuSelectedContext: 'Insights',
+    menuSelectedDebug: 'Debug menu',
     menuThemeToLight: 'Light mode',
     menuThemeToDark: 'Dark mode',
+    debugTitle: 'Debug menu',
+    debugRefresh: 'Refresh',
+    debugCopy: 'Copy report',
+    debugCopied: 'Report copied',
+    debugSectionInsights: '1) AI understanding',
+    debugSectionCanonical: '2) Canonical patch',
+    debugSectionQuery: '3) Effective query',
+    debugSectionCandidates: '4) Candidate pool summary',
+    debugSectionMatch: '5) Candidate match breakdown',
+    debugSectionMeta: '6) Last model/API metadata',
+    debugSectionDialog: '7) Last dialog turn',
+    debugSectionRaw: '8) Raw JSON',
     requestTitle: 'Leave a request',
     requestNameLabel: 'Name',
     requestContactLabel: 'Contact (phone / WhatsApp / e-mail)',
@@ -286,8 +312,21 @@ const LOCALES = {
     menuBackToDialog: 'Volver al dialogo',
     menuSelectedRequest: 'Dejar solicitud',
     menuSelectedContext: 'Insights',
+    menuSelectedDebug: 'Debug menu',
     menuThemeToLight: 'Modo claro',
     menuThemeToDark: 'Modo oscuro',
+    debugTitle: 'Debug menu',
+    debugRefresh: 'Actualizar',
+    debugCopy: 'Copiar informe',
+    debugCopied: 'Informe copiado',
+    debugSectionInsights: '1) AI understanding',
+    debugSectionCanonical: '2) Canonical patch',
+    debugSectionQuery: '3) Effective query',
+    debugSectionCandidates: '4) Candidate pool summary',
+    debugSectionMatch: '5) Candidate match breakdown',
+    debugSectionMeta: '6) Last model/API metadata',
+    debugSectionDialog: '7) Last dialog turn',
+    debugSectionRaw: '8) Raw JSON',
     requestTitle: 'Dejar una solicitud',
     requestNameLabel: 'Nombre',
     requestContactLabel: 'Contacto (telefono / WhatsApp / e-mail)',
@@ -410,6 +449,9 @@ class VoiceWidget extends HTMLElement {
     this.stream = null;
     this.audioBlob = null;
     this.recordedChunks = [];
+    this._debugSelectionHistory = [];
+    this._debugLastApiPayload = null;
+    this._debugLastApiMeta = null;
 
     // ⚠️ больше НЕ создаём id на фронте — читаем если сохранён, иначе null
     this.sessionId = this.getInitialSessionId();
@@ -575,7 +617,7 @@ class VoiceWidget extends HTMLElement {
     setTitle('sendButton', locale.sendTitle);
     root.querySelectorAll('.header-action.header-right').forEach((el) => el.setAttribute('title', locale.menuRequest));
     root.querySelectorAll('.header-action.header-left').forEach((el) => el.setAttribute('title', locale.menuLanguage));
-    root.querySelectorAll('.header-logo').forEach((el) => el.setAttribute('title', locale.menuInsights));
+    root.querySelectorAll('.header-logo').forEach((el) => el.setAttribute('title', locale.menuSelectedDebug || locale.menuInsights));
     const floatingClose = root.getElementById('widgetCloseFloating');
     if (floatingClose) floatingClose.setAttribute('title', locale.closeWidgetTitle);
 
@@ -599,6 +641,17 @@ class VoiceWidget extends HTMLElement {
     setText('#dataUnderstoodBtn', locale.understood);
     setText('#whatDataTrigger', locale.footerWhatData);
     setTextAll('.viral-link-text', locale.footerViral);
+    setText('#debugTitle', locale.debugTitle);
+    setText('#debugRefreshBtn', locale.debugRefresh);
+    setText('#debugCopyBtn', locale.debugCopy);
+    setText('#debugSectionInsights', locale.debugSectionInsights);
+    setText('#debugSectionCanonical', locale.debugSectionCanonical);
+    setText('#debugSectionQuery', locale.debugSectionQuery);
+    setText('#debugSectionCandidates', locale.debugSectionCandidates);
+    setText('#debugSectionMatch', locale.debugSectionMatch);
+    setText('#debugSectionMeta', locale.debugSectionMeta);
+    setText('#debugSectionDialog', locale.debugSectionDialog);
+    setText('#debugSectionRaw', locale.debugSectionRaw);
 
     setText('#reqContactError', locale.requestContactError);
     setText('#reqConsentError', locale.requestConsentError);
@@ -740,6 +793,7 @@ class VoiceWidget extends HTMLElement {
     }
 
     this.updateMenuUI();
+    try { this.refreshDebugMenu?.(); } catch {}
   }
 
   getConsent() {
@@ -1148,6 +1202,7 @@ render() {
   .dialog-screen.hidden{ display:none; }
   .context-screen.hidden{ display:none; }
   .request-screen.hidden{ display:none; }
+  .debug-screen.hidden{ display:none; }
 
   /* Chat */
   .thread{ display:flex; flex-direction:column; gap:2px; position:relative; z-index:1; min-height:0; }
@@ -2249,15 +2304,82 @@ render() {
                 
                 /* Make other v2 screens scrollable within widget bounds */
                 .context-screen .voice-widget-container,
-                .request-screen .voice-widget-container{
+                .request-screen .voice-widget-container,
+                .debug-screen .voice-widget-container{
                     display:flex;
                     flex-direction:column;
                 }
                 .context-screen .context-main-container,
-                .request-screen .request-main-container{
+                .request-screen .request-main-container,
+                .debug-screen .debug-main-container{
                     flex:1;
                     min-height:0;
                     overflow-y:auto; overflow-x:hidden;
+                }
+
+                .debug-main-container{
+                    width:100%;
+                    max-width:360px;
+                    margin: var(--space-l) auto 0 auto;
+                    padding: 0 var(--space-l) var(--space-l) var(--space-l);
+                    box-sizing:border-box;
+                    display:grid;
+                    gap:10px;
+                }
+                .debug-title{
+                    font-family: var(--ff);
+                    font-size:16px;
+                    font-weight:600;
+                    color:var(--color-text);
+                }
+                .debug-actions{
+                    display:flex;
+                    gap:8px;
+                }
+                .debug-btn{
+                    flex:1 1 0;
+                    min-width:0;
+                    height:34px;
+                    border-radius:10px;
+                    border:1.25px solid var(--color-accent);
+                    background:transparent;
+                    color:var(--color-accent);
+                    font-family:var(--ff);
+                    font-size:12px;
+                    font-weight:600;
+                    cursor:pointer;
+                }
+                .debug-btn--primary{
+                    background:var(--color-accent);
+                    color:#fff;
+                }
+                .debug-section{
+                    background:rgba(106,108,155,.10);
+                    border:1px solid rgba(106,108,155,.30);
+                    border-radius:10px;
+                    padding:8px;
+                    display:grid;
+                    gap:6px;
+                }
+                .debug-section-title{
+                    font-family:var(--ff);
+                    font-size:11px;
+                    font-weight:600;
+                    color:var(--color-text);
+                    opacity:.9;
+                }
+                .debug-section-pre{
+                    margin:0;
+                    white-space:pre-wrap;
+                    word-break:break-word;
+                    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                    font-size:10px;
+                    line-height:1.35;
+                    color:var(--color-text);
+                    opacity:.92;
+                    max-height:140px;
+                    overflow:auto;
+                    scrollbar-width:thin;
                 }
                 
                 
@@ -3501,6 +3623,63 @@ render() {
       </div>
       </div>
 
+      <!-- Debug Screen (temporary) -->
+      <div class="debug-screen hidden" id="debugScreen">
+        <div class="voice-widget-container">
+          <div class="bg-grid"></div>
+          <div class="screen-header">
+            <button class="header-action header-left" type="button" title="Language">
+              <img src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="Language">
+            </button>
+            <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
+            <button class="header-action header-right" type="button" title="Request">
+              <img src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="Request">
+            </button>
+          </div>
+          <div class="debug-main-container">
+            <div class="debug-title" id="debugTitle">Debug menu</div>
+            <div class="debug-actions">
+              <button type="button" class="debug-btn debug-btn--primary" id="debugRefreshBtn">Refresh</button>
+              <button type="button" class="debug-btn" id="debugCopyBtn">Copy report</button>
+            </div>
+
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionInsights">1) AI understanding</div>
+              <pre class="debug-section-pre" id="debugInsightsPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionCanonical">2) Canonical patch</div>
+              <pre class="debug-section-pre" id="debugCanonicalPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionQuery">3) Effective query</div>
+              <pre class="debug-section-pre" id="debugQueryPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionCandidates">4) Candidate pool summary</div>
+              <pre class="debug-section-pre" id="debugCandidatesPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionMatch">5) Candidate match breakdown</div>
+              <pre class="debug-section-pre" id="debugMatchPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionMeta">6) Last model/API metadata</div>
+              <pre class="debug-section-pre" id="debugMetaPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionDialog">7) Last dialog turn</div>
+              <pre class="debug-section-pre" id="debugDialogPre">-</pre>
+            </section>
+            <section class="debug-section">
+              <div class="debug-section-title" id="debugSectionRaw">8) Raw JSON</div>
+              <pre class="debug-section-pre" id="debugRawPre">-</pre>
+            </section>
+            <a class="footer-text viral-link-text" id="debugViralLink" href="#">Powered by VIA AI, I want the same widget</a>
+          </div>
+        </div>
+      </div>
+
       <!-- Cookie/Telemetry Consent Banner -->
       <div class="data-overlay" id="cookieOverlay" style="display:none;">
         <div class="data-modal">
@@ -3627,7 +3806,7 @@ render() {
   _startLauncherAttention();
 
   // Screen management (fresh query each time to avoid stale refs)
-  const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen'];
+  const screenIds = ['mainScreen','dialogScreen','contextScreen','requestScreen','debugScreen'];
   const showScreen = (screenName) => {
     screenIds.forEach(id => this.shadowRoot.getElementById(id)?.classList.add('hidden'));
     const targetId = screenName === 'dialog' ? 'dialogScreen' : screenName === 'main' ? 'mainScreen' : screenName + 'Screen';
@@ -5159,10 +5338,13 @@ render() {
       this.updateMenuUI();
     } else if (e.target.closest('.header-logo')) {
       e.preventDefault();
-      const contextScreen = this.shadowRoot.getElementById('contextScreen');
-      const isContext = contextScreen && !contextScreen.classList.contains('hidden');
+      const debugScreen = this.shadowRoot.getElementById('debugScreen');
+      const isDebug = debugScreen && !debugScreen.classList.contains('hidden');
       this._headerLangDropdownOpen = false;
-      this.showScreen(isContext ? 'dialog' : 'context');
+      this.showScreen(isDebug ? 'dialog' : 'debug');
+      if (!isDebug) {
+        try { this.refreshDebugMenu(); } catch {}
+      }
       this.updateMenuUI();
     } else if (e.target.closest('.header-action.header-right')) {
       e.preventDefault();
@@ -5182,6 +5364,12 @@ render() {
       e.preventDefault();
       this.toggleTheme();
       this.updateInterface();
+    } else if (e.target.matches('#debugRefreshBtn') || e.target.closest('#debugRefreshBtn')) {
+      e.preventDefault();
+      try { this.refreshDebugMenu(); } catch {}
+    } else if (e.target.matches('#debugCopyBtn') || e.target.closest('#debugCopyBtn')) {
+      e.preventDefault();
+      try { this.copyDebugReport(); } catch {}
     } else if (e.target.matches('.card-btn[data-action="send_card"]')) {
       // Показать карточку из последнего предложения
       const container = e.target.closest('.card-screen');
@@ -5328,6 +5516,11 @@ render() {
     this.events.on('understandingUpdated', (u) => { 
       console.log('🧠 Understanding updated:', u);
       this.updateDetailsScreen(u);
+      this._pushDebugHistory('extraction_applied', {
+        progress: u?.progress ?? null,
+        filled: Object.entries(u || {}).filter(([k, v]) => k !== 'progress' && v !== null && v !== undefined && String(v).trim() !== '').map(([k]) => k)
+      });
+      try { this.refreshDebugMenu(); } catch {}
     });
 
     // UI
@@ -5358,10 +5551,12 @@ render() {
       this.api.sendCardInteraction('next', data.variantId);
     });
     this.events.on('cardInteractionSent', ({ action }) => {
+      this._pushDebugHistory('query_applied', { action: action || 'unknown' });
       if (action === 'next') {
         this._isGeneratingNext = false;
         try { this.updateActiveCardSlide(); } catch {}
       }
+      try { this.refreshDebugMenu(); } catch {}
     });
 
     // ошибки/нотификации/лоадеры
@@ -6616,6 +6811,270 @@ render() {
     };
   }
 
+  _pushDebugHistory(event, payload = {}) {
+    try {
+      const row = {
+        ts: new Date().toISOString(),
+        event: String(event || 'event'),
+        payload
+      };
+      this._debugSelectionHistory.push(row);
+      if (this._debugSelectionHistory.length > 120) {
+        this._debugSelectionHistory = this._debugSelectionHistory.slice(-120);
+      }
+    } catch {}
+  }
+
+  storeLastApiPayload(payload, meta = {}) {
+    this._debugLastApiPayload = payload || null;
+    this._debugLastApiMeta = {
+      ts: new Date().toISOString(),
+      source: meta?.source || 'unknown',
+      requestType: meta?.requestType || 'unknown'
+    };
+    const cardsCount = Array.isArray(payload?.cards) ? payload.cards.length : 0;
+    this._pushDebugHistory('candidates_received', {
+      source: this._debugLastApiMeta.source,
+      requestType: this._debugLastApiMeta.requestType,
+      cardsCount
+    });
+    try { this.refreshDebugMenu(); } catch {}
+  }
+
+  _parseFirstNumber(v) {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'number' && Number.isFinite(v)) return v;
+    const s = String(v).replace(/\s/g, '');
+    const m = s.match(/-?\d+(?:[.,]\d+)?/);
+    if (!m) return null;
+    const n = Number(m[0].replace(',', '.'));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  buildDebugCanonicalPatch(insights = {}) {
+    const src = insights || {};
+    const operationRaw = String(src.operation || '').toLowerCase();
+    let operation = null;
+    if (/rent|аренд|alquil/.test(operationRaw)) operation = 'rent';
+    else if (operationRaw) operation = 'sale';
+    const canonical = {
+      operation,
+      type: src.type || null,
+      location: src.location || null,
+      rooms: this._parseFirstNumber(src.rooms),
+      maxPrice: this._parseFirstNumber(src.budget),
+      maxArea: this._parseFirstNumber(src.area),
+      details: src.details || null,
+      preferences: src.preferences || null
+    };
+    Object.keys(canonical).forEach((k) => {
+      if (canonical[k] === null || canonical[k] === '' || canonical[k] === undefined) delete canonical[k];
+    });
+    return canonical;
+  }
+
+  getDebugEffectiveSearchParams(insights = {}) {
+    const patch = this.buildDebugCanonicalPatch(insights);
+    return {
+      ...patch,
+      lang: this.getLangCode(),
+      sessionId: this.sessionId || null
+    };
+  }
+
+  _collectDebugCandidatePool() {
+    const fromDom = [];
+    try {
+      const nodes = this.shadowRoot.querySelectorAll('.cards-slider .card-slide .cs[data-variant-id]');
+      nodes.forEach((node, idx) => {
+        fromDom.push({
+          id: node.getAttribute('data-variant-id') || null,
+          city: node.getAttribute('data-city') || null,
+          district: node.getAttribute('data-district') || null,
+          rooms: this._parseFirstNumber(node.getAttribute('data-rooms')),
+          priceEUR: this._parseFirstNumber(node.getAttribute('data-price-eur')),
+          source: `dom#${idx + 1}`
+        });
+      });
+    } catch {}
+
+    const apiCards = Array.isArray(this.api?.lastProposedCards) ? this.api.lastProposedCards : [];
+    const fromApiMemory = apiCards.map((c, idx) => ({ ...c, source: `api.memory#${idx + 1}` }));
+    const payloadCards = Array.isArray(this._debugLastApiPayload?.cards) ? this._debugLastApiPayload.cards : [];
+    const fromPayload = payloadCards.map((c, idx) => ({ ...c, source: `api.payload#${idx + 1}` }));
+
+    const merged = [...fromDom, ...fromApiMemory, ...fromPayload];
+    const seen = new Set();
+    const deduped = [];
+    merged.forEach((item) => {
+      const key = item?.id ? `id:${item.id}` : `k:${item?.city || ''}|${item?.district || ''}|${item?.rooms || ''}|${item?.priceEUR || ''}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      deduped.push(item);
+    });
+    return deduped;
+  }
+
+  _evaluateCandidateAgainstQuery(candidate = {}, query = {}) {
+    const checks = [];
+    const pushCheck = (name, status, actual, expected) => checks.push({ name, status, actual, expected });
+
+    if (query.operation) {
+      const actual = String(candidate.operation || '').toLowerCase();
+      pushCheck('operation', actual ? (actual === query.operation ? 'pass' : 'fail') : 'skip', actual || '-', query.operation);
+    } else pushCheck('operation', 'skip', '-', '-');
+
+    if (query.type) {
+      const actual = String(candidate.type || candidate.property_type || '').toLowerCase();
+      const expected = String(query.type).toLowerCase();
+      pushCheck('type', actual ? (actual.includes(expected) ? 'pass' : 'fail') : 'skip', actual || '-', expected);
+    } else pushCheck('type', 'skip', '-', '-');
+
+    if (query.location) {
+      const actual = `${candidate.city || ''} ${candidate.district || ''}`.trim().toLowerCase();
+      const expected = String(query.location).toLowerCase();
+      pushCheck('location', actual ? (actual.includes(expected) ? 'pass' : 'fail') : 'skip', actual || '-', expected);
+    } else pushCheck('location', 'skip', '-', '-');
+
+    if (typeof query.rooms === 'number') {
+      const actual = this._parseFirstNumber(candidate.rooms);
+      pushCheck('rooms', typeof actual === 'number' ? (actual === query.rooms ? 'pass' : 'fail') : 'skip', actual ?? '-', query.rooms);
+    } else pushCheck('rooms', 'skip', '-', '-');
+
+    if (typeof query.maxPrice === 'number') {
+      const actual = this._parseFirstNumber(candidate.priceEUR ?? candidate.price);
+      pushCheck('maxPrice', typeof actual === 'number' ? (actual <= query.maxPrice ? 'pass' : 'fail') : 'skip', actual ?? '-', query.maxPrice);
+    } else pushCheck('maxPrice', 'skip', '-', '-');
+
+    if (typeof query.maxArea === 'number') {
+      const actual = this._parseFirstNumber(candidate.area_m2 ?? candidate.built_area ?? candidate.area);
+      pushCheck('maxArea', typeof actual === 'number' ? (actual <= query.maxArea ? 'pass' : 'fail') : 'skip', actual ?? '-', query.maxArea);
+    } else pushCheck('maxArea', 'skip', '-', '-');
+
+    const considered = checks.filter((c) => c.status !== 'skip').length;
+    const passed = checks.filter((c) => c.status === 'pass').length;
+    return { checks, considered, passed };
+  }
+
+  _buildDebugSnapshot() {
+    const insights = this.getUnderstanding();
+    const canonicalPatch = this.buildDebugCanonicalPatch(insights);
+    const effectiveQuery = this.getDebugEffectiveSearchParams(insights);
+    const candidates = this._collectDebugCandidatePool();
+    const match = candidates.slice(0, 12).map((c) => {
+      const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery);
+      return { candidate: c, ...m };
+    });
+    const user = [...this.messages].reverse().find((m) => m?.type === 'user');
+    const assistant = [...this.messages].reverse().find((m) => m?.type === 'assistant');
+    const dialog = {
+      user: user?.content || null,
+      assistant: assistant?.content || null
+    };
+    const apiMeta = {
+      ...this._debugLastApiMeta,
+      role: this.role || null,
+      timing: this._debugLastApiPayload?.timing || null,
+      tokens: this._debugLastApiPayload?.tokens || null,
+      stage: this._debugLastApiPayload?.stage || null,
+      cardsCount: Array.isArray(this._debugLastApiPayload?.cards) ? this._debugLastApiPayload.cards.length : 0,
+      historyTail: this._debugSelectionHistory.slice(-20)
+    };
+    return { insights, canonicalPatch, effectiveQuery, candidates, match, apiMeta, dialog };
+  }
+
+  _toPretty(value) {
+    try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+  }
+
+  _buildDebugReportText(snapshot) {
+    const s = snapshot || this._buildDebugSnapshot();
+    const lines = [];
+    lines.push('=== DEBUG REPORT ===');
+    lines.push(`time: ${new Date().toISOString()}`);
+    lines.push(`sessionId: ${this.sessionId || '-'}`);
+    lines.push('');
+    lines.push('[AI understanding]');
+    lines.push(this._toPretty(s.insights));
+    lines.push('');
+    lines.push('[Canonical patch]');
+    lines.push(this._toPretty(s.canonicalPatch));
+    lines.push('');
+    lines.push('[Effective query]');
+    lines.push(this._toPretty(s.effectiveQuery));
+    lines.push('');
+    lines.push('[Candidate pool]');
+    lines.push(`count: ${s.candidates.length}`);
+    lines.push(`ids: ${s.candidates.map((c) => c.id).filter(Boolean).join(', ') || '-'}`);
+    lines.push('');
+    lines.push('[Last model/API metadata]');
+    lines.push(this._toPretty(s.apiMeta));
+    lines.push('');
+    lines.push('[Last dialog turn]');
+    lines.push(this._toPretty(s.dialog));
+    return lines.join('\n');
+  }
+
+  refreshDebugMenu() {
+    const debugScreen = this.shadowRoot?.getElementById('debugScreen');
+    if (!debugScreen) return;
+    const s = this._buildDebugSnapshot();
+    const set = (id, text) => {
+      const el = this.shadowRoot.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    set('debugInsightsPre', this._toPretty(s.insights));
+    set('debugCanonicalPre', this._toPretty(s.canonicalPatch));
+    set('debugQueryPre', this._toPretty(s.effectiveQuery));
+    set('debugCandidatesPre', this._toPretty({
+      count: s.candidates.length,
+      ids: s.candidates.map((c) => c.id).filter(Boolean),
+      sample: s.candidates.slice(0, 8)
+    }));
+    const matchLines = s.match.map((m) => {
+      const id = m?.candidate?.id || '-';
+      const ratio = m.considered ? `${m.passed}/${m.considered}` : 'n/a';
+      const checks = m.checks.map((c) => `${c.status === 'pass' ? '✅' : c.status === 'fail' ? '❌' : '⏭️'} ${c.name}: ${c.actual} -> ${c.expected}`).join('\n');
+      return `#${id} (${ratio})\n${checks}`;
+    });
+    set('debugMatchPre', matchLines.join('\n\n') || '-');
+    set('debugMetaPre', this._toPretty(s.apiMeta));
+    set('debugDialogPre', this._toPretty(s.dialog));
+    set('debugRawPre', this._toPretty({
+      sourceInsights: s.insights,
+      canonicalPatch: s.canonicalPatch,
+      effectiveQuery: s.effectiveQuery,
+      lastApiPayloadCompact: this._debugLastApiPayload
+        ? {
+            sessionId: this._debugLastApiPayload.sessionId || null,
+            stage: this._debugLastApiPayload.stage || null,
+            cardsCount: Array.isArray(this._debugLastApiPayload.cards) ? this._debugLastApiPayload.cards.length : 0,
+            insights: this._debugLastApiPayload.insights || null
+          }
+        : null
+    }));
+    this._debugLastReportText = this._buildDebugReportText(s);
+  }
+
+  async copyDebugReport() {
+    const text = this._debugLastReportText || this._buildDebugReportText(this._buildDebugSnapshot());
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      this.ui?.showNotification?.(this.t('debugCopied') || 'Copied');
+    } catch {
+      this.ui?.showNotification?.('Copy failed');
+    }
+  }
+
   onStateChange(cb) {
     this.events.on('uiStateChanged', cb);
     this.events.on('understandingUpdated', cb);
@@ -6660,11 +7119,19 @@ render() {
     const dialogScreen = this.shadowRoot.getElementById('dialogScreen');
     const contextScreen = this.shadowRoot.getElementById('contextScreen');
     const requestScreen = this.shadowRoot.getElementById('requestScreen');
+    const debugScreen = this.shadowRoot.getElementById('debugScreen');
     const isContext = !!(contextScreen && !contextScreen.classList.contains('hidden'));
     const isRequest = !!(requestScreen && !requestScreen.classList.contains('hidden'));
+    const isDebug = !!(debugScreen && !debugScreen.classList.contains('hidden'));
     const isDialog = !!(dialogScreen && !dialogScreen.classList.contains('hidden'));
     const activeHeader = this.shadowRoot.querySelector(
-      (isContext ? '#contextScreen .screen-header' : isRequest ? '#requestScreen .screen-header' : '.dialog-screen:not(.hidden) .screen-header')
+      (isContext
+        ? '#contextScreen .screen-header'
+        : isRequest
+        ? '#requestScreen .screen-header'
+        : isDebug
+        ? '#debugScreen .screen-header'
+        : '.dialog-screen:not(.hidden) .screen-header')
     );
     if (!activeHeader) return;
 
@@ -6685,10 +7152,10 @@ render() {
     if (logoImg) logoImg.setAttribute('src', `${ASSETS_BASE}${this.getLogoByTheme()}`);
     if (leftBtn) leftBtn.setAttribute('title', locale.menuLanguage);
     if (rightBtn) rightBtn.setAttribute('title', locale.menuRequest);
-    if (logo) logo.setAttribute('title', locale.menuInsights);
+    if (logo) logo.setAttribute('title', locale.menuSelectedDebug || locale.menuInsights);
 
     // Internal screens: show selected-state header overlay (back + close + badge)
-    if (isContext || isRequest) {
+    if (isContext || isRequest || isDebug) {
       this._headerLangDropdownOpen = false;
       activeHeader.classList.add('menu-opened');
       this.shadowRoot.querySelectorAll('.header-language-menu').forEach((el) => el.remove());
@@ -6700,7 +7167,11 @@ render() {
       } else {
         overlay.classList.add('open');
       }
-      const badgeText = isRequest ? locale.menuSelectedRequest : locale.menuSelectedContext;
+      const badgeText = isRequest
+        ? locale.menuSelectedRequest
+        : isDebug
+        ? locale.menuSelectedDebug
+        : locale.menuSelectedContext;
       const badgeClass = isRequest ? 'menu-badge--request' : 'menu-badge--context';
       overlay.innerHTML = `
         <div class="menu-overlay-content">
