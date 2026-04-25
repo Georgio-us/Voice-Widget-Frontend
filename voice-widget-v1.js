@@ -5098,6 +5098,16 @@ render() {
       } catch {}
     } else if (e.target.matches('#widgetCloseFloating') || e.target.closest('#widgetCloseFloating')) {
       try { this.closeWidget?.(); } catch {}
+    } else if (e.target.matches('.menu-link[data-action="back"]') || e.target.closest('.menu-link[data-action="back"]')) {
+      e.preventDefault();
+      this._headerLangDropdownOpen = false;
+      this.showScreen('dialog');
+      this.updateMenuUI();
+    } else if (e.target.matches('.menu-close-btn') || e.target.closest('.menu-close-btn')) {
+      e.preventDefault();
+      this._headerLangDropdownOpen = false;
+      this.showScreen('dialog');
+      this.updateMenuUI();
     } else if (e.target.closest('[data-language-code]')) {
       e.preventDefault();
       const code = String(e.target.closest('[data-language-code]')?.getAttribute('data-language-code') || '').trim();
@@ -6609,11 +6619,14 @@ render() {
   }
 
   updateMenuUI() {
+    const dialogScreen = this.shadowRoot.getElementById('dialogScreen');
+    const contextScreen = this.shadowRoot.getElementById('contextScreen');
+    const requestScreen = this.shadowRoot.getElementById('requestScreen');
+    const isContext = !!(contextScreen && !contextScreen.classList.contains('hidden'));
+    const isRequest = !!(requestScreen && !requestScreen.classList.contains('hidden'));
+    const isDialog = !!(dialogScreen && !dialogScreen.classList.contains('hidden'));
     const activeHeader = this.shadowRoot.querySelector(
-      '.main-screen:not(.hidden) .screen-header, ' +
-      '.dialog-screen:not(.hidden) .screen-header, ' +
-      '.context-screen:not(.hidden) .screen-header, ' +
-      '.request-screen:not(.hidden) .screen-header'
+      (isContext ? '#contextScreen .screen-header' : isRequest ? '#requestScreen .screen-header' : '.dialog-screen:not(.hidden) .screen-header')
     );
     if (!activeHeader) return;
 
@@ -6635,6 +6648,46 @@ render() {
     if (leftBtn) leftBtn.setAttribute('title', locale.menuLanguage);
     if (rightBtn) rightBtn.setAttribute('title', locale.menuRequest);
     if (logo) logo.setAttribute('title', locale.menuInsights);
+
+    // Internal screens: show selected-state header overlay (back + close + badge)
+    if (isContext || isRequest) {
+      this._headerLangDropdownOpen = false;
+      activeHeader.classList.add('menu-opened');
+      this.shadowRoot.querySelectorAll('.header-language-menu').forEach((el) => el.remove());
+      let overlay = activeHeader.querySelector('.menu-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'menu-overlay open';
+        activeHeader.appendChild(overlay);
+      } else {
+        overlay.classList.add('open');
+      }
+      const badgeText = isRequest ? locale.menuSelectedRequest : locale.menuSelectedContext;
+      const badgeClass = isRequest ? 'menu-badge--request' : 'menu-badge--context';
+      overlay.innerHTML = `
+        <div class="menu-overlay-content">
+          <div class="menu-grid menu-grid--selected">
+            <div class="menu-col menu-col--single">
+              <button class="menu-link" data-action="back">${locale.menuBackToDialog}</button>
+            </div>
+            <div class="menu-col menu-col--single menu-col--middle" style="justify-content:center;">
+              <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
+            </div>
+            <div class="menu-col menu-col--single">
+              <div class="menu-badge ${badgeClass}">${badgeText || ''}</div>
+            </div>
+          </div>
+        </div>`;
+    } else if (isDialog) {
+      activeHeader.classList.remove('menu-opened');
+      activeHeader.querySelectorAll('.menu-overlay').forEach((el) => el.remove());
+    }
+
+    if (!isDialog) {
+      const ctxThemeBtn = this.shadowRoot.getElementById('ctxThemeToggleBtn');
+      if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
+      return;
+    }
 
     let langMenu = activeHeader.querySelector('.header-language-menu');
     if (!langMenu) {
