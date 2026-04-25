@@ -1263,6 +1263,43 @@ render() {
   /* select (filled like primary) */
   .card-actions-panel .card-btn.select{ background:var(--color-accent); color:#fff; border:1.25px solid var(--color-accent); }
   .card-actions-panel .card-btn.select:hover{ transform:translateY(-1px); }
+  .card-actions-panel--split{ justify-content:space-between; gap:10px; }
+  .card-actions-panel--split .card-btn.select{ flex:0 0 auto; min-width:120px; }
+  .card-price-action{
+    border:none;
+    background:transparent;
+    color:var(--color-text);
+    padding:0;
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:center;
+    gap:2px;
+    cursor:pointer;
+    font:inherit;
+    text-align:right;
+  }
+  .card-price-action:hover .card-price-current{ opacity:.85; }
+  .card-price-action:focus-visible{
+    outline:2px solid var(--color-accent);
+    outline-offset:4px;
+    border-radius:6px;
+  }
+  .card-price-old{
+    font-size:12px;
+    line-height:1;
+    color:var(--color-text);
+    opacity:.55;
+    text-decoration:line-through;
+  }
+  .card-price-current{
+    font-size:16px;
+    line-height:1.1;
+    font-weight:700;
+    color:var(--color-text);
+    letter-spacing:.01em;
+  }
   /* next (outlined) */
   .card-actions-panel .card-btn.next{ background:transparent; color:var(--color-accent); border:1.25px solid var(--color-accent); }
   .card-actions-panel .card-btn.next:hover{ opacity:.9; }
@@ -4770,12 +4807,13 @@ render() {
       });
       
       this.events.emit('like', { variantId });
-    } else if (e.target.matches('.card-btn[data-action="select"]')) {
+    } else if (e.target.closest('[data-action="select"][data-variant-id]')) {
       // Flip: визуальный тест — показываем back сторону карточки
-      const slide = e.target.closest('.card-slide');
+      const selectAction = e.target.closest('[data-action="select"][data-variant-id]');
+      const slide = selectAction?.closest('.card-slide');
       if (slide) slide.classList.add('flipped');
       // RMv3 / Sprint 1 / Task 1: фиксируем факт выбора карточки на сервере (server-first)
-      const variantId = e.target.getAttribute('data-variant-id');
+      const variantId = selectAction?.getAttribute('data-variant-id');
       try {
         if (this.api && variantId) {
           this.api.sendCardInteraction('select', variantId);
@@ -5315,14 +5353,23 @@ render() {
             <div class="cs-image-media">${coverImage ? `<img src="${coverImage}" alt="${normalized.city} ${normalized.province}" loading="lazy">` : 'Put image here'}</div>
           </div>
           <div class="cs-body">
-            <div class="cs-row"><div class="cs-title">${locationLine}</div><div class="cs-title">${normalized.priceLabel}</div></div>
-            <div class="cs-row"><div class="cs-sub">${typeStatusLine}</div><div class="cs-sub">${normalized.roomsLabel}</div></div>
-            <div class="cs-row"><div class="cs-sub"></div><div class="cs-sub">${normalized.floorLabel}</div></div>
+            <div class="cs-row"><div class="cs-title">${locationLine}</div></div>
+            <div class="cs-row"><div class="cs-sub">${typeStatusLine}</div></div>
           </div>
           ${iconsRowHtml}
           <div class="card-actions-wrap">
-            <div class="card-actions-panel">
+            <div class="card-actions-panel card-actions-panel--split">
               <button class="card-btn select" data-action="select" data-variant-id="${normalized.id}">${locale.cardSelect || 'Выбрать'}</button>
+              <button
+                type="button"
+                class="card-price-action"
+                data-action="select"
+                data-variant-id="${normalized.id}"
+                aria-label="${locale.cardSelect || 'Выбрать'}"
+              >
+                ${normalized.priceOldLabel ? `<span class="card-price-old">${normalized.priceOldLabel}</span>` : ''}
+                <span class="card-price-current">${normalized.priceLabel || ''}</span>
+              </button>
             </div>
             </div>
           </div>
@@ -5930,7 +5977,9 @@ render() {
     const imageGallery = assetPool;
     const coverImage = image || imageGallery[0] || '';
 
+    const priceOldNum = toInt(raw.price_old ?? raw.priceOld ?? raw.old_price ?? raw.oldPrice);
     const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
+    const priceOldLabel = raw.price_old || raw.priceOld || raw.old_price || raw.oldPrice || (priceOldNum != null ? `${priceOldNum} €` : '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
     const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
 
@@ -5955,6 +6004,8 @@ render() {
       has_parking: toBool(raw.has_parking),
       has_pool: toBool(raw.has_pool),
       priceEUR: priceNum != null ? priceNum : null,
+      priceOldEUR: priceOldNum != null ? priceOldNum : null,
+      priceOldLabel,
       priceLabel
     };
   }
