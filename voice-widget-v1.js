@@ -86,6 +86,8 @@ const LOCALES = {
     cardCancel: 'Отменить',
     cardSelect: 'Выбрать',
     cardNext: 'Ещё одну',
+    cardDescription: 'Описание',
+    cardDescriptionOk: 'OK',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
     inDialogLeadTitle: 'Оставьте контакты',
@@ -201,6 +203,8 @@ const LOCALES = {
     cardCancel: 'Cancel',
     cardSelect: 'Select',
     cardNext: 'Another one',
+    cardDescription: 'Description',
+    cardDescriptionOk: 'OK',
     handoffMessage: 'You selected a property. You can ask for details or cancel.',
     handoffDetails: 'More details',
     inDialogLeadTitle: 'Leave your contact details',
@@ -316,6 +320,8 @@ const LOCALES = {
     cardCancel: 'Cancelar',
     cardSelect: 'Seleccionar',
     cardNext: 'Otra más',
+    cardDescription: 'Descripcion',
+    cardDescriptionOk: 'OK',
     handoffMessage: 'Has elegido una propiedad. Puedes pedir mas detalles o cancelar.',
     handoffDetails: 'Mas detalles',
     inDialogLeadTitle: 'Deja tus datos de contacto',
@@ -1354,7 +1360,7 @@ render() {
   .card-form-header__back:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
   .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
   .card-form-header__spacer{ width:18px; flex-shrink:0; }
-  /* Card back: info panel (description + specs + assets + CTA) */
+  /* Card back: info panel (specs + actions) */
   .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
   .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
   .card-back-header__close img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
@@ -1363,13 +1369,84 @@ render() {
   .card-back-header__close:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
   .card-back-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
   .card-back-header__spacer{ width:24px; flex-shrink:0; }
-  .card-back-description-slot{ height:180px; flex-shrink:0; overflow-y:auto; font-size:12px; line-height:1.4; color:var(--color-text); margin-top:8px; padding:12px; border-radius:6px; background:var(--color-sub-surface); }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
-  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex-shrink:0; font-size:13px; font-weight: 500; color:var(--color-text); align-items:center; margin-top: 12px; }
+  .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex:1 1 auto; min-height:0; font-size:13px; font-weight:500; color:var(--color-text); align-items:center; margin-top:12px; }
   .card-back-specs__item{ margin:0; }
   .card-back-specs__item:nth-child(odd){ justify-self:start; text-align:left; }
   .card-back-specs__item:nth-child(even){ justify-self:end; text-align:right; }
-  .card-slide-back .btn-open-form{ margin-top:auto; flex-shrink:0; padding:10px 16px; font-size:14px; font-weight:600; color:#fff; background:var(--color-accent); border:1px solid var(--color-accent); border-radius:10px; cursor:pointer; }
+  .card-back-actions{ margin-top:auto; display:flex; gap:10px; width:100%; }
+  .card-slide-back .btn-open-form,
+  .card-slide-back .btn-open-description{
+    flex:1 1 0;
+    min-width:0;
+    padding:10px 12px;
+    font-size:14px;
+    font-weight:600;
+    border-radius:10px;
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .card-slide-back .btn-open-form{
+    color:#fff;
+    background:var(--color-accent);
+    border:1px solid var(--color-accent);
+  }
+  .card-slide-back .btn-open-description{
+    color:var(--color-accent);
+    background:transparent;
+    border:1px solid var(--color-accent);
+  }
+  .card-desc-modal{
+    position:absolute !important;
+    inset:0;
+    z-index:4;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    background:rgba(0,0,0,.46);
+    box-sizing:border-box;
+  }
+  .card-desc-modal.is-open{ display:flex; }
+  .card-desc-modal__dialog{
+    width:100%;
+    max-height:100%;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    border-radius:10px;
+    background:var(--bg-card);
+    border:1px solid rgba(65,120,207,.35);
+    padding:12px;
+    box-sizing:border-box;
+  }
+  .card-desc-modal__text{
+    flex:1 1 auto;
+    min-height:80px;
+    max-height:220px;
+    overflow-y:auto;
+    font-size:12px;
+    line-height:1.45;
+    color:var(--color-text);
+    background:var(--color-sub-surface);
+    border-radius:8px;
+    padding:10px;
+    white-space:pre-line;
+  }
+  .card-desc-modal__ok{
+    align-self:flex-end;
+    min-width:88px;
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid var(--color-accent);
+    background:var(--color-accent);
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
   .card-back-placeholder{ background:var(--bg-card); border:2px dashed var(--color-accent); border-radius:14px; padding:24px; color:var(--color-text); font-size:14px; font-weight:600; text-align:center; min-height:100%; box-sizing:border-box; }
   .cards-slider{ scroll-behavior:smooth; scrollbar-width:none; -ms-overflow-style:none; }
   .cards-slider::-webkit-scrollbar{ display:none; width:0; height:0; }
@@ -4848,9 +4925,21 @@ render() {
       const slide = e.target.closest('.card-slide');
       if (slide) slide.classList.remove('flipped');
     } else if (e.target.matches('.btn-open-form') || e.target.closest('.btn-open-form')) {
-      // Описание -> форма заявки
+      // Back -> форма заявки
       const slide = e.target.closest('.card-slide');
       if (slide) slide.classList.add('card-slide--form-open');
+    } else if (e.target.matches('.btn-open-description') || e.target.closest('.btn-open-description')) {
+      // Open description modal
+      const slide = e.target.closest('.card-slide');
+      const modal = slide?.querySelector('.card-desc-modal');
+      if (modal) modal.classList.add('is-open');
+    } else if (e.target.matches('.card-desc-modal__ok') || e.target.closest('.card-desc-modal__ok')) {
+      // Close description modal by OK
+      const modal = e.target.closest('.card-desc-modal');
+      if (modal) modal.classList.remove('is-open');
+    } else if (e.target.matches('.card-desc-modal')) {
+      // Close description modal by overlay click
+      e.target.classList.remove('is-open');
     } else if (e.target.closest('.card-form-header__back')) {
       // Форма -> назад к описанию
       const slide = e.target.closest('.card-slide');
@@ -5340,6 +5429,7 @@ render() {
     const tagBadgesHtml = Array.isArray(normalized.tags) && normalized.tags.length
       ? `<div class="cs-image-tags">${normalized.tags.map((t) => `<button type="button" class="cs-image-tag" tabindex="-1" aria-hidden="true">${t}</button>`).join('')}</div>`
       : '';
+    const descriptionText = (normalized.description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const iconItems = [];
     if (normalized.area_m2 != null) {
       iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}house-blue.svg" alt="Area"><span>${normalized.area_m2}m²</span></div>`);
@@ -5410,17 +5500,26 @@ render() {
           <button type="button" class="card-back-header__close" aria-label="Back">
             <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
           </button>
-          <span class="card-back-header__title">${normalized.id || ''} / ${normalized.city || ''} / ${normalized.priceLabel || ''}</span>
+          <span class="card-back-header__title">${normalized.id || ''} / ${normalized.priceLabel || ''}</span>
           <span class="card-back-header__spacer" aria-hidden="true"></span>
         </div>
-        <div class="card-back-separator"></div><div class="card-back-description-slot">${(normalized.description || 'Description null').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        <div class="card-back-separator"></div>
         <div class="card-back-specs">
           <span class="card-back-specs__item">Square: ${normalized.area_m2 || 'null'} m²</span>
           <span class="card-back-specs__item">Price/m²: ${normalized.price_per_m2 || 'null'} €</span>
           <span class="card-back-specs__item">Floor: ${normalized.floor || 'null'}</span>
           <span class="card-back-specs__item">Bathrooms: ${normalized.bathrooms || 'null'}</span>
         </div>
-        <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
+        <div class="card-back-actions">
+          <button type="button" class="btn-open-form">${locale.leaveRequest}</button>
+          <button type="button" class="btn-open-description">${locale.cardDescription || 'Описание'}</button>
+        </div>
+        <div class="card-desc-modal" aria-hidden="true">
+          <div class="card-desc-modal__dialog" role="dialog" aria-modal="true" aria-label="${locale.cardDescription || 'Описание'}">
+            <div class="card-desc-modal__text">${descriptionText || '-'}</div>
+            <button type="button" class="card-desc-modal__ok">${locale.cardDescriptionOk || 'OK'}</button>
+          </div>
+        </div>
       </div>
       <div class="card-slide-form">
         <div class="card-form-header">
