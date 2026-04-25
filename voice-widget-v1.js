@@ -559,8 +559,11 @@ class VoiceWidget extends HTMLElement {
     setTitle('toggleButton', locale.speakTitle);
     setTitle('mainSendButton', locale.sendTitle);
     setTitle('sendButton', locale.sendTitle);
-    root.querySelectorAll('.header-action.header-right').forEach((el) => el.setAttribute('title', locale.closeWidgetTitle));
-    root.querySelectorAll('.header-action.header-left').forEach((el) => el.setAttribute('title', locale.statsTitle));
+    root.querySelectorAll('.header-action.header-right').forEach((el) => el.setAttribute('title', locale.menuRequest));
+    root.querySelectorAll('.header-action.header-left').forEach((el) => el.setAttribute('title', locale.menuLanguage));
+    root.querySelectorAll('.header-logo').forEach((el) => el.setAttribute('title', locale.menuInsights));
+    const floatingClose = root.getElementById('widgetCloseFloating');
+    if (floatingClose) floatingClose.setAttribute('title', locale.closeWidgetTitle);
 
     setText('#ctxStatusText', locale.statusFulfilled);
     setText('#ctxStageMessage', locale.ctxStageMessage);
@@ -576,6 +579,8 @@ class VoiceWidget extends HTMLElement {
     setText('#ctxSpamWarningCancelBtn', locale.cancel);
     setText('#ctxSpamWarningContinueBtn', locale.continue);
     setText('#ctxSpamBlockCloseBtn', locale.understood);
+    const ctxThemeBtn = root.getElementById('ctxThemeToggleBtn');
+    if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
     setText('#whatDataUnderstoodBtn', locale.understood);
     setText('#dataUnderstoodBtn', locale.understood);
     setText('.footer-text', locale.footerWhatData);
@@ -876,9 +881,15 @@ class VoiceWidget extends HTMLElement {
   }
 
   updateStatsIcons() {
-    const nextSrc = `${ASSETS_BASE}${this.getStatsIconByTheme()}`;
+    const nextSrc = `${ASSETS_BASE}${this.getLanguageIconByTheme()}`;
     const statsIcons = this.shadowRoot.querySelectorAll('.header-action.header-left img');
     statsIcons.forEach((img) => img.setAttribute('src', nextSrc));
+  }
+
+  updateHeaderRightIcons() {
+    const nextSrc = `${ASSETS_BASE}${this.getContactIconByTheme()}`;
+    const rightIcons = this.shadowRoot.querySelectorAll('.header-action.header-right img');
+    rightIcons.forEach((img) => img.setAttribute('src', nextSrc));
   }
 
   updateLogoIcons() {
@@ -904,6 +915,7 @@ class VoiceWidget extends HTMLElement {
       this.updateToggleButtonState('chat');
       this.updateSendButtonIcons();
       this.updateStatsIcons();
+      this.updateHeaderRightIcons();
       this.updateLogoIcons();
       this.updateInsightsProgressTrackStroke();
     } catch {}
@@ -1085,6 +1097,30 @@ render() {
     opacity:1;
     pointer-events:auto;
 }
+
+.widget-close-floating{
+    position:absolute;
+    top:-14px;
+    right:-6px;
+    width:34px;
+    height:34px;
+    border:none;
+    border-radius:999px;
+    background:var(--bg-card);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:9;
+    box-shadow:0 6px 18px rgba(0,0,0,.22);
+}
+.widget-close-floating img{
+    width:22px;
+    height:22px;
+    display:block;
+}
+.widget-close-floating:hover{ opacity:.92; }
+.widget-close-floating:active{ opacity:.82; }
   /* Content */
   .content{ display:flex; flex-direction:column; height:100%; padding:0; gap:0; position:relative; z-index:3; }
 
@@ -2329,7 +2365,7 @@ render() {
                 .screen-header .header-action{ grid-row:1; }
                 .screen-header .header-left{ grid-column:1; justify-self:start; }
                 .screen-header .header-right{ grid-column:3; justify-self:end; }
-                .screen-header .header-logo{ grid-column:2; grid-row:1; justify-self:center; width:auto; height:18px; display:block; }
+                .screen-header .header-logo{ grid-column:2; grid-row:1; justify-self:center; width:auto; height:18px; display:block; cursor:pointer; }
                 /* скрываем крайние кнопки при открытом меню */
                 .screen-header.menu-opened .header-action{ display:none; }
                 .screen-header.menu-opened .header-logo{ display:none; }
@@ -2949,6 +2985,16 @@ render() {
                     color: var(--color-text);
                     background: rgba(255, 255, 255, 0.12);
                 }
+                .header-language-menu{
+                    position:absolute;
+                    top:44px;
+                    left:0;
+                    z-index:20;
+                    display:none;
+                }
+                .header-language-menu.open{
+                    display:block;
+                }
                 .menu-link {
                     width: 110px;
                     height: 25px;
@@ -3082,6 +3128,9 @@ render() {
   
 
   <div class="widget" role="dialog" aria-modal="true" aria-label="Voice Assistant">
+    <button class="widget-close-floating" id="widgetCloseFloating" type="button" title="Close widget">
+      <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+    </button>
     <!-- Header removed for v2 UI -->
 
     <!-- Content -->
@@ -3092,11 +3141,11 @@ render() {
             <div class="bg-grid"></div>
             <div class="screen-header">
               <button class="header-action header-left" type="button" title="Статистика">
-                <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
+                <img src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="Language">
               </button>
               <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
               <button class="header-action header-right" type="button" title="Закрыть виджет">
-                <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+                <img src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="Request">
               </button>
             </div>
             <div class="main-center">
@@ -3138,11 +3187,11 @@ render() {
           <div class="bg-grid"></div>
           <div class="screen-header">
             <button class="header-action header-left" type="button" title="Статистика">
-              <img src="${ASSETS_BASE}${this.getStatsIconByTheme()}" alt="Stats">
+              <img src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="Language">
             </button>
             <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
             <button class="header-action header-right" type="button" title="Закрыть виджет">
-              <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+              <img src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="Request">
             </button>
           </div>
           <div class="dialogue-container" id="messagesContainer">
@@ -3170,7 +3219,15 @@ render() {
       <div class="context-screen hidden" id="contextScreen">
         <div class="voice-widget-container">
           <div class="bg-grid"></div>
-          <div class="screen-header"></div>
+          <div class="screen-header">
+            <button class="header-action header-left" type="button" title="Language">
+              <img src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="Language">
+            </button>
+            <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
+            <button class="header-action header-right" type="button" title="Request">
+              <img src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="Request">
+            </button>
+          </div>
           <div class="context-main-container">
             <div class="progress-grid-container">
               <div class="grid-column-left"></div>
@@ -3298,7 +3355,8 @@ render() {
               </div>
             </div>
           </div>
-          <div class="footer-text">What data do we know?</div>
+            <div class="footer-text">What data do we know?</div>
+            <button class="ctx-send-btn" id="ctxThemeToggleBtn" type="button">Dark mode</button>
             </div>
           </div>
 
@@ -3306,7 +3364,15 @@ render() {
       <div class="request-screen hidden" id="requestScreen">
         <div class="voice-widget-container">
           <div class="bg-grid"></div>
-          <div class="screen-header"></div>
+          <div class="screen-header">
+            <button class="header-action header-left" type="button" title="Language">
+              <img src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="Language">
+            </button>
+            <img src="${ASSETS_BASE}${this.getLogoByTheme()}" alt="VIA.AI" class="header-logo">
+            <button class="header-action header-right" type="button" title="Request">
+              <img src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="Request">
+            </button>
+          </div>
           <div class="request-main-container">
             <div class="request-title">Leave a request</div>
             <div class="request-field">
@@ -5030,9 +5096,44 @@ render() {
         const t = this.shadowRoot.getElementById('inDialogLeadThanksBlock');
         if (t && t.parentElement) t.parentElement.removeChild(t);
       } catch {}
-    } else if (e.target.closest('.header-action.header-right')) {
-      // Close widget from header right action
+    } else if (e.target.matches('#widgetCloseFloating') || e.target.closest('#widgetCloseFloating')) {
       try { this.closeWidget?.(); } catch {}
+    } else if (e.target.closest('[data-language-code]')) {
+      e.preventDefault();
+      const code = String(e.target.closest('[data-language-code]')?.getAttribute('data-language-code') || '').trim();
+      if (code) this.setLanguage(code);
+      this._headerLangDropdownOpen = false;
+      this.updateMenuUI();
+    } else if (e.target.closest('.header-action.header-left')) {
+      e.preventDefault();
+      e.stopPropagation();
+      this._headerLangDropdownOpen = !this._headerLangDropdownOpen;
+      this.updateMenuUI();
+    } else if (e.target.closest('.header-logo')) {
+      e.preventDefault();
+      const contextScreen = this.shadowRoot.getElementById('contextScreen');
+      const isContext = contextScreen && !contextScreen.classList.contains('hidden');
+      this._headerLangDropdownOpen = false;
+      this.showScreen(isContext ? 'dialog' : 'context');
+      this.updateMenuUI();
+    } else if (e.target.closest('.header-action.header-right')) {
+      e.preventDefault();
+      const requestScreen = this.shadowRoot.getElementById('requestScreen');
+      const isRequest = requestScreen && !requestScreen.classList.contains('hidden');
+      this._headerLangDropdownOpen = false;
+      this.showScreen(isRequest ? 'dialog' : 'request');
+      this.updateMenuUI();
+    } else if (this._headerLangDropdownOpen) {
+      const inDropdown = e.target.closest('.header-language-menu');
+      const inLangBtn = e.target.closest('.header-action.header-left');
+      if (!inDropdown && !inLangBtn) {
+        this._headerLangDropdownOpen = false;
+        this.updateMenuUI();
+      }
+    } else if (e.target.matches('#ctxThemeToggleBtn') || e.target.closest('#ctxThemeToggleBtn')) {
+      e.preventDefault();
+      this.toggleTheme();
+      this.updateInterface();
     } else if (e.target.matches('.card-btn[data-action="send_card"]')) {
       // Показать карточку из последнего предложения
       const container = e.target.closest('.card-screen');
@@ -6498,184 +6599,58 @@ render() {
     console.log('👋 Voice Widget disconnected and cleaned up');
   }
 
-  // ===== v2 Menu Overlay integration (UI only) =====
+  // ===== Header controls (language, insights, request) =====
   setupMenuOverlay() {
-    // Привязываем overlay к header активного экрана
-    const container = this.shadowRoot.querySelector(
+    // legacy menu overlay intentionally disabled
+    try {
+      this.shadowRoot.querySelectorAll('.menu-overlay').forEach((el) => el.remove());
+    } catch {}
+    this.updateMenuUI();
+  }
+
+  updateMenuUI() {
+    const activeHeader = this.shadowRoot.querySelector(
       '.main-screen:not(.hidden) .screen-header, ' +
       '.dialog-screen:not(.hidden) .screen-header, ' +
       '.context-screen:not(.hidden) .screen-header, ' +
       '.request-screen:not(.hidden) .screen-header'
     );
-    let overlay = this.shadowRoot.querySelector('.menu-overlay');
-    if (!container) {
-      // Нет подходящего header — удаляем overlay, чтобы не мешал низу виджета
-      if (overlay && overlay.parentElement) overlay.parentElement.removeChild(overlay);
-      return;
-    }
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.className = 'menu-overlay';
-      const content = document.createElement('div');
-      content.className = 'menu-overlay-content';
-      overlay.appendChild(content);
-      container.appendChild(overlay);
-    } else if (overlay.parentElement !== container) {
-      container.appendChild(overlay);
-    }
-    this.updateMenuUI();
-    // Открытие/закрытие overlay через левую кнопку (stats) активного header.
-    const statsBtn = container.querySelector('.header-action.header-left');
-    if (statsBtn) {
-      statsBtn.onclick = () => {
-        if (this._menuState === 'closed' || !this._menuState) this._menuState = 'open';
-        else if (this._menuState === 'open') this._menuState = 'closed';
-        else if (this._menuState === 'selected') this._menuState = 'open';
-        this.updateMenuUI();
-      };
-    }
-  }
+    if (!activeHeader) return;
 
-  updateMenuUI() {
-    const overlay = this.shadowRoot.querySelector('.menu-overlay');
-    if (!overlay) return;
     const locale = this.getCurrentLocale();
     const languageCodes = ['RU', 'EN', 'ES'];
     const languageFlags = { RU: '🇷🇺', EN: '🇬🇧', ES: '🇪🇸' };
-    const themeMode = this.getTheme();
-    const themeActionLabel = themeMode === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
-    const themeActionIcon = themeMode === 'light' ? 'dark-theme.svg' : 'light-theme.svg';
     if (!this._menuLanguageCode || !languageFlags[this._menuLanguageCode]) this._menuLanguageCode = this.currentLang || this.defaultLanguage;
-    if (typeof this._menuLanguageDropdownOpen !== 'boolean') this._menuLanguageDropdownOpen = false;
-    const syncLanguageOutsideClick = () => {
-      const shouldListen = this._menuState === 'open' && this._menuLanguageDropdownOpen;
-      if (!shouldListen) {
-        if (this._menuLanguageOutsideClickBound && this._menuLanguageOutsideClickHandler) {
-          this.shadowRoot.removeEventListener('click', this._menuLanguageOutsideClickHandler, true);
-        }
-        this._menuLanguageOutsideClickBound = false;
-        return;
-      }
-      if (!this._menuLanguageOutsideClickHandler) {
-        this._menuLanguageOutsideClickHandler = (e) => {
-          if (!this._menuLanguageDropdownOpen || this._menuState !== 'open') return;
-          const picker = this.shadowRoot?.querySelector('[data-language-picker]');
-          if (!picker) return;
-          const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
-          if (path.includes(picker)) return;
-          this._menuLanguageDropdownOpen = false;
-          this.updateMenuUI();
-        };
-      }
-      if (!this._menuLanguageOutsideClickBound) {
-        this.shadowRoot.addEventListener('click', this._menuLanguageOutsideClickHandler, true);
-        this._menuLanguageOutsideClickBound = true;
-      }
-    };
-    if (this._menuState === 'closed' || !this._menuState) overlay.classList.remove('open'); else overlay.classList.add('open');
+    if (typeof this._headerLangDropdownOpen !== 'boolean') this._headerLangDropdownOpen = false;
 
-    // Toggle side header actions and logo on active screen
-    try {
-      const activeHeader = this.shadowRoot.querySelector(
-        '.main-screen:not(.hidden) .screen-header, ' +
-        '.dialog-screen:not(.hidden) .screen-header, ' +
-        '.context-screen:not(.hidden) .screen-header, ' +
-        '.request-screen:not(.hidden) .screen-header'
-      );
-      if (activeHeader) activeHeader.classList.toggle('menu-opened', !!(this._menuState && this._menuState !== 'closed'));
-    } catch {}
+    const leftBtn = activeHeader.querySelector('.header-action.header-left');
+    const rightBtn = activeHeader.querySelector('.header-action.header-right');
+    const logo = activeHeader.querySelector('.header-logo');
+    const leftImg = leftBtn?.querySelector('img');
+    const rightImg = rightBtn?.querySelector('img');
+    const logoImg = logo?.tagName === 'IMG' ? logo : logo?.querySelector('img');
+    if (leftImg) leftImg.setAttribute('src', `${ASSETS_BASE}${this.getLanguageIconByTheme()}`);
+    if (rightImg) rightImg.setAttribute('src', `${ASSETS_BASE}${this.getContactIconByTheme()}`);
+    if (logoImg) logoImg.setAttribute('src', `${ASSETS_BASE}${this.getLogoByTheme()}`);
+    if (leftBtn) leftBtn.setAttribute('title', locale.menuLanguage);
+    if (rightBtn) rightBtn.setAttribute('title', locale.menuRequest);
+    if (logo) logo.setAttribute('title', locale.menuInsights);
 
-    let content = overlay.querySelector('.menu-overlay-content');
-    if (!content) {
-      content = document.createElement('div');
-      content.className = 'menu-overlay-content';
-      overlay.appendChild(content);
+    let langMenu = activeHeader.querySelector('.header-language-menu');
+    if (!langMenu) {
+      langMenu = document.createElement('div');
+      langMenu.className = 'header-language-menu';
+      activeHeader.appendChild(langMenu);
     }
+    langMenu.classList.toggle('open', !!this._headerLangDropdownOpen);
+    langMenu.innerHTML = `
+      <div class="menu-language-dropdown ${this._headerLangDropdownOpen ? 'open' : ''}">
+        ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${code}</button>`).join('')}
+      </div>
+    `;
 
-    if (this._menuState === 'open') {
-      content.innerHTML = `
-        <div class="menu-grid">
-          <div class="menu-col">
-            <button class="menu-btn menu-btn--request" data-action="request"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getContactIconByTheme()}" alt="">${locale.menuRequest}</button>
-            <div class="menu-language ${this._menuLanguageDropdownOpen ? 'open' : ''}" data-language-picker>
-              <button class="menu-btn menu-btn--language menu-language-trigger" type="button" data-action="language">
-                <img class="menu-btn__icon" src="${ASSETS_BASE}${this.getLanguageIconByTheme()}" alt="">${locale.menuLanguage}
-              </button>
-              <div class="menu-language-dropdown ${this._menuLanguageDropdownOpen ? 'open' : ''}">
-                ${languageCodes.map((code) => `<button class="menu-language-option ${this._menuLanguageCode === code ? 'is-active' : ''}" type="button" data-language-code="${code}">${languageFlags[code]} ${code}</button>`).join('')}
-              </div>
-            </div>
-          </div>
-          <div class="menu-col menu-col--middle" style="width:80px; align-items:center; justify-content:center;">
-            <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
-          </div>
-          <div class="menu-col">
-            <button class="menu-btn menu-btn--context" data-action="context"><img class="menu-btn__icon" src="${ASSETS_BASE}${this.getInsightsIconByTheme()}" alt="">${locale.menuInsights}</button>
-            <button class="menu-btn menu-btn--reset" data-action="theme"><img class="menu-btn__icon" src="${ASSETS_BASE}${themeActionIcon}" alt="">${themeActionLabel}</button>
-          </div>
-        </div>`;
-      const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this._menuLanguageDropdownOpen = false; this.updateMenuUI(); };
-      content.querySelectorAll('[data-language-code]').forEach(btn => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const nextCode = e.currentTarget.getAttribute('data-language-code');
-          if (!nextCode || !languageFlags[nextCode]) return;
-          this._menuLanguageDropdownOpen = false;
-          this.setLanguage(nextCode);
-        };
-      });
-      content.querySelectorAll('.menu-btn').forEach(btn => {
-        btn.onclick = (e) => {
-          const action = e.currentTarget.getAttribute('data-action');
-          if (!action) return;
-          if (action === 'language') {
-            e.preventDefault();
-            e.stopPropagation();
-            this._menuLanguageDropdownOpen = !this._menuLanguageDropdownOpen;
-            this.updateMenuUI();
-            return;
-          }
-          if (action === 'theme') {
-            e.preventDefault();
-            e.stopPropagation();
-            this._menuLanguageDropdownOpen = false;
-            this.toggleTheme();
-            this.updateMenuUI();
-            return;
-          }
-          this._menuLanguageDropdownOpen = false;
-          if (action === 'request') { this.showScreen('request'); this._selectedMenu = 'request'; this._menuState = 'selected'; }
-          if (action === 'context') { this.showScreen('context'); this._selectedMenu = 'context'; this._menuState = 'selected'; }
-          this.updateMenuUI();
-        };
-      });
-      syncLanguageOutsideClick();
-    } else if (this._menuState === 'selected') {
-      const labelMap = { request: locale.menuSelectedRequest, context: locale.menuSelectedContext };
-      const colorClass = this._selectedMenu === 'request' ? 'menu-badge--request' : 'menu-badge--context';
-      content.innerHTML = `
-        <div class="menu-grid menu-grid--selected">
-          <div class="menu-col menu-col--single">
-            <button class="menu-link" data-action="back">${locale.menuBackToDialog}</button>
-          </div>
-          <div class="menu-col menu-col--single menu-col--middle" style="justify-content:center;">
-            <button class="menu-close-btn" aria-label="Close menu"><img src="${ASSETS_BASE}menu_close_btn.svg" alt="Close"></button>
-          </div>
-          <div class="menu-col menu-col--single">
-            <div class="menu-badge ${colorClass}">${labelMap[this._selectedMenu] || ''}</div>
-          </div>
-        </div>`;
-      const closeBtn = content.querySelector('.menu-close-btn');
-      if (closeBtn) closeBtn.onclick = () => { try { this.resetLegacyMenuState(); this.resetRequestScreen(); this.resetContextScreen(); } catch {} this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
-      const backBtn = content.querySelector('[data-action="back"]');
-      if (backBtn) backBtn.onclick = () => { this.showScreen('dialog'); this._menuState = 'closed'; this._selectedMenu = null; this.updateMenuUI(); };
-      syncLanguageOutsideClick();
-    } else {
-      content.innerHTML = '';
-      syncLanguageOutsideClick();
-    }
+    const ctxThemeBtn = this.shadowRoot.getElementById('ctxThemeToggleBtn');
+    if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
   }
 
   // совместимость
