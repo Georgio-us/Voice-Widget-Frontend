@@ -1399,7 +1399,7 @@ render() {
   .card-back-specs{
     display:grid;
     grid-template-columns:1fr 1fr;
-    gap:8px 12px;
+    gap:20px 20px;
     flex:1 1 auto;
     min-height:0;
     margin-top:12px;
@@ -1412,11 +1412,12 @@ render() {
     min-width:0;
   }
   .card-back-specs__icon{
-    width:18px;
-    height:18px;
-    flex:0 0 18px;
+    width:24px;
+    height:24px;
+    flex:0 0 24px;
     object-fit:contain;
     display:block;
+    filter: brightness(0) invert(1);
   }
   .card-back-specs__text{
     min-width:0;
@@ -1425,7 +1426,7 @@ render() {
     line-height:1.15;
   }
   .card-back-specs__label{
-    font-size:10px;
+    font-size:12px;
     opacity:.75;
     text-transform:uppercase;
     letter-spacing:.02em;
@@ -1917,6 +1918,10 @@ render() {
                 }
                 :host([data-theme="light"]) .card-screen .cs-icon-item img,
                 :host([theme="light"]) .card-screen .cs-icon-item img {
+                  filter: none;
+                }
+                :host([data-theme="light"]) .card-screen .card-back-specs__icon,
+                :host([theme="light"]) .card-screen .card-back-specs__icon {
                   filter: none;
                 }
                 :host([data-theme="light"]) .card-screen .cs-icon-check,
@@ -5478,6 +5483,21 @@ render() {
     const track = this.ensureCardsSlider();
     if (!track) return;
     const locale = this.getCurrentLocale();
+    const formatNumeric = (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '';
+      const rounded = Math.round(n * 10) / 10;
+      return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.0$/, '');
+    };
+    const formatDistance = (value, med) => {
+      if (value == null || Number(value) <= 0) return null;
+      const unit = String(med || '').trim().toLowerCase() || 'm';
+      const shown = formatNumeric(value);
+      if (!shown) return null;
+      if (unit === 'km') return `${shown} km`;
+      if (unit === 'min') return `${shown} min`;
+      return `${shown} m`;
+    };
     const slide = document.createElement('div');
     slide.className = 'card-slide';
     let gallery = Array.isArray(normalized.imageGallery)
@@ -5517,17 +5537,18 @@ render() {
       { key: 'bathrooms', label: 'Bathrooms', icon: `${ASSETS_BASE}bath-blue.svg`, value: normalized.bathroomsNum != null && normalized.bathroomsNum > 0 ? String(normalized.bathroomsNum) : null },
       { key: 'built_area', label: 'Built area', icon: `${ASSETS_BASE}house-blue.svg`, value: normalized.areaNum != null && normalized.areaNum > 0 ? `${normalized.areaNum} m²` : null },
       { key: 'plot_area', label: 'Plot area', icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.plotNum != null && normalized.plotNum > 0 ? `${normalized.plotNum} m²` : null },
+      { key: 'terrace', label: 'Terrace', icon: `${ASSETS_BASE}plano-blue.svg`, value: normalized.terraceNum != null && normalized.terraceNum > 0 ? `${normalized.terraceNum} m²` : null },
       { key: 'floor', label: 'Floor', icon: `${ASSETS_BASE}floor-blue.svg`, value: normalized.floorNum != null && normalized.floorNum > 0 ? String(normalized.floorNum) : null },
       { key: 'parking', label: 'Parking', icon: `${ASSETS_BASE}garaje-blue.svg`, value: normalized.has_parking === true ? 'Yes' : null },
       { key: 'pool', label: 'Pool', icon: `${ASSETS_BASE}pool-blue.svg`, value: normalized.has_pool === true ? 'Yes' : null },
       { key: 'year_built', label: 'Year built', icon: `${ASSETS_BASE}year-blue.svg`, value: normalized.yearBuiltNum != null && normalized.yearBuiltNum > 0 ? String(normalized.yearBuiltNum) : null },
       { key: 'orientation', label: 'Orientation', icon: `${ASSETS_BASE}orientation-blue.svg`, value: normalized.orientationText || null },
-      { key: 'distance_beach', label: 'Beach', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceBeachNum != null && normalized.distanceBeachNum > 0 ? `${normalized.distanceBeachNum} m` : null }
+      { key: 'distance_beach', label: 'Beach', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceBeachNum, normalized.distanceBeachMed) }
     ];
     const featureSecondary = [
-      { key: 'distance_airport', label: 'Airport', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceAirportNum != null && normalized.distanceAirportNum > 0 ? `${normalized.distanceAirportNum} m` : null },
-      { key: 'distance_golf', label: 'Golf', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceGolfNum != null && normalized.distanceGolfNum > 0 ? `${normalized.distanceGolfNum} m` : null },
-      { key: 'distance_amenities', label: 'Amenities', icon: `${ASSETS_BASE}distance-blue.svg`, value: normalized.distanceAmenitiesNum != null && normalized.distanceAmenitiesNum > 0 ? `${normalized.distanceAmenitiesNum} m` : null }
+      { key: 'distance_airport', label: 'Airport', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceAirportNum, normalized.distanceAirportMed) },
+      { key: 'distance_golf', label: 'Golf', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceGolfNum, normalized.distanceGolfMed) },
+      { key: 'distance_amenities', label: 'Amenities', icon: `${ASSETS_BASE}distance-blue.svg`, value: formatDistance(normalized.distanceAmenitiesNum, normalized.distanceAmenitiesMed) }
     ];
     const features = [];
     for (const item of featurePrimary) {
@@ -6149,6 +6170,11 @@ render() {
       const n = String(v).replace(/[^0-9]/g, '');
       return n ? parseInt(n, 10) : null;
     };
+    const toNumber = (v) => {
+      if (v == null) return null;
+      const n = Number.parseFloat(String(v).replace(',', '.').replace(/[^0-9.-]/g, ''));
+      return Number.isFinite(n) ? n : null;
+    };
     const toBool = (v) => {
       if (v === true || v === false) return v;
       if (v == null) return false;
@@ -6157,6 +6183,47 @@ render() {
     };
     const toLabel = (v) => String(v || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
     const normalizeTag = (v) => String(v || '').replace(/<[^>]+>/g, ' ').trim().replace(/\s+/g, ' ').toUpperCase();
+    const toDistanceUnit = (v) => {
+      const s = String(v || '').trim().toLowerCase();
+      if (!s) return null;
+      if (/(km|kilom)/.test(s)) return 'km';
+      if (/(min)/.test(s)) return 'min';
+      if (/(mt|mts|metro|metre|meter|\bm\b)/.test(s)) return 'm';
+      return null;
+    };
+    const normalizeOrientation = (v, lang = 'en') => {
+      const input = String(v || '').trim();
+      if (!input) return '';
+      const dict = {
+        N: 'N', NORTH: 'N', NORTE: 'N', С: 'N',
+        S: 'S', SOUTH: 'S', SUR: 'S', Ю: 'S',
+        E: 'E', EAST: 'E', ESTE: 'E', В: 'E',
+        W: 'W', O: 'W', WEST: 'W', OESTE: 'W', З: 'W',
+        NE: 'NE', NORESTE: 'NE', СВ: 'NE',
+        NW: 'NW', NO: 'NW', NOROESTE: 'NW', СЗ: 'NW',
+        SE: 'SE', SURESTE: 'SE', ЮВ: 'SE',
+        SW: 'SW', SO: 'SW', SUROESTE: 'SW', SUDOESTE: 'SW', ЮЗ: 'SW'
+      };
+      const labels = {
+        en: { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'North East', NW: 'North West', SE: 'South East', SW: 'South West' },
+        es: { N: 'Norte', S: 'Sur', E: 'Este', W: 'Oeste', NE: 'Noreste', NW: 'Noroeste', SE: 'Sureste', SW: 'Suroeste' },
+        ru: { N: 'Север', S: 'Юг', E: 'Восток', W: 'Запад', NE: 'Северо-восток', NW: 'Северо-запад', SE: 'Юго-восток', SW: 'Юго-запад' }
+      };
+      const target = labels[lang] || labels.en;
+      const tokens = input
+        .toUpperCase()
+        .replace(/[().]/g, ' ')
+        .split(/[\s,;/|-]+/)
+        .map((t) => t.trim())
+        .filter(Boolean);
+      const normalized = [];
+      for (const token of tokens) {
+        const key = dict[token];
+        if (key && !normalized.includes(key)) normalized.push(key);
+      }
+      if (!normalized.length) return toLabel(input);
+      return normalized.map((k) => target[k] || k).join(', ');
+    };
     const toPlainDescription = (v) => {
       const input = String(v || '').trim();
       if (!input) return '';
@@ -6190,11 +6257,16 @@ render() {
     const plotNum = toInt(raw.plot_m2);
     const pricePerM2Num = toInt(raw.price_per_m2);
     const bathroomsNum = toInt(raw.bathrooms);
+    const terraceNum = toInt(raw.terrace_m2);
     const yearBuiltNum = toInt(raw.year_built);
-    const distanceBeachNum = toInt(raw.distance_beach);
-    const distanceAirportNum = toInt(raw.distance_airport);
-    const distanceGolfNum = toInt(raw.distance_golf);
-    const distanceAmenitiesNum = toInt(raw.distance_amenities);
+    const distanceBeachNum = toNumber(raw.distance_beach);
+    const distanceAirportNum = toNumber(raw.distance_airport);
+    const distanceGolfNum = toNumber(raw.distance_golf);
+    const distanceAmenitiesNum = toNumber(raw.distance_amenities);
+    const distanceBeachMed = toDistanceUnit(raw.distance_beach_med ?? raw.distanceBeachMed);
+    const distanceAirportMed = toDistanceUnit(raw.distance_airport_med ?? raw.distanceAirportMed);
+    const distanceGolfMed = toDistanceUnit(raw.distance_golf_med ?? raw.distanceGolfMed);
+    const distanceAmenitiesMed = toDistanceUnit(raw.distance_amenities_med ?? raw.distanceAmenitiesMed);
     const city = raw.city || raw.location || '';
     const province = raw.province || raw.district || raw.area || '';
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
@@ -6236,7 +6308,7 @@ render() {
           ? raw.tags.split(',').map((v) => v.trim()).filter(Boolean)
           : []);
     const tags = Array.from(new Set(rawTags.map(normalizeTag).filter(Boolean))).slice(0, 4);
-    const orientationText = toLabel(raw.orientation || '');
+    const orientationText = normalizeOrientation(raw.orientation || '', this.getLangCode());
 
     const priceOldNum = toInt(raw.price_old ?? raw.priceOld ?? raw.old_price ?? raw.oldPrice);
     const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
@@ -6264,11 +6336,16 @@ render() {
       areaNum,
       plotNum,
       bathroomsNum,
+      terraceNum,
       yearBuiltNum,
       distanceBeachNum,
+      distanceBeachMed,
       distanceAirportNum,
+      distanceAirportMed,
       distanceGolfNum,
+      distanceGolfMed,
       distanceAmenitiesNum,
+      distanceAmenitiesMed,
       orientationText,
       area_m2: areaNum != null ? areaNum : (raw.area_m2 ?? null),
       plot_m2: plotNum != null ? plotNum : (raw.plot_m2 ?? null),
