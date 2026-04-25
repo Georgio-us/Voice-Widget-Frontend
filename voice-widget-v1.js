@@ -86,6 +86,7 @@ const LOCALES = {
     cardCancel: 'Отменить',
     cardSelect: 'Выбрать',
     cardNext: 'Ещё одну',
+    cardBack: 'Назад',
     cardDescription: 'Описание',
     cardDescriptionOk: 'OK',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
@@ -203,6 +204,7 @@ const LOCALES = {
     cardCancel: 'Cancel',
     cardSelect: 'Select',
     cardNext: 'Another one',
+    cardBack: 'Back',
     cardDescription: 'Description',
     cardDescriptionOk: 'OK',
     handoffMessage: 'You selected a property. You can ask for details or cancel.',
@@ -320,6 +322,7 @@ const LOCALES = {
     cardCancel: 'Cancelar',
     cardSelect: 'Seleccionar',
     cardNext: 'Otra más',
+    cardBack: 'Atras',
     cardDescription: 'Descripcion',
     cardDescriptionOk: 'OK',
     handoffMessage: 'Has elegido una propiedad. Puedes pedir mas detalles o cancelar.',
@@ -1361,14 +1364,37 @@ render() {
   .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
   .card-form-header__spacer{ width:18px; flex-shrink:0; }
   /* Card back: info panel (specs + actions) */
-  .card-back-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-back-header__close{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
-  .card-back-header__close img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
-  .card-back-header__close:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
-  .card-back-header__close:active{ transform:translateY(0); opacity:.88; }
-  .card-back-header__close:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-back-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
-  .card-back-header__spacer{ width:24px; flex-shrink:0; }
+  .card-back-header{ flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0; margin-bottom:8px; width:100%; }
+  .card-back-header__back-badge,
+  .card-back-header__ref-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:4px;
+    background:var(--color-accent);
+    color:#fff;
+    font-size:12px;
+    line-height:1;
+    font-weight:600;
+    letter-spacing:.02em;
+    padding:6px 10px;
+    white-space:nowrap;
+    min-height:26px;
+    box-sizing:border-box;
+  }
+  .card-back-header__back-badge{
+    border:none;
+    cursor:pointer;
+  }
+  .card-back-header__back-badge:hover{ opacity:.92; }
+  .card-back-header__back-badge:active{ opacity:.82; }
+  .card-back-header__back-badge:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+  .card-back-header__ref-badge{
+    margin-left:auto;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:70%;
+  }
   .card-back-separator{ width:100%; height:2px; border-radius:1px; background:linear-gradient(90deg, rgba(65, 120, 207, 0) 0%, var(--color-accent) 50%, rgba(65, 120, 207, 0) 100%); margin:12px 0; flex-shrink:0; }
   .card-back-specs{ display:grid; grid-template-columns:1fr 1fr; grid-template-rows:auto auto; gap:8px 12px; flex:1 1 auto; min-height:0; font-size:13px; font-weight:500; color:var(--color-text); align-items:center; margin-top:12px; }
   .card-back-specs__item{ margin:0; }
@@ -4920,7 +4946,7 @@ render() {
           this.api.sendCardInteraction('select', variantId);
         }
       } catch {}
-    } else if (e.target.closest('.card-back-header__close')) {
+    } else if (e.target.closest('.card-back-header__back-badge')) {
       // Назад с описания на фото (front)
       const slide = e.target.closest('.card-slide');
       if (slide) slide.classList.remove('flipped');
@@ -5497,11 +5523,8 @@ render() {
       <div class="card-slide-back">
         <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
-          <button type="button" class="card-back-header__close" aria-label="Back">
-            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
-          </button>
-          <span class="card-back-header__title">${normalized.id || ''} / ${normalized.priceLabel || ''}</span>
-          <span class="card-back-header__spacer" aria-hidden="true"></span>
+          <button type="button" class="card-back-header__back-badge" aria-label="${locale.cardBack || 'Назад'}">${locale.cardBack || 'Назад'}</button>
+          <span class="card-back-header__ref-badge">REF: ${normalized.id || '-'}</span>
         </div>
         <div class="card-back-separator"></div>
         <div class="card-back-specs">
