@@ -1136,17 +1136,38 @@ render() {
   }
   .card-screen .cs-image .cs-image-nav-btn:hover{ background:rgba(255,255,255,.88); }
   .card-screen .cs-image .cs-image-nav-btn.is-hidden{ visibility:hidden; pointer-events:none; }
-  /* overlay: растягиваем на всю плоскость изображения и прижимаем контент вправо-вверх (без absolute) */
+  /* overlay: слой поверх изображения для плашек */
   .card-screen .cs-image .cs-image-overlay{
     z-index:1;
     position:relative;
     width:100%;
     height:100%;
     display:flex;
-    justify-content:flex-end;
+    justify-content:flex-start;
     align-items:flex-start;
-    padding:10px;
+    padding:5px;
     box-sizing:border-box;
+    pointer-events:none;
+  }
+  .card-screen .cs-image .cs-image-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+    max-width:100%;
+    pointer-events:auto;
+  }
+  .card-screen .cs-image .cs-image-tag{
+    border:none;
+    background:var(--color-accent);
+    color:#fff;
+    border-radius:4px;
+    padding:5px 10px;
+    font-size:11px;
+    line-height:1;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    cursor:default;
   }
   .card-screen .cs-image .card-btn.like[data-action="like"]{
     display:inline-flex;
@@ -5316,6 +5337,9 @@ render() {
     const coverImage = gallery[0] || normalized.image || '';
     const locationLine = [normalized.city, normalized.province].filter(Boolean).join(' / ');
     const typeStatusLine = [normalized.property_type, normalized.listing_status].filter(Boolean).join('. ');
+    const tagBadgesHtml = Array.isArray(normalized.tags) && normalized.tags.length
+      ? `<div class="cs-image-tags">${normalized.tags.map((t) => `<button type="button" class="cs-image-tag" tabindex="-1" aria-hidden="true">${t}</button>`).join('')}</div>`
+      : '';
     const iconItems = [];
     if (normalized.area_m2 != null) {
       iconItems.push(`<div class="cs-icon-item"><img src="${ASSETS_BASE}house-blue.svg" alt="Area"><span>${normalized.area_m2}m²</span></div>`);
@@ -5345,6 +5369,7 @@ render() {
               <button type="button" class="cs-image-nav-btn${canSwitchImage ? '' : ' is-hidden'}" data-action="image-next" aria-label="Next image">&#8250;</button>
             </div>
             <div class="cs-image-overlay">
+              ${tagBadgesHtml}
               <!-- Кнопка «Нравится» временно снята в виду чистки интерфейса (логика не удалена)
               <button class="card-btn like" data-action="like" data-variant-id="${normalized.id}" aria-label="Нравится">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
@@ -5938,6 +5963,7 @@ render() {
       return s === 'true' || s === '1' || s === 'yes';
     };
     const toLabel = (v) => String(v || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+    const normalizeTag = (v) => String(v || '').replace(/<[^>]+>/g, ' ').trim().replace(/\s+/g, ' ').toUpperCase();
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
@@ -5980,6 +6006,12 @@ render() {
     if (image && !assetPool.includes(image)) assetPool.unshift(image);
     const imageGallery = assetPool;
     const coverImage = image || imageGallery[0] || '';
+    const rawTags = Array.isArray(raw.tags)
+      ? raw.tags
+      : (typeof raw.tags === 'string'
+          ? raw.tags.split(',').map((v) => v.trim()).filter(Boolean)
+          : []);
+    const tags = Array.from(new Set(rawTags.map(normalizeTag).filter(Boolean))).slice(0, 4);
 
     const priceOldNum = toInt(raw.price_old ?? raw.priceOld ?? raw.old_price ?? raw.oldPrice);
     const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
@@ -6007,6 +6039,7 @@ render() {
       bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
       has_parking: toBool(raw.has_parking),
       has_pool: toBool(raw.has_pool),
+      tags,
       priceEUR: priceNum != null ? priceNum : null,
       priceOldEUR: priceOldNum != null ? priceOldNum : null,
       priceOldLabel,
