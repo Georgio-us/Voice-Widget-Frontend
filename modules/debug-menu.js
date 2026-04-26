@@ -162,7 +162,9 @@ export class DebugMenuManager {
 
   buildSnapshot() {
     const serverTrace = this.lastApiPayload?.queryTraceV1 || null;
-    const insights = serverTrace?.sourceInsights || this.widget.getUnderstanding();
+    const insightsRaw = serverTrace?.sourceInsights || this.widget.getUnderstanding();
+    const insights = { ...(insightsRaw || {}) };
+    delete insights.progress;
     const canonicalPatch = serverTrace?.canonicalPatch || this.buildCanonicalPatch(insights);
     const effectiveQuery = serverTrace?.postValidationQuery || this.getEffectiveSearchParams(insights);
     const preValidationQuery = serverTrace?.preValidationQuery || null;

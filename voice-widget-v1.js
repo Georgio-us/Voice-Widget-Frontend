@@ -5584,8 +5584,7 @@ render() {
       console.log('🧠 Understanding updated:', u);
       this.updateDetailsScreen(u);
       this._pushDebugHistory('extraction_applied', {
-        progress: u?.progress ?? null,
-        filled: Object.entries(u || {}).filter(([k, v]) => k !== 'progress' && v !== null && v !== undefined && String(v).trim() !== '').map(([k]) => k)
+        filled: Object.entries(u || {}).filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '').map(([k]) => k)
       });
       try { this.refreshDebugMenu(); } catch {}
     });
@@ -5700,36 +5699,15 @@ render() {
   updateDetailsScreen(understanding) {
     const params = understanding.params || understanding;
     
-    // Update progress
-    const progressFill = this.shadowRoot.getElementById('progressFill');
-    const progressText = this.shadowRoot.getElementById('progressText');
-    const ctxProgressText = this.shadowRoot.getElementById('ctxProgressText');
+    // Progress-based UX is disabled. Keep neutral status only.
     const ctxStatusText = this.shadowRoot.getElementById('ctxStatusText');
     const ctxStageMessage = this.shadowRoot.getElementById('ctxStageMessage');
-      const progress = (typeof understanding.progress === 'number') ? understanding.progress : 0;
-    if (progressFill && progressText) {
-      progressFill.style.width = `${progress}%`;
-      progressText.textContent = `${progress}% — ${progress === 0 ? 'ожидание' : 'обработка'}`;
-    }
-    if (ctxProgressText) ctxProgressText.textContent = `${Math.max(0, Math.min(99, Math.round(progress)))}%`;
+    const progressGrid = this.shadowRoot.querySelector('.progress-grid-container');
+    if (progressGrid) progressGrid.style.display = 'none';
     if (ctxStatusText || ctxStageMessage) {
-      // Map progress to state (explicit ranges with fallbacks)
-      const p = progress;
-      let status = 'initial request';
-      let message = 'We’ve received your initial request. Share a few details to get started.';
-      if ((p >= 22 && p <= 33) || (p >= 12 && p < 22)) {
-        status = 'more info added';
-        message = 'Great — we added more details. Keep going to refine the search.';
-      } else if ((p >= 44 && p <= 55) || (p > 33 && p < 44)) {
-        status = 'half path done';
-        message = 'Halfway there. A couple more details will sharpen the results.';
-      } else if ((p >= 66 && p <= 77) || (p > 55 && p < 66)) {
-        status = 'almost done';
-        message = 'Almost done. Final tweaks and we’ll have precise matches.';
-      } else if ((p >= 88 && p <= 99) || (p > 77)) {
-        status = 'fulfilled';
-        message = 'Well done! Your data is enough for a confident, targeted search.';
-      }
+      const filledCount = Object.entries(params || {}).filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== '').length;
+      const status = 'insights active';
+      const message = `Captured fields: ${filledCount}`;
       if (ctxStatusText) ctxStatusText.textContent = `Status: ${status}`;
       if (ctxStageMessage) ctxStageMessage.textContent = message;
     }
