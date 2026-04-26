@@ -169,15 +169,15 @@ export class DebugMenuManager {
     const insightsRaw = serverTrace?.sourceInsights || this.widget.getUnderstanding();
     const insights = { ...(insightsRaw || {}) };
     delete insights.progress;
-    const canonicalPatch = serverTrace?.canonicalPatch || this.buildCanonicalPatch(insights);
-    const effectiveQuery = serverTrace?.postValidationQuery || this.getEffectiveSearchParams(insights);
+    const canonicalPatch = serverTrace?.canonicalPatch || null;
+    const effectiveQuery = serverTrace?.postValidationQuery || null;
     const preValidationQuery = serverTrace?.preValidationQuery || null;
     const droppedFields = Array.isArray(serverTrace?.droppedFields) ? serverTrace.droppedFields : [];
     const missingFields = Array.isArray(serverTrace?.missingFields) ? serverTrace.missingFields : [];
     const matchedCount = Number.isFinite(serverTrace?.matchedCount) ? serverTrace.matchedCount : null;
     const candidates = this._collectCandidatePool(serverTrace);
     const match = candidates.slice(0, 12).map((c) => {
-      const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery);
+      const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery || {});
       return { candidate: c, ...m };
     });
     const user = [...this.widget.messages].reverse().find((m) => m?.type === 'user');
