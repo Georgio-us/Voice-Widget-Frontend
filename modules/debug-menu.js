@@ -62,8 +62,8 @@ export class DebugMenuManager {
       type: src.type || null,
       location: src.location || null,
       rooms: this._parseFirstNumber(src.rooms),
-      maxPrice: this._parseFirstNumber(src.budget),
-      maxArea: this._parseFirstNumber(src.area),
+      minPrice: this._parseFirstNumber(src.budget),
+      minArea: this._parseFirstNumber(src.area),
       details: src.details || null,
       preferences: src.preferences || null
     };
@@ -145,15 +145,15 @@ export class DebugMenuManager {
       pushCheck('rooms', typeof actual === 'number' ? (actual === query.rooms ? 'pass' : 'fail') : 'skip', actual ?? '-', query.rooms);
     } else pushCheck('rooms', 'skip', '-', '-');
 
-    if (typeof query.maxPrice === 'number') {
+    if (typeof query.minPrice === 'number') {
       const actual = this._parseFirstNumber(candidate.priceEUR ?? candidate.price);
-      pushCheck('maxPrice', typeof actual === 'number' ? (actual <= query.maxPrice ? 'pass' : 'fail') : 'skip', actual ?? '-', query.maxPrice);
-    } else pushCheck('maxPrice', 'skip', '-', '-');
+      pushCheck('minPrice', typeof actual === 'number' ? (actual >= query.minPrice ? 'pass' : 'fail') : 'skip', actual ?? '-', query.minPrice);
+    } else pushCheck('minPrice', 'skip', '-', '-');
 
-    if (typeof query.maxArea === 'number') {
+    if (typeof query.minArea === 'number') {
       const actual = this._parseFirstNumber(candidate.area_m2 ?? candidate.built_area ?? candidate.area);
-      pushCheck('maxArea', typeof actual === 'number' ? (actual <= query.maxArea ? 'pass' : 'fail') : 'skip', actual ?? '-', query.maxArea);
-    } else pushCheck('maxArea', 'skip', '-', '-');
+      pushCheck('minArea', typeof actual === 'number' ? (actual >= query.minArea ? 'pass' : 'fail') : 'skip', actual ?? '-', query.minArea);
+    } else pushCheck('minArea', 'skip', '-', '-');
 
     const considered = checks.filter((c) => c.status !== 'skip').length;
     const passed = checks.filter((c) => c.status === 'pass').length;
