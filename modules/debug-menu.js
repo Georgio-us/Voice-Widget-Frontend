@@ -82,7 +82,7 @@ export class DebugMenuManager {
     };
   }
 
-  _collectCandidatePool() {
+  _collectCandidatePool(serverTrace = null) {
     const fromDom = [];
     try {
       const nodes = this.widget.shadowRoot.querySelectorAll('.cards-slider .card-slide .cs[data-variant-id]');
@@ -103,7 +103,11 @@ export class DebugMenuManager {
     const payloadCards = Array.isArray(this.lastApiPayload?.cards) ? this.lastApiPayload.cards : [];
     const fromPayload = payloadCards.map((c, idx) => ({ ...c, source: `api.payload#${idx + 1}` }));
 
-    const merged = [...fromDom, ...fromApiMemory, ...fromPayload];
+    const fromTrace = Array.isArray(serverTrace?.candidateIds)
+      ? serverTrace.candidateIds.map((id, idx) => ({ id, source: `server.trace#${idx + 1}` }))
+      : [];
+
+    const merged = [...fromDom, ...fromApiMemory, ...fromPayload, ...fromTrace];
     const seen = new Set();
     const deduped = [];
     merged.forEach((item) => {
@@ -171,7 +175,7 @@ export class DebugMenuManager {
     const droppedFields = Array.isArray(serverTrace?.droppedFields) ? serverTrace.droppedFields : [];
     const missingFields = Array.isArray(serverTrace?.missingFields) ? serverTrace.missingFields : [];
     const matchedCount = Number.isFinite(serverTrace?.matchedCount) ? serverTrace.matchedCount : null;
-    const candidates = this._collectCandidatePool();
+    const candidates = this._collectCandidatePool(serverTrace);
     const match = candidates.slice(0, 12).map((c) => {
       const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery);
       return { candidate: c, ...m };
