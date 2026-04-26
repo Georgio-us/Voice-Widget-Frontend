@@ -37,6 +37,22 @@ export class APIClient {
     }
   }
 
+  _emitSystemSelectionEvent(data = {}) {
+    try {
+      const matchedCount = data?.queryTraceV1 && Number.isFinite(data.queryTraceV1.matchedCount)
+        ? data.queryTraceV1.matchedCount
+        : null;
+      if (matchedCount === null) return;
+      if (matchedCount > 0) {
+        const txt = this.t('systemMatchesFound', { count: matchedCount }) || `Подборка обновлена · найдено ${matchedCount} объектов`;
+        this.widget.ui?.addSystemEventMessage?.(txt);
+      } else {
+        const txt = this.t('systemNoMatches') || 'Подборка обновлена · точных совпадений нет';
+        this.widget.ui?.addSystemEventMessage?.(txt);
+      }
+    } catch {}
+  }
+
   // ---------- Cards API helpers ----------
   _deriveCardsBaseUrl() {
     // this.apiUrl обычно: https://.../api/audio/upload
@@ -240,10 +256,10 @@ export class APIClient {
 
     textInput.value = '';
     if (sendButton) { sendButton.disabled = true; sendButton.classList.remove('active'); }
-    this.widget.ui.showLoading();
 
     const userMessage = { type: 'user', content: messageText, timestamp: new Date() };
     this.widget.ui.addMessage(userMessage);
+    this.widget.ui.showLoading();
 
     // Логируем user_message перед отправкой
     logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
@@ -267,6 +283,7 @@ export class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
+      this._emitSystemSelectionEvent(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -356,6 +373,7 @@ export class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
+      this._emitSystemSelectionEvent(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -444,14 +462,13 @@ export class APIClient {
       return;
     }
 
-    this.widget.ui.showLoading();
-
     const userMessage = {
       type: 'user',
       content: this.t('voiceMessageLabel', { seconds: this.widget.audioRecorder.recordingTime }),
       timestamp: new Date()
     };
     this.widget.ui.addMessage(userMessage);
+    this.widget.ui.showLoading();
 
     // Логируем user_message перед отправкой аудио
     logTelemetry(TelemetryEventTypes.USER_MESSAGE, {
@@ -485,6 +502,7 @@ export class APIClient {
 
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
+      this._emitSystemSelectionEvent(data);
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -727,6 +745,7 @@ export class APIClient {
       if (response.ok) {
         const data = await response.json();
         try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/interaction', requestType: `interaction_${action}` }); } catch {}
+        this._emitSystemSelectionEvent(data);
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
 
         // 🆕 Sprint I: сохраняем role из server response (read-only)

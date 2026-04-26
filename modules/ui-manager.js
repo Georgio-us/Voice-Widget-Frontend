@@ -427,6 +427,36 @@ export class UIManager {
     if (!thread) return;
     const wrapper = document.createElement('div');
     wrapper.className = `message ${message.type}`;
+
+    if (message.type === 'system') {
+      const systemLine = document.createElement('div');
+      systemLine.className = 'system-event-line';
+
+      const systemText = document.createElement('span');
+      systemText.className = 'system-event-text';
+      systemText.textContent = String(message.content || '');
+      systemText.setAttribute('role', 'button');
+      systemText.setAttribute('tabindex', '0');
+      systemText.setAttribute('aria-expanded', 'false');
+
+      const toggleExpanded = () => {
+        const expanded = systemText.classList.toggle('is-expanded');
+        systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      };
+      systemText.addEventListener('click', toggleExpanded);
+      systemText.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toggleExpanded();
+        }
+      });
+
+      systemLine.appendChild(systemText);
+      wrapper.appendChild(systemLine);
+      thread.appendChild(wrapper);
+      return;
+    }
+
     // v2 bubble markup
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble ' + (message.type === 'assistant' ? 'widget-bubble' : 'user-bubble');
@@ -463,6 +493,40 @@ export class UIManager {
       wrapper.appendChild(bubble);
       thread.appendChild(wrapper);
     }
+  }
+
+  addSystemEventMessage(text = '') {
+    const payload = String(text || '').trim();
+    if (!payload) return;
+    const last = this.widget.messages?.[this.widget.messages.length - 1];
+    if (last && last.type === 'system' && String(last.content || '').trim() === payload) return;
+    this.addMessage({ type: 'system', content: payload, timestamp: new Date() });
+  }
+
+  showThinkingIndicator() {
+    this.hideThinkingIndicator();
+    const { thread } = this.elements;
+    if (!thread) return null;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'message assistant thinking-message';
+    wrapper.setAttribute('data-thinking', '1');
+
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble widget-bubble thinking-bubble';
+    bubble.innerHTML = '<span class="thinking-dots" aria-label="Thinking"><span></span><span></span><span></span></span>';
+
+    wrapper.appendChild(bubble);
+    thread.appendChild(wrapper);
+    this._scrollToBottom();
+    return wrapper;
+  }
+
+  hideThinkingIndicator(node = null) {
+    if (node?.parentNode) node.parentNode.removeChild(node);
+    this.shadowRoot
+      ?.querySelectorAll?.('.thinking-message[data-thinking="1"]')
+      ?.forEach((el) => el.remove());
   }
 
   _scrollToBottom() {
@@ -555,8 +619,13 @@ export class UIManager {
   updateMessageCount() {
     // Message count display removed in new layout
   }
-  showLoading() { this.shadowRoot.getElementById('loadingIndicator')?.classList.add('active'); }
-  hideLoading() { this.shadowRoot.getElementById('loadingIndicator')?.classList.remove('active'); }
+  showLoading() {
+    this._thinkingNode = this.showThinkingIndicator();
+  }
+  hideLoading() {
+    this.hideThinkingIndicator(this._thinkingNode || null);
+    this._thinkingNode = null;
+  }
   showNotification(m) { console.log('📢', m); }
   showWarning(m) { console.log('⚠️', m); }
 
@@ -568,6 +637,8 @@ export class UIManager {
   clearMessages() {
     this.widget.messages = [];
     this._saveHistory();
+    this.hideThinkingIndicator();
+    this._thinkingNode = null;
 
     const { thread } = this.elements;
     if (thread) {

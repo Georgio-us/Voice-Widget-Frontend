@@ -130,6 +130,8 @@ const LOCALES = {
     parseError: 'Не удалось разобрать ответ сервера',
     responseMissing: 'Ответ от сервера не получен.',
     sendTextError: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
+    systemMatchesFound: 'Подборка обновлена · найдено {count} объектов',
+    systemNoMatches: 'Подборка обновлена · точных совпадений нет',
     shortRecording: 'Запись слишком короткая',
     voiceMessageLabel: 'Голосовое сообщение ({seconds}с)',
     processingCardsError: 'Ошибка при обработке команды карточек',
@@ -262,6 +264,8 @@ const LOCALES = {
     parseError: 'Failed to parse server response',
     responseMissing: 'No response was received from the server.',
     sendTextError: 'An error occurred while sending the message. Please try again.',
+    systemMatchesFound: 'Selection updated · found {count} properties',
+    systemNoMatches: 'Selection updated · no exact matches found',
     shortRecording: 'Recording is too short',
     voiceMessageLabel: 'Voice message ({seconds}s)',
     processingCardsError: 'Error while processing card command',
@@ -394,6 +398,8 @@ const LOCALES = {
     parseError: 'No se pudo procesar la respuesta del servidor',
     responseMissing: 'No se recibio respuesta del servidor.',
     sendTextError: 'Ocurrio un error al enviar el mensaje. Intentalo de nuevo.',
+    systemMatchesFound: 'Seleccion actualizada · encontrados {count} inmuebles',
+    systemNoMatches: 'Seleccion actualizada · no hay coincidencias exactas',
     shortRecording: 'La grabacion es demasiado corta',
     voiceMessageLabel: 'Mensaje de voz ({seconds}s)',
     processingCardsError: 'Error al procesar el comando de tarjetas',
@@ -1208,6 +1214,68 @@ render() {
   .message{ display:flex; }
   .message.user{ justify-content:flex-end; }
   .message.assistant{ justify-content:flex-start; }
+  .message.system{ justify-content:center; width:100%; margin:4px 0 8px; }
+  .system-event-line{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    color: var(--color-text);
+    opacity: .62;
+    font-size:11px;
+    line-height:1.2;
+    user-select:none;
+  }
+  .system-event-line::before,
+  .system-event-line::after{
+    content:'';
+    flex:1;
+    min-width:28px;
+    height:1px;
+    background: rgba(106,108,155,.45);
+  }
+  .system-event-text{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:60%;
+    text-align:center;
+    cursor:pointer;
+  }
+  .system-event-text.is-expanded{
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+    max-width:100%;
+  }
+  .thinking-bubble{
+    min-width:52px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:10px 14px;
+  }
+  .thinking-dots{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    height:10px;
+  }
+  .thinking-dots span{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:currentColor;
+    opacity:.25;
+    animation:thinkingPulse 1s infinite ease-in-out;
+  }
+  .thinking-dots span:nth-child(2){ animation-delay:.15s; }
+  .thinking-dots span:nth-child(3){ animation-delay:.3s; }
+  @keyframes thinkingPulse{
+    0%,100%{ opacity:.25; transform:translateY(0); }
+    50%{ opacity:1; transform:translateY(-1px); }
+  }
   .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
   .message.assistant .bubble--full{ border-bottom-left-radius:16px; }
   .message.user .bubble--full{ border-bottom-right-radius:16px; }
@@ -1839,8 +1907,8 @@ render() {
 
   
 
-  .loading{ position:absolute; display:none; align-items:center; justify-content:center; background: rgba(53,67,96,0.10); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
-  .loading.active{ display:flex; }
+  .loading{ position:absolute; display:none !important; align-items:center; justify-content:center; background: rgba(53,67,96,0.10); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius:20px; z-index:2; pointer-events:none; }
+  .loading.active{ display:none !important; }
   .loading-text{ color:#ffffff; font-size:16px; font-weight:400; font-family: var(--ff); display:flex; align-items:center; gap:4px; }
   .loading-text .dots{ display:inline-flex; gap:2px; margin-left:2px; }
   .loading-text .dots span{ display:inline-block; opacity:.2; animation:dotBlink 1.2s infinite ease-in-out; }
