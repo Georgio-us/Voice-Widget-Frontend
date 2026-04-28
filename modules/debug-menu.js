@@ -170,6 +170,7 @@ export class DebugMenuManager {
     const insights = { ...(insightsRaw || {}) };
     delete insights.progress;
     const canonicalPatch = serverTrace?.canonicalPatch || null;
+    const locationParsing = serverTrace?.locationSemantics || null;
     const effectiveQuery = serverTrace?.postValidationQuery || null;
     const preValidationQuery = serverTrace?.preValidationQuery || null;
     const droppedFields = Array.isArray(serverTrace?.droppedFields) ? serverTrace.droppedFields : [];
@@ -195,7 +196,7 @@ export class DebugMenuManager {
       cardsCount: Array.isArray(this.lastApiPayload?.cards) ? this.lastApiPayload.cards.length : 0,
       historyTail: this.selectionHistory.slice(-20)
     };
-    return { insights, canonicalPatch, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
+    return { insights, canonicalPatch, locationParsing, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
   }
 
   buildReportText(snapshot) {
@@ -210,6 +211,9 @@ export class DebugMenuManager {
     lines.push('');
     lines.push('[Canonical patch]');
     lines.push(this._toPretty(s.canonicalPatch));
+    lines.push('');
+    lines.push('[Location parsing]');
+    lines.push(this._toPretty(s.locationParsing));
     lines.push('');
     lines.push('[Effective query]');
     lines.push(this._toPretty({
@@ -242,6 +246,7 @@ export class DebugMenuManager {
     set('debugInsightsPre', this._toPretty(s.insights));
     set('debugCanonicalPre', this._toPretty(s.canonicalPatch));
     set('debugQueryPre', this._toPretty({
+      locationParsing: s.locationParsing,
       preValidationQuery: s.preValidationQuery,
       postValidationQuery: s.effectiveQuery,
       droppedFields: s.droppedFields,
@@ -264,6 +269,7 @@ export class DebugMenuManager {
     set('debugDialogPre', this._toPretty(s.dialog));
     set('debugRawPre', this._toPretty({
       sourceInsights: s.insights,
+      locationParsing: s.locationParsing,
       canonicalPatch: s.canonicalPatch,
       preValidationQuery: s.preValidationQuery,
       postValidationQuery: s.effectiveQuery,
