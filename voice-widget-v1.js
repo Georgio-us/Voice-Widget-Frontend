@@ -1193,6 +1193,25 @@ render() {
     height:22px;
     display:block;
 }
+.widget-close-floating .widget-close-x{
+    position: relative;
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+.widget-close-floating .widget-close-x::before,
+.widget-close-floating .widget-close-x::after{
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+    width: 2px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--color-text);
+}
+.widget-close-floating .widget-close-x::before{ transform: rotate(45deg); }
+.widget-close-floating .widget-close-x::after{ transform: rotate(-45deg); }
 .widget-close-floating:hover{ opacity:.92; }
 .widget-close-floating:active{ opacity:.82; }
   /* Content */
@@ -3059,6 +3078,11 @@ render() {
                     color: var(--color-text);
                     border: 1px solid var(--color-accent);
                 }
+                #requestViralLink{
+                    display:block;
+                    width:100%;
+                    text-align:center;
+                }
                 
                 /* ========================= */
                 /*         Menu Overlay      */
@@ -3342,7 +3366,7 @@ render() {
 
   <div class="widget" role="dialog" aria-modal="true" aria-label="Voice Assistant">
     <button class="widget-close-floating" id="widgetCloseFloating" type="button" title="Close widget">
-      <img src="${ASSETS_BASE}main_close_btn.svg" alt="Close">
+      <span class="widget-close-x" aria-hidden="true"></span>
     </button>
     <!-- Header removed for v2 UI -->
 
@@ -4508,11 +4532,8 @@ render() {
     });
     cancelBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      ['reqName','reqCode','reqPhone','reqEmail','reqComment'].forEach(id => { const el = get(id); if (el) el.value=''; });
-      if (get('reqConsent')) get('reqConsent').checked = false;
-      ['reqCode','reqPhone','reqEmail'].forEach(id => markError(get(id), false));
-      showContactError(false); showConsentError(false);
-      if (reqEmailGhost) reqEmailGhost.textContent='';
+      this.resetRequestScreen?.();
+      this.showScreen?.('dialog');
     });
     root.getElementById('requestThanksOverlayClose')?.addEventListener('click', (e) => {
       e.preventDefault();
