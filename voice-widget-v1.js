@@ -3082,6 +3082,7 @@ render() {
                     display:block;
                     width:100%;
                     text-align:center;
+                    margin-top:15px;
                 }
                 
                 /* ========================= */
