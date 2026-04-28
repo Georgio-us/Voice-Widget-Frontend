@@ -188,10 +188,8 @@ export class DebugMenuManager {
     };
     const apiMeta = {
       ...this.lastApiMeta,
-      role: this.widget.role || null,
       timing: this.lastApiPayload?.timing || null,
       tokens: this.lastApiPayload?.tokens || null,
-      stage: this.lastApiPayload?.stage || null,
       serverQueryTrace: !!serverTrace,
       matchedCount,
       cardsCount: Array.isArray(this.lastApiPayload?.cards) ? this.lastApiPayload.cards.length : 0,
@@ -274,7 +272,6 @@ export class DebugMenuManager {
       lastApiPayloadCompact: this.lastApiPayload
         ? {
             sessionId: this.lastApiPayload.sessionId || null,
-            stage: this.lastApiPayload.stage || null,
             cardsCount: Array.isArray(this.lastApiPayload.cards) ? this.lastApiPayload.cards.length : 0,
             insights: this.lastApiPayload.insights || null
           }

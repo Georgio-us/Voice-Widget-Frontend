@@ -227,12 +227,6 @@ export class APIClient {
           this.widget.understanding.update(migrated);
           console.log('📥 Загружены данные сессии:', data);
         }
-        // 🆕 Sprint I: сохраняем role из server response (read-only)
-        if (data?.role !== undefined) {
-          this.widget.role = data.role;
-        } else {
-          console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
-        }
         return { exists: true, expired: false };
       }
       // Сессия удалена на сервере (TTL/manual clear): очищаем локальный thread и sid
@@ -287,13 +281,6 @@ export class APIClient {
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
-
-      // 🆕 Sprint I: сохраняем role из server response (read-only)
-      if (data?.role !== undefined) {
-        this.widget.role = data.role;
-      } else {
-        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
-      }
 
       console.log('📥 Ответ на текст:', {
         sessionId: data.sessionId, messageCount: data.messageCount,
@@ -378,13 +365,6 @@ export class APIClient {
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
 
-      // 🆕 Sprint I: сохраняем role из server response (read-only)
-      if (data?.role !== undefined) {
-        this.widget.role = data.role;
-      } else {
-        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
-      }
-
       console.log('📥 Ответ на текст (main):', {
         sessionId: data.sessionId, messageCount: data.messageCount,
         insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
@@ -415,7 +395,6 @@ export class APIClient {
         messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
         hasCards: data.cards && data.cards.length > 0,
         cards: cardsForLog,
-        stage: data.stage || null,
         insights: data.insights || null
       });
       
@@ -507,13 +486,6 @@ export class APIClient {
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
 
-      // 🆕 Sprint I: сохраняем role из server response (read-only)
-      if (data?.role !== undefined) {
-        this.widget.role = data.role;
-      } else {
-        console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
-      }
-
       console.log('📥 Ответ на аудио:', {
         sessionId: data.sessionId, messageCount: data.messageCount,
         insights: data.insights, tokens: data.tokens, timing: data.timing, cards: data.cards, ui: data.ui, role: data.role
@@ -563,7 +535,6 @@ export class APIClient {
         messageText: parsed.cleaned ? parsed.cleaned.substring(0, 200) : null,
         hasCards: data.cards && data.cards.length > 0,
         cards: cardsForLog,
-        stage: data.stage || null,
         insights: data.insights || null
       });
 
@@ -747,13 +718,6 @@ export class APIClient {
         try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/interaction', requestType: `interaction_${action}` }); } catch {}
         this._emitSystemSelectionEvent(data);
         console.log('📤 Card interaction sent:', { action, variantId, response: data });
-
-        // 🆕 Sprint I: сохраняем role из server response (read-only)
-        if (data?.role !== undefined) {
-          this.widget.role = data.role;
-        } else {
-          console.warn('⚠️ [Sprint I] role отсутствует в server response (контрактная проблема)');
-        }
 
         // Для первого показа карточки ('show') карточку уже отрисовали локально,
         // с бэка берём только текст-подпись. Для остальных действий — рендерим карточку.
