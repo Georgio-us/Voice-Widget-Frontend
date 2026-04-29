@@ -1239,6 +1239,7 @@ render() {
     display:flex;
     align-items:center;
     justify-content:center;
+    margin:10px;
     gap:10px;
     color: var(--color-text);
     opacity: .62;
@@ -1731,7 +1732,7 @@ render() {
     transform:none;
   }
   /* actions container for clearer boundaries */
-  .card-actions-wrap{ margin:0 8px 8px; padding:8px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; background:var(--bg-card); }
+  .card-actions-wrap{ margin:0 8px 8px; padding:8px; border:1px solid rgba(71, 105, 165, 0); border-radius:12px; }
   .card-slide .cs{ width:100%; }
 
   /* ===== RMv3 / Sprint 2 / Task 2.2: Post-handoff block (UI-only) ===== */
@@ -2406,7 +2407,7 @@ render() {
                 .debug-main-container{
                     width:100%;
                     max-width:360px;
-                    margin: var(--space-l) auto 0 auto;
+                    margin: 0 auto 0 auto;
                     padding: 0 var(--space-l) var(--space-l) var(--space-l);
                     box-sizing:border-box;
                     display:grid;
@@ -2874,7 +2875,7 @@ render() {
                     position: static;
                     width: 100%;
                     max-width: 360px;
-                    margin: var(--space-l) auto 0 auto;
+                    margin: 0 auto 0 auto;
                     padding: 0 var(--space-l);
                 }
                 
@@ -6716,6 +6717,12 @@ render() {
         .trim();
       return s;
     };
+    const formatEuro = (value) => {
+      if (value == null || !Number.isFinite(Number(value))) return '';
+      const intValue = Math.round(Number(value));
+      const grouped = String(intValue).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return `${grouped} €`;
+    };
     const priceNum = toInt(raw.price);
     const roomsNum = toInt(raw.rooms);
     const floorNum = toInt(raw.floor);
@@ -6777,8 +6784,8 @@ render() {
     const orientationText = normalizeOrientation(raw.orientation || '', this.getLangCode());
 
     const priceOldNum = toInt(raw.price_old ?? raw.priceOld ?? raw.old_price ?? raw.oldPrice);
-    const priceLabel = raw.price || (priceNum != null ? `${priceNum} €` : (raw.priceLabel || ''));
-    const priceOldLabel = raw.price_old || raw.priceOld || raw.old_price || raw.oldPrice || (priceOldNum != null ? `${priceOldNum} €` : '');
+    const priceLabel = priceNum != null ? formatEuro(priceNum) : (raw.price || raw.priceLabel || '');
+    const priceOldLabel = priceOldNum != null ? formatEuro(priceOldNum) : (raw.price_old || raw.priceOld || raw.old_price || raw.oldPrice || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
     const floorLabel = floorNum != null ? `${floorNum} floor` : (raw.floor || '');
 
