@@ -16,6 +16,7 @@ export class APIClient {
     this.lastSelectionSnapshot = null; // последняя актуальная подборка (для action system-event)
     this._lastHandledActionEventId = null;
     this._lastHandledSelectionVersion = null;
+    this._lastInsightsHash = null;
   }
 
   t(key, params = null) {
@@ -132,6 +133,61 @@ export class APIClient {
     this._emitSystemSelectionAction(bundle);
   }
 
+  _hashInsights(insights) {
+    try {
+      if (!insights || typeof insights !== 'object') return 'null';
+      const ordered = {};
+      Object.keys(insights).sort().forEach((k) => { ordered[k] = insights[k]; });
+      return JSON.stringify(ordered);
+    } catch {
+      return String(Date.now());
+    }
+  }
+
+  _didInsightsChange(data = {}) {
+    try {
+      const current = this._hashInsights(data?.insights || null);
+      if (this._lastInsightsHash === null) {
+        this._lastInsightsHash = current;
+        return true;
+      }
+      const changed = this._lastInsightsHash !== current;
+      this._lastInsightsHash = current;
+      return changed;
+    } catch {
+      return true;
+    }
+  }
+
+  _prepareManagerActionEvent(data = {}, { userText = '', insightsChanged = true, hasSelectionAction = false } = {}) {
+    try {
+      if (!data || typeof data !== 'object') return null;
+      if (data?.ui?.systemEvent) return null;
+      if (insightsChanged === true) return null;
+      if (hasSelectionAction === true) return null;
+
+      const text = String(userText || '').trim();
+      const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+      if (text.length < 10 || words < 2) return null;
+
+      const infoText = this.t('systemManagerHint') || 'Вопрос вне подбора · можно уточнить у менеджера';
+      const actionText = this.t('systemContactManager') || 'Связаться с менеджером';
+      const eventId = `mgr_${Date.now()}`;
+
+      return {
+        info: { type: 'info', text: infoText },
+        action: {
+          type: 'action',
+          text: actionText,
+          action: 'open_manager',
+          payload: { eventId }
+        }
+      };
+    } catch {
+      return null;
+    }
+  }
+
   _buildSelectionVersion(postQuery, matchedCount) {
     try {
       const src = JSON.stringify({ postQuery: postQuery || null, matchedCount: Number(matchedCount) || 0 });
@@ -147,6 +203,14 @@ export class APIClient {
   }
 
   async handleSystemEventAction({ action, payload } = {}) {
+    if (action === 'open_manager') {
+      try {
+        this.widget?.showScreen?.('request');
+        return true;
+      } catch {
+        return false;
+      }
+    }
     if (action !== 'open_results') return false;
     const eventId = payload?.eventId || null;
     const selectionVersion = payload?.selectionVersion || null;
@@ -430,6 +494,12 @@ export class APIClient {
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
+      const insightsChanged = this._didInsightsChange(data);
+      const managerEvent = this._prepareManagerActionEvent(data, {
+        userText: messageText,
+        insightsChanged,
+        hasSelectionAction: !!selectionEvent?.action
+      });
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -444,6 +514,7 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
       this._emitSystemSelectionInfo(selectionEvent);
+      this._emitSystemSelectionInfo(managerEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
@@ -454,6 +525,7 @@ export class APIClient {
       };
       this.widget.ui.addMessage(assistantMessage);
       this._emitSystemSelectionAction(selectionEvent);
+      this._emitSystemSelectionAction(managerEvent);
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
@@ -519,6 +591,12 @@ export class APIClient {
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
+      const insightsChanged = this._didInsightsChange(data);
+      const managerEvent = this._prepareManagerActionEvent(data, {
+        userText: messageText,
+        insightsChanged,
+        hasSelectionAction: !!selectionEvent?.action
+      });
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -533,6 +611,7 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
       this._emitSystemSelectionInfo(selectionEvent);
+      this._emitSystemSelectionInfo(managerEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
@@ -543,6 +622,7 @@ export class APIClient {
       };
       this.widget.ui.addMessage(assistantMessage);
       this._emitSystemSelectionAction(selectionEvent);
+      this._emitSystemSelectionAction(managerEvent);
       
       // Логируем assistant_reply после получения ответа (main screen)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
@@ -646,6 +726,12 @@ export class APIClient {
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
+      const insightsChanged = this._didInsightsChange(data);
+      const managerEvent = this._prepareManagerActionEvent(data, {
+        userText: data?.transcription || '',
+        insightsChanged,
+        hasSelectionAction: !!selectionEvent?.action
+      });
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -674,6 +760,7 @@ export class APIClient {
 
       if (data.insights) this.widget.understanding.update(data.insights);
       this._emitSystemSelectionInfo(selectionEvent);
+      this._emitSystemSelectionInfo(managerEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
@@ -685,6 +772,7 @@ export class APIClient {
       };
       this.widget.ui.addMessage(assistantMessage);
       this._emitSystemSelectionAction(selectionEvent);
+      this._emitSystemSelectionAction(managerEvent);
       
       // Логируем assistant_reply после получения ответа (аудио)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0

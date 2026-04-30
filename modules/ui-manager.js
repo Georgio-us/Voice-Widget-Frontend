@@ -435,7 +435,7 @@ export class UIManager {
       const systemText = document.createElement('span');
       systemText.className = 'system-event-text';
       systemText.textContent = String(message.content || '');
-      const isAction = message.systemType === 'action' && message.action === 'open_results';
+      const isAction = message.systemType === 'action' && (message.action === 'open_results' || message.action === 'open_manager');
       if (isAction) {
         systemText.classList.add('system-event-text--action');
         systemText.setAttribute('role', 'button');
@@ -524,7 +524,7 @@ export class UIManager {
     if (!content) return;
 
     const action = isObject ? (input.action || null) : null;
-    const supportedAction = action === 'open_results';
+    const supportedAction = action === 'open_results' || action === 'open_manager';
     const systemType = isObject && input.type === 'action' && supportedAction ? 'action' : 'info';
     const payload = isObject && input.payload && typeof input.payload === 'object' ? input.payload : null;
     const eventId = payload?.eventId || (isObject ? input.eventId : null) || null;
