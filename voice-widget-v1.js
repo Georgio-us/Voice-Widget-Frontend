@@ -1940,6 +1940,15 @@ render() {
     padding:6px 10px;
   }
 
+  @media (max-width: 450px) {
+    /* Mobile: reduce card height by 20px via image area; keep body unchanged */
+    .card-screen .cs-image{ height:240px; flex:0 0 240px; }
+    .card-slide-front,.card-slide-back{ height:420px; }
+    .card-slide--form-open .card-slide-form{ height:420px; }
+    /* Hide decorative divider in back/form views */
+    .card-back-separator{ display:none; }
+  }
+
   /* In-dialog thanks (UI-only) */
   .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color: var(--color-text); margin-bottom:6px; text-align:center; }
   .dialog-screen .in-dialog-thanks__text{ font-size:12px; font-weight:400; color: var(--color-text); opacity: .85; text-align:center; line-height:1.35; }
