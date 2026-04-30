@@ -48,12 +48,15 @@ export class APIClient {
         return { explicit };
       }
 
-      const matchedCount = data?.queryTraceV1 && Number.isFinite(data.queryTraceV1.matchedCount)
-        ? data.queryTraceV1.matchedCount
-        : null;
+      const trace = data?.queryTraceV1 || null;
+      const traceMatchedCount = trace && Number.isFinite(trace.matchedCount) ? Number(trace.matchedCount) : null;
+      const traceCandidateIds = Array.isArray(trace?.candidateIds) ? trace.candidateIds.filter(Boolean) : [];
+      const matchedCount = traceCandidateIds.length > 0
+        ? traceCandidateIds.length
+        : traceMatchedCount;
       if (matchedCount === null) return null;
       const postQuery = data?.queryTraceV1?.postValidationQuery || null;
-      const queryTrace = data?.queryTraceV1 || null;
+      const queryTrace = trace;
       const cards = Array.isArray(data?.cards) ? data.cards : [];
       const selectionVersion = this._buildSelectionVersion(postQuery, matchedCount);
       const eventId = `sel_${selectionVersion}`;
