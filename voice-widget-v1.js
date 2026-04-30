@@ -132,6 +132,7 @@ const LOCALES = {
     sendTextError: 'Произошла ошибка при отправке сообщения. Попробуйте снова.',
     systemMatchesFound: 'Подборка обновлена · найдено {count} объектов',
     systemNoMatches: 'Подборка обновлена · точных совпадений нет',
+    systemOpenSelection: 'Смотреть подборку',
     shortRecording: 'Запись слишком короткая',
     voiceMessageLabel: 'Голосовое сообщение ({seconds}с)',
     processingCardsError: 'Ошибка при обработке команды карточек',
@@ -266,6 +267,7 @@ const LOCALES = {
     sendTextError: 'An error occurred while sending the message. Please try again.',
     systemMatchesFound: 'Selection updated · found {count} properties',
     systemNoMatches: 'Selection updated · no exact matches found',
+    systemOpenSelection: 'Open selection',
     shortRecording: 'Recording is too short',
     voiceMessageLabel: 'Voice message ({seconds}s)',
     processingCardsError: 'Error while processing card command',
@@ -400,6 +402,7 @@ const LOCALES = {
     sendTextError: 'Ocurrio un error al enviar el mensaje. Intentalo de nuevo.',
     systemMatchesFound: 'Seleccion actualizada · encontrados {count} inmuebles',
     systemNoMatches: 'Seleccion actualizada · no hay coincidencias exactas',
+    systemOpenSelection: 'Ver selección',
     shortRecording: 'La grabacion es demasiado corta',
     voiceMessageLabel: 'Mensaje de voz ({seconds}s)',
     processingCardsError: 'Error al procesar el comando de tarjetas',
@@ -449,7 +452,7 @@ class VoiceWidget extends HTMLElement {
     // базовые состояния
     this.isRecording = false;
     this.recordingTime = 0;
-    this.maxRecordingTime = 30;
+    this.maxRecordingTime = 60;
     this.minRecordingTime = 1;
     this.messages = [];
     this.mediaRecorder = null;

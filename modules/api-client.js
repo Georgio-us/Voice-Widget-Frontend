@@ -69,8 +69,12 @@ export class APIClient {
       if (matchedCount > 0) {
         const txt = this.t('systemMatchesFound', { count: matchedCount }) || `Подборка обновлена · найдено ${matchedCount} объектов`;
         this.widget.ui?.addSystemEventMessage?.({
+          type: 'info',
+          text: txt
+        });
+        this.widget.ui?.addSystemEventMessage?.({
           type: 'action',
-          text: `${txt} · открыть`,
+          text: this.t('systemOpenSelection') || 'Смотреть подборку',
           action: 'open_results',
           payload: {
             eventId,
@@ -145,7 +149,6 @@ export class APIClient {
       if (!response.ok) return false;
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/interaction', requestType: 'interaction_show' }); } catch {}
-      this._emitSystemSelectionEvent(data);
       if (data && data.card) {
         try { this.widget.resetCardsSliderHost?.(); } catch {}
         this.widget.showMockCardWithActions(data.card);
@@ -403,6 +406,7 @@ export class APIClient {
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      this._emitSystemSelectionEvent(data);
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
@@ -467,7 +471,6 @@ export class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
-      this._emitSystemSelectionEvent(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -486,6 +489,7 @@ export class APIClient {
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      this._emitSystemSelectionEvent(data);
       
       // Логируем assistant_reply после получения ответа (main screen)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
@@ -588,7 +592,6 @@ export class APIClient {
 
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
-      this._emitSystemSelectionEvent(data);
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -626,6 +629,7 @@ export class APIClient {
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
+      this._emitSystemSelectionEvent(data);
       
       // Логируем assistant_reply после получения ответа (аудио)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0

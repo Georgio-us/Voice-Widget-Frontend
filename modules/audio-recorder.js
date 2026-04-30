@@ -9,7 +9,7 @@ export class AudioRecorder {
         this.isRecording = false;
         this.recordingTime = 0;
         this.recordingTimer = null;
-        this.maxRecordingTime = 30;
+        this.maxRecordingTime = 60;
         this.minRecordingTime = 1;
         this.mediaRecorder = null; 
         this.stream = null;
