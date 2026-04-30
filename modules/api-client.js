@@ -168,7 +168,8 @@ export class APIClient {
 
       const text = String(userText || '').trim();
       const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
-      if (text.length < 10 || words < 2) return null;
+      const hasManagerKeyword = this._hasManagerIntentKeyword(text);
+      if (!hasManagerKeyword && (text.length < 10 || words < 2)) return null;
 
       const infoText = this.t('systemManagerHint') || 'Вопрос вне подбора · можно уточнить у менеджера';
       const actionText = this.t('systemContactManager') || 'Связаться с менеджером';
@@ -185,6 +186,47 @@ export class APIClient {
       };
     } catch {
       return null;
+    }
+  }
+
+  _hasManagerIntentKeyword(text = '') {
+    try {
+      const s = String(text || '').toLowerCase().trim();
+      if (!s) return false;
+      const patterns = [
+        // RU
+        /\bменедж\w*\b/i,
+        /\bсвяза\w*\b/i,
+        /\bзаявк\w*\b/i,
+        /\bипотек\w*\b/i,
+        /\bрассроч\w*\b/i,
+        /\bкредит\w*\b/i,
+        /\bпросмотр\w*\b/i,
+        /\bпоказ\w*\b/i,
+        /\bпозвон\w*\b/i,
+        /\bперезвон\w*\b/i,
+        /\bконтакт\w*\b/i,
+        // EN
+        /\bmanager\b/i,
+        /\bcontact\b/i,
+        /\bcallback\b/i,
+        /\bmortgage\b/i,
+        /\binstallment\b/i,
+        /\bloan\b/i,
+        /\bviewing\b/i,
+        /\bappointment\b/i,
+        // ES
+        /\bgerente\b/i,
+        /\bcontactar\b/i,
+        /\bhipoteca\b/i,
+        /\bcuotas?\b/i,
+        /\bcredito\b/i,
+        /\bvisita\b/i,
+        /\bcita\b/i
+      ];
+      return patterns.some((re) => re.test(s));
+    } catch {
+      return false;
     }
   }
 
