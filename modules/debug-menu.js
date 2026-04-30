@@ -176,6 +176,10 @@ export class DebugMenuManager {
     const droppedFields = Array.isArray(serverTrace?.droppedFields) ? serverTrace.droppedFields : [];
     const missingFields = Array.isArray(serverTrace?.missingFields) ? serverTrace.missingFields : [];
     const matchedCount = Number.isFinite(serverTrace?.matchedCount) ? serverTrace.matchedCount : null;
+    const locationRuntime = {
+      scope: serverTrace?.relaxed?.locationScope || null,
+      fallbackMessage: serverTrace?.relaxed?.locationFallbackMessage || null
+    };
     const candidates = this._collectCandidatePool(serverTrace);
     const match = candidates.slice(0, 12).map((c) => {
       const m = this._evaluateCandidateAgainstQuery(c, effectiveQuery || {});
@@ -196,7 +200,7 @@ export class DebugMenuManager {
       cardsCount: Array.isArray(this.lastApiPayload?.cards) ? this.lastApiPayload.cards.length : 0,
       historyTail: this.selectionHistory.slice(-20)
     };
-    return { insights, canonicalPatch, locationParsing, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
+    return { insights, canonicalPatch, locationParsing, locationRuntime, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
   }
 
   buildReportText(snapshot) {
@@ -214,6 +218,9 @@ export class DebugMenuManager {
     lines.push('');
     lines.push('[Location parsing]');
     lines.push(this._toPretty(s.locationParsing));
+    lines.push('');
+    lines.push('[Location runtime]');
+    lines.push(this._toPretty(s.locationRuntime));
     lines.push('');
     lines.push('[Effective query]');
     lines.push(this._toPretty({
@@ -247,6 +254,7 @@ export class DebugMenuManager {
     set('debugCanonicalPre', this._toPretty(s.canonicalPatch));
     set('debugQueryPre', this._toPretty({
       locationParsing: s.locationParsing,
+      locationRuntime: s.locationRuntime,
       preValidationQuery: s.preValidationQuery,
       postValidationQuery: s.effectiveQuery,
       droppedFields: s.droppedFields,
@@ -270,6 +278,7 @@ export class DebugMenuManager {
     set('debugRawPre', this._toPretty({
       sourceInsights: s.insights,
       locationParsing: s.locationParsing,
+      locationRuntime: s.locationRuntime,
       canonicalPatch: s.canonicalPatch,
       preValidationQuery: s.preValidationQuery,
       postValidationQuery: s.effectiveQuery,
