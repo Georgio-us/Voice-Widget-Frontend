@@ -248,6 +248,15 @@ export class APIClient {
     if (action === 'open_manager') {
       try {
         this.widget?.showScreen?.('request');
+        const requestEl = this.widget?.shadowRoot?.getElementById?.('requestScreen');
+        if (requestEl) {
+          requestEl.classList.remove('request-enter');
+          // restart animation deterministically
+          void requestEl.offsetWidth;
+          requestEl.classList.add('request-enter');
+          const clear = () => requestEl.classList.remove('request-enter');
+          requestEl.addEventListener('animationend', clear, { once: true });
+        }
         return true;
       } catch {
         return false;

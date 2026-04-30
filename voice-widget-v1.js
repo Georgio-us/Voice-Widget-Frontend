@@ -1245,6 +1245,13 @@ render() {
   .dialog-screen.hidden{ display:none; }
   .context-screen.hidden{ display:none; }
   .request-screen.hidden{ display:none; }
+  .request-screen.request-enter{
+    animation: requestScreenEnter .24s ease-out;
+  }
+  @keyframes requestScreenEnter{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
   .debug-screen.hidden{ display:none; }
 
   /* Chat */
