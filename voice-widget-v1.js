@@ -1576,7 +1576,7 @@ render() {
   .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
   .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
   .card-slide--form-open .card-slide-back{ display:none !important; }
-  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:440px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:16px; box-sizing:border-box; }
+  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:440px; overflow:visible; background:var(--bg-card); border-radius:14px; padding:16px; box-sizing:border-box; }
   .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
   .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
   .card-form-header__back img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
@@ -1792,7 +1792,8 @@ render() {
   .card-slide-back .in-dialog-lead{ margin-bottom: 10px; }
   .dialog-screen .in-dialog-lead__body,
   .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; }
-  .card-slide-form .in-dialog-lead__body{ padding:2px; display:grid; gap:10px; max-height:100%; overflow-y:auto; }
+  .card-slide-form .in-dialog-lead{ display:flex; flex-direction:column; flex:1 1 auto; min-height:0; }
+  .card-slide-form .in-dialog-lead__body{ padding:2px; display:grid; gap:10px; flex:1 1 auto; min-height:0; overflow-y:auto; }
   .dialog-screen .in-dialog-lead__title,
   .card-slide-back .in-dialog-lead__title{
     font-family: var(--ff);
