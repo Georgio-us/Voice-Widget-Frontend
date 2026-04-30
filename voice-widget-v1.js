@@ -5433,6 +5433,7 @@ render() {
     } else if (e.target.matches('.in-dialog-lead__cancel')) {
       const slide = e.target.closest('.card-slide');
       if (slide) {
+        slide.classList.remove('card-slide--form-open');
         slide.classList.remove('flipped');
       } else {
         try { this.cancelHandoffFlowUI(); } catch {}
@@ -6547,7 +6548,10 @@ render() {
         .then((result) => {
           if (result?.ok === true) {
             const slide = formRoot?.closest('.card-slide');
-            if (slide) slide.classList.remove('flipped');
+            if (slide) {
+              slide.classList.remove('card-slide--form-open');
+              slide.classList.remove('flipped');
+            }
             try { this.cancelHandoffFlowUI(); } catch {}
             try { this.renderInDialogLeadThanksBlock(); } catch {}
           } else {
