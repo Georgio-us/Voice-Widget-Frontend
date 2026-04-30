@@ -537,10 +537,12 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
+      const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: messageText,
         insightsChanged,
-        hasSelectionAction: !!selectionEvent?.action
+        hasSelectionAction: !!emittedSelectionEvent?.action
       });
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
@@ -555,7 +557,7 @@ export class APIClient {
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
-      this._emitSystemSelectionInfo(selectionEvent);
+      this._emitSystemSelectionInfo(emittedSelectionEvent);
       this._emitSystemSelectionInfo(managerEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
@@ -566,7 +568,7 @@ export class APIClient {
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
-      this._emitSystemSelectionAction(selectionEvent);
+      this._emitSystemSelectionAction(emittedSelectionEvent);
       this._emitSystemSelectionAction(managerEvent);
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
@@ -634,10 +636,12 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
+      const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: messageText,
         insightsChanged,
-        hasSelectionAction: !!selectionEvent?.action
+        hasSelectionAction: !!emittedSelectionEvent?.action
       });
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
@@ -652,7 +656,7 @@ export class APIClient {
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
-      this._emitSystemSelectionInfo(selectionEvent);
+      this._emitSystemSelectionInfo(emittedSelectionEvent);
       this._emitSystemSelectionInfo(managerEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
@@ -663,7 +667,7 @@ export class APIClient {
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
-      this._emitSystemSelectionAction(selectionEvent);
+      this._emitSystemSelectionAction(emittedSelectionEvent);
       this._emitSystemSelectionAction(managerEvent);
       
       // Логируем assistant_reply после получения ответа (main screen)
@@ -769,10 +773,12 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
+      const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: data?.transcription || '',
         insightsChanged,
-        hasSelectionAction: !!selectionEvent?.action
+        hasSelectionAction: !!emittedSelectionEvent?.action
       });
 
       // ✅ подхватываем новую sessionId с сервера
@@ -801,7 +807,7 @@ export class APIClient {
       }
 
       if (data.insights) this.widget.understanding.update(data.insights);
-      this._emitSystemSelectionInfo(selectionEvent);
+      this._emitSystemSelectionInfo(emittedSelectionEvent);
       this._emitSystemSelectionInfo(managerEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
@@ -813,7 +819,7 @@ export class APIClient {
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
-      this._emitSystemSelectionAction(selectionEvent);
+      this._emitSystemSelectionAction(emittedSelectionEvent);
       this._emitSystemSelectionAction(managerEvent);
       
       // Логируем assistant_reply после получения ответа (аудио)
