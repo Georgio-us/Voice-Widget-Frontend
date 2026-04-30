@@ -1706,8 +1706,8 @@ render() {
     flex-direction:column;
     gap:12px;
     border-radius:16px;
-    background:rgba(23,22,24,.95);
-    border:1px solid rgba(106,108,155,.30);
+    background:var(--bg-card);
+    border:1px solid rgba(65,120,207,.35);
     padding:14px;
     box-sizing:border-box;
   }
@@ -1716,18 +1716,18 @@ render() {
     overflow-y:auto;
     font-size:12px;
     line-height:1.45;
-    color:#FFFFFF;
+    color:var(--color-text);
     white-space:pre-line;
     text-align:left;
   }
   .card-desc-modal__actions{ display:flex; justify-content:center; }
   .card-desc-modal__ok{
-    min-width: var(--btn-min-w);
-    padding: var(--btn-py) var(--btn-px);
-    border-radius: var(--btn-radius);
-    border:1.25px solid var(--color-accent);
-    background:var(--color-accent);
-    color:#fff;
+    min-width: 72px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border:1px solid var(--color-accent);
+    background:transparent;
+    color:var(--color-accent);
     font-size:12px;
     font-weight:600;
     cursor:pointer;
