@@ -65,9 +65,17 @@ export class APIClient {
         cards
       };
 
+      const locationFallbackMessage = typeof data?.queryTraceV1?.relaxed?.locationFallbackMessage === 'string'
+        ? data.queryTraceV1.relaxed.locationFallbackMessage.trim()
+        : '';
+      const prefaceInfo = locationFallbackMessage
+        ? { type: 'info', text: locationFallbackMessage }
+        : null;
+
       if (matchedCount > 0) {
         const txt = this.t('systemMatchesFound', { count: matchedCount }) || `Подборка обновлена · найдено ${matchedCount} объектов`;
         return {
+          prefaceInfo,
           info: {
             type: 'info',
             text: txt
@@ -87,6 +95,7 @@ export class APIClient {
       }
       const txt = this.t('systemNoMatches') || 'Подборка обновлена · точных совпадений нет';
       return {
+        prefaceInfo,
         info: {
           type: 'info',
           text: txt
@@ -105,6 +114,7 @@ export class APIClient {
         this.widget.ui?.addSystemEventMessage?.(bundle.explicit);
         return;
       }
+      if (bundle.prefaceInfo) this.widget.ui?.addSystemEventMessage?.(bundle.prefaceInfo);
       if (bundle.info) this.widget.ui?.addSystemEventMessage?.(bundle.info);
     } catch {}
   }
