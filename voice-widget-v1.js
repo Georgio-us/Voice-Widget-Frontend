@@ -1263,6 +1263,22 @@ render() {
     text-align:center;
     cursor:pointer;
   }
+  .system-event-text--action{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid rgba(65,120,207,.45);
+    background:rgba(65,120,207,.12);
+    color:var(--color-text);
+    opacity:.95;
+    cursor:pointer;
+    transition:background .15s ease, transform .08s ease, opacity .15s ease;
+  }
+  .system-event-text--action:hover{ background:rgba(65,120,207,.2); }
+  .system-event-text--action:active{ transform:translateY(1px); opacity:.9; }
+  .system-event-text--action:focus-visible{ outline:1px solid rgba(65,120,207,.65); outline-offset:1px; }
   .system-event-text.is-expanded{
     white-space:normal;
     overflow:visible;
@@ -2357,12 +2373,12 @@ render() {
                 .input-container {
                     width: 100%;
                     max-width: 360px;
-                    height: 60px;
+                    height: 50px;
                     background:
                       linear-gradient(#2B272C, #2B272C) padding-box,
                     #4178CF border-box;
                     border: 1px solid transparent;
-                    border-radius: 40px;
+                    border-radius: 16px;
                     display: flex;
                     gap: 12px;
                     align-items: center;
@@ -5465,20 +5481,7 @@ render() {
       const container = e.target.closest('.card-screen');
       if (container) container.remove();
       // ❗ Начинаем новый показ: удалим старый слайдер (если был)
-      try {
-        const oldHost = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
-        if (oldHost && oldHost.parentElement) {
-          // 🆕 Sprint IV: отправляем ui_slider_ended перед удалением slider host (выход из slider-режима)
-          if (this.api) {
-            try {
-              this.api.sendSliderEnded();
-            } catch (e) {
-              console.warn('Error sending slider ended confirmation:', e);
-            }
-          }
-          oldHost.parentElement.removeChild(oldHost);
-        }
-      } catch {}
+      this.resetCardsSliderHost();
       // Мгновенно покажем карточку локально, чтобы не ждать сети
       try {
         if (this._lastSuggestedCard) {
@@ -5842,6 +5845,27 @@ render() {
       } else {
         textInput.classList.remove('shake');
       }
+    }
+  }
+
+  resetCardsSliderHost() {
+    try {
+      const oldHost = this.shadowRoot.querySelector('.card-screen.cards-slider-host');
+      if (oldHost && oldHost.parentElement) {
+        if (this.api) {
+          try { this.api.sendSliderEnded(); } catch {}
+        }
+        oldHost.parentElement.removeChild(oldHost);
+      }
+    } catch {}
+  }
+
+  async handleSystemEventAction(event = {}) {
+    try {
+      if (!event || typeof event !== 'object') return false;
+      return await this.api?.handleSystemEventAction?.(event);
+    } catch {
+      return false;
     }
   }
 

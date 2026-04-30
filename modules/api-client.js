@@ -13,6 +13,9 @@ export class APIClient {
     // --- Cards state (infra for future "brain") ---
     this.lastProposedCards = [];     // последние предложенные карточки (объекты)
     this.lastShownCardId = null;     // последняя реально показанная карточка (id)
+    this.lastSelectionSnapshot = null; // последняя актуальная подборка (для action system-event)
+    this._lastHandledActionEventId = null;
+    this._lastHandledSelectionVersion = null;
   }
 
   t(key, params = null) {
@@ -39,18 +42,122 @@ export class APIClient {
 
   _emitSystemSelectionEvent(data = {}) {
     try {
+      const explicit = data?.ui?.systemEvent;
+      if (explicit && typeof explicit === 'object') {
+        this.widget.ui?.addSystemEventMessage?.(explicit);
+        return;
+      }
+
       const matchedCount = data?.queryTraceV1 && Number.isFinite(data.queryTraceV1.matchedCount)
         ? data.queryTraceV1.matchedCount
         : null;
       if (matchedCount === null) return;
+      const postQuery = data?.queryTraceV1?.postValidationQuery || null;
+      const queryTrace = data?.queryTraceV1 || null;
+      const cards = Array.isArray(data?.cards) ? data.cards : [];
+      const selectionVersion = this._buildSelectionVersion(postQuery, matchedCount);
+      const eventId = `sel_${selectionVersion}`;
+      this.lastSelectionSnapshot = {
+        selectionVersion,
+        eventId,
+        matchedCount,
+        postQuery,
+        queryTrace,
+        cards
+      };
+
       if (matchedCount > 0) {
         const txt = this.t('systemMatchesFound', { count: matchedCount }) || `Подборка обновлена · найдено ${matchedCount} объектов`;
-        this.widget.ui?.addSystemEventMessage?.(txt);
+        this.widget.ui?.addSystemEventMessage?.({
+          type: 'action',
+          text: `${txt} · открыть`,
+          action: 'open_results',
+          payload: {
+            eventId,
+            selectionVersion,
+            count: matchedCount,
+            autofocusFirst: true
+          }
+        });
       } else {
         const txt = this.t('systemNoMatches') || 'Подборка обновлена · точных совпадений нет';
         this.widget.ui?.addSystemEventMessage?.(txt);
       }
     } catch {}
+  }
+
+  _buildSelectionVersion(postQuery, matchedCount) {
+    try {
+      const src = JSON.stringify({ postQuery: postQuery || null, matchedCount: Number(matchedCount) || 0 });
+      let h = 2166136261;
+      for (let i = 0; i < src.length; i++) {
+        h ^= src.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return `v_${(h >>> 0).toString(16)}`;
+    } catch {
+      return `v_${Date.now()}`;
+    }
+  }
+
+  async handleSystemEventAction({ action, payload } = {}) {
+    if (action !== 'open_results') return false;
+    const eventId = payload?.eventId || null;
+    const selectionVersion = payload?.selectionVersion || null;
+    if (eventId && this._lastHandledActionEventId === eventId) return true;
+    if (!eventId && selectionVersion && this._lastHandledSelectionVersion === selectionVersion) return true;
+    const ok = await this.openLatestResults({ autofocusFirst: payload?.autofocusFirst !== false });
+    if (ok) {
+      this._lastHandledActionEventId = eventId || this._lastHandledActionEventId;
+      this._lastHandledSelectionVersion = selectionVersion || this._lastHandledSelectionVersion;
+    }
+    return ok;
+  }
+
+  async openLatestResults({ autofocusFirst = true } = {}) {
+    try {
+      const snapshot = this.lastSelectionSnapshot || null;
+      const cards = Array.isArray(snapshot?.cards) ? snapshot.cards : this.lastProposedCards;
+      if (Array.isArray(cards) && cards.length) {
+        const first = cards[0];
+        if (!first) return false;
+        this.widget._lastSuggestedCard = first;
+        try { this.widget.resetCardsSliderHost?.(); } catch {}
+        this.widget.showMockCardWithActions(first);
+        this.widget.scrollCardHostIntoView?.();
+        if (autofocusFirst && first?.id) {
+          try { await this.sendCardInteraction('show', String(first.id)); } catch {}
+        }
+        return true;
+      }
+
+      // Если локальных карточек нет — запросим первый вариант у сервера.
+      const interactionUrl = this.apiUrl.replace('/upload', '/interaction');
+      const response = await fetch(interactionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'show',
+          sessionId: this.widget.sessionId || '',
+          lang: this._getUiLang()
+        })
+      });
+      if (!response.ok) return false;
+      const data = await response.json().catch(() => ({}));
+      try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/interaction', requestType: 'interaction_show' }); } catch {}
+      this._emitSystemSelectionEvent(data);
+      if (data && data.card) {
+        try { this.widget.resetCardsSliderHost?.(); } catch {}
+        this.widget.showMockCardWithActions(data.card);
+        this.widget.scrollCardHostIntoView?.();
+        this._rememberShown(data.card.id || null);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn('openLatestResults failed:', e);
+      return false;
+    }
   }
 
   // ---------- Cards API helpers ----------

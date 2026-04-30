@@ -435,21 +435,44 @@ export class UIManager {
       const systemText = document.createElement('span');
       systemText.className = 'system-event-text';
       systemText.textContent = String(message.content || '');
-      systemText.setAttribute('role', 'button');
-      systemText.setAttribute('tabindex', '0');
-      systemText.setAttribute('aria-expanded', 'false');
-
-      const toggleExpanded = () => {
-        const expanded = systemText.classList.toggle('is-expanded');
-        systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      };
-      systemText.addEventListener('click', toggleExpanded);
-      systemText.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          toggleExpanded();
-        }
-      });
+      const isAction = message.systemType === 'action' && message.action === 'open_results';
+      if (isAction) {
+        systemText.classList.add('system-event-text--action');
+        systemText.setAttribute('role', 'button');
+        systemText.setAttribute('tabindex', '0');
+        const trigger = () => {
+          try {
+            this.widget?.handleSystemEventAction?.({
+              action: message.action,
+              payload: message.payload || null,
+              eventId: message.eventId || null,
+              selectionVersion: message.selectionVersion || null
+            });
+          } catch {}
+        };
+        systemText.addEventListener('click', trigger);
+        systemText.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            trigger();
+          }
+        });
+      } else {
+        systemText.setAttribute('role', 'button');
+        systemText.setAttribute('tabindex', '0');
+        systemText.setAttribute('aria-expanded', 'false');
+        const toggleExpanded = () => {
+          const expanded = systemText.classList.toggle('is-expanded');
+          systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        };
+        systemText.addEventListener('click', toggleExpanded);
+        systemText.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleExpanded();
+          }
+        });
+      }
 
       systemLine.appendChild(systemText);
       wrapper.appendChild(systemLine);
@@ -495,12 +518,41 @@ export class UIManager {
     }
   }
 
-  addSystemEventMessage(text = '') {
-    const payload = String(text || '').trim();
-    if (!payload) return;
+  addSystemEventMessage(input = '') {
+    const isObject = input && typeof input === 'object' && !Array.isArray(input);
+    const content = isObject ? String(input.text || '').trim() : String(input || '').trim();
+    if (!content) return;
+
+    const action = isObject ? (input.action || null) : null;
+    const supportedAction = action === 'open_results';
+    const systemType = isObject && input.type === 'action' && supportedAction ? 'action' : 'info';
+    const payload = isObject && input.payload && typeof input.payload === 'object' ? input.payload : null;
+    const eventId = payload?.eventId || (isObject ? input.eventId : null) || null;
+    const selectionVersion = payload?.selectionVersion || (isObject ? input.selectionVersion : null) || null;
+
+    const dedupeKey = eventId
+      ? `event:${eventId}`
+      : (systemType === 'action' && action && selectionVersion
+          ? `action:${action}:${selectionVersion}`
+          : `text:${content}`);
+
+    if (!this.widget._seenSystemEventKeys) this.widget._seenSystemEventKeys = new Set();
+    if (this.widget._seenSystemEventKeys.has(dedupeKey)) return;
+    this.widget._seenSystemEventKeys.add(dedupeKey);
+
     const last = this.widget.messages?.[this.widget.messages.length - 1];
-    if (last && last.type === 'system' && String(last.content || '').trim() === payload) return;
-    this.addMessage({ type: 'system', content: payload, timestamp: new Date() });
+    if (last && last.type === 'system' && String(last.content || '').trim() === content && last.systemType === systemType) return;
+
+    this.addMessage({
+      type: 'system',
+      systemType,
+      action,
+      payload,
+      eventId,
+      selectionVersion,
+      content,
+      timestamp: new Date()
+    });
   }
 
   showThinkingIndicator() {
