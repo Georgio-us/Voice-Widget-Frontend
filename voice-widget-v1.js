@@ -88,7 +88,7 @@ const LOCALES = {
     ctxDataStorage: 'Хранение и шифрование данных',
     ctxStageMessage: 'Отлично! Вы заполнили систему данными, и теперь подбор будет точнее.',
     ctxHint: 'Вы можете оставить заявку, чтобы менеджер сразу начал работу по вашему кейсу',
-    leaveRequest: 'Оставить заявку',
+    leaveRequest: 'Связаться',
     namePlaceholder: 'Имя',
     phonePlaceholder: 'Телефон',
     emailPlaceholder: 'E-mail',
