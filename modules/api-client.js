@@ -437,8 +437,12 @@ export class APIClient {
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
-      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
-      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      const assistantMessage = {
+        type: 'assistant',
+        content: parsed.cleaned || this.t('responseMissing'),
+        timestamp: new Date()
+      };
+      this.widget.ui.addMessage(assistantMessage);
       this._emitSystemSelectionAction(selectionEvent);
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
@@ -522,8 +526,12 @@ export class APIClient {
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
-      const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
-      if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      const assistantMessage = {
+        type: 'assistant',
+        content: parsed.cleaned || this.t('responseMissing'),
+        timestamp: new Date()
+      };
+      this.widget.ui.addMessage(assistantMessage);
       this._emitSystemSelectionAction(selectionEvent);
       
       // Логируем assistant_reply после получения ответа (main screen)
