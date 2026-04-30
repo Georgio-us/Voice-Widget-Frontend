@@ -170,6 +170,7 @@ export class DebugMenuManager {
     const insights = { ...(insightsRaw || {}) };
     delete insights.progress;
     const canonicalPatch = serverTrace?.canonicalPatch || null;
+    const locationExtraction = serverTrace?.locationExtraction || null;
     const locationParsing = serverTrace?.locationSemantics || null;
     const effectiveQuery = serverTrace?.postValidationQuery || null;
     const preValidationQuery = serverTrace?.preValidationQuery || null;
@@ -200,7 +201,7 @@ export class DebugMenuManager {
       cardsCount: Array.isArray(this.lastApiPayload?.cards) ? this.lastApiPayload.cards.length : 0,
       historyTail: this.selectionHistory.slice(-20)
     };
-    return { insights, canonicalPatch, locationParsing, locationRuntime, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
+    return { insights, canonicalPatch, locationExtraction, locationParsing, locationRuntime, preValidationQuery, effectiveQuery, droppedFields, missingFields, matchedCount, candidates, match, apiMeta, dialog };
   }
 
   buildReportText(snapshot) {
@@ -215,6 +216,9 @@ export class DebugMenuManager {
     lines.push('');
     lines.push('[Canonical patch]');
     lines.push(this._toPretty(s.canonicalPatch));
+    lines.push('');
+    lines.push('[Location extraction]');
+    lines.push(this._toPretty(s.locationExtraction));
     lines.push('');
     lines.push('[Location parsing]');
     lines.push(this._toPretty(s.locationParsing));
@@ -253,6 +257,7 @@ export class DebugMenuManager {
     set('debugInsightsPre', this._toPretty(s.insights));
     set('debugCanonicalPre', this._toPretty(s.canonicalPatch));
     set('debugQueryPre', this._toPretty({
+      locationExtraction: s.locationExtraction,
       locationParsing: s.locationParsing,
       locationRuntime: s.locationRuntime,
       preValidationQuery: s.preValidationQuery,
@@ -277,6 +282,7 @@ export class DebugMenuManager {
     set('debugDialogPre', this._toPretty(s.dialog));
     set('debugRawPre', this._toPretty({
       sourceInsights: s.insights,
+      locationExtraction: s.locationExtraction,
       locationParsing: s.locationParsing,
       locationRuntime: s.locationRuntime,
       canonicalPatch: s.canonicalPatch,
