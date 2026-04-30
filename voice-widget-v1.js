@@ -2244,6 +2244,14 @@ render() {
                 :host([theme="light"]) .dial-item:hover {
                   background: rgba(0, 0, 0, 0.08);
                 }
+                :host([data-theme="light"]) .dial-btn,
+                :host([theme="light"]) .dial-btn,
+                :host([data-theme="light"]) .card-slide-form .in-dialog-lead__phone-row .dial-btn,
+                :host([theme="light"]) .card-slide-form .in-dialog-lead__phone-row .dial-btn {
+                  background: rgba(0, 0, 0, 0.06);
+                  border-color: rgba(0, 0, 0, 0.15);
+                  color: var(--color-text);
+                }
                 :host([data-theme="light"]) .request-select,
                 :host([theme="light"]) .request-select {
                   color: var(--color-text);
@@ -2937,6 +2945,9 @@ render() {
                 
                 .request-field {
                     margin-bottom: 20px;
+                }
+                @media (max-width: 450px){
+                    #requestScreen #reqCommentField { display: none; }
                 }
                 
                 .request-field-label {
@@ -3702,7 +3713,7 @@ render() {
               </div>
               <input type="hidden" id="reqMethod" value="WhatsApp" />
           </div>
-            <div class="request-field">
+            <div class="request-field" id="reqCommentField">
               <div class="request-field-label">Comment (optional)</div>
               <textarea class="request-textarea" id="reqComment" placeholder="Short note"></textarea>
         </div>
