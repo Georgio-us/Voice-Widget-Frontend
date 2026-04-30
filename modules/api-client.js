@@ -40,18 +40,17 @@ export class APIClient {
     }
   }
 
-  _emitSystemSelectionEvent(data = {}) {
+  _prepareSystemSelectionEvent(data = {}) {
     try {
       const explicit = data?.ui?.systemEvent;
       if (explicit && typeof explicit === 'object') {
-        this.widget.ui?.addSystemEventMessage?.(explicit);
-        return;
+        return { explicit };
       }
 
       const matchedCount = data?.queryTraceV1 && Number.isFinite(data.queryTraceV1.matchedCount)
         ? data.queryTraceV1.matchedCount
         : null;
-      if (matchedCount === null) return;
+      if (matchedCount === null) return null;
       const postQuery = data?.queryTraceV1?.postValidationQuery || null;
       const queryTrace = data?.queryTraceV1 || null;
       const cards = Array.isArray(data?.cards) ? data.cards : [];
@@ -68,26 +67,59 @@ export class APIClient {
 
       if (matchedCount > 0) {
         const txt = this.t('systemMatchesFound', { count: matchedCount }) || `Подборка обновлена · найдено ${matchedCount} объектов`;
-        this.widget.ui?.addSystemEventMessage?.({
+        return {
+          info: {
+            type: 'info',
+            text: txt
+          },
+          action: {
+            type: 'action',
+            text: this.t('systemOpenSelection') || 'Смотреть подборку',
+            action: 'open_results',
+            payload: {
+              eventId,
+              selectionVersion,
+              count: matchedCount,
+              autofocusFirst: true
+            }
+          }
+        };
+      }
+      const txt = this.t('systemNoMatches') || 'Подборка обновлена · точных совпадений нет';
+      return {
+        info: {
           type: 'info',
           text: txt
-        });
-        this.widget.ui?.addSystemEventMessage?.({
-          type: 'action',
-          text: this.t('systemOpenSelection') || 'Смотреть подборку',
-          action: 'open_results',
-          payload: {
-            eventId,
-            selectionVersion,
-            count: matchedCount,
-            autofocusFirst: true
-          }
-        });
-      } else {
-        const txt = this.t('systemNoMatches') || 'Подборка обновлена · точных совпадений нет';
-        this.widget.ui?.addSystemEventMessage?.(txt);
+        },
+        action: null
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  _emitSystemSelectionInfo(bundle) {
+    try {
+      if (!bundle) return;
+      if (bundle.explicit) {
+        this.widget.ui?.addSystemEventMessage?.(bundle.explicit);
+        return;
       }
+      if (bundle.info) this.widget.ui?.addSystemEventMessage?.(bundle.info);
     } catch {}
+  }
+
+  _emitSystemSelectionAction(bundle) {
+    try {
+      if (!bundle || bundle.explicit) return;
+      if (bundle.action) this.widget.ui?.addSystemEventMessage?.(bundle.action);
+    } catch {}
+  }
+
+  _emitSystemSelectionEvent(data = {}) {
+    const bundle = this._prepareSystemSelectionEvent(data);
+    this._emitSystemSelectionInfo(bundle);
+    this._emitSystemSelectionAction(bundle);
   }
 
   _buildSelectionVersion(postQuery, matchedCount) {
@@ -387,6 +419,7 @@ export class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
+      const selectionEvent = this._prepareSystemSelectionEvent(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -400,12 +433,13 @@ export class APIClient {
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
+      this._emitSystemSelectionInfo(selectionEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
-      this._emitSystemSelectionEvent(data);
+      this._emitSystemSelectionAction(selectionEvent);
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
@@ -470,6 +504,7 @@ export class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
+      const selectionEvent = this._prepareSystemSelectionEvent(data);
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -483,12 +518,13 @@ export class APIClient {
       this.widget.ui.updateMessageCount();
 
       if (data.insights) this.widget.understanding.update(data.insights);
+      this._emitSystemSelectionInfo(selectionEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
-      this._emitSystemSelectionEvent(data);
+      this._emitSystemSelectionAction(selectionEvent);
       
       // Логируем assistant_reply после получения ответа (main screen)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
@@ -591,6 +627,7 @@ export class APIClient {
 
       const data = await response.json().catch(() => ({}));
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
+      const selectionEvent = this._prepareSystemSelectionEvent(data);
 
       // ✅ подхватываем новую sessionId с сервера
       if (data?.sessionId) this.widget.ui?._setSessionIdAndDisplay(data.sessionId);
@@ -618,6 +655,7 @@ export class APIClient {
       }
 
       if (data.insights) this.widget.understanding.update(data.insights);
+      this._emitSystemSelectionInfo(selectionEvent);
 
       const assistantRaw = data[this.responseField] || this.t('responseMissing');
       const parsed = this.extractHiddenCommands(assistantRaw);
@@ -628,7 +666,7 @@ export class APIClient {
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
-      this._emitSystemSelectionEvent(data);
+      this._emitSystemSelectionAction(selectionEvent);
       
       // Логируем assistant_reply после получения ответа (аудио)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
