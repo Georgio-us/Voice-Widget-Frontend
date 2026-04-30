@@ -1576,7 +1576,7 @@ render() {
   .card-slide.flipped .card-slide-back{ opacity:1; pointer-events:auto; }
   .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
   .card-slide--form-open .card-slide-back{ display:none !important; }
-  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:440px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:18px; box-sizing:border-box; }
+  .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:440px; overflow:hidden; background:var(--bg-card); border-radius:14px; padding:16px; box-sizing:border-box; }
   .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
   .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
   .card-form-header__back img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
@@ -1792,7 +1792,7 @@ render() {
   .card-slide-back .in-dialog-lead{ margin-bottom: 10px; }
   .dialog-screen .in-dialog-lead__body,
   .card-slide-back .in-dialog-lead__body{ padding:12px; display:grid; gap:12px; }
-  .card-slide-form .in-dialog-lead__body{ padding:2px; display:grid; gap:12px; max-height:100%; overflow-y:auto; }
+  .card-slide-form .in-dialog-lead__body{ padding:2px; display:grid; gap:10px; max-height:100%; overflow-y:auto; }
   .dialog-screen .in-dialog-lead__title,
   .card-slide-back .in-dialog-lead__title{
     font-family: var(--ff);
@@ -1822,6 +1822,19 @@ render() {
   .card-slide-back .in-dialog-lead__phone-row .dial-select{ flex:0 0 auto; }
   .dialog-screen .in-dialog-lead__phone-row .in-dialog-lead__input,
   .card-slide-back .in-dialog-lead__phone-row .in-dialog-lead__input{ flex:1 1 auto; min-width:0; }
+  .card-slide-form .in-dialog-lead__phone-row .dial-btn{
+    height: var(--field-h);
+    line-height: var(--field-h);
+    border-radius:10px;
+    background:rgba(106,108,155,.10);
+    border:1px solid rgba(106,108,155,.30);
+    color: var(--color-text);
+    font-family: var(--ff);
+    font-size:12px;
+    font-weight:400;
+    padding:0 var(--space-s);
+    box-sizing:border-box;
+  }
   /* Visual reference: ctx-input (Context Screen) but with new class */
   .dialog-screen .in-dialog-lead__input,
   .card-slide-back .in-dialog-lead__input{
@@ -1878,6 +1891,7 @@ render() {
   /* Visual reference: ctx-send-btn (Context Screen) but with new class */
   .dialog-screen .in-dialog-lead__actions,
   .card-slide-back .in-dialog-lead__actions{ display:flex; gap: var(--space-m); margin-top: 6px; }
+  .card-slide-form .in-dialog-lead__actions{ gap:10px; margin-top:4px; }
   .dialog-screen .in-dialog-lead__send,
   .card-slide-back .in-dialog-lead__send{
     flex:1 1 0;
@@ -1913,6 +1927,11 @@ render() {
   .card-slide-back .in-dialog-lead__cancel:hover{ opacity:.9; transform: translateY(-1px); }
   .dialog-screen .in-dialog-lead__cancel:active,
   .card-slide-back .in-dialog-lead__cancel:active{ transform: translateY(0); opacity:.85; }
+  .card-slide-form .in-dialog-lead__send,
+  .card-slide-form .in-dialog-lead__cancel{
+    min-width:0;
+    padding:6px 10px;
+  }
 
   /* In-dialog thanks (UI-only) */
   .dialog-screen .in-dialog-thanks__title{ font-size:14px; font-weight:600; color: var(--color-text); margin-bottom:6px; text-align:center; }
