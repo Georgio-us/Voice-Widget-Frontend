@@ -513,6 +513,7 @@ class VoiceWidget extends HTMLElement {
 
     this.render();
     this.bindEvents();
+    this.resetSessionOnPageLoad();
     this.checkBrowserSupport();
     this.initializeUI();
   }
@@ -528,6 +529,29 @@ class VoiceWidget extends HTMLElement {
     } catch {
       return null;
     }
+  }
+
+  resetSessionOnPageLoad() {
+    try {
+      const toDelete = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        if (
+          key === 'vw_sessionId' ||
+          key === 'voiceWidgetSessionId' ||
+          key === 'vw_last_snapshot' ||
+          key.startsWith('vw_thread_')
+        ) {
+          toDelete.push(key);
+        }
+      }
+      toDelete.forEach((key) => localStorage.removeItem(key));
+    } catch {}
+    try { sessionStorage.removeItem('vw_greeting_shown'); } catch {}
+    this.sessionId = null;
+    this.messages = [];
+    try { this.ui?._setSessionIdAndDisplay?.(null); } catch {}
   }
 
   getInitialLanguage() {
@@ -837,22 +861,8 @@ class VoiceWidget extends HTMLElement {
     this.ui.bindAccordionEvents();
     // (scrim удалён как неиспользуемый)
 
-    // 1) проверяем session на сервере 2) только потом грузим локальную историю (без "мигания")
-    if (this.sessionId) {
-      this.api.loadSessionInfo()
-        .then((state) => {
-          if (state?.expired) {
-            try { this.ui.clearMessages(); } catch {}
-            return;
-          }
-          try { this.ui.loadHistory(); } catch {}
-        })
-        .catch(() => {
-          try { this.ui.loadHistory(); } catch {}
-        });
-    } else {
-      this.ui.loadHistory();
-    }
+    // Contract: page reload/new tab starts a fresh session.
+    // Keep thread empty until first user message.
 
     // Initialize understanding bar with 0%
     this.updateHeaderUnderstanding(0);
@@ -1272,14 +1282,14 @@ render() {
     justify-content:center;
     padding:6px 12px;
     border-radius:999px;
-    border:1px solid rgba(65,120,207,.45);
-    background:rgba(65,120,207,.12);
-    color:var(--color-text);
-    opacity:.95;
+    border:1px solid var(--color-accent);
+    background:var(--color-accent);
+    color:#FFFFFF;
+    opacity:1;
     cursor:pointer;
     transition:background .15s ease, transform .08s ease, opacity .15s ease;
   }
-  .system-event-text--action:hover{ background:rgba(65,120,207,.2); }
+  .system-event-text--action:hover{ background:#3A6CB9; }
   .system-event-text--action:active{ transform:translateY(1px); opacity:.9; }
   .system-event-text--action:focus-visible{ outline:1px solid rgba(65,120,207,.65); outline-offset:1px; }
   .system-event-text.is-expanded{
@@ -3969,12 +3979,8 @@ render() {
     this.classList.add("open");
     try { this._enableOutsideClose?.(); } catch {}
     this.showChatScreen();
-    try {
-      if (!sessionStorage.getItem('vw_greeting_shown')) {
-        this.showGreetingMessage();
-        sessionStorage.setItem('vw_greeting_shown', '1');
-      }
-    } catch {}
+    const hasMessages = Array.isArray(this.messages) && this.messages.length > 0;
+    if (!hasMessages) this.showGreetingMessage();
     
     // Логируем session_start при первом открытии
     if (!_sessionStarted) {
