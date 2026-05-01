@@ -247,6 +247,59 @@ export class APIClient {
     }
   }
 
+  _normalizeApiResponse(rawData, requestType = 'unknown') {
+    const data = (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) ? rawData : {};
+    const machine = (data.machinePayload && typeof data.machinePayload === 'object' && !Array.isArray(data.machinePayload))
+      ? data.machinePayload
+      : null;
+
+    if (!rawData || typeof rawData !== 'object' || Array.isArray(rawData)) {
+      console.warn(`[VW][contract:${requestType}] API response is not an object`);
+    }
+
+    if (machine) {
+      if (!data[this.responseField] && typeof machine.assistantText === 'string') {
+        data[this.responseField] = machine.assistantText;
+      }
+      if (!data.insights && machine.insights && typeof machine.insights === 'object') {
+        data.insights = machine.insights;
+      }
+      if (!Array.isArray(data.cards) && Array.isArray(machine.cards)) {
+        data.cards = machine.cards;
+      }
+      if (!data.ui && machine.ui && typeof machine.ui === 'object') {
+        data.ui = machine.ui;
+      }
+      if (!data.queryTraceV1 && machine.queryTraceV1 && typeof machine.queryTraceV1 === 'object') {
+        data.queryTraceV1 = machine.queryTraceV1;
+      }
+      if (!data.sessionId && machine.sessionId) {
+        data.sessionId = machine.sessionId;
+      }
+    }
+
+    if (typeof data[this.responseField] !== 'string') {
+      console.warn(`[VW][contract:${requestType}] Missing assistant text field "${this.responseField}"`);
+    }
+    if (data.insights != null && (typeof data.insights !== 'object' || Array.isArray(data.insights))) {
+      console.warn(`[VW][contract:${requestType}] Invalid insights shape`);
+    }
+    if (data.cards != null && !Array.isArray(data.cards)) {
+      console.warn(`[VW][contract:${requestType}] Invalid cards shape`);
+      data.cards = [];
+    }
+    if (data.ui != null && (typeof data.ui !== 'object' || Array.isArray(data.ui))) {
+      console.warn(`[VW][contract:${requestType}] Invalid ui shape`);
+      data.ui = null;
+    }
+    if (data.queryTraceV1 != null && (typeof data.queryTraceV1 !== 'object' || Array.isArray(data.queryTraceV1))) {
+      console.warn(`[VW][contract:${requestType}] Invalid queryTraceV1 shape`);
+      data.queryTraceV1 = null;
+    }
+
+    return data;
+  }
+
   async handleSystemEventAction({ action, payload } = {}) {
     if (action === 'open_manager') {
       try {
@@ -307,7 +360,8 @@ export class APIClient {
         })
       });
       if (!response.ok) return false;
-      const data = await response.json().catch(() => ({}));
+      const rawData = await response.json().catch(() => ({}));
+      const data = this._normalizeApiResponse(rawData, 'interaction_show');
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/interaction', requestType: 'interaction_show' }); } catch {}
       if (data && data.card) {
         try { this.widget.resetCardsSliderHost?.(); } catch {}
@@ -545,7 +599,8 @@ export class APIClient {
       console.log('📤 Текст →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
-      const data = await response.json().catch(() => ({}));
+      const rawData = await response.json().catch(() => ({}));
+      const data = this._normalizeApiResponse(rawData, 'text');
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
@@ -644,7 +699,8 @@ export class APIClient {
       console.log('📤 Текст (main) →', this.apiUrl, 'sid:', this.widget.sessionId, 'lang:', replyLang);
 
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
-      const data = await response.json().catch(() => ({}));
+      const rawData = await response.json().catch(() => ({}));
+      const data = this._normalizeApiResponse(rawData, 'text_main');
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
@@ -781,7 +837,8 @@ export class APIClient {
       const response = await fetch(this.apiUrl, { method: 'POST', body: fd });
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-      const data = await response.json().catch(() => ({}));
+      const rawData = await response.json().catch(() => ({}));
+      const data = this._normalizeApiResponse(rawData, 'audio');
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
