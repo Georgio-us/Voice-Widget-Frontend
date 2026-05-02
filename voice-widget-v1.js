@@ -771,6 +771,62 @@ class UIManager {
     if (!root?.classList) return;
     const enabled = this.isDemoFxEnabled();
     root.classList.toggle('demo-fx', enabled);
+    this.ensureDemoFxRuntimeStyles(enabled);
+  }
+
+  ensureDemoFxRuntimeStyles(enabled = false) {
+    const doc = (this.getRoot && this.getRoot()?.ownerDocument) || document;
+    if (!doc) return;
+    const styleId = 'vw-demo-fx-runtime-styles';
+    let styleEl = doc.getElementById(styleId);
+    if (!enabled) {
+      if (styleEl) styleEl.remove();
+      return;
+    }
+    if (!styleEl) {
+      styleEl = doc.createElement('style');
+      styleEl.id = styleId;
+      styleEl.textContent = `
+        .demo-fx { position: relative; }
+        .demo-fx .thinking-bubble { min-width: 68px; padding: 11px 16px; }
+        .demo-fx .thinking-dots { gap: 7px; height: 16px; }
+        .demo-fx .thinking-dots span {
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          background: currentColor;
+          opacity: .35;
+          animation: demoFxThinkingPulseHard 820ms infinite ease-in-out;
+          box-shadow: 0 0 0 rgba(65,120,207,0);
+        }
+        .demo-fx .thinking-dots span:nth-child(2) { animation-delay: .12s; }
+        .demo-fx .thinking-dots span:nth-child(3) { animation-delay: .24s; }
+        @keyframes demoFxThinkingPulseHard {
+          0%, 100% { opacity: .35; transform: translateY(0) scale(1); box-shadow: 0 0 0 rgba(65,120,207,0); }
+          45% { opacity: 1; transform: translateY(-6px) scale(1.2); box-shadow: 0 0 18px rgba(65,120,207,.7); }
+          75% { opacity: .75; transform: translateY(1px) scale(.95); }
+        }
+        .demo-fx .demo-fx-ripple {
+          position: absolute;
+          width: 26px;
+          height: 26px;
+          margin-left: -13px;
+          margin-top: -13px;
+          border-radius: 999px;
+          pointer-events: none;
+          z-index: 9999;
+          border: 2px solid rgba(115, 181, 255, 0.82);
+          background: radial-gradient(circle, rgba(115,181,255,.45) 0%, rgba(115,181,255,.15) 42%, rgba(115,181,255,0) 72%);
+          animation: demoFxRippleHard 920ms cubic-bezier(.15,.9,.2,1) forwards;
+        }
+        @keyframes demoFxRippleHard {
+          0% { opacity: 0.98; transform: scale(0.35); }
+          65% { opacity: 0.72; }
+          100% { opacity: 0; transform: scale(13); }
+        }
+      `;
+      doc.head.appendChild(styleEl);
+    }
   }
 
   bindDemoFxTouchRipple() {
@@ -782,7 +838,7 @@ class UIManager {
       if (!this.isDemoFxEnabled()) return;
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
-      if (!target.closest('button, a, [role="button"], .message-bubble, .card-screen, .pill-action, .vw-filters-overlay, .vw-access-overlay, .cards-slider, .system-event-text')) return;
+      // Demo capture mode: ripple for any visible tap in widget area, including empty background.
       this.spawnDemoFxRipple(event.clientX, event.clientY);
     }, { passive: true });
   }
