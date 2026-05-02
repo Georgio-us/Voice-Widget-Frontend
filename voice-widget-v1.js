@@ -789,40 +789,41 @@ class UIManager {
       styleEl.textContent = `
         .demo-fx { position: relative; }
         .demo-fx .thinking-bubble { min-width: 68px; padding: 11px 16px; }
-        .demo-fx .thinking-dots { gap: 7px; height: 16px; }
+        .demo-fx .thinking-bubble { min-width: 54px; padding: 10px 13px; }
+        .demo-fx .thinking-dots { gap: 4px; height: 10px; }
         .demo-fx .thinking-dots span {
-          width: 9px;
-          height: 9px;
+          width: 7px;
+          height: 7px;
           border-radius: 50%;
           background: currentColor;
-          opacity: .35;
-          animation: demoFxThinkingPulseHard 820ms infinite ease-in-out;
+          opacity: .32;
+          animation: demoFxThinkingPulseHard 900ms infinite ease-in-out;
           box-shadow: 0 0 0 rgba(65,120,207,0);
         }
         .demo-fx .thinking-dots span:nth-child(2) { animation-delay: .12s; }
         .demo-fx .thinking-dots span:nth-child(3) { animation-delay: .24s; }
         @keyframes demoFxThinkingPulseHard {
           0%, 100% { opacity: .35; transform: translateY(0) scale(1); box-shadow: 0 0 0 rgba(65,120,207,0); }
-          45% { opacity: 1; transform: translateY(-6px) scale(1.2); box-shadow: 0 0 18px rgba(65,120,207,.7); }
+          45% { opacity: 1; transform: translateY(-2.5px) scale(1.14); box-shadow: 0 0 10px rgba(65,120,207,.6); }
           75% { opacity: .75; transform: translateY(1px) scale(.95); }
         }
         .demo-fx .demo-fx-ripple {
           position: absolute;
-          width: 26px;
-          height: 26px;
-          margin-left: -13px;
-          margin-top: -13px;
+          width: 22px;
+          height: 22px;
+          margin-left: -11px;
+          margin-top: -11px;
           border-radius: 999px;
           pointer-events: none;
           z-index: 9999;
           border: 2px solid rgba(115, 181, 255, 0.82);
           background: radial-gradient(circle, rgba(115,181,255,.45) 0%, rgba(115,181,255,.15) 42%, rgba(115,181,255,0) 72%);
-          animation: demoFxRippleHard 920ms cubic-bezier(.15,.9,.2,1) forwards;
+          animation: demoFxRippleHard 520ms cubic-bezier(.15,.9,.2,1) forwards;
         }
         @keyframes demoFxRippleHard {
           0% { opacity: 0.98; transform: scale(0.35); }
           65% { opacity: 0.72; }
-          100% { opacity: 0; transform: scale(13); }
+          100% { opacity: 0; transform: scale(2.9); }
         }
       `;
       doc.head.appendChild(styleEl);
