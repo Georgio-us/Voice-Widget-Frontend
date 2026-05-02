@@ -11,6 +11,7 @@ const TELEGRAM_MINIAPP_PATH = process.env.TELEGRAM_MINIAPP_PATH || 'app';
 const VW_API_URL = process.env.VW_API_URL || '';
 const VW_CARDS_SEARCH_URL = process.env.VW_CARDS_SEARCH_URL || '';
 const VW_SHARE_BASE_URL = process.env.VW_SHARE_BASE_URL || FRONTEND_APP_URL || '';
+const VW_DEMO_FX = String(process.env.VW_DEMO_FX || '').trim();
 const SHARE_PREFIX = 'prop_';
 const SHARE_SELECTION_PREFIX = 'sel_';
 const INDEX_HTML_PATH = path.join(__dirname, 'index.html');
@@ -389,6 +390,7 @@ function renderIndexWithOg({ propId, card, injectBaseHref = false, req = null })
     window.__VW_CARDS_SEARCH_URL__ = ${JSON.stringify(EFFECTIVE_VW_CARDS_SEARCH_URL)};
     window.__VW_TELEGRAM_BOT_USERNAME__ = ${JSON.stringify(String(TELEGRAM_BOT_USERNAME || '').trim().replace(/^@/, ''))};
     window.__VW_SHARE_BASE_URL__ = ${JSON.stringify(shareBaseForClient)};
+    window.__VW_DEMO_FX__ = ${JSON.stringify(VW_DEMO_FX)};
   </script>`;
   return html.replace('</head>', `${ogMeta}${runtimeConfigScript}\n</head>`);
 }

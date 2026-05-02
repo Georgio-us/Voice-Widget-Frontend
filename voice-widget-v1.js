@@ -738,6 +738,8 @@ class UIManager {
   // ---------- init ----------
   initializeUI() {
     this.cacheElements();
+    this.applyDemoFxMode();
+    this.bindDemoFxTouchRipple();
     this.setState('idle');
     this.isInsightsExpanded = this.widget.classList.contains('expanded');
 
@@ -746,6 +748,75 @@ class UIManager {
 
     this.widget.dialogStarted = false;
     this.widget.understanding?.updateUnderstandingDisplay?.();
+  }
+
+  isDemoFxEnabled() {
+    try {
+      const fromEnv = String((typeof window !== 'undefined' ? window.__VW_DEMO_FX__ : '') || '').trim().toLowerCase();
+      if (fromEnv === '1' || fromEnv === 'true' || fromEnv === 'on') return true;
+      if (fromEnv === '0' || fromEnv === 'false' || fromEnv === 'off') return false;
+      const qs = new URLSearchParams(window.location.search || '');
+      const fromQuery = String(qs.get('demoFx') || '').trim();
+      if (fromQuery === '1' || fromQuery.toLowerCase() === 'true') return true;
+      if (fromQuery === '0' || fromQuery.toLowerCase() === 'false') return false;
+      const fromStorage = String(localStorage.getItem('vw_demo_fx') || '').trim().toLowerCase();
+      return fromStorage === '1' || fromStorage === 'true' || fromStorage === 'on';
+    } catch {
+      return false;
+    }
+  }
+
+  applyDemoFxMode() {
+    const root = this.getRoot();
+    if (!root?.classList) return;
+    const enabled = this.isDemoFxEnabled();
+    root.classList.toggle('demo-fx', enabled);
+  }
+
+  bindDemoFxTouchRipple() {
+    if (this._demoFxRippleBound) return;
+    this._demoFxRippleBound = true;
+    const root = this.getRoot();
+    if (!root?.addEventListener) return;
+    root.addEventListener('pointerdown', (event) => {
+      if (!this.isDemoFxEnabled()) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (!target.closest('button, a, [role="button"], .message-bubble, .card-screen, .pill-action, .vw-filters-overlay, .vw-access-overlay, .cards-slider, .system-event-text')) return;
+      this.spawnDemoFxRipple(event.clientX, event.clientY);
+    }, { passive: true });
+  }
+
+  spawnDemoFxRipple(clientX, clientY) {
+    const root = this.getRoot();
+    if (!root) return;
+    const hostRect = (root.getBoundingClientRect && root.getBoundingClientRect()) || { left: 0, top: 0 };
+    const x = Number(clientX) - Number(hostRect.left || 0);
+    const y = Number(clientY) - Number(hostRect.top || 0);
+    const ripple = document.createElement('span');
+    ripple.className = 'demo-fx-ripple';
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    root.appendChild(ripple);
+    const cleanup = () => {
+      try { ripple.remove(); } catch {}
+    };
+    ripple.addEventListener('animationend', cleanup, { once: true });
+    setTimeout(cleanup, 900);
+  }
+
+  triggerDemoFxGlow() {
+    if (!this.isDemoFxEnabled()) return;
+    const root = this.getRoot();
+    if (!root?.classList) return;
+    root.classList.remove('demo-fx-glow-pulse');
+    // force reflow to restart animation deterministically
+    void root.offsetWidth;
+    root.classList.add('demo-fx-glow-pulse');
+    clearTimeout(this._demoFxGlowTimer);
+    this._demoFxGlowTimer = setTimeout(() => {
+      try { root.classList.remove('demo-fx-glow-pulse'); } catch {}
+    }, 820);
   }
 
   cacheElements() {
@@ -1090,6 +1161,7 @@ class UIManager {
     const last = this.widget.messages?.[this.widget.messages.length - 1];
     if (last && last.type === 'system' && String(last.content || '').trim() === payload) return;
     this.addMessage({ type: 'system', content: payload, timestamp: new Date() });
+    this.triggerDemoFxGlow();
   }
 
   _appendBubble(message) {
@@ -1150,6 +1222,12 @@ class UIManager {
         } catch (e) {
           console.warn('Markdown render fallback:', e);
           bubble.textContent = message.content;
+        }
+        if (this.isDemoFxEnabled()) {
+          bubble.classList.add('demo-fx-assistant-reveal');
+          setTimeout(() => {
+            try { bubble.classList.remove('demo-fx-assistant-reveal'); } catch {}
+          }, 760);
         }
         wrapper.appendChild(bubble);
         thread.appendChild(wrapper);

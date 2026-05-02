@@ -198,6 +198,120 @@
     text-overflow: clip;
     max-width: 100%;
   }
+  /* ==================================================
+     Demo FX mode (cinematic capture only)
+     Enabled by root class: .demo-fx
+     ================================================== */
+  .demo-fx {
+    --demo-fx-boost: 1.2;
+    position: relative;
+  }
+  .demo-fx .message-bubble,
+  .demo-fx .card-screen .cs,
+  .demo-fx .pill-action,
+  .demo-fx .system-event-text,
+  .demo-fx .vw-filters-apply,
+  .demo-fx .card-btn {
+    transition-duration: calc(220ms * var(--demo-fx-boost));
+  }
+  .demo-fx .system-event-text {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-accent) 48%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+    box-shadow: 0 0 0 0 rgba(65, 120, 207, 0.34);
+    animation: demoFxSystemPulse 1800ms ease-in-out infinite;
+  }
+  @keyframes demoFxSystemPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(65, 120, 207, 0.28); }
+    50% { box-shadow: 0 0 24px 2px rgba(65, 120, 207, 0.42); }
+  }
+
+  .demo-fx .thinking-bubble {
+    min-width: 66px;
+    padding: 11px 16px;
+  }
+  .demo-fx .thinking-dots {
+    gap: 6px;
+    height: 14px;
+  }
+  .demo-fx .thinking-dots span {
+    width: 8px;
+    height: 8px;
+    opacity: .35;
+    box-shadow: 0 0 0 rgba(65, 120, 207, 0);
+    animation: demoFxThinkingPulse 900ms infinite ease-in-out;
+  }
+  .demo-fx .thinking-dots span:nth-child(2) { animation-delay: .13s; }
+  .demo-fx .thinking-dots span:nth-child(3) { animation-delay: .26s; }
+  @keyframes demoFxThinkingPulse {
+    0%, 100% { opacity: .35; transform: translateY(0) scale(1); box-shadow: 0 0 0 rgba(65,120,207,0); }
+    40% { opacity: 1; transform: translateY(-4px) scale(1.18); box-shadow: 0 0 16px rgba(65,120,207,.65); }
+    70% { opacity: .8; transform: translateY(1px) scale(.95); }
+  }
+
+  .demo-fx .demo-fx-assistant-reveal {
+    animation: demoFxAssistantReveal 720ms cubic-bezier(.2,.9,.18,1);
+  }
+  @keyframes demoFxAssistantReveal {
+    0% { opacity: 0; transform: translateY(8px) scale(.985); filter: saturate(0.9); }
+    35% { opacity: 1; transform: translateY(0) scale(1.01); filter: saturate(1.25); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1); }
+  }
+
+  .demo-fx .dialog-screen {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 280ms ease, transform 320ms cubic-bezier(.2,.85,.2,1);
+  }
+  .demo-fx .dialog-screen.hidden {
+    display: none;
+  }
+  .demo-fx .card-screen,
+  .demo-fx .cards-slider-host,
+  .demo-fx .vw-filters-overlay,
+  .demo-fx .vw-access-overlay {
+    animation: demoFxScreenSlideIn 360ms cubic-bezier(.18,.84,.2,1);
+  }
+  @keyframes demoFxScreenSlideIn {
+    0% { opacity: 0; transform: translateX(14px); }
+    100% { opacity: 1; transform: translateX(0); }
+  }
+
+  .demo-fx-glow-pulse::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    pointer-events: none;
+    border-radius: 18px;
+    border: 1px solid rgba(65, 120, 207, 0.72);
+    box-shadow: 0 0 0 0 rgba(65, 120, 207, 0.58), inset 0 0 0 0 rgba(65, 120, 207, 0.34);
+    animation: demoFxGlowFlash 760ms ease-out forwards;
+    z-index: 20;
+  }
+  @keyframes demoFxGlowFlash {
+    0% { opacity: 0.95; box-shadow: 0 0 0 0 rgba(65,120,207,.65), inset 0 0 18px rgba(65,120,207,.42); }
+    100% { opacity: 0; box-shadow: 0 0 44px 8px rgba(65,120,207,0), inset 0 0 0 rgba(65,120,207,0); }
+  }
+
+  .demo-fx .demo-fx-ripple {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    margin-top: -9px;
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 30;
+    border: 2px solid rgba(115, 181, 255, 0.72);
+    background: radial-gradient(circle, rgba(115,181,255,0.34) 0%, rgba(115,181,255,0.08) 40%, rgba(115,181,255,0) 72%);
+    animation: demoFxRipple 760ms cubic-bezier(.15,.9,.2,1) forwards;
+  }
+  @keyframes demoFxRipple {
+    0% { opacity: 0.95; transform: scale(0.35); }
+    70% { opacity: 0.55; }
+    100% { opacity: 0; transform: scale(10); }
+  }
   .thread > .message.system + .card-screen{ margin-top:5px; }
   .bubble--full{ max-width:100%; width:100%; align-self:stretch; padding:5px; border-radius:16px; }
   .message.assistant .bubble--full{ background: var(--bg-bubble); }
