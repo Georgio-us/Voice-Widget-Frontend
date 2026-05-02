@@ -9516,7 +9516,7 @@ class VoiceWidget extends HTMLElement {
         gap: 10px;
       }
       .vw-access-sub-title {
-        text-align: center;
+        text-align: right;
         font-size: .92rem;
         font-weight: 600;
         color: var(--text-secondary, rgba(255,255,255,0.78));
