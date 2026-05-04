@@ -1591,14 +1591,37 @@ render() {
   .card-slide-form{ grid-area:1/1; min-height:0; display:none; }
   .card-slide--form-open .card-slide-back{ display:none !important; }
   .card-slide--form-open .card-slide-form{ display:flex; flex-direction:column; height:440px; overflow:visible; background:var(--bg-card); border-radius:14px; padding:16px; box-sizing:border-box; }
-  .card-form-header{ height:24px; flex-shrink:0; display:flex; align-items:center; padding:0; margin-bottom:8px; width:100%; }
-  .card-form-header__back{ width:18px; height:18px; flex-shrink:0; padding:0; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--color-accent); opacity:.9; border-radius:6px; transition: background-color .18s ease, transform .18s ease, opacity .18s ease, box-shadow .18s ease; }
-  .card-form-header__back img{ display:block; filter: brightness(0) saturate(100%) invert(45%) sepia(79%) saturate(741%) hue-rotate(193deg) brightness(90%) contrast(88%); }
-  .card-form-header__back:hover{ background:rgba(65,120,207,.12); transform:translateY(-1px); opacity:1; }
-  .card-form-header__back:active{ transform:translateY(0); opacity:.88; }
-  .card-form-header__back:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
-  .card-form-header__title{ flex:1; font-size:14px; font-weight:600; color:var(--color-text); margin:0; text-align:center; min-width:0; }
-  .card-form-header__spacer{ width:18px; flex-shrink:0; }
+  .card-form-header{ height:26px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0; margin-bottom:8px; width:100%; }
+  .card-form-header__back-badge,
+  .card-form-header__title-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:4px;
+    background:var(--color-accent);
+    color:#fff;
+    font-size:12px;
+    line-height:1;
+    font-weight:600;
+    letter-spacing:.02em;
+    padding:6px 10px;
+    white-space:nowrap;
+    min-height:26px;
+    box-sizing:border-box;
+  }
+  .card-form-header__back-badge{
+    border:none;
+    cursor:pointer;
+  }
+  .card-form-header__back-badge:hover{ opacity:.92; }
+  .card-form-header__back-badge:active{ opacity:.82; }
+  .card-form-header__back-badge:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+  .card-form-header__title-badge{
+    margin-left:auto;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:70%;
+  }
   /* Card back: info panel (specs + actions) */
   .card-back-header{ flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0; margin-bottom:8px; width:100%; }
   .card-back-header__back-badge,
@@ -5458,7 +5481,7 @@ render() {
     } else if (e.target.matches('.card-desc-modal')) {
       // Close description modal by overlay click
       e.target.classList.remove('is-open');
-    } else if (e.target.closest('.card-form-header__back')) {
+    } else if (e.target.closest('.card-form-header__back-badge')) {
       // Форма -> назад к описанию
       const slide = e.target.closest('.card-slide');
       if (slide) slide.classList.remove('card-slide--form-open');
@@ -6192,11 +6215,8 @@ render() {
       </div>
       <div class="card-slide-form">
         <div class="card-form-header">
-          <button type="button" class="card-form-header__back" aria-label="Back">
-            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
-          </button>
-          <span class="card-form-header__title">${locale.leaveRequest}</span>
-          <span class="card-form-header__spacer" aria-hidden="true"></span>
+          <button type="button" class="card-form-header__back-badge" aria-label="${locale.cardBack || 'Назад'}">${locale.cardBack || 'Назад'}</button>
+          <span class="card-form-header__title-badge">${locale.leaveRequest}</span>
         </div><div class="card-back-separator"></div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
       </div>`;
