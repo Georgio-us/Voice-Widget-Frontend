@@ -24,6 +24,37 @@
     assetsBase: undefined           // опционально: база для ассетов (передадим в window.__VW_ASSETS_BASE__)
   };
 
+  let runtimeConfigPromise = null;
+  function ensureRuntimeConfig(options) {
+    const hasExplicitApi = !!(options && options.apiUrl);
+    const hasGlobalApi = !!(window && window.__VW_API_URL__);
+    if (hasExplicitApi || hasGlobalApi) return Promise.resolve();
+    if (!SCRIPT_BASE) return Promise.resolve();
+    if (runtimeConfigPromise) return runtimeConfigPromise;
+
+    runtimeConfigPromise = new Promise((resolve) => {
+      try {
+        // Best-effort fallback: try to load runtime-config.js from same origin/path as loader.js.
+        const src = `${SCRIPT_BASE}runtime-config.js`;
+        const exists = Array.from(document.querySelectorAll('script')).some((s) => {
+          const u = (s.src || '').split('?')[0].split('#')[0];
+          return u.endsWith('/runtime-config.js');
+        });
+        if (exists) return resolve();
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => resolve(); // non-blocking by design
+        document.head.appendChild(s);
+        setTimeout(resolve, 1200); // hard cap, never block widget boot
+      } catch {
+        resolve();
+      }
+    });
+    return runtimeConfigPromise;
+  }
+
   function ensureWidgetLoaded(options) {
     // Уже зарегистрирован
     if (window.customElements && window.customElements.get && window.customElements.get('voice-widget')) {
@@ -141,7 +172,7 @@
   window.VoiceWidget = {
     init(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
-      return ensureWidgetLoaded(options).then(() => {
+      return ensureRuntimeConfig(options).then(() => ensureWidgetLoaded(options)).then(() => {
         const host = createHostIfNeeded(options);
         positionHost(host, options);
         bindViewportStabilizer(host, options);
@@ -152,7 +183,7 @@
     // на случай, если тег уже вёрстан на странице (необязательное)
     upgrade(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
-      return ensureWidgetLoaded(options).then(() => {
+      return ensureRuntimeConfig(options).then(() => ensureWidgetLoaded(options)).then(() => {
         let host = document.getElementById('vw-host');
         if (!host) {
           host = document.createElement('div');
@@ -175,5 +206,4 @@
     }
   };
 })(window, document);
-
 
