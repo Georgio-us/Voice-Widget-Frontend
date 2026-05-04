@@ -911,10 +911,11 @@ class VoiceWidget extends HTMLElement {
   }
 
   initTheme() {
+    // Deployment default must win over persisted browser preference when explicitly set.
     let theme = DEFAULT_THEME || 'dark';
     try {
       const saved = localStorage.getItem('vw_theme');
-      if (saved === 'light' || saved === 'dark') theme = saved;
+      if (!DEFAULT_THEME && (saved === 'light' || saved === 'dark')) theme = saved;
     } catch {}
     this.applyTheme(theme);
   }
