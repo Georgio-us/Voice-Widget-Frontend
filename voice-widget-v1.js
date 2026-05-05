@@ -5481,7 +5481,7 @@ render() {
     } else if (e.target.matches('.card-desc-modal')) {
       // Close description modal by overlay click
       e.target.classList.remove('is-open');
-    } else if (e.target.closest('.card-form-header__back-badge')) {
+    } else if (e.target.closest('.card-form-header__back-badge') || e.target.closest('[data-action="card-form-back"]')) {
       // Форма -> назад к описанию
       const slide = e.target.closest('.card-slide');
       if (slide) slide.classList.remove('card-slide--form-open');
@@ -6215,7 +6215,7 @@ render() {
       </div>
       <div class="card-slide-form">
         <div class="card-form-header">
-          <button type="button" class="card-form-header__back-badge" aria-label="${locale.cardBack || 'Назад'}">${locale.cardBack || 'Назад'}</button>
+          <button type="button" class="card-form-header__back-badge" data-action="card-form-back" aria-label="${locale.cardBack || 'Назад'}">${locale.cardBack || 'Назад'}</button>
           <span class="card-form-header__title-badge">${locale.leaveRequest}</span>
         </div><div class="card-back-separator"></div>
         ${this.getInDialogLeadFormHTML(this.getCurrentLocale(), '_' + normalized.id)}
