@@ -1235,7 +1235,7 @@ class UIManager {
       systemText.setAttribute('role', 'button');
       systemText.setAttribute('tabindex', '0');
       systemText.setAttribute('aria-expanded', 'false');
-      systemText.title = 'Нажмите, чтобы раскрыть';
+      systemText.title = this.t('systemExpandTitle') || 'Нажмите, чтобы раскрыть';
       const toggleExpanded = () => {
         const expanded = systemText.classList.toggle('is-expanded');
         systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
@@ -1349,20 +1349,21 @@ class UIManager {
 
   resetInsightsValues(resetProgress = true) {
     const setTxt = (id, txt) => { const el = this.$byId(id); if (el) el.textContent = txt; };
-    setTxt('nameValue', 'не определено');
-    setTxt('operationValue', 'не определена');
-    setTxt('budgetValue', 'не определен');
-    setTxt('typeValue', 'не определен');
-    setTxt('locationValue', 'не определен');
-    setTxt('roomsValue', 'не определено');
-    setTxt('areaValue', 'не определена');
-    setTxt('detailsValue', 'не определены');
-    setTxt('preferencesValue', 'не определены');
+    const empty = this.t('insightDefault') || 'не указано';
+    setTxt('nameValue', empty);
+    setTxt('operationValue', empty);
+    setTxt('budgetValue', empty);
+    setTxt('typeValue', empty);
+    setTxt('locationValue', empty);
+    setTxt('roomsValue', empty);
+    setTxt('areaValue', empty);
+    setTxt('detailsValue', empty);
+    setTxt('preferencesValue', empty);
 
     if (resetProgress) {
       const { progressFill, progressText } = this.elements;
       if (progressFill) progressFill.style.width = '0%';
-      if (progressText) progressText.textContent = '0% — ожидание';
+      if (progressText) progressText.textContent = `0% — ${this.t('stageWaiting') || 'Ожидание'}`;
     }
   }
 
@@ -1407,7 +1408,7 @@ class UIManager {
 
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble widget-bubble thinking-bubble';
-    bubble.innerHTML = '<span class="thinking-dots" aria-label="Thinking"><span></span><span></span><span></span></span>';
+    bubble.innerHTML = `<span class="thinking-dots" aria-label="${this.t('loadingText') || 'Thinking'}"><span></span><span></span><span></span></span>`;
     wrapper.appendChild(bubble);
     thread.appendChild(wrapper);
     this._scrollToBottom();
@@ -2780,11 +2781,40 @@ const LOCALES = {
     cardSelect: 'Выбрать',
     cardNext: 'Ещё одну',
     cardBackContact: 'Связаться',
+    cardShareGuest: 'Поделиться',
+    shareSent: 'Успешно отправлено ✓',
+    shareCopied: 'Ссылка скопирована ✓',
+    shareFailed: 'Не удалось поделиться',
+    sharePropertyIntro: 'Подобрал объект, который может вам подойти.',
+    shareSelectionTitleSingle: 'Объект недвижимости',
+    shareSelectionTitleMany: 'Подборка объектов ({count})',
+    shareSelectionTextMany: 'Подобрал для вас подборку из {count} объектов.\nОткройте карточки — внутри все детали и фото.',
+    shareSelectionFailed: 'Не удалось поделиться подборкой',
+    shareTypeLabel: 'Тип',
+    sharePriceLabel: 'Цена',
+    shareAreaLabel: 'Площадь',
+    shareDistrictLabel: 'Район',
+    objectLabel: 'Объект',
+    room1: 'комната',
+    room2to4: 'комнаты',
+    roomMany: 'комнат',
     cardReadDescription: 'Читать описание',
     cardDescriptionTitle: 'Описание объекта',
     cardDescriptionOk: 'OK',
     cardDescriptionEmpty: 'Описание пока недоступно',
     cardTitleFullAria: 'Показать полный заголовок',
+    systemExpandTitle: 'Нажмите, чтобы раскрыть',
+    filtersAria: 'Фильтры',
+    viewAria: 'Вид выдачи',
+    titleNotSpecified: 'Название не указано',
+    locationNotSpecified: 'Локация не указана',
+    priceNotSpecified: 'Цена не указана',
+    listNavAria: 'Навигация списка',
+    prevObjectAria: 'Предыдущий объект',
+    nextObjectAria: 'Следующий объект',
+    addToWishlistAria: 'Добавить в подборку',
+    openImageAria: 'Открыть изображение',
+    backAria: 'Назад',
     handoffMessage: 'Вы выбрали объект. Дальше можно уточнить детали или отменить.',
     handoffDetails: 'Подробнее',
     pillAvailable: 'Доступно {count} объектов',
@@ -2969,11 +2999,40 @@ const LOCALES = {
     cardSelect: 'Обрати',
     cardNext: 'Ще одну',
     cardBackContact: "Зв'язатися",
+    cardShareGuest: 'Поділитися',
+    shareSent: 'Успішно надіслано ✓',
+    shareCopied: 'Посилання скопійовано ✓',
+    shareFailed: 'Не вдалося поділитися',
+    sharePropertyIntro: 'Підібрав обʼєкт, який може вам підійти.',
+    shareSelectionTitleSingle: "Об'єкт нерухомості",
+    shareSelectionTitleMany: "Добірка об'єктів ({count})",
+    shareSelectionTextMany: "Підібрав для вас добірку з {count} об'єктів.\nВідкрийте картки — всередині всі деталі та фото.",
+    shareSelectionFailed: 'Не вдалося поділитися добіркою',
+    shareTypeLabel: 'Тип',
+    sharePriceLabel: 'Ціна',
+    shareAreaLabel: 'Площа',
+    shareDistrictLabel: 'Район',
+    objectLabel: "Об'єкт",
+    room1: 'кімната',
+    room2to4: 'кімнати',
+    roomMany: 'кімнат',
     cardReadDescription: 'Читати опис',
     cardDescriptionTitle: "Опис об'єкта",
     cardDescriptionOk: 'OK',
     cardDescriptionEmpty: 'Опис поки недоступний',
     cardTitleFullAria: 'Показати повний заголовок',
+    systemExpandTitle: 'Натисніть, щоб розгорнути',
+    filtersAria: 'Фільтри',
+    viewAria: 'Вигляд видачі',
+    titleNotSpecified: 'Назву не вказано',
+    locationNotSpecified: 'Локацію не вказано',
+    priceNotSpecified: 'Ціну не вказано',
+    listNavAria: 'Навігація списку',
+    prevObjectAria: "Попередній об'єкт",
+    nextObjectAria: "Наступний об'єкт",
+    addToWishlistAria: 'Додати до добірки',
+    openImageAria: 'Відкрити зображення',
+    backAria: 'Назад',
     handoffMessage: 'Ви обрали об’єкт. Далі можна уточнити деталі або скасувати.',
     handoffDetails: 'Детальніше',
     pillAvailable: 'Доступно {count} обʼєктів',
@@ -3530,6 +3589,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   buildCardShareButtonsHtml() {
+    const locale = this.getCurrentLocale();
     if (this.isShareDualModeEnabled()) {
       return `
         <button type="button" class="card-back-icon-btn" data-action="share-property" aria-label="Share Global" title="Share Global"><img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global"></button>
@@ -3537,7 +3597,7 @@ class VoiceWidget extends HTMLElement {
       `;
     }
     return `
-      <button type="button" class="card-back-guest-share-btn" data-action="tg-share-property" aria-label="Поделиться" title="Поделиться">Поделиться</button>
+      <button type="button" class="card-back-guest-share-btn" data-action="tg-share-property" aria-label="${locale.cardShareGuest || 'Поделиться'}" title="${locale.cardShareGuest || 'Поделиться'}">${locale.cardShareGuest || 'Поделиться'}</button>
     `;
   }
 
@@ -3585,11 +3645,12 @@ class VoiceWidget extends HTMLElement {
   }
 
   buildSinglePropertyShareText(rawProperty = {}) {
+    const locale = this.getCurrentLocale();
     const normalized = this.normalizeCardData(rawProperty || {});
-    const typeLabel = String(normalized.propertyTypeBadgeLabel || normalized.propertyType || 'Объект').trim() || 'Объект';
+    const typeLabel = String(normalized.propertyTypeBadgeLabel || normalized.propertyType || locale.objectLabel || 'Объект').trim() || locale.objectLabel || 'Объект';
     const roomsRaw = Number(normalized.rooms);
     const roomsLabel = Number.isFinite(roomsRaw) && roomsRaw > 0
-      ? `${roomsRaw} ${roomsRaw === 1 ? 'комната' : (roomsRaw >= 2 && roomsRaw <= 4 ? 'комнаты' : 'комнат')}`
+      ? `${roomsRaw} ${roomsRaw === 1 ? (locale.room1 || 'комната') : (roomsRaw >= 2 && roomsRaw <= 4 ? (locale.room2to4 || 'комнаты') : (locale.roomMany || 'комнат'))}`
       : '';
     const typeWithRooms = roomsLabel ? `${typeLabel}, ${roomsLabel}` : typeLabel;
     const priceLabel = String(normalized.priceLabel || '—').trim() || '—';
@@ -3599,11 +3660,11 @@ class VoiceWidget extends HTMLElement {
       : '—';
     const districtLabel = String(normalized.district || normalized.neighborhood || normalized.city || '—').trim() || '—';
     return [
-      'Подобрал объект, который может вам подойти.',
-      `Тип: ${typeWithRooms}`,
-      `Цена: ${priceLabel}`,
-      `Площадь: ${areaLabel}`,
-      `Район: ${districtLabel}`
+      locale.sharePropertyIntro || 'Подобрал объект, который может вам подойти.',
+      `${locale.shareTypeLabel || 'Тип'}: ${typeWithRooms}`,
+      `${locale.sharePriceLabel || 'Цена'}: ${priceLabel}`,
+      `${locale.shareAreaLabel || 'Площадь'}: ${areaLabel}`,
+      `${locale.shareDistrictLabel || 'Район'}: ${districtLabel}`
     ].join('\n');
   }
 
@@ -3625,7 +3686,7 @@ class VoiceWidget extends HTMLElement {
     try {
       if (navigator?.share) {
         await navigator.share(payload);
-        this.showShareNotice('Успешно отправлено ✓');
+        this.showShareNotice(this.t('shareSent') || 'Успешно отправлено ✓');
         return true;
       }
     } catch (error) {
@@ -3634,14 +3695,15 @@ class VoiceWidget extends HTMLElement {
     }
     const copied = await this.copyTextToClipboard(shareUrl);
     if (copied) {
-      this.showShareNotice('Ссылка скопирована ✓');
+      this.showShareNotice(this.t('shareCopied') || 'Ссылка скопирована ✓');
       return true;
     }
-    this.showShareNotice('Не удалось поделиться');
+    this.showShareNotice(this.t('shareFailed') || 'Не удалось поделиться');
     return false;
   }
 
   async sharePropertiesSelectionByIds(ids = [], options = {}) {
+    const locale = this.getCurrentLocale();
     const normalized = Array.from(
       new Set(
         (Array.isArray(ids) ? ids : [])
@@ -3707,16 +3769,18 @@ class VoiceWidget extends HTMLElement {
       : this.buildTelegramSelectionLink(normalized);
     if (!shareUrl) return false;
     const payload = {
-      title: normalized.length === 1 ? 'Объект недвижимости' : `Подборка объектов (${normalized.length})`,
+      title: normalized.length === 1
+        ? (locale.shareSelectionTitleSingle || 'Объект недвижимости')
+        : (this.t('shareSelectionTitleMany', { count: normalized.length }) || `Подборка объектов (${normalized.length})`),
       text: normalized.length === 1
         ? this.buildSinglePropertyShareText(this.getCatalogPropertyById(normalized[0]) || { id: normalized[0] })
-        : `Подобрал для вас подборку из ${normalized.length} объектов.\nОткройте карточки — внутри все детали и фото.`,
+        : (this.t('shareSelectionTextMany', { count: normalized.length }) || `Подобрал для вас подборку из ${normalized.length} объектов.\nОткройте карточки — внутри все детали и фото.`),
       url: shareUrl
     };
     try {
       if (navigator?.share) {
         await navigator.share(payload);
-        this.showShareNotice('Успешно отправлено ✓');
+        this.showShareNotice(this.t('shareSent') || 'Успешно отправлено ✓');
         return true;
       }
     } catch (error) {
@@ -3725,10 +3789,10 @@ class VoiceWidget extends HTMLElement {
     }
     const copied = await this.copyTextToClipboard(shareUrl);
     if (copied) {
-      this.showShareNotice('Ссылка скопирована ✓');
+      this.showShareNotice(this.t('shareCopied') || 'Ссылка скопирована ✓');
       return true;
     }
-    this.showShareNotice('Не удалось поделиться');
+    this.showShareNotice(this.t('shareFailed') || 'Не удалось поделиться');
     return false;
   }
 
@@ -4945,19 +5009,21 @@ class VoiceWidget extends HTMLElement {
   }
 
   getAdminObjectOperationLabel(item) {
+    const isUa = this.getLangCode() === 'ua';
     const operation = String(item?.operation || '').trim().toLowerCase();
-    if (operation === 'sale') return 'Продажа';
-    if (operation === 'rent') return 'Аренда';
+    if (operation === 'sale') return isUa ? 'Продаж' : 'Продажа';
+    if (operation === 'rent') return isUa ? 'Оренда' : 'Аренда';
     return '—';
   }
 
   getAdminObjectTypeLabel(item) {
+    const isUa = this.getLangCode() === 'ua';
     const type = String(item?.propertyType || item?.property_type || '').trim().toLowerCase();
-    if (type === 'apartment') return 'Квартира';
-    if (type === 'house') return 'Дом';
-    if (type === 'commercial') return 'Коммерция';
+    if (type === 'apartment') return isUa ? 'Квартира' : 'Квартира';
+    if (type === 'house') return isUa ? 'Будинок' : 'Дом';
+    if (type === 'commercial') return isUa ? 'Комерція' : 'Коммерция';
     if (type === 'land') return 'Земля';
-    if (type === 'parking') return 'Паркинг';
+    if (type === 'parking') return isUa ? 'Паркінг' : 'Паркинг';
     return type ? (type[0].toUpperCase() + type.slice(1)) : '—';
   }
 
@@ -4985,20 +5051,22 @@ class VoiceWidget extends HTMLElement {
   }
 
   getSubscriptionPlanLabel(planRaw) {
+    const isUa = this.getLangCode() === 'ua';
     const plan = String(planRaw || '').trim().toLowerCase();
-    if (plan === 'trial_7') return 'Тест 7 дней';
-    if (plan === 'month_30') return 'Месячная (30 дней)';
-    if (plan === 'year_365') return 'Годовая (365 дней)';
+    if (plan === 'trial_7') return isUa ? 'Тест 7 днів' : 'Тест 7 дней';
+    if (plan === 'month_30') return isUa ? 'Місячна (30 днів)' : 'Месячная (30 дней)';
+    if (plan === 'year_365') return isUa ? 'Річна (365 днів)' : 'Годовая (365 дней)';
     if (plan === 'lifetime') return 'Lifetime';
     return plan ? plan : '—';
   }
 
   getSubscriptionStatusLabel(statusRaw, active = false) {
+    const isUa = this.getLangCode() === 'ua';
     const status = String(statusRaw || '').trim().toLowerCase();
-    if (active || status === 'active') return 'Активна';
-    if (status === 'expired') return 'Истекла';
-    if (status === 'revoked') return 'Отключена';
-    return status ? status : 'Неактивна';
+    if (active || status === 'active') return isUa ? 'Активна' : 'Активна';
+    if (status === 'expired') return isUa ? 'Закінчилася' : 'Истекла';
+    if (status === 'revoked') return isUa ? 'Вимкнена' : 'Отключена';
+    return status ? status : (isUa ? 'Неактивна' : 'Неактивна');
   }
 
   formatSubscriptionDate(value) {
@@ -5006,7 +5074,7 @@ class VoiceWidget extends HTMLElement {
     try {
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return '—';
-      return d.toLocaleDateString('ru-RU');
+      return d.toLocaleDateString(this.getLangCode() === 'ua' ? 'uk-UA' : 'ru-RU');
     } catch {
       return '—';
     }
@@ -5084,9 +5152,10 @@ class VoiceWidget extends HTMLElement {
     const now = new Date();
     const nextMonth = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
     const fmtDate = (d) => {
-      try { return d.toLocaleDateString('ru-RU'); } catch { return ''; }
+      try { return d.toLocaleDateString(this.getLangCode() === 'ua' ? 'uk-UA' : 'ru-RU'); } catch { return ''; }
     };
     const locale = this.getCurrentLocale();
+    const isUaLang = this.getLangCode() === 'ua';
     const safeSection = String(section || '').trim().toLowerCase();
     const isShareDualModeEnabled = this.isShareDualModeEnabled();
     const safeOptions = options && typeof options === 'object' ? options : {};
@@ -5132,25 +5201,25 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="property-type" name="propertyType">
-                    <option value="">* Тип недвижимости</option>
-                    <option value="apartment">Квартира</option>
-                    <option value="house">Дом</option>
-                    <option value="commercial">Коммерция</option>
-                    <option value="land">Участок</option>
+                    <option value="">${langCode === 'ua' ? '* Тип нерухомості' : '* Тип недвижимости'}</option>
+                    <option value="apartment">${langCode === 'ua' ? 'Квартира' : 'Квартира'}</option>
+                    <option value="house">${langCode === 'ua' ? 'Будинок' : 'Дом'}</option>
+                    <option value="commercial">${langCode === 'ua' ? 'Комерція' : 'Коммерция'}</option>
+                    <option value="land">${langCode === 'ua' ? 'Ділянка' : 'Участок'}</option>
                   </select>
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input vw-access-add-input--id" data-role="listing-operation" name="listingOperation">
-                    <option value="">Продажа/Аренда</option>
-                    <option value="sale">Продаж</option>
-                    <option value="rent">Аренда</option>
+                    <option value="">${langCode === 'ua' ? 'Продаж/Оренда' : 'Продажа/Аренда'}</option>
+                    <option value="sale">${langCode === 'ua' ? 'Продаж' : 'Продажа'}</option>
+                    <option value="rent">${langCode === 'ua' ? 'Оренда' : 'Аренда'}</option>
                   </select>
                 </label>
               </div>
               <label class="vw-access-add-field">
-                <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="* Введите заголовок" autocomplete="off">
+                <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="${langCode === 'ua' ? '* Введіть заголовок' : '* Введите заголовок'}" autocomplete="off">
               </label>
-              <div class="vw-access-add-hint">Можно добавить до 5 фотографий до 10мб каждая</div>
+              <div class="vw-access-add-hint">${langCode === 'ua' ? 'Можна додати до 5 фотографій до 10мб кожна' : 'Можно добавить до 5 фотографий до 10мб каждая'}</div>
               <div class="vw-access-add-photo-layout">
                 <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                 <div class="vw-access-add-photo-grid">
@@ -5162,11 +5231,11 @@ class VoiceWidget extends HTMLElement {
               </div>
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="* Укажите цену" autocomplete="off">
+                  <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="${langCode === 'ua' ? '* Вкажіть ціну' : '* Укажите цену'}" autocomplete="off">
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="rooms" name="rooms">
-                    <option value="">* Количество комнат</option>
+                    <option value="">${langCode === 'ua' ? '* Кількість кімнат' : '* Количество комнат'}</option>
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -5177,22 +5246,22 @@ class VoiceWidget extends HTMLElement {
               </div>
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
-                  <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="* Укажите площадь" autocomplete="off">
+                  <input class="vw-access-add-input" type="text" name="area" data-role="area" placeholder="${langCode === 'ua' ? '* Вкажіть площу' : '* Укажите площадь'}" autocomplete="off">
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="district" name="district">
-                    <option value="">* Укажите район</option>
-                    <option value="Приморский">Приморский</option>
-                    <option value="Суворовский">Суворовский</option>
-                    <option value="Киевский">Киевский</option>
-                    <option value="Малиновский">Малиновский</option>
+                    <option value="">${langCode === 'ua' ? '* Вкажіть район' : '* Укажите район'}</option>
+                    <option value="Приморский">${langCode === 'ua' ? 'Приморський' : 'Приморский'}</option>
+                    <option value="Суворовский">${langCode === 'ua' ? 'Суворовський' : 'Суворовский'}</option>
+                    <option value="Киевский">${langCode === 'ua' ? 'Київський' : 'Киевский'}</option>
+                    <option value="Малиновский">${langCode === 'ua' ? 'Малиновський' : 'Малиновский'}</option>
                   </select>
                 </label>
               </div>
               <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
-                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">Выйти</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-to-step-2">Продолжить</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-to-step-2">${langCode === 'ua' ? 'Продовжити' : 'Продолжить'}</button>
               </div>
             </div>
 
@@ -5200,12 +5269,12 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="floor" name="floor">
-                    <option value="">Этаж</option>
+                    <option value="">${langCode === 'ua' ? 'Поверх' : 'Этаж'}</option>
                   </select>
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="floors-total" name="floorsTotal">
-                    <option value="">Этажность</option>
+                    <option value="">${langCode === 'ua' ? 'Поверховість' : 'Этажность'}</option>
                   </select>
                 </label>
               </div>
@@ -5213,12 +5282,12 @@ class VoiceWidget extends HTMLElement {
                 <label class="vw-access-add-field">
                   <input type="hidden" data-role="complex" name="complex" value="">
                   <button type="button" class="vw-access-add-input vw-access-add-complex-trigger" data-role="complex-trigger" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="vw-access-add-complex-trigger__label" data-role="complex-trigger-label">Название ЖК</span>
+                    <span class="vw-access-add-complex-trigger__label" data-role="complex-trigger-label">${langCode === 'ua' ? 'Назва ЖК' : 'Название ЖК'}</span>
                   </button>
                 </label>
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="microdistrict" name="microdistrict">
-                    <option value="">Микрорайон</option>
+                    <option value="">${langCode === 'ua' ? 'Мікрорайон' : 'Микрорайон'}</option>
                     <option value="Черемушки">Черемушки</option>
                     <option value="Фонтан">Фонтан</option>
                     <option value="Таирова">Таирова</option>
@@ -5228,22 +5297,22 @@ class VoiceWidget extends HTMLElement {
                 </label>
               </div>
               <div class="vw-access-add-check-grid">
-                <label class="vw-access-add-check-item"><input type="checkbox" name="exclusive"><span>Эксклюзив</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="balcony"><span>Балкон</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="penthouse"><span>Пентхаус</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="loggia"><span>Лоджия</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="smartFlat"><span>Смарт-квартира</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>Терраса</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>Новострой</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>Есть паркинг</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="exclusive"><span>${langCode === 'ua' ? 'Ексклюзив' : 'Эксклюзив'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="balcony"><span>${langCode === 'ua' ? 'Балкон' : 'Балкон'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="penthouse"><span>${langCode === 'ua' ? 'Пентхаус' : 'Пентхаус'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="loggia"><span>${langCode === 'ua' ? 'Лоджія' : 'Лоджия'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="smartFlat"><span>${langCode === 'ua' ? 'Смарт-квартира' : 'Смарт-квартира'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>${langCode === 'ua' ? 'Тераса' : 'Терраса'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>${langCode === 'ua' ? 'Новобудова' : 'Новострой'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>${langCode === 'ua' ? 'Є паркінг' : 'Есть паркинг'}</span></label>
               </div>
               <label class="vw-access-add-field">
-                <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="Опишите квартиру"></textarea>
+                <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="${langCode === 'ua' ? 'Опишіть квартиру' : 'Опишите квартиру'}"></textarea>
               </label>
               <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
-                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">Выйти</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-preview">Предпросмотр</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-preview">${langCode === 'ua' ? 'Попередній перегляд' : 'Предпросмотр'}</button>
               </div>
             </div>
 
@@ -5253,7 +5322,7 @@ class VoiceWidget extends HTMLElement {
                   <img class="is-empty" data-role="preview-main-image" alt="preview">
                   <div class="vw-access-preview-overlay-badges">
                     <span class="vw-access-preview-pill" data-role="preview-id">ID</span>
-                    <span class="vw-access-preview-pill" data-role="preview-op">Продажа</span>
+                    <span class="vw-access-preview-pill" data-role="preview-op">${langCode === 'ua' ? 'Продаж' : 'Продажа'}</span>
                     <span class="vw-access-preview-pill" data-role="preview-type">Квартира</span>
                   </div>
                   <div class="vw-access-preview-thumbs">
@@ -5280,20 +5349,20 @@ class VoiceWidget extends HTMLElement {
                 </div>
               </div>
               <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-draft">В черновик</button>
-                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">Выйти</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">${isEditProperty ? 'Опубликовать изменения' : 'Опубликовать'}</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">${isEditProperty ? (langCode === 'ua' ? 'Опублікувати зміни' : 'Опубликовать изменения') : (langCode === 'ua' ? 'Опублікувати' : 'Опубликовать')}</button>
               </div>
             </div>
 
             <div class="vw-access-add-step" data-step-panel="4">
               <div class="vw-access-add-success">
-                <div class="vw-access-add-success-title">Спасибо!</div>
-                <div class="vw-access-add-success-text">Объявление добавлено на модерацию и появится после проверки.</div>
+                <div class="vw-access-add-success-title">${langCode === 'ua' ? 'Дякуємо!' : 'Спасибо!'}</div>
+                <div class="vw-access-add-success-text">${langCode === 'ua' ? 'Оголошення додано на модерацію і зʼявиться після перевірки.' : 'Объявление добавлено на модерацию и появится после проверки.'}</div>
               </div>
               <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-more">Добавить ещё объект</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-continue">Продолжить</button>
+                <button type="button" class="vw-access-sub-btn" data-role="add-more">${langCode === 'ua' ? 'Додати ще обʼєкт' : 'Добавить ещё объект'}</button>
+                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-continue">${langCode === 'ua' ? 'Продовжити' : 'Продолжить'}</button>
               </div>
             </div>
           </div>
@@ -5326,15 +5395,15 @@ class VoiceWidget extends HTMLElement {
                 <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
               </div>
               <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
-              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} комн · ${item.district}</div>
+              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${langCode === 'ua' ? 'кімн' : 'комн'} · ${item.district}</div>
             </div>
           </article>
         `).join('');
         return `
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
-              <div class="vw-access-objects-total">Всего: <strong data-role="list-total">${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">Выбрать всё</button>
+              <div class="vw-access-objects-total">${langCode === 'ua' ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${langCode === 'ua' ? 'Обрати все' : 'Выбрать всё'}</button>
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="sort-trigger">
                   <span>Сортировать по</span>
@@ -5348,7 +5417,7 @@ class VoiceWidget extends HTMLElement {
               <div class="vw-access-obj-list">${rows}</div>
             </div>
             <div class="vw-access-objects-bottombar${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>Отменить</button>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>${isUaLang ? 'Скасувати' : 'Отменить'}</button>
               ${isShareDualModeEnabled
                 ? `
                   <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
@@ -5358,7 +5427,7 @@ class VoiceWidget extends HTMLElement {
                     <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
                   </button>
                 `
-                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Поделиться</button>`
+                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>${locale.cardShareGuest || (isUaLang ? 'Поділитися' : 'Поделиться')}</button>`
               }
             </div>
           </div>
@@ -5375,7 +5444,7 @@ class VoiceWidget extends HTMLElement {
                 <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
               </div>
               <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
-              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} комн · ${item.district}</div>
+              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${isUaLang ? 'кімн' : 'комн'} · ${item.district}</div>
             </div>
           </article>
         `).join('');
@@ -5383,11 +5452,11 @@ class VoiceWidget extends HTMLElement {
         return `
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
-              <div class="vw-access-objects-total">Всего: <strong data-role="list-total">${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">Выбрать всё</button>
+              <div class="vw-access-objects-total">${isUaLang ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
+              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${isUaLang ? 'Обрати все' : 'Выбрать всё'}</button>
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
                 <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
-                  <span>Сбросить</span>
+                  <span>${isUaLang ? 'Скинути' : 'Сбросить'}</span>
                   <span class="vw-access-reset-glyph" aria-hidden="true">↻</span>
                 </button>
               </div>
@@ -5408,7 +5477,7 @@ class VoiceWidget extends HTMLElement {
                     <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
                   </button>
                 `
-                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>Поделиться</button>`
+                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>${locale.cardShareGuest || (isUaLang ? 'Поділитися' : 'Поделиться')}</button>`
               }
             </div>
           </div>
@@ -5441,16 +5510,16 @@ class VoiceWidget extends HTMLElement {
         const statusLabel = this.getSubscriptionStatusLabel(subscription?.status, isActive);
         const startsAtLabel = this.formatSubscriptionDate(subscription?.startsAt);
         const endsAtLabel = subscription?.plan === 'lifetime'
-          ? 'Без срока'
+          ? (isUaLang ? 'Без строку' : 'Без срока')
           : this.formatSubscriptionDate(subscription?.endsAt);
         const countdownLabel = formatCountdown(subscription?.endsAt, subscription?.plan);
         return `
           <div class="vw-subscription-panel">
             <div class="vw-subscription-status">
-              <div class="vw-subscription-row"><span class="vw-subscription-label">Текущий план:</span><span class="vw-subscription-value">${planLabel}</span></div>
-              <div class="vw-subscription-row"><span class="vw-subscription-label">Статус:</span><span class="vw-subscription-value">${statusLabel}</span></div>
-              <div class="vw-subscription-row"><span class="vw-subscription-label">Дата активации:</span><span class="vw-subscription-value">${startsAtLabel}</span></div>
-              <div class="vw-subscription-row"><span class="vw-subscription-label">Действует до:</span><span class="vw-subscription-value">${endsAtLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Поточний план:' : 'Текущий план:'}</span><span class="vw-subscription-value">${planLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Статус:' : 'Статус:'}</span><span class="vw-subscription-value">${statusLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Дата активації:' : 'Дата активации:'}</span><span class="vw-subscription-value">${startsAtLabel}</span></div>
+              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Діє до:' : 'Действует до:'}</span><span class="vw-subscription-value">${endsAtLabel}</span></div>
             </div>
             <div class="vw-subscription-countdown">${countdownLabel}</div>
             <div class="vw-subscription-prompt">${locale.accessSubPrompt || 'Хотите обновить/активировать подписку?'}</div>
@@ -5474,7 +5543,7 @@ class VoiceWidget extends HTMLElement {
         if (!isSuperAdmin) {
           return `
             <div class="vw-access-sub-list">
-              <div class="vw-access-sub-item">Доступ только для super-admin.</div>
+              <div class="vw-access-sub-item">${isUaLang ? 'Доступ лише для super-admin.' : 'Доступ только для super-admin.'}</div>
             </div>
           `;
         }
@@ -5489,7 +5558,7 @@ class VoiceWidget extends HTMLElement {
             <div class="vw-sub-keygen-row" data-plan-row="${row.plan}">
               <div class="vw-sub-keygen-row-head">
                 <div class="vw-sub-keygen-plan">${row.code}</div>
-                <button type="button" class="vw-sub-keygen-generate" data-role="subscription-generate" data-plan="${row.plan}">Сгенерировать 🔑</button>
+                <button type="button" class="vw-sub-keygen-generate" data-role="subscription-generate" data-plan="${row.plan}">${isUaLang ? 'Згенерувати 🔑' : 'Сгенерировать 🔑'}</button>
               </div>
               <div class="vw-sub-keygen-controls">
                 <input
@@ -5501,10 +5570,10 @@ class VoiceWidget extends HTMLElement {
                   placeholder=""
                   readonly
                 >
-                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-toggle-key" data-plan="${row.plan}" aria-label="Показать/скрыть ключ">👁</button>
-                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-copy-key" data-plan="${row.plan}" aria-label="Копировать ключ">📋</button>
+                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-toggle-key" data-plan="${row.plan}" aria-label="${isUaLang ? 'Показати/приховати ключ' : 'Показать/скрыть ключ'}">👁</button>
+                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-copy-key" data-plan="${row.plan}" aria-label="${isUaLang ? 'Копіювати ключ' : 'Копировать ключ'}">📋</button>
               </div>
-              <div class="vw-sub-keygen-stats">Всего сгенерировано: <strong>${generated}</strong>&nbsp;&nbsp; Всего использовано: <strong>${used}</strong></div>
+              <div class="vw-sub-keygen-stats">${isUaLang ? 'Всього згенеровано' : 'Всего сгенерировано'}: <strong>${generated}</strong>&nbsp;&nbsp; ${isUaLang ? 'Всього використано' : 'Всего использовано'}: <strong>${used}</strong></div>
             </div>
           `;
         }).join('');
@@ -5516,38 +5585,38 @@ class VoiceWidget extends HTMLElement {
       }
       return `
         <div class="vw-access-sub-list">
-          <div class="vw-access-sub-item">Дата регистрации: <strong>${fmtDate(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 42))}</strong></div>
-          <div class="vw-access-sub-item">Переходы в бота: <strong>173</strong></div>
-          <div class="vw-access-sub-item">Объектов в подборке: <strong>${list.length}</strong></div>
-          <div class="vw-access-sub-item">Активная подписка до: <strong>${fmtDate(nextMonth)}</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Дата реєстрації' : 'Дата регистрации'}: <strong>${fmtDate(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 42))}</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Переходи в бота' : 'Переходы в бота'}: <strong>173</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? "Об'єктів у добірці" : 'Объектов в подборке'}: <strong>${list.length}</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Активна підписка до' : 'Активная подписка до'}: <strong>${fmtDate(nextMonth)}</strong></div>
         </div>
       `;
     })();
 
     const title = safeSection === 'properties'
-      ? 'Мои объекты'
+      ? (isUaLang ? "Мої об'єкти" : 'Мои объекты')
       : safeSection === 'wishlist'
         ? (locale.accessUserWishlist || 'Моя подборка')
       : safeSection === 'want-bot'
         ? (locale.accessUserBotSectionTitle || 'Хочу такого бота!')
       : isAddProperty
-        ? 'Новый объект'
+        ? (isUaLang ? "Новий об'єкт" : 'Новый объект')
       : safeSection === 'subscription'
-        ? 'Управление подпиской'
+        ? (isUaLang ? 'Керування підпискою' : 'Управление подпиской')
       : safeSection === 'keygen'
         ? (locale.accessAdminKeygen || 'Генерация ключей')
-        : 'Статистика';
+        : (isUaLang ? 'Статистика' : 'Статистика');
     const modalHead = isAddProperty
       ? `
         <div class="vw-access-add-head">
-          <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
-          <div class="vw-access-add-stage" data-role="add-stage">Основные параметры</div>
-          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="Сбросить изменения">↻</button>
+          <button type="button" class="vw-access-sub-back" data-role="back">← ${isUaLang ? 'Назад' : 'Назад'}</button>
+          <div class="vw-access-add-stage" data-role="add-stage">${isUaLang ? 'Основні параметри' : 'Основные параметры'}</div>
+          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="${isUaLang ? 'Скинути зміни' : 'Сбросить изменения'}">↻</button>
         </div>
       `
       : `
         <div class="vw-access-sub-head">
-          <button type="button" class="vw-access-sub-back" data-role="back">← Назад</button>
+          <button type="button" class="vw-access-sub-back" data-role="back">← ${isUaLang ? 'Назад' : 'Назад'}</button>
           <div class="vw-access-sub-title">${title}</div>
           <span class="vw-access-sub-spacer" aria-hidden="true"></span>
         </div>
@@ -5573,7 +5642,9 @@ class VoiceWidget extends HTMLElement {
         const currentStep = Number(wizard?.getAttribute('data-step') || '1');
         if (wizard && currentStep > 1) {
           const prevStep = currentStep === 4 ? 3 : currentStep - 1;
-          const labels = { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
+          const labels = isUaLang
+            ? { 1: 'Основні параметри', 2: 'Додатково', 3: 'Попередній перегляд', 4: 'Готово' }
+            : { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
           wizard.setAttribute('data-step', String(prevStep));
           if (stageLabel) stageLabel.textContent = labels[prevStep] || labels[1];
           return;
@@ -5611,10 +5682,10 @@ class VoiceWidget extends HTMLElement {
         layer.className = 'vw-access-add-dialog-layer';
         layer.innerHTML = `
           <div class="vw-access-add-dialog">
-            <div class="vw-access-add-dialog-title">Удалить выбранные объекты (${count})?</div>
+            <div class="vw-access-add-dialog-title">${isUaLang ? 'Видалити вибрані обʼєкти' : 'Удалить выбранные объекты'} (${count})?</div>
             <div class="vw-access-add-dialog-actions">
-              <button type="button" class="vw-access-add-dialog-btn is-danger" data-role="confirm-delete">Удалить</button>
-              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="cancel-delete">Отмена</button>
+              <button type="button" class="vw-access-add-dialog-btn is-danger" data-role="confirm-delete">${isUaLang ? 'Видалити' : 'Удалить'}</button>
+              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="cancel-delete">${isUaLang ? 'Скасувати' : 'Отмена'}</button>
             </div>
           </div>
         `;
@@ -5628,14 +5699,14 @@ class VoiceWidget extends HTMLElement {
         cancelBtn?.addEventListener('click', close);
         confirmBtn?.addEventListener('click', async () => {
           if (!confirmBtn) return;
-          const original = confirmBtn.textContent || 'Удалить';
+          const original = confirmBtn.textContent || (isUaLang ? 'Видалити' : 'Удалить');
           confirmBtn.disabled = true;
           if (cancelBtn) cancelBtn.disabled = true;
-          confirmBtn.textContent = 'Удаляем...';
+          confirmBtn.textContent = isUaLang ? 'Видаляємо...' : 'Удаляем...';
           try {
             await onConfirm?.();
           } catch (error) {
-            this.ui?.showNotification?.('Не удалось выполнить удаление');
+            this.ui?.showNotification?.(isUaLang ? 'Не вдалося виконати видалення' : 'Не удалось выполнить удаление');
           } finally {
             close();
             confirmBtn.textContent = original;
@@ -5684,19 +5755,19 @@ class VoiceWidget extends HTMLElement {
         }
         this.updateAdminObjectsSelectionState(overlay);
         if (!failed.length) {
-          this.ui?.showNotification?.(`Удалено: ${succeeded.length}`);
+          this.ui?.showNotification?.(isUaLang ? `Видалено: ${succeeded.length}` : `Удалено: ${succeeded.length}`);
           return;
         }
         if (!succeeded.length) {
           const hasForbidden = failed.some((x) => x.code.includes('FORBIDDEN_ADMIN_ONLY'));
           if (hasForbidden) {
-            this.ui?.showNotification?.('Нет прав на удаление объектов');
+            this.ui?.showNotification?.(isUaLang ? 'Немає прав на видалення обʼєктів' : 'Нет прав на удаление объектов');
           } else {
             const code = String(failed?.[0]?.code || 'UNKNOWN');
-            this.ui?.showNotification?.(`Удаление не выполнено (${code})`);
+            this.ui?.showNotification?.(isUaLang ? `Видалення не виконано (${code})` : `Удаление не выполнено (${code})`);
           }
         } else {
-          this.ui?.showNotification?.(`Удаление частично выполнено: ${succeeded.length}/${selectedIds.length}`);
+          this.ui?.showNotification?.(isUaLang ? `Видалення виконано частково: ${succeeded.length}/${selectedIds.length}` : `Удаление частично выполнено: ${succeeded.length}/${selectedIds.length}`);
         }
       };
       getRows().forEach((row) => {
@@ -5869,7 +5940,7 @@ class VoiceWidget extends HTMLElement {
         const selectedIds = getSelectedIds();
         if (!selectedIds.length) return;
         this.sharePropertiesSelectionByIds(selectedIds, { preferNative: preferNative === true }).catch(() => {
-          this.ui?.showNotification?.('Не удалось поделиться подборкой');
+          this.ui?.showNotification?.(this.t('shareSelectionFailed') || 'Не удалось поделиться подборкой');
         });
       };
       overlay.querySelector('[data-role="share-global"]')?.addEventListener('click', () => shareSelection(true));
@@ -5948,7 +6019,7 @@ class VoiceWidget extends HTMLElement {
         const selectedIds = getSelectedIds();
         if (!selectedIds.length) return;
         this.sharePropertiesSelectionByIds(selectedIds, { preferNative: preferNative === true }).catch(() => {
-          this.ui?.showNotification?.('Не удалось поделиться подборкой');
+          this.ui?.showNotification?.(this.t('shareSelectionFailed') || 'Не удалось поделиться подборкой');
         });
       };
       overlay.querySelector('[data-role="share-global"]')?.addEventListener('click', () => shareSelection(true));
@@ -5975,13 +6046,13 @@ class VoiceWidget extends HTMLElement {
       const activate = async () => {
         const key = String(input?.value || '').trim();
         if (!key) {
-          this.ui?.showNotification?.('Введите ключ активации');
+          this.ui?.showNotification?.(isUaLang ? 'Введіть ключ активації' : 'Введите ключ активации');
           try { input?.focus(); } catch {}
           return;
         }
         updateBusy(true);
-        const originalText = activateBtn?.textContent || 'Активировать ключ';
-        if (activateBtn) activateBtn.textContent = 'Активация...';
+        const originalText = activateBtn?.textContent || (isUaLang ? 'Активувати ключ' : 'Активировать ключ');
+        if (activateBtn) activateBtn.textContent = isUaLang ? 'Активація...' : 'Активация...';
         try {
           const result = await this.api?.redeemSubscriptionActivationKey?.(key);
           this.openSubscriptionActivationResultModal({
@@ -6030,9 +6101,9 @@ class VoiceWidget extends HTMLElement {
         try {
           if (navigator?.clipboard?.writeText) await navigator.clipboard.writeText(key);
           else document.execCommand('copy');
-          this.ui?.showNotification?.('Ключ скопирован');
+          this.ui?.showNotification?.(isUaLang ? 'Ключ скопійовано' : 'Ключ скопирован');
         } catch {
-          this.ui?.showNotification?.('Не удалось скопировать ключ');
+          this.ui?.showNotification?.(isUaLang ? 'Не вдалося скопіювати ключ' : 'Не удалось скопировать ключ');
         }
       }));
       toggleKeyBtns.forEach((btn) => btn.addEventListener('click', () => {
@@ -6048,7 +6119,7 @@ class VoiceWidget extends HTMLElement {
           if (!plan) return;
           updateBusy(true);
           const original = btn.textContent || '...';
-          btn.textContent = 'Генерация...';
+          btn.textContent = isUaLang ? 'Генерація...' : 'Генерация...';
           try {
             const result = await this.api?.createSubscriptionActivationKey?.({ plan });
             const key = String(result?.activationKey || '').trim();
@@ -6057,18 +6128,18 @@ class VoiceWidget extends HTMLElement {
             state.generatedByPlan = { ...(state.generatedByPlan || {}), [plan]: key };
             state.visibleByPlan = { ...(state.visibleByPlan || {}), [plan]: false };
             await this.refreshSubscriptionKeygenStats();
-            this.ui?.showNotification?.('Ключ сгенерирован');
+            this.ui?.showNotification?.(isUaLang ? 'Ключ згенеровано' : 'Ключ сгенерирован');
             this.openAccessSubOverlay('keygen');
           } catch (error) {
             const code = String(error?.message || '');
             if (code.includes('FORBIDDEN_SUPER_ADMIN_ONLY')) {
-              this.ui?.showNotification?.('Доступ к генерации ключей только для super-admin');
+              this.ui?.showNotification?.(isUaLang ? 'Доступ до генерації ключів лише для super-admin' : 'Доступ к генерации ключей только для super-admin');
             } else if (code.includes('SUBSCRIPTION_KEY_PEPPER_REQUIRED')) {
-              this.ui?.showNotification?.('На сервере не задан SUBSCRIPTION_KEY_PEPPER');
+              this.ui?.showNotification?.(isUaLang ? 'На сервері не задано SUBSCRIPTION_KEY_PEPPER' : 'На сервере не задан SUBSCRIPTION_KEY_PEPPER');
             } else if (code.includes('INVALID_PLAN')) {
-              this.ui?.showNotification?.('Некорректный план генерации');
+              this.ui?.showNotification?.(isUaLang ? 'Некоректний план генерації' : 'Некорректный план генерации');
             } else {
-              this.ui?.showNotification?.(`Не удалось сгенерировать ключ (${code || 'UNKNOWN'})`);
+              this.ui?.showNotification?.(isUaLang ? `Не вдалося згенерувати ключ (${code || 'UNKNOWN'})` : `Не удалось сгенерировать ключ (${code || 'UNKNOWN'})`);
             }
           } finally {
             btn.textContent = original;
@@ -6108,7 +6179,9 @@ class VoiceWidget extends HTMLElement {
         const cleanFrac = String(fracPart || '').replace(/0+$/g, '');
         return cleanFrac ? `${groupedInt},${cleanFrac} м²` : `${groupedInt} м²`;
       };
-      const steps = { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
+      const steps = isUaLang
+        ? { 1: 'Основні параметри', 2: 'Додатково', 3: 'Попередній перегляд', 4: 'Готово' }
+        : { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
       const draft = { photos: Array(5).fill(''), photoFiles: Array(5).fill(null) };
       const priceInput = overlay.querySelector('[data-role="price"]');
       const areaInput = overlay.querySelector('[data-role="area"]');
@@ -6347,7 +6420,7 @@ class VoiceWidget extends HTMLElement {
       };
       const saveDraftAndExit = () => {
         this._addPropertyDraft = collectCurrentDraftState();
-        this.ui?.showNotification?.('Черновик сохранен');
+        this.ui?.showNotification?.(isUaLang ? 'Чернетку збережено' : 'Черновик сохранен');
         this.closeAccessSubOverlay();
       };
       const clearDraftAndExit = () => {
@@ -6362,36 +6435,36 @@ class VoiceWidget extends HTMLElement {
         }
         if (isEditProperty) {
           showActionDialog({
-            title: 'Изменения не опубликованы. Что сделать?',
+            title: isUaLang ? 'Зміни не опубліковано. Що зробити?' : 'Изменения не опубликованы. Что сделать?',
             buttons: [
               {
-                label: 'Опубликовать изменения',
+                label: isUaLang ? 'Опублікувати зміни' : 'Опубликовать изменения',
                 variant: 'primary',
                 onClick: () => {
                   if (typeof publishAction === 'function') publishAction();
                 }
               },
-              { label: 'Выйти без сохранения', variant: 'danger', onClick: clearDraftAndExit }
+              { label: isUaLang ? 'Вийти без збереження' : 'Выйти без сохранения', variant: 'danger', onClick: clearDraftAndExit }
             ]
           });
           return;
         }
         showActionDialog({
-          title: 'Объявление не опубликовано. Что сделать?',
+          title: isUaLang ? 'Оголошення не опубліковано. Що зробити?' : 'Объявление не опубликовано. Что сделать?',
           buttons: [
-            { label: 'Продолжить редактирование', variant: 'primary', onClick: () => {} },
-            { label: 'Сохранить в черновик', variant: 'neutral', onClick: saveDraftAndExit },
-            { label: 'Выйти без сохранения', variant: 'danger', onClick: clearDraftAndExit }
+            { label: isUaLang ? 'Продовжити редагування' : 'Продолжить редактирование', variant: 'primary', onClick: () => {} },
+            { label: isUaLang ? 'Зберегти у чернетку' : 'Сохранить в черновик', variant: 'neutral', onClick: saveDraftAndExit },
+            { label: isUaLang ? 'Вийти без збереження' : 'Выйти без сохранения', variant: 'danger', onClick: clearDraftAndExit }
           ]
         });
       };
       const showResetDialog = () => {
         if (!hasUnsavedChanges()) return;
         showActionDialog({
-          title: 'Сбросить все изменения?',
+          title: isUaLang ? 'Скинути всі зміни?' : 'Сбросить все изменения?',
           buttons: [
-            { label: 'Сбросить изменения', variant: 'danger', onClick: resetForm },
-            { label: 'Продолжить редактирование', variant: 'primary', onClick: () => {} }
+            { label: isUaLang ? 'Скинути зміни' : 'Сбросить изменения', variant: 'danger', onClick: resetForm },
+            { label: isUaLang ? 'Продовжити редагування' : 'Продолжить редактирование', variant: 'primary', onClick: () => {} }
           ]
         });
       };
@@ -10948,7 +11021,7 @@ render() {
           </div>
           <div class="pill-overlay-lane" aria-hidden="false">
             <div class="pill-overlay-row">
-              <button class="pill-action-btn" id="pillFiltersButton" type="button" aria-label="Фильтры">
+              <button class="pill-action-btn" id="pillFiltersButton" type="button" aria-label="${this.t('filtersAria') || 'Фильтры'}">
                 <span class="pill-action-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                     <path d="M4 6h16l-6.5 7.2v4.8l-3 1.8v-6.6L4 6z"></path>
@@ -10956,7 +11029,7 @@ render() {
                 </span>
               </button>
               <div class="objects-counter-pill" id="objectsCounterPill" role="button" tabindex="0">Знайдено 2,345 обʼєктів</div>
-              <button class="pill-action-btn pill-action-btn--view" id="pillViewButton" type="button" aria-label="Вид выдачи" aria-pressed="false">
+              <button class="pill-action-btn pill-action-btn--view" id="pillViewButton" type="button" aria-label="${this.t('viewAria') || 'Вид выдачи'}" aria-pressed="false">
                 <span class="pill-action-icon" aria-hidden="true">
                   <svg class="icon-list" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
                     <path d="M4 6h2.5M9 6h11M4 12h2.5M9 12h11M4 18h2.5M9 18h11"></path>
@@ -11732,9 +11805,9 @@ render() {
       <div class="property-card" data-variant-id="\${property.id || ''}">
         <div class="card-image" style="background-image: url('\${property.image || ''}')"></div>
         <div class="card-content">
-          <div class="card-title">\${property.title || 'Название не указано'}</div>
-          <div class="card-location">\${property.location || 'Локация не указана'}</div>
-          <div class="card-price">\${property.price || 'Цена не указана'}</div>
+          <div class="card-title">\${property.title || '${this.t('titleNotSpecified') || 'Название не указано'}'}</div>
+          <div class="card-location">\${property.location || '${this.t('locationNotSpecified') || 'Локация не указана'}'}</div>
+          <div class="card-price">\${property.price || '${this.t('priceNotSpecified') || 'Цена не указана'}'}</div>
           <div class="card-actions">
             <button class="card-btn like" data-action="like" data-variant-id="\${property.id || ''}">Мне нравится!</button>
             <button class="card-btn next" data-action="next" data-variant-id="\${property.id || ''}">Ещё вариант</button>
@@ -12144,7 +12217,7 @@ render() {
       const valueEl = this.$byId(id);
       const dotEl = this.$byId(dotId);
       if (valueEl) {
-        const text = value || 'не определено';
+        const text = value || (this.t('insightDefault') || 'не указано');
         valueEl.textContent = text;
         valueEl.setAttribute('title', text);
         valueEl.setAttribute('data-tooltip', text);
@@ -13880,11 +13953,11 @@ render() {
       if (isRecording) {
         // Show stop icon
         toggleButton.innerHTML = `<img src="${ASSETS_BASE}${this.getStopIconByTheme()}" alt="Stop" />`;
-        toggleButton.setAttribute('title', 'Сбросить');
+        toggleButton.setAttribute('title', this.t('cancel') || 'Сбросить');
       } else {
         // Show mic icon
         toggleButton.innerHTML = `<img src="${ASSETS_BASE}${this.getMicIconByTheme()}" alt="Microphone" />`;
-        toggleButton.setAttribute('title', 'Говорить');
+        toggleButton.setAttribute('title', this.t('speakTitle') || 'Говорить');
       }
     }
   }
@@ -13946,9 +14019,9 @@ render() {
           </div>
           <div class="cards-list">
             <div class="cards-list-body"></div>
-            <div class="cards-list-nav" aria-label="Навигация списка">
-              <button type="button" class="cards-list-nav-btn" data-action="catalog-list-prev" aria-label="Предыдущий объект">↑</button>
-              <button type="button" class="cards-list-nav-btn" data-action="catalog-list-next" aria-label="Следующий объект">↓</button>
+            <div class="cards-list-nav" aria-label="${this.t('listNavAria') || 'Навигация списка'}">
+              <button type="button" class="cards-list-nav-btn" data-action="catalog-list-prev" aria-label="${this.t('prevObjectAria') || 'Предыдущий объект'}">↑</button>
+              <button type="button" class="cards-list-nav-btn" data-action="catalog-list-next" aria-label="${this.t('nextObjectAria') || 'Следующий объект'}">↓</button>
             </div>
           </div>
         </div>`;
@@ -13981,9 +14054,9 @@ render() {
         list.className = 'cards-list';
         list.innerHTML = `
           <div class="cards-list-body"></div>
-          <div class="cards-list-nav" aria-label="Навигация списка">
-            <button type="button" class="cards-list-nav-btn" data-action="catalog-list-prev" aria-label="Предыдущий объект">↑</button>
-            <button type="button" class="cards-list-nav-btn" data-action="catalog-list-next" aria-label="Следующий объект">↓</button>
+          <div class="cards-list-nav" aria-label="${this.t('listNavAria') || 'Навигация списка'}">
+            <button type="button" class="cards-list-nav-btn" data-action="catalog-list-prev" aria-label="${this.t('prevObjectAria') || 'Предыдущий объект'}">↑</button>
+            <button type="button" class="cards-list-nav-btn" data-action="catalog-list-next" aria-label="${this.t('nextObjectAria') || 'Следующий объект'}">↓</button>
           </div>`;
         cs.appendChild(list);
       }
@@ -14033,7 +14106,7 @@ render() {
         const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
         const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
         const bgStyle = isThumb ? ` style="background-image:url('${safeUrl.replace(/'/g, "\\'")}')"` : '';
-        return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}${bgStyle}><span class="card-back-asset__label">img</span></button>`;
+        return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="${this.t('openImageAria') || 'Open image'}"${thumbData}${bgStyle}><span class="card-back-asset__label">img</span></button>`;
       }).join('');
       const complexLine = String(
         normalized?.features?.complex
@@ -14076,7 +14149,7 @@ render() {
               ${listArgBadgesHtml}
             </div>
             <div class="list-card__assets">${listAssetTilesHtml}</div>
-            <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
+            <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.addToWishlistAria || 'Добавить в подборку')}">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
@@ -14189,7 +14262,7 @@ render() {
       const openUrl = safeUrl || fallbackAssetOpenUrl;
       const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
       const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
-      return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="Open image"${thumbData}><span class="card-back-asset__label">img</span></button>`;
+      return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="${escCardAttr(locale.openImageAria || 'Open image')}"${thumbData}><span class="card-back-asset__label">img</span></button>`;
     }).join('');
     slide.innerHTML = `
       <div class="card-slide-front">
@@ -14200,7 +14273,7 @@ render() {
                 ${frontPrimaryBadgeHtml}
                 ${frontReasonBadgesHtml}
               </div>
-              <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="Добавить в подборку">
+              <button class="cs-like-btn card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.addToWishlistAria || 'Добавить в подборку')}">
                 <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
@@ -14244,7 +14317,7 @@ render() {
       <div class="card-slide-back">
         <div class="card-slide-back__bg${normalized.image ? '' : ' card-slide-back__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
-          <button type="button" class="card-back-header__close" aria-label="Back">Назад</button>
+          <button type="button" class="card-back-header__close" aria-label="${escCardAttr(locale.backAria || 'Back')}">${locale.backAria || 'Назад'}</button>
           <span class="card-back-header__score" aria-hidden="true">${escCardText(normalized.id || '')}</span>
         </div>
         <div class="card-back-scroll">
@@ -14267,8 +14340,8 @@ render() {
       </div>
       <div class="card-slide-form">
         <div class="card-form-header">
-          <button type="button" class="card-form-header__back" aria-label="Back">
-            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="Back">
+          <button type="button" class="card-form-header__back" aria-label="${escCardAttr(locale.backAria || 'Back')}">
+            <img src="${ASSETS_BASE}${this.getReturnIconByTheme()}" alt="${escCardAttr(locale.backAria || 'Back')}">
           </button>
           <span class="card-form-header__title">${locale.leaveRequest}</span>
           <span class="card-form-header__spacer" aria-hidden="true"></span>
@@ -16458,12 +16531,12 @@ render() {
     const operationRaw = String(raw.operation || raw.listingMode || '').trim().toLowerCase();
     const isUaLang = this.getLangCode() === 'ua';
     const operationBadgeLabel = operationRaw === 'rent'
-      ? 'Аренда'
-      : (operationRaw === 'sale' ? 'Продажа' : '');
+      ? (isUaLang ? 'Оренда' : 'Аренда')
+      : (operationRaw === 'sale' ? (isUaLang ? 'Продаж' : 'Продажа') : '');
     const propertyTypeRaw = String(propertyType || '').trim().toLowerCase();
     const propertyTypeBadgeLabel = (() => {
       if (!propertyTypeRaw) return '';
-      if (['apartment', 'flat'].includes(propertyTypeRaw)) return 'Квартира';
+      if (['apartment', 'flat'].includes(propertyTypeRaw)) return isUaLang ? 'Квартира' : 'Квартира';
       if (propertyTypeRaw === 'house') return 'Дом';
       if (propertyTypeRaw === 'commercial') return 'Коммерция';
       if (propertyTypeRaw === 'land') return 'Земля';
@@ -16603,13 +16676,13 @@ render() {
     // Phase-2 prep: consume normalized Group-2 payload from backend (features.display_specs).
     // Old/manual cards may not have this object; in that case the existing fallback logic is used.
     if (displaySpecs) {
-      pushExtra(dynamicBackFeatureItems, '📍', 'Улица', displaySpecs.street);
-      pushExtra(dynamicBackFeatureItems, '🍳', 'Кухня', displaySpecs.kitchen_area != null ? `${displaySpecs.kitchen_area} м²` : null);
-      pushExtra(dynamicBackFeatureItems, '🏗️', 'Этажность', displaySpecs.total_floors);
+      pushExtra(dynamicBackFeatureItems, '📍', isUaLang ? 'Вулиця' : 'Улица', displaySpecs.street);
+      pushExtra(dynamicBackFeatureItems, '🍳', isUaLang ? 'Кухня' : 'Кухня', displaySpecs.kitchen_area != null ? `${displaySpecs.kitchen_area} м²` : null);
+      pushExtra(dynamicBackFeatureItems, '🏗️', isUaLang ? 'Поверховість' : 'Этажность', displaySpecs.total_floors);
       pushExtra(dynamicBackFeatureItems, '🔥', isUaLang ? 'Опалення' : 'Отопление', mapOlxHeatingLabel(displaySpecs.heating));
-      pushExtra(dynamicBackFeatureItems, '🛠️', 'Ремонт', mapOlxRepairLabel(displaySpecs.repair));
-      pushExtra(dynamicBackFeatureItems, '🏙️', 'Инфраструктура', displaySpecs.infrastructure);
-      pushExtra(dynamicBackFeatureItems, '🌳', 'Ландшафт', displaySpecs.landscape);
+      pushExtra(dynamicBackFeatureItems, '🛠️', isUaLang ? 'Ремонт' : 'Ремонт', mapOlxRepairLabel(displaySpecs.repair));
+      pushExtra(dynamicBackFeatureItems, '🏙️', isUaLang ? 'Інфраструктура' : 'Инфраструктура', displaySpecs.infrastructure);
+      pushExtra(dynamicBackFeatureItems, '🌳', isUaLang ? 'Ландшафт' : 'Ландшафт', displaySpecs.landscape);
     }
 
     return {
