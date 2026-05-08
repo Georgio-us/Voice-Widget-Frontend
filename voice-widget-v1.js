@@ -12743,32 +12743,61 @@ render() {
   }
 
   _describeRelaxStep(step = 0, query = {}) {
+    const isUa = this.getLangCode() === 'ua';
     const n = Number(step) || 0;
-    if (n === 1) return 'В этой подборке нет новых вариантов с паркингом. Показываем без паркинга.';
-    if (n === 2) return 'В этой подборке нет новых вариантов с балконом/лоджией. Показываем ближайшие без него.';
-    if (n === 3) return 'Расширили условия по этажу.';
-    if (n === 4) return 'Расширили условия по площади.';
-    if (n === 5) return 'Расширили диапазон цены.';
-    if (n === 6) return 'По текущим условиям нет новых вариантов по комнатности. Показываем ближайшие по комнатам.';
-    if (n === 7) return 'Точного совпадения по ЖК больше нет. Показываем ближайшие варианты в ЖК.';
+    if (n === 1) return isUa ? 'У цій добірці немає нових варіантів із паркінгом. Показуємо без паркінгу.' : 'В этой подборке нет новых вариантов с паркингом. Показываем без паркинга.';
+    if (n === 2) return isUa ? 'У цій добірці немає нових варіантів із балконом/лоджією. Показуємо найближчі без нього.' : 'В этой подборке нет новых вариантов с балконом/лоджией. Показываем ближайшие без него.';
+    if (n === 3) return isUa ? 'Розширили умови за поверхом.' : 'Расширили условия по этажу.';
+    if (n === 4) return isUa ? 'Розширили умови за площею.' : 'Расширили условия по площади.';
+    if (n === 5) return isUa ? 'Розширили діапазон ціни.' : 'Расширили диапазон цены.';
+    if (n === 6) return isUa ? 'За поточними умовами немає нових варіантів за кімнатністю. Показуємо найближчі за кімнатами.' : 'По текущим условиям нет новых вариантов по комнатности. Показываем ближайшие по комнатам.';
+    if (n === 7) return isUa ? 'Точних збігів за ЖК більше немає. Показуємо найближчі варіанти в ЖК.' : 'Точного совпадения по ЖК больше нет. Показываем ближайшие варианты в ЖК.';
     if (n === 8) {
-      if (query.arcadia === true || query.center === true) return 'В выбранном микрорайоне нет новых вариантов. Показываем варианты по Приморскому району.';
-      return 'Расширили район поиска на ближайший уровень.';
+      if (query.arcadia === true || query.center === true) return isUa ? 'В обраному мікрорайоні немає нових варіантів. Показуємо варіанти по Приморському району.' : 'В выбранном микрорайоне нет новых вариантов. Показываем варианты по Приморскому району.';
+      return isUa ? 'Розширили район пошуку на найближчий рівень.' : 'Расширили район поиска на ближайший уровень.';
     }
-    if (n === 9 || n === 10 || n === 11) return 'Расширили район поиска.';
-    if (n === 12) return 'Показываем самые широкие похожие варианты.';
-    return 'Показаны похожие варианты.';
+    if (n === 9 || n === 10 || n === 11) return isUa ? 'Розширили район пошуку.' : 'Расширили район поиска.';
+    if (n === 12) return isUa ? 'Показуємо найширші схожі варіанти.' : 'Показываем самые широкие похожие варианты.';
+    return isUa ? 'Показано схожі варіанти.' : 'Показаны похожие варианты.';
   }
 
   _getDynamicFrontBadges(normalized = {}, query = null) {
+    const isUa = this.getLangCode() === 'ua';
+    const L = {
+      exact: isUa ? 'Точний збіг' : 'Точное попадание',
+      similar: isUa ? 'Схоже' : 'Похожее',
+      alt: isUa ? 'Альтернатива' : 'Альтернатива',
+      parkingYes: isUa ? 'Є паркінг' : 'Есть паркинг',
+      parkingNo: isUa ? 'Без паркінгу' : 'Без паркинга',
+      balconyYes: isUa ? 'Є балкон/лоджія' : 'Есть балкон/лоджия',
+      balconyNo: isUa ? 'Без балкона/лоджії' : 'Без балкона/лоджии',
+      inRc: isUa ? 'У ЖК' : 'В ЖК',
+      notInRc: isUa ? 'Не в ЖК' : 'Не в ЖК',
+      selectedDistrict: isUa ? 'Обраний район' : 'Выбранный район',
+      nearbyDistrict: isUa ? 'Сусідній район' : 'Соседний район',
+      priceInRange: isUa ? 'Ціна в діапазоні' : 'Цена в диапазоне',
+      priceAbove: isUa ? 'Ціна вища за запит' : 'Цена выше запроса',
+      priceBelow: isUa ? 'Ціна нижча за запит' : 'Цена ниже запроса',
+      roomsFit: isUa ? 'Підходить за кімнатами' : 'Подходит по комнатам',
+      roomsLess: isUa ? 'Менше кімнат' : 'Меньше комнат',
+      roomsMore: isUa ? 'Більше кімнат' : 'Больше комнат',
+      roomsClose: isUa ? 'Кімнатність близька' : 'Комнатность близка',
+      areaFit: isUa ? 'Підходить за метражем' : 'Подходит по метражу',
+      areaDiff: isUa ? 'Метраж відрізняється' : 'Метраж отличается',
+      floorFit: isUa ? 'Підходить за поверхом' : 'Подходящий этаж',
+      floorDiff: isUa ? 'Поверх відрізняється' : 'Этаж отличается',
+      ppm2: isUa ? 'Ціна за м²' : 'Цена за м²',
+      rc: 'ЖК',
+      kitchen: isUa ? 'Кухня' : 'Кухня'
+    };
     const score = Number(normalized?.score);
     const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 0;
     const tier = String(normalized?.matchTier || '').toLowerCase();
     const q = query && typeof query === 'object' ? query : {};
     const showInterpretation = this._isStrictFlowQuery(q);
     const primary = tier === 'high' || safeScore >= 80
-      ? 'Точное попадание'
-      : ((tier === 'mid' || safeScore >= 50) ? 'Похожее' : 'Альтернатива');
+      ? L.exact
+      : ((tier === 'mid' || safeScore >= 50) ? L.similar : L.alt);
     const toNum = (v) => {
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -12801,24 +12830,24 @@ render() {
     const iDistrict = this._normalizeDistrictForRelax(String(normalized?.district || normalized?.neighborhood || normalized?.city || ''));
 
     // Priority: explicit query constraints first, then soft compat reasons.
-    if (q.parking === true) pushArg(hasParking ? 'Есть паркинг' : 'Без паркинга');
-    if (q.balconyLoggia === true) pushArg(hasBalcony ? 'Есть балкон/лоджия' : 'Без балкона/лоджии');
+    if (q.parking === true) pushArg(hasParking ? L.parkingYes : L.parkingNo);
+    if (q.balconyLoggia === true) pushArg(hasBalcony ? L.balconyYes : L.balconyNo);
     if (q.rcOnly === true) {
       const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
-      pushArg(complex ? 'В ЖК' : 'Не в ЖК');
+      pushArg(complex ? L.inRc : L.notInRc);
     }
     if (qDistricts.length) {
-      if (iDistrict && qDistricts.includes(iDistrict)) pushArg('Выбранный район');
-      else if (iDistrict) pushArg('Соседний район');
+      if (iDistrict && qDistricts.includes(iDistrict)) pushArg(L.selectedDistrict);
+      else if (iDistrict) pushArg(L.nearbyDistrict);
     }
 
     const minP = toNum(q.minPrice);
     const maxP = toNum(q.maxPrice);
     const price = toNum(normalized?.priceUSD ?? normalized?.priceEUR ?? normalized?.price_amount);
     if (price != null && (minP != null || maxP != null)) {
-      if ((minP == null || price >= minP) && (maxP == null || price <= maxP)) pushArg('Цена в диапазоне');
-      else if (maxP != null && price > maxP) pushArg('Цена выше запроса');
-      else if (minP != null && price < minP) pushArg('Цена ниже запроса');
+      if ((minP == null || price >= minP) && (maxP == null || price <= maxP)) pushArg(L.priceInRange);
+      else if (maxP != null && price > maxP) pushArg(L.priceAbove);
+      else if (minP != null && price < minP) pushArg(L.priceBelow);
     }
 
     const qRoomsList = Array.from(new Set(
@@ -12835,7 +12864,7 @@ render() {
         return want != null && rooms === want;
       });
       if (roomInSelected) {
-        pushArg('Подходит по комнатам');
+        pushArg(L.roomsFit);
       } else {
         const roomBands = Array.from(new Set(
           qRoomsList.flatMap((token) => {
@@ -12849,11 +12878,11 @@ render() {
         const minBand = roomBands.length ? roomBands[0] : null;
         const maxBand = roomBands.length ? roomBands[roomBands.length - 1] : null;
         if (minBand != null && roomBand < minBand) {
-          pushArg('Меньше комнат');
+          pushArg(L.roomsLess);
         } else if (maxBand != null && maxBand < 5 && roomBand > maxBand) {
-          pushArg('Больше комнат');
+          pushArg(L.roomsMore);
         } else {
-          pushArg('Комнатность близка');
+          pushArg(L.roomsClose);
         }
       }
     }
@@ -12861,32 +12890,32 @@ render() {
     const maxA = toNum(q.maxArea);
     const area = toNum(normalized?.area_m2);
     if (area != null && (minA != null || maxA != null)) {
-      if ((minA == null || area >= minA) && (maxA == null || area <= maxA)) pushArg('Подходит по метражу');
-      else pushArg('Метраж отличается');
+      if ((minA == null || area >= minA) && (maxA == null || area <= maxA)) pushArg(L.areaFit);
+      else pushArg(L.areaDiff);
     }
     const minF = toNum(q.minFloor);
     const maxF = toNum(q.maxFloor);
     const floor = toNum(normalized?.floor);
     if (floor != null && (minF != null || maxF != null)) {
-      if ((minF == null || floor >= minF) && (maxF == null || floor <= maxF)) pushArg('Подходящий этаж');
-      else pushArg('Этаж отличается');
+      if ((minF == null || floor >= minF) && (maxF == null || floor <= maxF)) pushArg(L.floorFit);
+      else pushArg(L.floorDiff);
     }
 
     // No "fake" placeholders: only factual arguments.
     // Fallback chain: price per m2 -> residential complex -> kitchen area.
     const ppm2 = Number(normalized?.price_per_m2);
     if (args.length < 2 && Number.isFinite(ppm2) && ppm2 > 0) {
-      pushArg(`Цена за м²: ${Math.round(ppm2).toLocaleString('en-US')} $`);
+      pushArg(`${L.ppm2}: ${Math.round(ppm2).toLocaleString('en-US')} $`);
     }
     if (args.length < 2) {
       const complex = String(normalized?.features?.complex || normalized?.display_specs?.complex || '').trim();
-      if (complex) pushArg(`ЖК: ${complex}`);
+      if (complex) pushArg(`${L.rc}: ${complex}`);
     }
     if (args.length < 2) {
       const kitchen = normalized?.display_specs?.kitchen_area ?? normalized?.features?.display_specs?.kitchen_area;
       const kitchenNum = Number(kitchen);
       if (Number.isFinite(kitchenNum) && kitchenNum > 0) {
-        pushArg(`Кухня: ${kitchenNum} м²`);
+        pushArg(`${L.kitchen}: ${kitchenNum} м²`);
       }
     }
     return [showInterpretation ? primary : '', args[0] || '', args[1] || ''];
