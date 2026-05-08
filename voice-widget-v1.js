@@ -2790,6 +2790,9 @@ const LOCALES = {
     shareSelectionTitleMany: 'Подборка объектов ({count})',
     shareSelectionTextMany: 'Подобрал для вас подборку из {count} объектов.\nОткройте карточки — внутри все детали и фото.',
     shareSelectionFailed: 'Не удалось поделиться подборкой',
+    selectionUpdatedFound: 'Подборка обновлена · найдено {count} объектов',
+    selectionUpdatedNoStrict: 'Подборка обновлена · точных совпадений нет',
+    smartLayerFallbackNotice: 'Смарт-слой исчерпан · показываем 1-комнатные как fallback.',
     shareTypeLabel: 'Тип',
     sharePriceLabel: 'Цена',
     shareAreaLabel: 'Площадь',
@@ -3008,6 +3011,9 @@ const LOCALES = {
     shareSelectionTitleMany: "Добірка об'єктів ({count})",
     shareSelectionTextMany: "Підібрав для вас добірку з {count} об'єктів.\nВідкрийте картки — всередині всі деталі та фото.",
     shareSelectionFailed: 'Не вдалося поділитися добіркою',
+    selectionUpdatedFound: "Добірку оновлено · знайдено {count} об'єктів",
+    selectionUpdatedNoStrict: 'Добірку оновлено · точних збігів не знайдено',
+    smartLayerFallbackNotice: 'Смарт-шар вичерпано · показуємо 1-кімнатні як fallback.',
     shareTypeLabel: 'Тип',
     sharePriceLabel: 'Ціна',
     shareAreaLabel: 'Площа',
@@ -8671,9 +8677,9 @@ class VoiceWidget extends HTMLElement {
       const list = await this.refreshCatalogByEffectiveQuery();
       this.ui?.showNotification?.(`Фильтры применены: ${list.length}`);
       if (Array.isArray(list) && list.length > 0) {
-        this.ui?.addSystemEventMessage?.(`Подборка обновлена · найдено ${list.length} объектов`);
+        this.ui?.addSystemEventMessage?.(this.t('selectionUpdatedFound', { count: list.length }) || `Подборка обновлена · найдено ${list.length} объектов`);
       } else {
-        this.ui?.addSystemEventMessage?.('Подборка обновлена · точных совпадений нет');
+        this.ui?.addSystemEventMessage?.(this.t('selectionUpdatedNoStrict') || 'Подборка обновлена · точных совпадений нет');
       }
     } catch (error) {
       console.error('filters.apply failed:', error);
@@ -12445,8 +12451,8 @@ render() {
       this.refreshCatalogByEffectiveQuery(mergedInsights)
         .then((list) => {
           const count = Array.isArray(list) ? list.length : Number(window?.appState?.lastTotalMatches) || 0;
-          if (count > 0) this.ui?.addSystemEventMessage?.(`Подборка обновлена · найдено ${count} объектов`);
-          else this.ui?.addSystemEventMessage?.('Подборка обновлена · точных совпадений нет');
+          if (count > 0) this.ui?.addSystemEventMessage?.(this.t('selectionUpdatedFound', { count }) || `Подборка обновлена · найдено ${count} объектов`);
+          else this.ui?.addSystemEventMessage?.(this.t('selectionUpdatedNoStrict') || 'Подборка обновлена · точных совпадений нет');
         })
         .catch((error) => {
           console.warn('refreshCatalogByEffectiveQuery failed:', error);
@@ -13458,7 +13464,7 @@ render() {
           });
           this._debugCatalogSelectionHistory = debugHistory.slice(-80);
         } catch {}
-        this.ui?.addSystemEventMessage?.('Смарт-слой исчерпан · показываем 1-комнатные как fallback.');
+        this.ui?.addSystemEventMessage?.(this.t('smartLayerFallbackNotice') || 'Смарт-слой исчерпан · показываем 1-комнатные как fallback.');
       }
       const relaxNote = this._describeRelaxStep(usedLevel, query);
       if (relaxNote) this.ui?.addSystemEventMessage?.(relaxNote);
