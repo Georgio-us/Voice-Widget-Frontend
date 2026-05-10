@@ -5199,6 +5199,25 @@ class VoiceWidget extends HTMLElement {
     };
     const safeNum = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '—');
     const isUaLang = this.getLangCode() === 'ua';
+    const recentEl = overlay.querySelector('[data-role="stats-recent-leads-body"]');
+    const recentActivityEl = overlay.querySelector('[data-role="stats-recent-activity-body"]');
+    const digestEl = overlay.querySelector('[data-role="stats-lead-digest"]');
+    const leadsToggleEl = overlay.querySelector('[data-role="stats-recent-leads-toggle"]');
+    const activityToggleEl = overlay.querySelector('[data-role="stats-recent-activity-toggle"]');
+    const setupAccordion = (toggleEl, bodyEl) => {
+      if (!toggleEl || !bodyEl) return;
+      if (toggleEl.dataset.bound === '1') return;
+      const isOpen = String(toggleEl.getAttribute('aria-expanded') || '') === 'true';
+      bodyEl.style.display = isOpen ? '' : 'none';
+      toggleEl.addEventListener('click', () => {
+        const nowOpen = String(toggleEl.getAttribute('aria-expanded') || '') !== 'true';
+        toggleEl.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+        bodyEl.style.display = nowOpen ? '' : 'none';
+      });
+      toggleEl.dataset.bound = '1';
+    };
+    setupAccordion(leadsToggleEl, recentEl);
+    setupAccordion(activityToggleEl, recentActivityEl);
     try {
       const stats = await this.api?.fetchAdminStatsSummary?.();
       if (!stats || typeof stats !== 'object') return;
@@ -5211,11 +5230,6 @@ class VoiceWidget extends HTMLElement {
       setText('stats-total-leads', safeNum(stats.totalLeads));
       setText('stats-total-sessions', safeNum(stats.totalSessions));
 
-      const recentEl = overlay.querySelector('[data-role="stats-recent-leads-body"]');
-      const recentActivityEl = overlay.querySelector('[data-role="stats-recent-activity-body"]');
-      const digestEl = overlay.querySelector('[data-role="stats-lead-digest"]');
-      const leadsToggleEl = overlay.querySelector('[data-role="stats-recent-leads-toggle"]');
-      const activityToggleEl = overlay.querySelector('[data-role="stats-recent-activity-toggle"]');
       const esc = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -5474,18 +5488,6 @@ class VoiceWidget extends HTMLElement {
           });
         }
       }
-      const setupAccordion = (toggleEl, bodyEl) => {
-        if (!toggleEl || !bodyEl) return;
-        const isOpen = String(toggleEl.getAttribute('aria-expanded') || '') === 'true';
-        bodyEl.style.display = isOpen ? '' : 'none';
-        toggleEl.addEventListener('click', () => {
-          const nowOpen = String(toggleEl.getAttribute('aria-expanded') || '') !== 'true';
-          toggleEl.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
-          bodyEl.style.display = nowOpen ? '' : 'none';
-        });
-      };
-      setupAccordion(leadsToggleEl, recentEl);
-      setupAccordion(activityToggleEl, recentActivityEl);
     } catch (error) {
       console.warn('[admin-stats] failed to load summary:', error?.message || error);
     }
@@ -10085,16 +10087,32 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-sub-item .vw-stats-accordion-toggle {
         width: 100%;
-        min-height: 32px;
-        border-radius: 10px;
-        border: 1px solid color-mix(in srgb, var(--color-accent, #2d8fe1) 62%, transparent);
-        background: color-mix(in srgb, var(--color-accent, #2d8fe1) 18%, rgba(255,255,255,0.08));
-        color: var(--color-accent, #2d8fe1);
-        font-size: .86rem;
+        min-height: 44px;
+        border-radius: 14px;
+        border: 0;
+        background: var(--color-accent, #2d8fe1);
+        color: #fff;
+        font-size: .94rem;
         font-weight: 800;
         text-align: left;
-        padding: 0 12px;
+        padding: 0 14px;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .vw-access-sub-item .vw-stats-accordion-toggle::before {
+        content: '+';
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1em;
+        font-size: 1.35em;
+        line-height: 1;
+        font-weight: 900;
+      }
+      .vw-access-sub-item .vw-stats-accordion-toggle[aria-expanded="true"]::before {
+        content: '−';
       }
       .vw-access-sub-item .vw-stats-accordion-body {
         display: none;
