@@ -5229,34 +5229,6 @@ class VoiceWidget extends HTMLElement {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-          const fmt = (at) => {
-            try {
-              const d = new Date(at);
-              if (Number.isNaN(d.getTime())) return '—';
-              return d.toLocaleString(isUaLang ? 'uk-UA' : 'ru-RU');
-            } catch {
-              return '—';
-            }
-          };
-          const sourceLabel = (raw) => {
-            const src = String(raw || '').trim().toLowerCase();
-            const mapUa = {
-              tg_property_card: 'Картка обʼєкта',
-              tg_header_main: 'Хедер (звʼязок)',
-              guest_want_bot_trial: 'Хочу такого бота (тест)',
-              guest_want_bot_consult: 'Хочу такого бота (консультація)',
-              tg_mini_app: 'Мініапп Telegram'
-            };
-            const mapRu = {
-              tg_property_card: 'Карточка объекта',
-              tg_header_main: 'Хедер (связь)',
-              guest_want_bot_trial: 'Хочу такого бота (тест)',
-              guest_want_bot_consult: 'Хочу такого бота (консультация)',
-              tg_mini_app: 'Миниапп Telegram'
-            };
-            const map = isUaLang ? mapUa : mapRu;
-            return map[src] || src || '—';
-          };
           const toTgLink = (row) => {
             const usernameRaw = String(row?.telegram_username || '').trim();
             const tgIdRaw = String(row?.telegram_user_id || '').trim();
@@ -5275,30 +5247,17 @@ class VoiceWidget extends HTMLElement {
             }
             return null;
           };
-          const humanPhone = (cc, num) => {
-            const a = String(cc || '').trim();
-            const b = String(num || '').trim();
-            const v = `${a}${b}`.replace(/\s+/g, '');
-            return v || '';
-          };
           const items = rows.slice(0, 5).map((row) => {
             const who = String(row?.name || '—').trim() || '—';
-            const src = sourceLabel(row?.source);
-            const prop = String(row?.property_id || row?.propertyId || '').trim();
-            const propPart = prop ? ` · ID ${esc(prop)}` : '';
             const tg = toTgLink(row);
             const tgPart = tg
-              ? ` · <a class="vw-stats-tg-link" href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
+              ? `<a class="vw-stats-tg-link" href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
               : '';
-            const phone = humanPhone(row?.phone_country_code, row?.phone_number);
-            const phonePart = phone ? ` · ${esc(phone)}` : '';
-            const emailRaw = String(row?.email || '').trim();
-            const emailPart = emailRaw && !/@telegram\.local$/i.test(emailRaw) ? ` · ${esc(emailRaw)}` : '';
             const sessionId = String(row?.session_id || '').trim();
             const detailsBtn = sessionId
-              ? ` · <button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}">${isUaLang ? 'деталі' : 'детали'}</button>`
+              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}">${isUaLang ? 'деталі' : 'детали'}</button>`
               : '';
-            return `${fmt(row?.created_at)} · ${esc(who)} · ${esc(src)}${propPart}${tgPart}${phonePart}${emailPart}${detailsBtn}`;
+            return `<span class="vw-stats-lead-row"><span class="vw-stats-lead-name">${esc(who)}</span>${tgPart ? `<span>·</span>${tgPart}` : ''}${detailsBtn ? `<span>·</span>${detailsBtn}` : ''}</span>`;
           });
           recentEl.innerHTML = `${label}: <strong>${items.join('<br>')}</strong>`;
 
@@ -9937,6 +9896,20 @@ class VoiceWidget extends HTMLElement {
         font-size: .84rem;
         line-height: 1;
         cursor: pointer;
+      }
+      .vw-access-sub-item .vw-stats-lead-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        min-width: 0;
+      }
+      .vw-access-sub-item .vw-stats-lead-name {
+        font-weight: 700;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .vw-access-sub-toolbar {
         display: flex;
