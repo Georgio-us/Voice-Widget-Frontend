@@ -1758,6 +1758,24 @@ class APIClient {
     return data?.stats && typeof data.stats === 'object' ? data.stats : {};
   }
 
+  async fetchAdminStatsSummary() {
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/stats/summary');
+    const u = new URL(url, window.location.origin);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) u.searchParams.set('tgUserId', String(tgIdentity.id));
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) u.searchParams.set('devAdmin', '1');
+    const res = await fetch(u.toString(), {
+      method: 'GET',
+      headers: this.buildTelegramAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      const serverError = String(data?.error || '');
+      throw new Error(serverError || `ADMIN_STATS_SUMMARY_FAILED_${res.status}`);
+    }
+    return data?.stats && typeof data.stats === 'object' ? data.stats : {};
+  }
+
   _deriveAdminApiBase() {
     try {
       const u = new URL(String(this.apiUrl));
@@ -5152,6 +5170,58 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  async loadAccessStatsSummary(overlay) {
+    if (!overlay) return;
+    const setText = (role, value) => {
+      const el = overlay.querySelector(`[data-role="${role}"]`);
+      if (!el) return;
+      el.textContent = value;
+    };
+    const safeNum = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '—');
+    const isUaLang = this.getLangCode() === 'ua';
+    try {
+      const stats = await this.api?.fetchAdminStatsSummary?.();
+      if (!stats || typeof stats !== 'object') return;
+
+      setText('stats-total-users', safeNum(stats.totalUsers));
+      setText('stats-users-today', safeNum(stats.usersToday));
+      setText('stats-leads-today', safeNum(stats.leadsToday));
+      setText('stats-sessions-today', safeNum(stats.sessionsToday));
+      setText('stats-active-properties', safeNum(stats.activeProperties));
+      setText('stats-total-leads', safeNum(stats.totalLeads));
+      setText('stats-total-sessions', safeNum(stats.totalSessions));
+
+      const recentEl = overlay.querySelector('[data-role="stats-recent-leads"]');
+      if (recentEl) {
+        const rows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
+        const label = isUaLang ? 'Останні заявки' : 'Последние заявки';
+        if (!rows.length) {
+          recentEl.innerHTML = `${label}: <strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
+        } else {
+          const fmt = (at) => {
+            try {
+              const d = new Date(at);
+              if (Number.isNaN(d.getTime())) return '—';
+              return d.toLocaleString(isUaLang ? 'uk-UA' : 'ru-RU');
+            } catch {
+              return '—';
+            }
+          };
+          const items = rows.slice(0, 5).map((row) => {
+            const who = String(row?.name || '—').trim() || '—';
+            const src = String(row?.source || '—').trim() || '—';
+            const prop = String(row?.property_id || row?.propertyId || '').trim();
+            const propPart = prop ? ` · ID ${prop}` : '';
+            return `${fmt(row?.created_at)} · ${who} · ${src}${propPart}`;
+          });
+          recentEl.innerHTML = `${label}: <strong>${items.join('<br>')}</strong>`;
+        }
+      }
+    } catch (error) {
+      console.warn('[admin-stats] failed to load summary:', error?.message || error);
+    }
+  }
+
   openAccessSubOverlay(section = 'stats', options = {}) {
     this.ensureAccessOverlayStyles();
     this.closeAccessSubOverlay();
@@ -5590,11 +5660,15 @@ class VoiceWidget extends HTMLElement {
         `;
       }
       return `
-        <div class="vw-access-sub-list">
-          <div class="vw-access-sub-item">${isUaLang ? 'Дата реєстрації' : 'Дата регистрации'}: <strong>${fmtDate(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 42))}</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Переходи в бота' : 'Переходы в бота'}: <strong>173</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? "Об'єктів у добірці" : 'Объектов в подборке'}: <strong>${list.length}</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Активна підписка до' : 'Активная подписка до'}: <strong>${fmtDate(nextMonth)}</strong></div>
+        <div class="vw-access-sub-list" data-role="admin-stats-summary">
+          <div class="vw-access-sub-item">${isUaLang ? 'Користувачів у боті (всього)' : 'Пользователей в боте (всего)'}: <strong data-role="stats-total-users">—</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Нових користувачів за сьогодні' : 'Новых пользователей за сегодня'}: <strong data-role="stats-users-today">—</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Нових заявок за сьогодні' : 'Новых заявок за сегодня'}: <strong data-role="stats-leads-today">—</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Нових сесій за сьогодні' : 'Новых сессий за сегодня'}: <strong data-role="stats-sessions-today">—</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Активних обʼєктів' : 'Активных объектов'}: <strong data-role="stats-active-properties">—</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Заявок (всього)' : 'Заявок (всего)'}: <strong data-role="stats-total-leads">—</strong></div>
+          <div class="vw-access-sub-item">${isUaLang ? 'Сесій (всього)' : 'Сессий (всего)'}: <strong data-role="stats-total-sessions">—</strong></div>
+          <div class="vw-access-sub-item" data-role="stats-recent-leads">${isUaLang ? 'Останні заявки' : 'Последние заявки'}: <strong>—</strong></div>
         </div>
       `;
     })();
@@ -5638,6 +5712,9 @@ class VoiceWidget extends HTMLElement {
       </div>
     `;
     this.getRoot().appendChild(overlay);
+    if (safeSection === 'stats') {
+      this.loadAccessStatsSummary(overlay);
+    }
     if (isAddProperty) {
       try { this.setMobileViewportLock(true); } catch {}
     }
