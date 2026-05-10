@@ -5198,6 +5198,12 @@ class VoiceWidget extends HTMLElement {
         if (!rows.length) {
           recentEl.innerHTML = `${label}: <strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
         } else {
+          const esc = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
           const fmt = (at) => {
             try {
               const d = new Date(at);
@@ -5207,12 +5213,63 @@ class VoiceWidget extends HTMLElement {
               return '—';
             }
           };
+          const sourceLabel = (raw) => {
+            const src = String(raw || '').trim().toLowerCase();
+            const mapUa = {
+              tg_property_card: 'Картка обʼєкта',
+              tg_header_main: 'Хедер (звʼязок)',
+              guest_want_bot_trial: 'Хочу такого бота (тест)',
+              guest_want_bot_consult: 'Хочу такого бота (консультація)',
+              tg_mini_app: 'Мініапп Telegram'
+            };
+            const mapRu = {
+              tg_property_card: 'Карточка объекта',
+              tg_header_main: 'Хедер (связь)',
+              guest_want_bot_trial: 'Хочу такого бота (тест)',
+              guest_want_bot_consult: 'Хочу такого бота (консультация)',
+              tg_mini_app: 'Миниапп Telegram'
+            };
+            const map = isUaLang ? mapUa : mapRu;
+            return map[src] || src || '—';
+          };
+          const toTgLink = (row) => {
+            const usernameRaw = String(row?.telegram_username || '').trim();
+            const tgIdRaw = String(row?.telegram_user_id || '').trim();
+            if (usernameRaw) {
+              const uname = usernameRaw.replace(/^@/, '');
+              return {
+                href: `https://t.me/${encodeURIComponent(uname)}`,
+                label: `@${uname}`
+              };
+            }
+            if (/^\d{5,20}$/.test(tgIdRaw)) {
+              return {
+                href: `tg://user?id=${encodeURIComponent(tgIdRaw)}`,
+                label: `id:${tgIdRaw}`
+              };
+            }
+            return null;
+          };
+          const humanPhone = (cc, num) => {
+            const a = String(cc || '').trim();
+            const b = String(num || '').trim();
+            const v = `${a}${b}`.replace(/\s+/g, '');
+            return v || '';
+          };
           const items = rows.slice(0, 5).map((row) => {
             const who = String(row?.name || '—').trim() || '—';
-            const src = String(row?.source || '—').trim() || '—';
+            const src = sourceLabel(row?.source);
             const prop = String(row?.property_id || row?.propertyId || '').trim();
-            const propPart = prop ? ` · ID ${prop}` : '';
-            return `${fmt(row?.created_at)} · ${who} · ${src}${propPart}`;
+            const propPart = prop ? ` · ID ${esc(prop)}` : '';
+            const tg = toTgLink(row);
+            const tgPart = tg
+              ? ` · <a href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
+              : '';
+            const phone = humanPhone(row?.phone_country_code, row?.phone_number);
+            const phonePart = phone ? ` · ${esc(phone)}` : '';
+            const emailRaw = String(row?.email || '').trim();
+            const emailPart = emailRaw && !/@telegram\.local$/i.test(emailRaw) ? ` · ${esc(emailRaw)}` : '';
+            return `${fmt(row?.created_at)} · ${esc(who)} · ${esc(src)}${propPart}${tgPart}${phonePart}${emailPart}`;
           });
           recentEl.innerHTML = `${label}: <strong>${items.join('<br>')}</strong>`;
         }
@@ -16274,17 +16331,13 @@ render() {
           ? (selectedMethod === 'email' ? 'email' : (selectedMethod === 'telegram' && telegramValid ? 'telegram' : 'email'))
           : 'telegram');
 
-      const emailFallback = !email && telegramValid
-        ? `${telegramNormalized.replace(/^@/, '').toLowerCase()}@telegram.local`
-        : null;
-
       const payload = {
         sessionId: this.sessionId || null,
         source: normalizedSource,
         name: displayName || 'Mini App User',
         phoneCountryCode,
         phoneNumber,
-        email: email || emailFallback,
+        email: email || null,
         preferredContactMethod,
         telegramUsername: telegramValid ? telegramNormalized : null,
         comment: telegramValid ? `telegram:${telegramNormalized}` : null,
