@@ -2739,7 +2739,7 @@ const LOCALES = {
     accessUserIcon: '♡',
     accessAdminGreeting: 'Добро пожаловать, {name} (@{username})! Вы в админ-панели',
     accessUserGreeting: 'Добро пожаловать, {name} (@{username})! Это ваш список избранного',
-    accessAdminStats: 'Статистика',
+    accessAdminStats: 'Статистика / заявки',
     accessAdminProperties: 'Мои объекты',
     accessAdminShowLiked: 'Лайкнутые',
     accessAdminShowAll: 'Все',
@@ -2960,7 +2960,7 @@ const LOCALES = {
     accessUserIcon: '♡',
     accessAdminGreeting: 'Вітаємо, {name} (@{username})! Ви в адмін-панелі',
     accessUserGreeting: 'Вітаємо, {name} (@{username})! Це ваш список обраного',
-    accessAdminStats: 'Статистика',
+    accessAdminStats: 'Статистика / заявки',
     accessAdminProperties: "Мої об'єкти",
     accessAdminShowLiked: 'Лайкнуті',
     accessAdminShowAll: 'Усі',
@@ -4579,6 +4579,8 @@ class VoiceWidget extends HTMLElement {
     }
     btn.setAttribute('title', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
     btn.setAttribute('aria-label', isAdmin ? (locale.appHeaderAdminAria || 'Открыть админ-панель') : (locale.appHeaderWishlistAria || 'Открыть избранное'));
+    if (isAdmin) this.setCrownStatsUnreadBadge(this._adminStatsUnreadTotal || 0);
+    else this.setCrownStatsUnreadBadge(0);
     this.updateFooterBrand();
   }
 
@@ -4618,6 +4620,110 @@ class VoiceWidget extends HTMLElement {
     item.classList.toggle('vw-access-item--has-count', count > 0);
     if (count > 0) item.dataset.count = String(count);
     else delete item.dataset.count;
+  }
+
+  getStatsSeenStorageKey() {
+    const base = String(this.api?.apiUrl || this.apiUrl || 'default').replace(/\/api\/audio\/upload\/?$/i, '').trim() || 'default';
+    const tgId = String(this.api?.getTelegramUserIdentity?.()?.id || 'anon').trim() || 'anon';
+    return `vw_stats_seen_v1:${base}:${tgId}`;
+  }
+
+  loadStatsSeenState() {
+    try {
+      const raw = localStorage.getItem(this.getStatsSeenStorageKey());
+      const parsed = raw ? JSON.parse(raw) : {};
+      return {
+        leads: Array.isArray(parsed?.leads) ? parsed.leads.map((x) => String(x || '').trim()).filter(Boolean) : [],
+        activity: Array.isArray(parsed?.activity) ? parsed.activity.map((x) => String(x || '').trim()).filter(Boolean) : []
+      };
+    } catch {
+      return { leads: [], activity: [] };
+    }
+  }
+
+  saveStatsSeenState(state) {
+    try {
+      localStorage.setItem(this.getStatsSeenStorageKey(), JSON.stringify(state || { leads: [], activity: [] }));
+    } catch {}
+  }
+
+  setAdminStatsMenuBadge(overlay, count = 0) {
+    const root = overlay || this.getRoot().querySelector('#vwAccessOverlay');
+    if (!root) return;
+    const item = root.querySelector('[data-role="admin-stats"]');
+    if (!item) return;
+    const safe = Math.max(0, Number(count) || 0);
+    item.classList.toggle('vw-access-item--has-count', safe > 0);
+    if (safe > 0) item.dataset.count = String(safe);
+    else delete item.dataset.count;
+  }
+
+  setCrownStatsUnreadBadge(count = 0) {
+    const btn = this.$byId('appThemeButton');
+    if (!btn) return;
+    const safe = Math.max(0, Number(count) || 0);
+    try {
+      if (!btn.style.position || btn.style.position === 'static') btn.style.position = 'relative';
+    } catch {}
+    let badge = btn.querySelector('.vw-crown-stats-count');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'vw-crown-stats-count';
+      badge.style.position = 'absolute';
+      badge.style.right = '-4px';
+      badge.style.bottom = '-4px';
+      badge.style.minWidth = '18px';
+      badge.style.height = '18px';
+      badge.style.padding = '0 5px';
+      badge.style.borderRadius = '999px';
+      badge.style.display = 'none';
+      badge.style.alignItems = 'center';
+      badge.style.justifyContent = 'center';
+      badge.style.background = '#1fbf57';
+      badge.style.color = '#fff';
+      badge.style.border = '1px solid rgba(255,255,255,0.55)';
+      badge.style.fontSize = '.66rem';
+      badge.style.fontWeight = '700';
+      badge.style.lineHeight = '1';
+      badge.style.pointerEvents = 'none';
+      badge.style.zIndex = '3';
+      btn.appendChild(badge);
+    }
+    if (safe > 0) {
+      badge.textContent = String(safe);
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+      badge.textContent = '';
+    }
+  }
+
+  async refreshAdminStatsUnreadIndicators(overlay = null) {
+    try {
+      const stats = await this.api?.fetchAdminStatsSummary?.();
+      if (!stats || typeof stats !== 'object') return;
+      const leadsRows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
+      const activityRows = Array.isArray(stats.recentActivity) ? stats.recentActivity : [];
+      const leadKeys = leadsRows.slice(0, 5).map((row) => {
+        const id = String(row?.id || '').trim();
+        if (id) return `lead:${id}`;
+        const sid = String(row?.session_id || '').trim();
+        const created = String(row?.created_at || '').trim();
+        return `lead:${sid}:${created}`;
+      }).filter(Boolean);
+      const activityKeys = activityRows.slice(0, 5).map((row) => {
+        const sid = String(row?.session_id || '').trim();
+        const created = String(row?.created_at || '').trim();
+        return `act:${sid}:${created}`;
+      }).filter(Boolean);
+      const seen = this.loadStatsSeenState();
+      const unreadLeads = leadKeys.filter((k) => !seen.leads.includes(k)).length;
+      const unreadActivity = activityKeys.filter((k) => !seen.activity.includes(k)).length;
+      const total = Math.max(0, unreadLeads + unreadActivity);
+      this._adminStatsUnreadTotal = total;
+      this.setAdminStatsMenuBadge(overlay, total);
+      this.setCrownStatsUnreadBadge(total);
+    } catch {}
   }
 
   updateUserWishlistMenuCount(overlay) {
@@ -5207,36 +5313,18 @@ class VoiceWidget extends HTMLElement {
     const activityToggleEl = overlay.querySelector('[data-role="stats-recent-activity-toggle"]');
     const leadsCountEl = overlay.querySelector('[data-role="stats-recent-leads-count"]');
     const activityCountEl = overlay.querySelector('[data-role="stats-recent-activity-count"]');
-    const seenStateKey = (() => {
-      const base = String(this.api?.apiUrl || this.apiUrl || 'default').replace(/\/api\/audio\/upload\/?$/i, '').trim() || 'default';
-      const tgId = String(this.api?.getTelegramUserIdentity?.()?.id || 'anon').trim() || 'anon';
-      return `vw_stats_seen_v1:${base}:${tgId}`;
-    })();
-    const loadSeenState = () => {
-      try {
-        const raw = localStorage.getItem(seenStateKey);
-        const parsed = raw ? JSON.parse(raw) : {};
-        return {
-          leads: Array.isArray(parsed?.leads) ? parsed.leads.map((x) => String(x || '').trim()).filter(Boolean) : [],
-          activity: Array.isArray(parsed?.activity) ? parsed.activity.map((x) => String(x || '').trim()).filter(Boolean) : []
-        };
-      } catch {
-        return { leads: [], activity: [] };
-      }
-    };
-    const saveSeenState = (state) => {
-      try {
-        localStorage.setItem(seenStateKey, JSON.stringify(state));
-      } catch {}
-    };
     let currentLeadKeys = [];
     let currentActivityKeys = [];
-    let seenState = loadSeenState();
+    let seenState = this.loadStatsSeenState();
     const updateBadges = () => {
       const leadsUnread = currentLeadKeys.filter((k) => !seenState.leads.includes(k)).length;
       const activityUnread = currentActivityKeys.filter((k) => !seenState.activity.includes(k)).length;
       if (leadsCountEl) leadsCountEl.textContent = String(Math.max(0, leadsUnread));
       if (activityCountEl) activityCountEl.textContent = String(Math.max(0, activityUnread));
+      const total = Math.max(0, leadsUnread + activityUnread);
+      this._adminStatsUnreadTotal = total;
+      this.setAdminStatsMenuBadge(null, total);
+      this.setCrownStatsUnreadBadge(total);
     };
     const setupAccordion = (toggleEl, bodyEl) => {
       if (!toggleEl || !bodyEl) return;
@@ -5263,7 +5351,7 @@ class VoiceWidget extends HTMLElement {
               ...seenState,
               leads: Array.from(new Set([...(seenState.leads || []), ...currentLeadKeys])).slice(-300)
             };
-            saveSeenState(seenState);
+            this.saveStatsSeenState(seenState);
             updateBadges();
           }
           if (toggleEl === activityToggleEl) {
@@ -5271,7 +5359,7 @@ class VoiceWidget extends HTMLElement {
               ...seenState,
               activity: Array.from(new Set([...(seenState.activity || []), ...currentActivityKeys])).slice(-300)
             };
-            saveSeenState(seenState);
+            this.saveStatsSeenState(seenState);
             updateBadges();
           }
         }
@@ -11267,7 +11355,10 @@ class VoiceWidget extends HTMLElement {
 
     this.getRoot().appendChild(overlay);
     this._accessOverlayOpen = true;
-    if (isAdmin) this.updateAdminWishlistMenuBadge(overlay);
+    if (isAdmin) {
+      this.updateAdminWishlistMenuBadge(overlay);
+      this.refreshAdminStatsUnreadIndicators(overlay).catch(() => {});
+    }
     else this.updateUserWishlistMenuCount(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeAccessOverlay());
     const olxConnectBtn = overlay.querySelector('[data-role="olx-connect"]');
