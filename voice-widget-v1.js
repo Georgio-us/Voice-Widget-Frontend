@@ -5254,14 +5254,36 @@ class VoiceWidget extends HTMLElement {
               ? `<a class="vw-stats-tg-link" href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
               : '';
             const sessionId = String(row?.session_id || '').trim();
+            const sourceRaw = String(row?.source || '').trim();
+            const propRaw = String(row?.property_id || row?.propertyId || '').trim();
             const detailsBtn = sessionId
-              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}">${isUaLang ? 'деталі' : 'детали'}</button>`
+              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}" data-source="${esc(sourceRaw)}" data-property-id="${esc(propRaw)}">${isUaLang ? 'деталі' : 'детали'}</button>`
               : '';
             return `<span class="vw-stats-lead-row"><span class="vw-stats-lead-name">${esc(who)}</span>${tgPart ? `<span>·</span>${tgPart}` : ''}${detailsBtn ? `<span>·</span>${detailsBtn}` : ''}</span>`;
           });
           recentEl.innerHTML = `${label}: <strong>${items.join('<br>')}</strong>`;
 
-          const showDigest = (digest, sessionId) => {
+          const sourceLabel = (raw) => {
+            const src = String(raw || '').trim().toLowerCase();
+            const mapUa = {
+              tg_property_card: 'Картка обʼєкта',
+              tg_header_main: 'Хедер (звʼязок)',
+              guest_want_bot_trial: 'Хочу такого бота (тест)',
+              guest_want_bot_consult: 'Хочу такого бота (консультація)',
+              tg_mini_app: 'Мініапп Telegram'
+            };
+            const mapRu = {
+              tg_property_card: 'Карточка объекта',
+              tg_header_main: 'Хедер (связь)',
+              guest_want_bot_trial: 'Хочу такого бота (тест)',
+              guest_want_bot_consult: 'Хочу такого бота (консультация)',
+              tg_mini_app: 'Миниапп Telegram'
+            };
+            const map = isUaLang ? mapUa : mapRu;
+            return map[src] || src || '—';
+          };
+
+          const showDigest = (digest, sessionId, leadMeta = {}) => {
             if (!digestEl) return;
             if (!digest) {
               digestEl.style.display = '';
@@ -5286,6 +5308,7 @@ class VoiceWidget extends HTMLElement {
               if (value && typeof value === 'object') {
                 const out = {};
                 Object.entries(value).forEach(([k, v]) => {
+                  if (k === 'progress') return;
                   const pv = prune(v);
                   if (isMeaningful(pv)) out[k] = pv;
                 });
@@ -5297,8 +5320,12 @@ class VoiceWidget extends HTMLElement {
             const insightCompact = insightsClean
               ? esc(JSON.stringify(insightsClean))
               : '—';
+            const sourcePart = sourceLabel(leadMeta?.source || '');
+            const propertyIdPart = String(leadMeta?.propertyId || '').trim();
             const lines = [
               `${isUaLang ? 'Сесія' : 'Сессия'}: <strong>${esc(sessionId || digest?.sessionId || '—')}</strong>`,
+              `${isUaLang ? 'Джерело заявки' : 'Источник заявки'}: <strong>${esc(sourcePart)}</strong>`,
+              `${isUaLang ? 'ID обʼєкта' : 'ID объекта'}: <strong>${esc(propertyIdPart || '—')}</strong>`,
               `${isUaLang ? 'Повідомлень' : 'Сообщений'}: <strong>${esc(String(digest?.messagesCount ?? '—'))}</strong>`,
               `${isUaLang ? 'Останній запит' : 'Последний запрос'}: <strong>${esc(lastUserText || '—')}</strong>`,
               `${isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента'}: <strong>${esc(assistantText || '—')}</strong>`,
@@ -5312,13 +5339,15 @@ class VoiceWidget extends HTMLElement {
             btn.addEventListener('click', async () => {
               const sessionId = String(btn.getAttribute('data-session-id') || '').trim();
               if (!sessionId) return;
+              const source = String(btn.getAttribute('data-source') || '').trim();
+              const propertyId = String(btn.getAttribute('data-property-id') || '').trim();
               if (digestEl) {
                 digestEl.style.display = '';
                 digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${isUaLang ? 'завантаження…' : 'загрузка…'}</strong>`;
               }
               try {
                 const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
-                showDigest(digest, sessionId);
+                showDigest(digest, sessionId, { source, propertyId });
               } catch (error) {
                 if (digestEl) {
                   digestEl.style.display = '';
