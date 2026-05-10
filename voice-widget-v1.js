@@ -5246,6 +5246,10 @@ class VoiceWidget extends HTMLElement {
         const nowOpen = String(toggleEl.getAttribute('aria-expanded') || '') !== 'true';
         toggleEl.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
         bodyEl.style.display = nowOpen ? 'block' : 'none';
+        if (!nowOpen && digestEl) {
+          digestEl.style.display = 'none';
+          digestEl.innerHTML = '';
+        }
         if (nowOpen) {
           if (toggleEl === leadsToggleEl) {
             seenState = {
