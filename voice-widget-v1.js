@@ -5394,6 +5394,7 @@ class VoiceWidget extends HTMLElement {
               renderRow('📍', isUaLang ? 'Джерело заявки' : 'Источник заявки', sourcePart),
               renderRow('🏠', isUaLang ? 'ID обʼєкта' : 'ID объекта', propertyIdPart || '—'),
               renderRow('💬', isUaLang ? 'Повідомлень' : 'Сообщений', String(digest?.messagesCount ?? '—'), true),
+              renderRow('🗂️', isUaLang ? 'Показано обʼєктів за сесію' : 'Показано объектов за сессию', String(digest?.shownObjectsCount ?? '—'), true),
               renderRow('🗣️', isUaLang ? 'Останній запит' : 'Последний запрос', lastUserText || '—'),
               renderRow('🤖', isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента', assistantText || '—'),
               `<div class="vw-stats-digest-row"><span class="vw-stats-digest-label">🔎 ${isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент'}</span><span class="vw-stats-digest-value">${prettyInsights}</span></div>`
