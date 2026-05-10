@@ -1776,6 +1776,26 @@ class APIClient {
     return data?.stats && typeof data.stats === 'object' ? data.stats : {};
   }
 
+  async fetchAdminSessionDigest(sessionId) {
+    const sid = String(sessionId || '').trim();
+    if (!sid) return null;
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, `/api/admin/stats/session/${encodeURIComponent(sid)}`);
+    const u = new URL(url, window.location.origin);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) u.searchParams.set('tgUserId', String(tgIdentity.id));
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) u.searchParams.set('devAdmin', '1');
+    const res = await fetch(u.toString(), {
+      method: 'GET',
+      headers: this.buildTelegramAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      const serverError = String(data?.error || '');
+      throw new Error(serverError || `ADMIN_SESSION_DIGEST_FAILED_${res.status}`);
+    }
+    return data?.digest && typeof data.digest === 'object' ? data.digest : null;
+  }
+
   _deriveAdminApiBase() {
     try {
       const u = new URL(String(this.apiUrl));
@@ -5192,11 +5212,16 @@ class VoiceWidget extends HTMLElement {
       setText('stats-total-sessions', safeNum(stats.totalSessions));
 
       const recentEl = overlay.querySelector('[data-role="stats-recent-leads"]');
+      const digestEl = overlay.querySelector('[data-role="stats-lead-digest"]');
       if (recentEl) {
         const rows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
         const label = isUaLang ? 'Останні заявки' : 'Последние заявки';
         if (!rows.length) {
           recentEl.innerHTML = `${label}: <strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
+          if (digestEl) {
+            digestEl.style.display = 'none';
+            digestEl.innerHTML = '';
+          }
         } else {
           const esc = (value) => String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -5269,9 +5294,55 @@ class VoiceWidget extends HTMLElement {
             const phonePart = phone ? ` · ${esc(phone)}` : '';
             const emailRaw = String(row?.email || '').trim();
             const emailPart = emailRaw && !/@telegram\.local$/i.test(emailRaw) ? ` · ${esc(emailRaw)}` : '';
-            return `${fmt(row?.created_at)} · ${esc(who)} · ${esc(src)}${propPart}${tgPart}${phonePart}${emailPart}`;
+            const sessionId = String(row?.session_id || '').trim();
+            const detailsBtn = sessionId
+              ? ` · <button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}">${isUaLang ? 'деталі' : 'детали'}</button>`
+              : '';
+            return `${fmt(row?.created_at)} · ${esc(who)} · ${esc(src)}${propPart}${tgPart}${phonePart}${emailPart}${detailsBtn}`;
           });
           recentEl.innerHTML = `${label}: <strong>${items.join('<br>')}</strong>`;
+
+          const showDigest = (digest, sessionId) => {
+            if (!digestEl) return;
+            if (!digest) {
+              digestEl.style.display = '';
+              digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
+              return;
+            }
+            const lastUserText = String(digest?.lastUserText || '').trim();
+            const assistantText = String(digest?.lastAssistantText || '').trim();
+            const insights = digest?.lastInsights && typeof digest.lastInsights === 'object' ? digest.lastInsights : null;
+            const insightCompact = insights ? esc(JSON.stringify(insights)) : '—';
+            const lines = [
+              `${isUaLang ? 'Сесія' : 'Сессия'}: <strong>${esc(sessionId || digest?.sessionId || '—')}</strong>`,
+              `${isUaLang ? 'Повідомлень' : 'Сообщений'}: <strong>${esc(String(digest?.messagesCount ?? '—'))}</strong>`,
+              `${isUaLang ? 'Останній запит' : 'Последний запрос'}: <strong>${esc(lastUserText || '—')}</strong>`,
+              `${isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента'}: <strong>${esc(assistantText || '—')}</strong>`,
+              `${isUaLang ? 'Останні інсайти (raw)' : 'Последние инсайты (raw)'}: <strong>${insightCompact}</strong>`
+            ];
+            digestEl.style.display = '';
+            digestEl.innerHTML = lines.join('<br>');
+          };
+
+          recentEl.querySelectorAll('[data-role="lead-details"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+              const sessionId = String(btn.getAttribute('data-session-id') || '').trim();
+              if (!sessionId) return;
+              if (digestEl) {
+                digestEl.style.display = '';
+                digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${isUaLang ? 'завантаження…' : 'загрузка…'}</strong>`;
+              }
+              try {
+                const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
+                showDigest(digest, sessionId);
+              } catch (error) {
+                if (digestEl) {
+                  digestEl.style.display = '';
+                  digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${esc(error?.message || 'load_failed')}</strong>`;
+                }
+              }
+            });
+          });
         }
       }
     } catch (error) {
@@ -5726,6 +5797,7 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-sub-item">${isUaLang ? 'Заявок (всього)' : 'Заявок (всего)'}: <strong data-role="stats-total-leads">—</strong></div>
           <div class="vw-access-sub-item">${isUaLang ? 'Сесій (всього)' : 'Сессий (всего)'}: <strong data-role="stats-total-sessions">—</strong></div>
           <div class="vw-access-sub-item" data-role="stats-recent-leads">${isUaLang ? 'Останні заявки' : 'Последние заявки'}: <strong>—</strong></div>
+          <div class="vw-access-sub-item" data-role="stats-lead-digest" style="display:none;"></div>
         </div>
       `;
     })();
