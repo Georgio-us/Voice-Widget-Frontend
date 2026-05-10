@@ -5522,8 +5522,13 @@ class VoiceWidget extends HTMLElement {
         if (!rows.length) {
           recentActivityEl.innerHTML = `<strong>—</strong>`;
         } else {
+          const compactActivityName = (value) => {
+            const full = String(value || '—').trim() || '—';
+            const firstToken = full.split(/\s+/).filter(Boolean)[0];
+            return firstToken || full;
+          };
           const items = rows.slice(0, 5).map((row) => {
-            const who = String(row?.name || '—').trim() || '—';
+            const who = compactActivityName(row?.name);
             const tg = toTgLink(row);
             const tgPart = tg
               ? `<a class="vw-stats-tg-link" href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
@@ -10133,9 +10138,14 @@ class VoiceWidget extends HTMLElement {
         text-decoration: underline;
         text-underline-offset: 2px;
         font-weight: 700;
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
+        flex: 0 0 auto;
       }
       .vw-access-sub-item .vw-stats-lead-details-btn {
         min-height: 24px;
+        min-width: 86px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.5);
         background: rgba(255,255,255,0.9);
@@ -10144,6 +10154,8 @@ class VoiceWidget extends HTMLElement {
         font-size: .84rem;
         line-height: 1;
         cursor: pointer;
+        white-space: nowrap;
+        flex: 0 0 auto;
       }
       .vw-access-sub-item .vw-stats-lead-row {
         display: flex;
@@ -10151,10 +10163,13 @@ class VoiceWidget extends HTMLElement {
         gap: 8px;
         flex-wrap: nowrap;
         min-width: 0;
+        white-space: nowrap;
       }
       .vw-access-sub-item .vw-stats-lead-name {
         font-weight: 700;
-        min-width: 0;
+        min-width: 0px;
+        max-width: 90px;
+        flex: 0 1 90px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
