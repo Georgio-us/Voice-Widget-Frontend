@@ -5204,6 +5204,8 @@ class VoiceWidget extends HTMLElement {
     const digestEl = overlay.querySelector('[data-role="stats-lead-digest"]');
     const leadsToggleEl = overlay.querySelector('[data-role="stats-recent-leads-toggle"]');
     const activityToggleEl = overlay.querySelector('[data-role="stats-recent-activity-toggle"]');
+    const leadsCountEl = overlay.querySelector('[data-role="stats-recent-leads-count"]');
+    const activityCountEl = overlay.querySelector('[data-role="stats-recent-activity-count"]');
     const setupAccordion = (toggleEl, bodyEl) => {
       if (!toggleEl || !bodyEl) return;
       if (toggleEl.dataset.bound === '1') return;
@@ -5397,6 +5399,7 @@ class VoiceWidget extends HTMLElement {
       };
       if (recentEl) {
         const rows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
+        if (leadsCountEl) leadsCountEl.textContent = String(Math.max(0, rows.length));
         if (!rows.length) {
           recentEl.innerHTML = `<strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
           if (digestEl) {
@@ -5445,6 +5448,7 @@ class VoiceWidget extends HTMLElement {
       }
       if (recentActivityEl) {
         const rows = Array.isArray(stats.recentActivity) ? stats.recentActivity : [];
+        if (activityCountEl) activityCountEl.textContent = String(Math.max(0, rows.length));
         if (!rows.length) {
           recentActivityEl.innerHTML = `<strong>—</strong>`;
         } else {
@@ -5941,13 +5945,15 @@ class VoiceWidget extends HTMLElement {
           <div class="vw-access-sub-item">${isUaLang ? 'Сесій (всього)' : 'Сессий (всего)'}: <strong data-role="stats-total-sessions">—</strong></div>
           <div class="vw-access-sub-item vw-stats-accordion">
             <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-leads-toggle" aria-expanded="false">
-              ${isUaLang ? 'Останні заявки' : 'Последние заявки'}
+              <span>${isUaLang ? 'Останні заявки' : 'Последние заявки'}</span>
+              <span class="vw-stats-accordion-count" data-role="stats-recent-leads-count">0</span>
             </button>
             <div class="vw-stats-accordion-body" data-role="stats-recent-leads-body"><strong>—</strong></div>
           </div>
           <div class="vw-access-sub-item vw-stats-accordion">
             <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-activity-toggle" aria-expanded="false">
-              ${isUaLang ? 'Остання активність' : 'Последняя активность'}
+              <span>${isUaLang ? 'Остання активність' : 'Последняя активность'}</span>
+              <span class="vw-stats-accordion-count" data-role="stats-recent-activity-count">0</span>
             </button>
             <div class="vw-stats-accordion-body" data-role="stats-recent-activity-body"><strong>—</strong></div>
           </div>
@@ -10084,38 +10090,46 @@ class VoiceWidget extends HTMLElement {
       .vw-access-sub-item.vw-stats-accordion {
         display: grid;
         gap: 8px;
+        border: 0;
+        background: transparent;
+        padding: 0;
       }
       .vw-access-sub-item .vw-stats-accordion-toggle {
         width: 100%;
-        min-height: 44px;
-        border-radius: 14px;
-        border: 0;
-        background: var(--color-accent, #2d8fe1);
-        color: #fff;
-        font-size: .94rem;
-        font-weight: 800;
+        min-height: 42px;
+        border-radius: 12px;
+        border: 1px solid var(--color-accent, #2d8fe1);
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        font-size: .86rem;
+        font-weight: 700;
         text-align: left;
-        padding: 0 14px;
+        padding: 0 12px;
         cursor: pointer;
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 10px;
       }
-      .vw-access-sub-item .vw-stats-accordion-toggle::before {
-        content: '+';
+      .vw-access-sub-item .vw-stats-accordion-count {
+        min-width: 24px;
+        height: 24px;
+        border-radius: 999px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 1em;
-        font-size: 1.35em;
-        line-height: 1;
-        font-weight: 900;
-      }
-      .vw-access-sub-item .vw-stats-accordion-toggle[aria-expanded="true"]::before {
-        content: '−';
+        padding: 0 8px;
+        font-size: .78rem;
+        font-weight: 800;
+        color: #fff;
+        background: var(--color-accent, #2d8fe1);
       }
       .vw-access-sub-item .vw-stats-accordion-body {
         display: none;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        border-radius: 12px;
+        padding: 10px 12px;
       }
       .vw-access-sub-item .vw-stats-digest {
         display: grid;
