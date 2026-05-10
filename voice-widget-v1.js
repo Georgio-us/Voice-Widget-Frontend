@@ -5241,11 +5241,11 @@ class VoiceWidget extends HTMLElement {
       if (!toggleEl || !bodyEl) return;
       if (toggleEl.dataset.bound === '1') return;
       const isOpen = String(toggleEl.getAttribute('aria-expanded') || '') === 'true';
-      bodyEl.style.display = isOpen ? '' : 'none';
+      bodyEl.style.display = isOpen ? 'block' : 'none';
       toggleEl.addEventListener('click', () => {
         const nowOpen = String(toggleEl.getAttribute('aria-expanded') || '') !== 'true';
         toggleEl.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
-        bodyEl.style.display = nowOpen ? '' : 'none';
+        bodyEl.style.display = nowOpen ? 'block' : 'none';
         if (nowOpen) {
           if (toggleEl === leadsToggleEl) {
             seenState = {
