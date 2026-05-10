@@ -5317,9 +5317,72 @@ class VoiceWidget extends HTMLElement {
               return value;
             };
             const insightsClean = insights ? prune(insights) : null;
-            const insightCompact = insightsClean
-              ? esc(JSON.stringify(insightsClean))
-              : '—';
+            const prettyInsights = (() => {
+              if (!insightsClean || typeof insightsClean !== 'object') return '—';
+              const labelMapUa = {
+                operation: 'Операція',
+                type: 'Тип',
+                district: 'Район',
+                location: 'Локація',
+                rooms: 'Кімнати',
+                budget: 'Бюджет',
+                budgetMax: 'Бюджет до',
+                minPrice: 'Ціна від',
+                maxPrice: 'Ціна до',
+                residentialComplex: 'ЖК',
+                rcOnly: 'Тільки ЖК',
+                parking: 'Паркінг',
+                balconyLoggia: 'Балкон/лоджія',
+                arcadia: 'Аркадія',
+                center: 'Центр'
+              };
+              const labelMapRu = {
+                operation: 'Операция',
+                type: 'Тип',
+                district: 'Район',
+                location: 'Локация',
+                rooms: 'Комнаты',
+                budget: 'Бюджет',
+                budgetMax: 'Бюджет до',
+                minPrice: 'Цена от',
+                maxPrice: 'Цена до',
+                residentialComplex: 'ЖК',
+                rcOnly: 'Только ЖК',
+                parking: 'Паркинг',
+                balconyLoggia: 'Балкон/лоджия',
+                arcadia: 'Аркадия',
+                center: 'Центр'
+              };
+              const map = isUaLang ? labelMapUa : labelMapRu;
+              const normValue = (key, value) => {
+                if (value === null || value === undefined) return '';
+                if (Array.isArray(value)) return value.map((x) => normValue(key, x)).filter(Boolean).join(', ');
+                const raw = String(value).trim();
+                if (!raw) return '';
+                if (key === 'operation') {
+                  if (raw === 'sale' || raw === 'buy') return isUaLang ? 'Купівля' : 'Покупка';
+                  if (raw === 'rent') return isUaLang ? 'Оренда' : 'Аренда';
+                }
+                if (key === 'type') {
+                  if (raw === 'apartment') return isUaLang ? 'Квартира' : 'Квартира';
+                  if (raw === 'house') return isUaLang ? 'Будинок' : 'Дом';
+                  if (raw === 'commercial') return isUaLang ? 'Комерція' : 'Коммерция';
+                  if (raw === 'land') return isUaLang ? 'Ділянка' : 'Участок';
+                }
+                if (['rcOnly', 'parking', 'balconyLoggia', 'arcadia', 'center'].includes(key)) {
+                  if (raw === 'true') return isUaLang ? 'Так' : 'Да';
+                  if (raw === 'false') return isUaLang ? 'Ні' : 'Нет';
+                }
+                return raw;
+              };
+              const parts = Object.entries(insightsClean).map(([k, v]) => {
+                const label = map[k] || k;
+                const val = normValue(k, v);
+                if (!val) return '';
+                return `${label}: ${val}`;
+              }).filter(Boolean);
+              return parts.length ? esc(parts.join(' · ')) : '—';
+            })();
             const sourcePart = sourceLabel(leadMeta?.source || '');
             const propertyIdPart = String(leadMeta?.propertyId || '').trim();
             const lines = [
@@ -5329,7 +5392,7 @@ class VoiceWidget extends HTMLElement {
               `${isUaLang ? 'Повідомлень' : 'Сообщений'}: <strong>${esc(String(digest?.messagesCount ?? '—'))}</strong>`,
               `${isUaLang ? 'Останній запит' : 'Последний запрос'}: <strong>${esc(lastUserText || '—')}</strong>`,
               `${isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента'}: <strong>${esc(assistantText || '—')}</strong>`,
-              `${isUaLang ? 'Останні інсайти (raw)' : 'Последние инсайты (raw)'}: <strong>${insightCompact}</strong>`
+              `${isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент'}: <strong>${prettyInsights}</strong>`
             ];
             digestEl.style.display = '';
             digestEl.innerHTML = lines.join('<br>');
