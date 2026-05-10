@@ -5285,9 +5285,13 @@ class VoiceWidget extends HTMLElement {
 
           const showDigest = (digest, sessionId, leadMeta = {}) => {
             if (!digestEl) return;
+            const renderRow = (emoji, label, value, compact = false) => {
+              const valueText = String(value ?? '').trim() || '—';
+              return `<div class="vw-stats-digest-row${compact ? ' is-compact' : ''}"><span class="vw-stats-digest-label">${emoji} ${esc(label)}</span><span class="vw-stats-digest-value">${esc(valueText)}</span></div>`;
+            };
             if (!digest) {
               digestEl.style.display = '';
-              digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
+              digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'немає даних' : 'нет данных'}</div></div>`;
               return;
             }
             const lastUserText = String(digest?.lastUserText || '').trim();
@@ -5385,17 +5389,17 @@ class VoiceWidget extends HTMLElement {
             })();
             const sourcePart = sourceLabel(leadMeta?.source || '');
             const propertyIdPart = String(leadMeta?.propertyId || '').trim();
-            const lines = [
-              `${isUaLang ? 'Сесія' : 'Сессия'}: <strong>${esc(sessionId || digest?.sessionId || '—')}</strong>`,
-              `${isUaLang ? 'Джерело заявки' : 'Источник заявки'}: <strong>${esc(sourcePart)}</strong>`,
-              `${isUaLang ? 'ID обʼєкта' : 'ID объекта'}: <strong>${esc(propertyIdPart || '—')}</strong>`,
-              `${isUaLang ? 'Повідомлень' : 'Сообщений'}: <strong>${esc(String(digest?.messagesCount ?? '—'))}</strong>`,
-              `${isUaLang ? 'Останній запит' : 'Последний запрос'}: <strong>${esc(lastUserText || '—')}</strong>`,
-              `${isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента'}: <strong>${esc(assistantText || '—')}</strong>`,
-              `${isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент'}: <strong>${prettyInsights}</strong>`
+            const rows = [
+              renderRow('🧩', isUaLang ? 'Сесія' : 'Сессия', sessionId || digest?.sessionId || '—', true),
+              renderRow('📍', isUaLang ? 'Джерело заявки' : 'Источник заявки', sourcePart),
+              renderRow('🏠', isUaLang ? 'ID обʼєкта' : 'ID объекта', propertyIdPart || '—'),
+              renderRow('💬', isUaLang ? 'Повідомлень' : 'Сообщений', String(digest?.messagesCount ?? '—'), true),
+              renderRow('🗣️', isUaLang ? 'Останній запит' : 'Последний запрос', lastUserText || '—'),
+              renderRow('🤖', isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента', assistantText || '—'),
+              `<div class="vw-stats-digest-row"><span class="vw-stats-digest-label">🔎 ${isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент'}</span><span class="vw-stats-digest-value">${prettyInsights}</span></div>`
             ];
             digestEl.style.display = '';
-            digestEl.innerHTML = lines.join('<br>');
+            digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div>${rows.join('')}</div>`;
           };
 
           recentEl.querySelectorAll('[data-role="lead-details"]').forEach((btn) => {
@@ -5406,7 +5410,7 @@ class VoiceWidget extends HTMLElement {
               const propertyId = String(btn.getAttribute('data-property-id') || '').trim();
               if (digestEl) {
                 digestEl.style.display = '';
-                digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${isUaLang ? 'завантаження…' : 'загрузка…'}</strong>`;
+                digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'завантаження…' : 'загрузка…'}</div></div>`;
               }
               try {
                 const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
@@ -5414,7 +5418,7 @@ class VoiceWidget extends HTMLElement {
               } catch (error) {
                 if (digestEl) {
                   digestEl.style.display = '';
-                  digestEl.innerHTML = `${isUaLang ? 'Деталі сесії' : 'Детали сессии'}: <strong>${esc(error?.message || 'load_failed')}</strong>`;
+                  digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${esc(error?.message || 'load_failed')}</div></div>`;
                 }
               }
             });
@@ -10002,6 +10006,44 @@ class VoiceWidget extends HTMLElement {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+      .vw-access-sub-item .vw-stats-digest {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-access-sub-item .vw-stats-digest-title {
+        font-size: .9rem;
+        line-height: 1.25;
+        font-weight: 800;
+        color: var(--text-primary, #fff);
+      }
+      .vw-access-sub-item .vw-stats-digest-row {
+        display: grid;
+        gap: 2px;
+      }
+      .vw-access-sub-item .vw-stats-digest-label {
+        font-size: .8rem;
+        line-height: 1.2;
+        font-weight: 700;
+        color: var(--text-primary, #fff);
+      }
+      .vw-access-sub-item .vw-stats-digest-value {
+        font-size: .76rem;
+        line-height: 1.3;
+        font-weight: 500;
+        color: var(--text-secondary, rgba(255,255,255,0.84));
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .vw-access-sub-item .vw-stats-digest-row.is-compact .vw-stats-digest-value {
+        font-size: .72rem;
+      }
+      .vw-access-sub-item .vw-stats-digest-empty {
+        font-size: .8rem;
+        line-height: 1.25;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.84));
       }
       .vw-access-sub-toolbar {
         display: flex;
