@@ -5288,7 +5288,7 @@ class VoiceWidget extends HTMLElement {
             const propPart = prop ? ` · ID ${esc(prop)}` : '';
             const tg = toTgLink(row);
             const tgPart = tg
-              ? ` · <a href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
+              ? ` · <a class="vw-stats-tg-link" href="${esc(tg.href)}" target="_blank" rel="noopener noreferrer">${esc(tg.label)}</a>`
               : '';
             const phone = humanPhone(row?.phone_country_code, row?.phone_number);
             const phonePart = phone ? ` · ${esc(phone)}` : '';
@@ -5312,7 +5312,32 @@ class VoiceWidget extends HTMLElement {
             const lastUserText = String(digest?.lastUserText || '').trim();
             const assistantText = String(digest?.lastAssistantText || '').trim();
             const insights = digest?.lastInsights && typeof digest.lastInsights === 'object' ? digest.lastInsights : null;
-            const insightCompact = insights ? esc(JSON.stringify(insights)) : '—';
+            const isMeaningful = (value) => {
+              if (value === null || value === undefined) return false;
+              if (typeof value === 'string') return value.trim().length > 0;
+              if (Array.isArray(value)) return value.some((item) => isMeaningful(item));
+              if (typeof value === 'object') return Object.values(value).some((item) => isMeaningful(item));
+              return true;
+            };
+            const prune = (value) => {
+              if (Array.isArray(value)) {
+                const arr = value.map((item) => prune(item)).filter((item) => isMeaningful(item));
+                return arr.length ? arr : null;
+              }
+              if (value && typeof value === 'object') {
+                const out = {};
+                Object.entries(value).forEach(([k, v]) => {
+                  const pv = prune(v);
+                  if (isMeaningful(pv)) out[k] = pv;
+                });
+                return Object.keys(out).length ? out : null;
+              }
+              return value;
+            };
+            const insightsClean = insights ? prune(insights) : null;
+            const insightCompact = insightsClean
+              ? esc(JSON.stringify(insightsClean))
+              : '—';
             const lines = [
               `${isUaLang ? 'Сесія' : 'Сессия'}: <strong>${esc(sessionId || digest?.sessionId || '—')}</strong>`,
               `${isUaLang ? 'Повідомлень' : 'Сообщений'}: <strong>${esc(String(digest?.messagesCount ?? '—'))}</strong>`,
@@ -9849,7 +9874,8 @@ class VoiceWidget extends HTMLElement {
         padding: 14px;
         display: grid;
         gap: 40px;
-        overflow: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
       .vw-access-sub-head {
         display: grid;
@@ -9886,6 +9912,31 @@ class VoiceWidget extends HTMLElement {
         border-radius: 12px;
         padding: 10px 12px;
         font-size: .86rem;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .vw-access-sub-item strong {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .vw-access-sub-item .vw-stats-tg-link {
+        color: var(--color-accent, #2d8fe1);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        font-weight: 700;
+      }
+      .vw-access-sub-item .vw-stats-lead-details-btn {
+        min-height: 24px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.9);
+        color: #242528;
+        padding: 0 10px;
+        font-size: .84rem;
+        line-height: 1;
+        cursor: pointer;
       }
       .vw-access-sub-toolbar {
         display: flex;
