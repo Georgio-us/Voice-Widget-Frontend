@@ -5206,6 +5206,37 @@ class VoiceWidget extends HTMLElement {
     const activityToggleEl = overlay.querySelector('[data-role="stats-recent-activity-toggle"]');
     const leadsCountEl = overlay.querySelector('[data-role="stats-recent-leads-count"]');
     const activityCountEl = overlay.querySelector('[data-role="stats-recent-activity-count"]');
+    const seenStateKey = (() => {
+      const base = String(this.api?.apiUrl || this.apiUrl || 'default').replace(/\/api\/audio\/upload\/?$/i, '').trim() || 'default';
+      const tgId = String(this.api?.getTelegramUserIdentity?.()?.id || 'anon').trim() || 'anon';
+      return `vw_stats_seen_v1:${base}:${tgId}`;
+    })();
+    const loadSeenState = () => {
+      try {
+        const raw = localStorage.getItem(seenStateKey);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return {
+          leads: Array.isArray(parsed?.leads) ? parsed.leads.map((x) => String(x || '').trim()).filter(Boolean) : [],
+          activity: Array.isArray(parsed?.activity) ? parsed.activity.map((x) => String(x || '').trim()).filter(Boolean) : []
+        };
+      } catch {
+        return { leads: [], activity: [] };
+      }
+    };
+    const saveSeenState = (state) => {
+      try {
+        localStorage.setItem(seenStateKey, JSON.stringify(state));
+      } catch {}
+    };
+    let currentLeadKeys = [];
+    let currentActivityKeys = [];
+    let seenState = loadSeenState();
+    const updateBadges = () => {
+      const leadsUnread = currentLeadKeys.filter((k) => !seenState.leads.includes(k)).length;
+      const activityUnread = currentActivityKeys.filter((k) => !seenState.activity.includes(k)).length;
+      if (leadsCountEl) leadsCountEl.textContent = String(Math.max(0, leadsUnread));
+      if (activityCountEl) activityCountEl.textContent = String(Math.max(0, activityUnread));
+    };
     const setupAccordion = (toggleEl, bodyEl) => {
       if (!toggleEl || !bodyEl) return;
       if (toggleEl.dataset.bound === '1') return;
@@ -5215,6 +5246,24 @@ class VoiceWidget extends HTMLElement {
         const nowOpen = String(toggleEl.getAttribute('aria-expanded') || '') !== 'true';
         toggleEl.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
         bodyEl.style.display = nowOpen ? '' : 'none';
+        if (nowOpen) {
+          if (toggleEl === leadsToggleEl) {
+            seenState = {
+              ...seenState,
+              leads: Array.from(new Set([...(seenState.leads || []), ...currentLeadKeys])).slice(-300)
+            };
+            saveSeenState(seenState);
+            updateBadges();
+          }
+          if (toggleEl === activityToggleEl) {
+            seenState = {
+              ...seenState,
+              activity: Array.from(new Set([...(seenState.activity || []), ...currentActivityKeys])).slice(-300)
+            };
+            saveSeenState(seenState);
+            updateBadges();
+          }
+        }
       });
       toggleEl.dataset.bound = '1';
     };
@@ -5399,7 +5448,13 @@ class VoiceWidget extends HTMLElement {
       };
       if (recentEl) {
         const rows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
-        if (leadsCountEl) leadsCountEl.textContent = String(Math.max(0, rows.length));
+        currentLeadKeys = rows.slice(0, 5).map((row) => {
+          const id = String(row?.id || '').trim();
+          if (id) return `lead:${id}`;
+          const sid = String(row?.session_id || '').trim();
+          const created = String(row?.created_at || '').trim();
+          return `lead:${sid}:${created}`;
+        }).filter(Boolean);
         if (!rows.length) {
           recentEl.innerHTML = `<strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
           if (digestEl) {
@@ -5448,7 +5503,11 @@ class VoiceWidget extends HTMLElement {
       }
       if (recentActivityEl) {
         const rows = Array.isArray(stats.recentActivity) ? stats.recentActivity : [];
-        if (activityCountEl) activityCountEl.textContent = String(Math.max(0, rows.length));
+        currentActivityKeys = rows.slice(0, 5).map((row) => {
+          const sid = String(row?.session_id || '').trim();
+          const created = String(row?.created_at || '').trim();
+          return `act:${sid}:${created}`;
+        }).filter(Boolean);
         if (!rows.length) {
           recentActivityEl.innerHTML = `<strong>—</strong>`;
         } else {
@@ -5492,6 +5551,7 @@ class VoiceWidget extends HTMLElement {
           });
         }
       }
+      updateBadges();
     } catch (error) {
       console.warn('[admin-stats] failed to load summary:', error?.message || error);
     }
