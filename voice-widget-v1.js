@@ -5201,7 +5201,8 @@ class VoiceWidget extends HTMLElement {
     const isUaLang = this.getLangCode() === 'ua';
     const recentEl = overlay.querySelector('[data-role="stats-recent-leads-body"]');
     const recentActivityEl = overlay.querySelector('[data-role="stats-recent-activity-body"]');
-    const digestEl = overlay.querySelector('[data-role="stats-lead-digest"]');
+    const leadsDigestEl = overlay.querySelector('[data-role="stats-leads-digest"]');
+    const activityDigestEl = overlay.querySelector('[data-role="stats-activity-digest"]');
     const leadsToggleEl = overlay.querySelector('[data-role="stats-recent-leads-toggle"]');
     const activityToggleEl = overlay.querySelector('[data-role="stats-recent-activity-toggle"]');
     const leadsCountEl = overlay.querySelector('[data-role="stats-recent-leads-count"]');
@@ -5246,9 +5247,15 @@ class VoiceWidget extends HTMLElement {
         const nowOpen = String(toggleEl.getAttribute('aria-expanded') || '') !== 'true';
         toggleEl.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
         bodyEl.style.display = nowOpen ? 'block' : 'none';
-        if (!nowOpen && digestEl) {
-          digestEl.style.display = 'none';
-          digestEl.innerHTML = '';
+        if (!nowOpen) {
+          if (toggleEl === leadsToggleEl && leadsDigestEl) {
+            leadsDigestEl.style.display = 'none';
+            leadsDigestEl.innerHTML = '';
+          }
+          if (toggleEl === activityToggleEl && activityDigestEl) {
+            activityDigestEl.style.display = 'none';
+            activityDigestEl.innerHTML = '';
+          }
         }
         if (nowOpen) {
           if (toggleEl === leadsToggleEl) {
@@ -5328,15 +5335,15 @@ class VoiceWidget extends HTMLElement {
         const map = isUaLang ? mapUa : mapRu;
         return map[src] || src || '—';
       };
-      const showDigest = (digest, sessionId, leadMeta = {}) => {
-        if (!digestEl) return;
+      const showDigest = (targetEl, digest, sessionId, leadMeta = {}) => {
+        if (!targetEl) return;
         const renderRow = (emoji, label, value, compact = false) => {
           const valueText = String(value ?? '').trim() || '—';
           return `<div class="vw-stats-digest-row${compact ? ' is-compact' : ''}"><span class="vw-stats-digest-label">${emoji} ${esc(label)}</span><span class="vw-stats-digest-value">${esc(valueText)}</span></div>`;
         };
         if (!digest) {
-          digestEl.style.display = '';
-          digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'немає даних' : 'нет данных'}</div></div>`;
+          targetEl.style.display = '';
+          targetEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'немає даних' : 'нет данных'}</div></div>`;
           return;
         }
         const lastUserText = String(digest?.lastUserText || '').trim();
@@ -5447,8 +5454,8 @@ class VoiceWidget extends HTMLElement {
           renderRow('🤖', isUaLang ? 'Остання відповідь асистента' : 'Последний ответ ассистента', assistantText || '—'),
           `<div class="vw-stats-digest-row"><span class="vw-stats-digest-label">🔎 ${isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент'}</span><span class="vw-stats-digest-value">${prettyInsights}</span></div>`
         ];
-        digestEl.style.display = '';
-        digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div>${rows.join('')}</div>`;
+        targetEl.style.display = '';
+        targetEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div>${rows.join('')}</div>`;
       };
       if (recentEl) {
         const rows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
@@ -5461,9 +5468,9 @@ class VoiceWidget extends HTMLElement {
         }).filter(Boolean);
         if (!rows.length) {
           recentEl.innerHTML = `<strong>${isUaLang ? 'немає даних' : 'нет данных'}</strong>`;
-          if (digestEl) {
-            digestEl.style.display = 'none';
-            digestEl.innerHTML = '';
+          if (leadsDigestEl) {
+            leadsDigestEl.style.display = 'none';
+            leadsDigestEl.innerHTML = '';
           }
         } else {
           const items = rows.slice(0, 5).map((row) => {
@@ -5488,17 +5495,17 @@ class VoiceWidget extends HTMLElement {
               if (!sessionId) return;
               const source = String(btn.getAttribute('data-source') || '').trim();
               const propertyId = String(btn.getAttribute('data-property-id') || '').trim();
-              if (digestEl) {
-                digestEl.style.display = '';
-                digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'завантаження…' : 'загрузка…'}</div></div>`;
+              if (leadsDigestEl) {
+                leadsDigestEl.style.display = '';
+                leadsDigestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'завантаження…' : 'загрузка…'}</div></div>`;
               }
               try {
                 const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
-                showDigest(digest, sessionId, { source, propertyId, leftLead: true });
+                showDigest(leadsDigestEl, digest, sessionId, { source, propertyId, leftLead: true });
               } catch (error) {
-                if (digestEl) {
-                  digestEl.style.display = '';
-                  digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${esc(error?.message || 'load_failed')}</div></div>`;
+                if (leadsDigestEl) {
+                  leadsDigestEl.style.display = '';
+                  leadsDigestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${esc(error?.message || 'load_failed')}</div></div>`;
                 }
               }
             });
@@ -5538,17 +5545,17 @@ class VoiceWidget extends HTMLElement {
               const source = String(btn.getAttribute('data-source') || '').trim();
               const propertyId = String(btn.getAttribute('data-property-id') || '').trim();
               const leftLead = String(btn.getAttribute('data-left-lead') || '').trim() === '1';
-              if (digestEl) {
-                digestEl.style.display = '';
-                digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'завантаження…' : 'загрузка…'}</div></div>`;
+              if (activityDigestEl) {
+                activityDigestEl.style.display = '';
+                activityDigestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'завантаження…' : 'загрузка…'}</div></div>`;
               }
               try {
                 const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
-                showDigest(digest, sessionId, { source, propertyId, leftLead });
+                showDigest(activityDigestEl, digest, sessionId, { source, propertyId, leftLead });
               } catch (error) {
-                if (digestEl) {
-                  digestEl.style.display = '';
-                  digestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${esc(error?.message || 'load_failed')}</div></div>`;
+                if (activityDigestEl) {
+                  activityDigestEl.style.display = '';
+                  activityDigestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${esc(error?.message || 'load_failed')}</div></div>`;
                 }
               }
             });
@@ -6014,6 +6021,7 @@ class VoiceWidget extends HTMLElement {
             </button>
             <div class="vw-stats-accordion-body" data-role="stats-recent-leads-body"><strong>—</strong></div>
           </div>
+          <div class="vw-access-sub-item" data-role="stats-leads-digest" style="display:none;"></div>
           <div class="vw-access-sub-item vw-stats-accordion">
             <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-activity-toggle" aria-expanded="false">
               <span>${isUaLang ? 'Остання активність' : 'Последняя активность'}</span>
@@ -6021,7 +6029,7 @@ class VoiceWidget extends HTMLElement {
             </button>
             <div class="vw-stats-accordion-body" data-role="stats-recent-activity-body"><strong>—</strong></div>
           </div>
-          <div class="vw-access-sub-item" data-role="stats-lead-digest" style="display:none;"></div>
+          <div class="vw-access-sub-item" data-role="stats-activity-digest" style="display:none;"></div>
         </div>
       `;
     })();
