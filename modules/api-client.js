@@ -192,33 +192,6 @@ export class APIClient {
     }
   }
 
-  _hasOpenResultsIntent(text = '') {
-    try {
-      const s = String(text || '').toLowerCase().trim();
-      if (!s) return false;
-      const patterns = [
-        // RU
-        /\bпокаж\w*\b/i,
-        /\bпосмотр\w*\b/i,
-        /\bчто\s+есть\b/i,
-        /\bвариант\w*\b/i,
-        // EN
-        /\bshow\b/i,
-        /\bshow\s+me\b/i,
-        /\blet'?s\s+see\b/i,
-        /\bwhat\s+do\s+you\s+have\b/i,
-        // ES
-        /\bmostrar\b/i,
-        /\bens[eé]ñ\w*\b/i,
-        /\bver\b/i,
-        /\bque\s+tienes\b/i
-      ];
-      return patterns.some((re) => re.test(s));
-    } catch {
-      return false;
-    }
-  }
-
   _hasManagerIntentKeyword(text = '') {
     try {
       const s = String(text || '').toLowerCase().trim();
@@ -231,6 +204,8 @@ export class APIClient {
         /\bипотек\w*\b/i,
         /\bрассроч\w*\b/i,
         /\bкредит\w*\b/i,
+        /\bпросмотр\w*\b/i,
+        /\bпоказ\w*\b/i,
         /\bпозвон\w*\b/i,
         /\bперезвон\w*\b/i,
         /\bконтакт\w*\b/i,
@@ -629,17 +604,12 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
-      const openResultsIntent = this._hasOpenResultsIntent(messageText);
-      const hasSelectionActionCandidate = !!selectionEvent?.action;
-      const shouldEmitSelectionEvent =
-        insightsChanged === true ||
-        !!selectionEvent?.explicit ||
-        (openResultsIntent && hasSelectionActionCandidate);
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
       const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: messageText,
         insightsChanged,
-        hasSelectionAction: !!emittedSelectionEvent?.action || (openResultsIntent && hasSelectionActionCandidate)
+        hasSelectionAction: !!emittedSelectionEvent?.action
       });
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
@@ -734,17 +704,12 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
-      const openResultsIntent = this._hasOpenResultsIntent(messageText);
-      const hasSelectionActionCandidate = !!selectionEvent?.action;
-      const shouldEmitSelectionEvent =
-        insightsChanged === true ||
-        !!selectionEvent?.explicit ||
-        (openResultsIntent && hasSelectionActionCandidate);
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
       const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: messageText,
         insightsChanged,
-        hasSelectionAction: !!emittedSelectionEvent?.action || (openResultsIntent && hasSelectionActionCandidate)
+        hasSelectionAction: !!emittedSelectionEvent?.action
       });
 
       // ✅ если сервер выдал sessionId — подхватываем и показываем
@@ -877,17 +842,12 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
-      const openResultsIntent = this._hasOpenResultsIntent(data?.transcription || '');
-      const hasSelectionActionCandidate = !!selectionEvent?.action;
-      const shouldEmitSelectionEvent =
-        insightsChanged === true ||
-        !!selectionEvent?.explicit ||
-        (openResultsIntent && hasSelectionActionCandidate);
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
       const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: data?.transcription || '',
         insightsChanged,
-        hasSelectionAction: !!emittedSelectionEvent?.action || (openResultsIntent && hasSelectionActionCandidate)
+        hasSelectionAction: !!emittedSelectionEvent?.action
       });
 
       // ✅ подхватываем новую sessionId с сервера
