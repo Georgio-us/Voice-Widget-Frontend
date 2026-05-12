@@ -6590,7 +6590,23 @@ render() {
         preferredContactMethod: 'phone',
         comment: null,
         language: language,
-        propertyId: null,
+        propertyId: (() => {
+          try {
+            const idWithSuffix = formRoot?.querySelector('input[id^="inDialogLeadName"]')?.id || '';
+            const fromSuffix = idWithSuffix.includes('_') ? idWithSuffix.split('_').pop() : '';
+            if (fromSuffix && String(fromSuffix).trim()) return String(fromSuffix).trim();
+          } catch {}
+          try {
+            const slide = formRoot?.closest('.card-slide');
+            const variantId = slide?.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
+            if (variantId && String(variantId).trim()) return String(variantId).trim();
+          } catch {}
+          try {
+            const fallbackId = this._lastSuggestedCard?.id;
+            if (fallbackId && String(fallbackId).trim()) return String(fallbackId).trim();
+          } catch {}
+          return null;
+        })(),
         consent: true
       };
 
