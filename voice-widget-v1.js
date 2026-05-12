@@ -6580,6 +6580,16 @@ render() {
       // Submit to backend (/api/leads), isolated from other forms
       const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
       const language = (this.currentLang || this.defaultLanguage).toLowerCase();
+      const strictPropertyId = (() => {
+        try {
+          const hiddenIdEl = formRoot?.querySelector('input[id^="inDialogLeadPropertyId"]');
+          const v = String(hiddenIdEl?.value || '').trim();
+          return v || null;
+        } catch {
+          return null;
+        }
+      })();
+
       const payload = {
         sessionId: this.sessionId || null,
         source: 'widget_in_dialog',
@@ -6590,23 +6600,7 @@ render() {
         preferredContactMethod: 'phone',
         comment: null,
         language: language,
-        propertyId: (() => {
-          try {
-            const idWithSuffix = formRoot?.querySelector('input[id^="inDialogLeadName"]')?.id || '';
-            const fromSuffix = idWithSuffix.includes('_') ? idWithSuffix.split('_').pop() : '';
-            if (fromSuffix && String(fromSuffix).trim()) return String(fromSuffix).trim();
-          } catch {}
-          try {
-            const slide = formRoot?.closest('.card-slide');
-            const variantId = slide?.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
-            if (variantId && String(variantId).trim()) return String(variantId).trim();
-          } catch {}
-          try {
-            const fallbackId = this._lastSuggestedCard?.id;
-            if (fallbackId && String(fallbackId).trim()) return String(fallbackId).trim();
-          } catch {}
-          return null;
-        })(),
+        propertyId: strictPropertyId,
         consent: true
       };
 
@@ -6639,6 +6633,7 @@ render() {
   // HTML формы in-dialog lead (для слайдера back и legacy handoff)
   getInDialogLeadFormHTML(locale, idSuffix = '') {
     const s = idSuffix;
+    const propertyId = String(s || '').replace(/^_+/, '').trim();
     return `
         <div class="in-dialog-lead" role="group" aria-label="In-dialog lead block">
           <div class="in-dialog-lead__body">
@@ -6663,6 +6658,7 @@ render() {
                 </div>
                 <input class="in-dialog-lead__input" id="inDialogLeadPhone${s}" type="tel" inputmode="tel" autocomplete="tel" placeholder="${locale.requestPhonePlaceholder}">
                 <input id="inDialogLeadCode${s}" type="hidden" value="+34" />
+                <input id="inDialogLeadPropertyId${s}" type="hidden" value="${propertyId}" />
               </div>
             </div>
             <div class="in-dialog-lead__field">
