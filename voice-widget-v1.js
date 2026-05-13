@@ -1776,6 +1776,27 @@ class APIClient {
     return data?.stats && typeof data.stats === 'object' ? data.stats : {};
   }
 
+  async fetchAdminClientsList() {
+    const url = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/clients/list');
+    const u = new URL(url, window.location.origin);
+    const tgIdentity = this.getTelegramUserIdentity();
+    if (tgIdentity?.id) u.searchParams.set('tgUserId', String(tgIdentity.id));
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) u.searchParams.set('devAdmin', '1');
+    const res = await fetch(u.toString(), {
+      method: 'GET',
+      headers: this.buildTelegramAuthHeaders()
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.ok === false) {
+      const serverError = String(data?.error || '');
+      throw new Error(serverError || `ADMIN_CLIENTS_LIST_FAILED_${res.status}`);
+    }
+    return {
+      summary: data?.summary && typeof data.summary === 'object' ? data.summary : {},
+      clients: Array.isArray(data?.clients) ? data.clients : []
+    };
+  }
+
   async fetchAdminSessionDigest(sessionId) {
     const sid = String(sessionId || '').trim();
     if (!sid) return null;
@@ -2740,6 +2761,7 @@ const LOCALES = {
     accessAdminGreeting: 'Добро пожаловать, {name} (@{username})! Вы в админ-панели',
     accessUserGreeting: 'Добро пожаловать, {name} (@{username})! Это ваш список избранного',
     accessAdminStats: 'Статистика / заявки',
+    accessAdminClients: 'Клиенты',
     accessAdminProperties: 'Мои объекты',
     accessAdminShowLiked: 'Лайкнутые',
     accessAdminShowAll: 'Все',
@@ -2961,6 +2983,7 @@ const LOCALES = {
     accessAdminGreeting: 'Вітаємо, {name} (@{username})! Ви в адмін-панелі',
     accessUserGreeting: 'Вітаємо, {name} (@{username})! Це ваш список обраного',
     accessAdminStats: 'Статистика / заявки',
+    accessAdminClients: 'Клієнти',
     accessAdminProperties: "Мої об'єкти",
     accessAdminShowLiked: 'Лайкнуті',
     accessAdminShowAll: 'Усі',
@@ -5296,6 +5319,142 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  async loadAccessClientsList(overlay) {
+    if (!overlay) return;
+    const isUaLang = this.getLangCode() === 'ua';
+    const esc = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const safeNum = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '0');
+    const formatDate = (value) => {
+      if (!value) return '—';
+      try {
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString(isUaLang ? 'uk-UA' : 'ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+      } catch {
+        return '—';
+      }
+    };
+    const clientName = (client) => {
+      const full = [client?.first_name, client?.last_name].map((v) => String(v || '').trim()).filter(Boolean).join(' ').trim();
+      return full || String(client?.telegram_username || '').replace(/^@/, '') || `ID ${client?.telegram_user_id || '—'}`;
+    };
+    const tgLink = (client) => {
+      const usernameRaw = String(client?.telegram_username || '').trim();
+      const idRaw = String(client?.telegram_user_id || '').trim();
+      if (usernameRaw) {
+        const uname = usernameRaw.replace(/^@/, '');
+        return `<a class="vw-stats-tg-link" href="https://t.me/${encodeURIComponent(uname)}" target="_blank" rel="noopener noreferrer">@${esc(uname)}</a>`;
+      }
+      if (/^\d{5,20}$/.test(idRaw)) {
+        return `<a class="vw-stats-tg-link" href="tg://user?id=${encodeURIComponent(idRaw)}">id:${esc(idRaw)}</a>`;
+      }
+      return '—';
+    };
+    const renderInsights = (insights) => {
+      if (!insights || typeof insights !== 'object') return '—';
+      const labels = isUaLang
+        ? { operation: 'Операція', type: 'Тип', district: 'Район', location: 'Локація', rooms: 'Кімнати', budget: 'Бюджет', budgetMax: 'Бюджет до' }
+        : { operation: 'Операция', type: 'Тип', district: 'Район', location: 'Локация', rooms: 'Комнаты', budget: 'Бюджет', budgetMax: 'Бюджет до' };
+      const normalize = (key, value) => {
+        if (value === null || value === undefined) return '';
+        if (Array.isArray(value)) return value.map((x) => normalize(key, x)).filter(Boolean).join(', ');
+        const raw = String(value).trim();
+        if (!raw || key === 'progress') return '';
+        if (key === 'operation') {
+          if (raw === 'buy' || raw === 'sale') return isUaLang ? 'Купівля' : 'Покупка';
+          if (raw === 'rent') return isUaLang ? 'Оренда' : 'Аренда';
+        }
+        if (key === 'type' && raw === 'apartment') return isUaLang ? 'Квартира' : 'Квартира';
+        return raw;
+      };
+      const parts = Object.entries(insights).map(([key, value]) => {
+        const v = normalize(key, value);
+        return v ? `${labels[key] || key}: ${v}` : '';
+      }).filter(Boolean);
+      return parts.length ? esc(parts.join(' · ')) : '—';
+    };
+    const root = overlay.querySelector('[data-role="admin-clients-list"]');
+    if (!root) return;
+    root.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Завантаження...' : 'Загрузка...'}</strong></div>`;
+    try {
+      const data = await this.api?.fetchAdminClientsList?.();
+      const summary = data?.summary && typeof data.summary === 'object' ? data.summary : {};
+      const clients = Array.isArray(data?.clients) ? data.clients : [];
+      const summaryHtml = `
+        <div class="vw-access-sub-item">${isUaLang ? 'Клієнтів у боті' : 'Клиентов в боте'}: <strong>${safeNum(summary.totalClients)}</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Заявки залишали' : 'Оставляли заявки'}: <strong>${safeNum(summary.withLeads)}</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Активні за 7 днів' : 'Активные за 7 дней'}: <strong>${safeNum(summary.active7Days)}</strong></div>
+      `;
+      if (!clients.length) {
+        root.innerHTML = `${summaryHtml}<div class="vw-access-sub-item"><strong>${isUaLang ? 'Клієнтів поки немає' : 'Клиентов пока нет'}</strong></div>`;
+        return;
+      }
+      const rowsHtml = clients.map((client, idx) => {
+        const name = clientName(client);
+        const leads = Number(client?.leads_count || 0);
+        const last = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || null;
+        return `
+          <div class="vw-client-card" data-role="client-card" data-client-index="${idx}" role="button" tabindex="0">
+            <span class="vw-client-card__main">
+              <span class="vw-client-card__name">${esc(name)}</span>
+              <span class="vw-client-card__tg">${tgLink(client)}</span>
+            </span>
+            <span class="vw-client-card__meta">${leads} ${isUaLang ? 'заяв.' : 'заяв.'} · ${formatDate(last)}</span>
+          </div>
+          <div class="vw-client-details" data-role="client-details" data-client-index="${idx}" style="display:none;"></div>
+        `;
+      }).join('');
+      root.innerHTML = `${summaryHtml}<div class="vw-clients-list">${rowsHtml}</div>`;
+      root.querySelectorAll('[data-role="client-card"]').forEach((btn) => {
+        const toggle = () => {
+          const idx = Number(btn.getAttribute('data-client-index'));
+          const client = clients[idx];
+          if (!client) return;
+          const details = root.querySelector(`[data-role="client-details"][data-client-index="${idx}"]`);
+          if (!details) return;
+          const isOpen = details.style.display !== 'none';
+          root.querySelectorAll('[data-role="client-details"]').forEach((el) => {
+            el.style.display = 'none';
+            el.innerHTML = '';
+          });
+          if (isOpen) return;
+          const session = client?.latest_session && typeof client.latest_session === 'object' ? client.latest_session : {};
+          const rows = [
+            { label: 'Telegram ID', value: client?.telegram_user_id || '—' },
+            { label: isUaLang ? 'Username' : 'Username', value: client?.telegram_username || '—' },
+            { label: isUaLang ? 'Вперше зайшов' : 'Впервые зашел', value: formatDate(client?.first_seen_at) },
+            { label: isUaLang ? 'Остання активність' : 'Последняя активность', value: formatDate(client?.last_seen_at || client?.last_session_at) },
+            { label: isUaLang ? 'Заявок' : 'Заявок', value: safeNum(client?.leads_count) },
+            { label: isUaLang ? 'Сесій' : 'Сессий', value: safeNum(client?.sessions_count) },
+            { label: isUaLang ? 'Остання сесія' : 'Последняя сессия', value: client?.last_session_id || '—' },
+            { label: isUaLang ? 'Повідомлень' : 'Сообщений', value: safeNum(session?.messagesCount) },
+            { label: isUaLang ? 'Показано обʼєктів' : 'Показано объектов', value: safeNum(session?.shownObjectsCount) },
+            { label: isUaLang ? 'Останній запит' : 'Последний запрос', value: session?.lastUserText || '—' },
+            { label: isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент', value: renderInsights(session?.lastInsights), html: true }
+          ];
+          details.innerHTML = `<div class="vw-client-details__inner">${rows.map((row) => `<div class="vw-client-details__row"><span>${esc(row.label)}</span><strong>${row.html ? row.value : esc(row.value)}</strong></div>`).join('')}</div>`;
+          details.style.display = 'block';
+        };
+        btn.addEventListener('click', (event) => {
+          if (event.target?.closest?.('a')) return;
+          toggle();
+        });
+        btn.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          toggle();
+        });
+      });
+    } catch (error) {
+      root.innerHTML = `<div class="vw-access-sub-item"><strong>${esc(error?.message || 'load_failed')}</strong></div>`;
+    }
+  }
+
   async loadAccessStatsSummary(overlay) {
     if (!overlay) return;
     const setText = (role, value) => {
@@ -6098,6 +6257,13 @@ class VoiceWidget extends HTMLElement {
           </div>
         `;
       }
+      if (safeSection === 'clients') {
+        return `
+          <div class="vw-access-sub-list" data-role="admin-clients-list">
+            <div class="vw-access-sub-item"><strong>${isUaLang ? 'Завантаження...' : 'Загрузка...'}</strong></div>
+          </div>
+        `;
+      }
       return `
         <div class="vw-access-sub-list" data-role="admin-stats-summary">
           <div class="vw-access-sub-item">${isUaLang ? 'Користувачів у боті (всього)' : 'Пользователей в боте (всего)'}: <strong data-role="stats-total-users">—</strong></div>
@@ -6139,6 +6305,8 @@ class VoiceWidget extends HTMLElement {
         ? (isUaLang ? 'Керування підпискою' : 'Управление подпиской')
       : safeSection === 'keygen'
         ? (locale.accessAdminKeygen || 'Генерация ключей')
+      : safeSection === 'clients'
+        ? (locale.accessAdminClients || (isUaLang ? 'Клієнти' : 'Клиенты'))
         : (isUaLang ? 'Статистика' : 'Статистика');
     const modalHead = isAddProperty
       ? `
@@ -6168,6 +6336,8 @@ class VoiceWidget extends HTMLElement {
     this.getRoot().appendChild(overlay);
     if (safeSection === 'stats') {
       this.loadAccessStatsSummary(overlay);
+    } else if (safeSection === 'clients') {
+      this.loadAccessClientsList(overlay);
     }
     if (isAddProperty) {
       try { this.setMobileViewportLock(true); } catch {}
@@ -10344,6 +10514,91 @@ class VoiceWidget extends HTMLElement {
         font-weight: 600;
         color: var(--text-secondary, rgba(255,255,255,0.84));
       }
+      .vw-clients-list {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-client-card {
+        width: 100%;
+        min-height: 48px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 9px 12px;
+        display: grid;
+        gap: 4px;
+        text-align: left;
+        cursor: pointer;
+      }
+      .vw-client-card__main {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .vw-client-card__name {
+        min-width: 0;
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: .86rem;
+        font-weight: 800;
+      }
+      .vw-client-card__tg {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: .8rem;
+        font-weight: 700;
+      }
+      .vw-client-card .vw-stats-tg-link {
+        color: var(--color-accent, #2d8fe1);
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .vw-client-card__meta {
+        font-size: .72rem;
+        line-height: 1.2;
+        color: var(--text-secondary, rgba(255,255,255,0.78));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .vw-client-details {
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 88%, transparent);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+      .vw-client-details__inner {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-client-details__row {
+        display: grid;
+        gap: 2px;
+      }
+      .vw-client-details__row span {
+        font-size: .76rem;
+        line-height: 1.2;
+        font-weight: 700;
+        color: var(--text-primary, #fff);
+      }
+      .vw-client-details__row strong {
+        font-size: .74rem;
+        line-height: 1.3;
+        font-weight: 500;
+        color: var(--text-secondary, rgba(255,255,255,0.84));
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
       .vw-access-sub-toolbar {
         display: flex;
         justify-content: flex-end;
@@ -11324,6 +11579,7 @@ class VoiceWidget extends HTMLElement {
             <button type="button" class="vw-access-item" data-role="admin-properties"><span class="vw-access-item__icon" aria-hidden="true">🏠</span><span class="vw-access-item__label">${locale.accessAdminProperties || "Мої об'єкти"}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-wishlist"><span class="vw-access-item__icon" aria-hidden="true">♡</span><span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-stats"><span class="vw-access-item__icon" aria-hidden="true">📊</span><span class="vw-access-item__label">${locale.accessAdminStats || 'Статистика'}</span></button>
+            <button type="button" class="vw-access-item" data-role="admin-clients"><span class="vw-access-item__icon" aria-hidden="true">👤</span><span class="vw-access-item__label">${locale.accessAdminClients || 'Клиенты'}</span></button>
             <button type="button" class="vw-access-item" data-role="admin-subscription"><span class="vw-access-item__icon" aria-hidden="true">💳</span><span class="vw-access-item__label">${locale.accessAdminSubscription || 'Керування підпискою'}</span></button>
             ${isSuperAdmin ? `<button type="button" class="vw-access-item" data-role="admin-keygen"><span class="vw-access-item__icon" aria-hidden="true">🧩</span><span class="vw-access-item__label">${locale.accessAdminKeygen || 'Генерация ключей'}</span></button>` : ''}
             <button type="button" class="vw-access-item" data-role="olx-connect"><span class="vw-access-item__icon" aria-hidden="true">🔗</span><span class="vw-access-item__label">${locale.accessAdminOlxConnect || 'Подключить OLX'}</span></button>
@@ -11374,6 +11630,7 @@ class VoiceWidget extends HTMLElement {
     }
     overlay.querySelector('[data-role="admin-add-property"]')?.addEventListener('click', () => this.openAccessSubOverlay('add-property'));
     overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
+    overlay.querySelector('[data-role="admin-clients"]')?.addEventListener('click', () => this.openAccessSubOverlay('clients'));
     overlay.querySelector('[data-role="admin-properties"]')?.addEventListener('click', async () => {
       try { await this.ensureAdminFullCatalogLoaded(); } catch {}
       this.openAccessSubOverlay('properties');
