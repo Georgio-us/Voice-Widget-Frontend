@@ -604,7 +604,7 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
-      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit || !!selectionEvent?.action;
       const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: messageText,
@@ -704,7 +704,7 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'text_main' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
-      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit || !!selectionEvent?.action;
       const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: messageText,
@@ -842,7 +842,7 @@ export class APIClient {
       try { this.widget.storeLastApiPayload?.(data, { source: 'api/audio/upload', requestType: 'audio' }); } catch {}
       const selectionEvent = this._prepareSystemSelectionEvent(data);
       const insightsChanged = this._didInsightsChange(data);
-      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit;
+      const shouldEmitSelectionEvent = insightsChanged === true || !!selectionEvent?.explicit || !!selectionEvent?.action;
       const emittedSelectionEvent = shouldEmitSelectionEvent ? selectionEvent : null;
       const managerEvent = this._prepareManagerActionEvent(data, {
         userText: data?.transcription || '',
