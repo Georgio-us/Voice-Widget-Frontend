@@ -5134,7 +5134,8 @@ render() {
           // Формируем данные для отправки (short form не имеет preferredContactMethod и comment)
           const leadData = {
             sessionId: this.sessionId || null,
-            source: 'widget_short_form',
+            // Legacy short-form source is deprecated; unify as header/general lead source.
+            source: 'widget_full_form',
             name: name,
             phoneCountryCode: code || null,
             phoneNumber: phone || null,
@@ -6592,7 +6593,7 @@ render() {
 
       const payload = {
         sessionId: this.sessionId || null,
-        source: 'widget_in_dialog',
+        source: strictPropertyId ? 'widget_in_dialog' : 'widget_manager_cta',
         name: name,
         phoneCountryCode: phoneCountryCode,
         phoneNumber: phone || null,
