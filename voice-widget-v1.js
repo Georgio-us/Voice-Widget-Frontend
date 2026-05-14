@@ -3286,58 +3286,58 @@ render() {
                 }
                 .viral-modal{
                     width:min(360px, calc(100vw - 24px));
-                    background: rgba(23,22,24,.98);
-                    border:1px solid rgba(255,255,255,.16);
+                    background: rgba(28,28,31,.98);
+                    border:1px solid rgba(235,235,240,.14);
                     border-radius:16px;
                     box-shadow: 0 14px 40px rgba(0,0,0,.35);
-                    color:#FFFFFF;
-                    padding:14px;
+                    color:#F2F2F4;
+                    padding:20px 18px;
                     box-sizing:border-box;
                     display:grid;
-                    gap:10px;
+                    gap:14px;
                 }
                 .viral-modal__title{
                     margin:0;
                     font:700 18px/1.25 var(--ff);
-                    color:#FFFFFF;
+                    color:#F4F4F6;
                 }
                 .viral-modal__subtitle{
                     margin:0;
                     font:500 13px/1.35 var(--ff);
-                    color:rgba(255,255,255,.72);
+                    color:rgba(236,236,240,.74);
                 }
                 .viral-modal__list{
-                    margin:4px 0;
+                    margin:2px 0 4px 0;
                     padding-left:16px;
                     display:grid;
-                    gap:6px;
+                    gap:8px;
                     font:500 12px/1.35 var(--ff);
-                    color:rgba(255,255,255,.88);
+                    color:rgba(238,238,242,.88);
                 }
                 .viral-modal__field{
                     display:grid;
-                    gap:6px;
+                    gap:7px;
                 }
                 .viral-modal__label{
                     font:500 11px/1.2 var(--ff);
-                    color:rgba(255,255,255,.70);
+                    color:rgba(232,232,236,.70);
                 }
                 .viral-modal__input{
                     width:100%;
-                    height:38px;
+                    height:42px;
                     border-radius:10px;
-                    border:1px solid rgba(255,255,255,.18);
-                    background: rgba(255,255,255,.08);
-                    color:#FFFFFF;
-                    padding:0 10px;
+                    border:1px solid rgba(235,235,240,.18);
+                    background: rgba(242,242,246,.08);
+                    color:#F2F2F4;
+                    padding:0 12px;
                     box-sizing:border-box;
                     font:500 13px/1 var(--ff);
                 }
-                .viral-modal__input::placeholder{ color:rgba(255,255,255,.46); }
+                .viral-modal__input::placeholder{ color:rgba(232,232,236,.46); }
                 .viral-modal__input.error{ border-color:#E85F62; }
                 .viral-modal__consent{ display:flex; gap:8px; align-items:flex-start; }
                 .viral-modal__checkbox{ width:12px; height:12px; margin-top:3px; }
-                .viral-modal__consent-text{ font:400 10px/1.35 var(--ff); color:rgba(255,255,255,.68); }
+                .viral-modal__consent-text{ font:400 10px/1.35 var(--ff); color:rgba(232,232,236,.68); }
                 .viral-modal__consent-text a{ color:var(--color-accent); text-decoration:none; }
                 .viral-modal__error{
                     display:none;
@@ -3348,19 +3348,22 @@ render() {
                 .viral-modal__error.visible{ display:block; }
                 .viral-modal__actions{
                     display:flex;
-                    gap:8px;
-                    justify-content:flex-end;
+                    gap:12px;
+                    justify-content:center;
+                    width:100%;
                 }
                 .viral-modal__btn{
+                    flex:1 1 0;
+                    min-width:0;
                     border-radius:10px;
-                    padding:8px 12px;
+                    padding:11px 12px;
                     font:600 12px/1 var(--ff);
                     cursor:pointer;
                 }
                 .viral-modal__btn--ghost{
                     border:1px solid var(--color-accent);
-                    color:#FFFFFF;
-                    background:transparent;
+                    color:#F2F2F4;
+                    background:rgba(242,242,246,.03);
                 }
                 .viral-modal__btn--primary{
                     border:0;
