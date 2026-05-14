@@ -104,6 +104,19 @@ const LOCALES = {
     dataStorageBody: 'Мы храним данные на защищенных серверах в ЕС. Передача защищена современными TLS и HSTS; данные в хранилище зашифрованы (AES-256). Доступ строго ограничен и аудитируется. Мы не продаем ваши персональные данные. Вы можете запросить удаление в любой момент через поддержку.',
     footerWhatData: 'Какие данные мы знаем?',
     footerViral: 'Разработано VIA AI, хочу такой же виджет',
+    viralModalTitle: 'Если вы агентство недвижимости, застройщик или девелопер?',
+    viralModalSubtitle: 'Оставьте заявку и получите бесплатный 1‑й месяц + консультацию по интеграции',
+    viralBenefit1: 'Полная интеграция с вашей базой объектов',
+    viralBenefit2: 'Ваши клиенты общаются с сайтом голосом и текстом',
+    viralBenefit3: 'Быстрые подборки объектов для ваших клиентов',
+    viralBenefit4: 'AI дополняет работу менеджеров и повышает конверсию',
+    viralPhoneLabel: 'Телефон',
+    viralEmailLabel: 'Email',
+    viralConsentText: 'Я согласен(а) на обработку моих данных для связи по вопросу интеграции.',
+    viralContactError: 'Укажите телефон или email',
+    viralConsentError: 'Примите Политику конфиденциальности',
+    viralThanksTitle: 'Спасибо!',
+    viralThanksBody: 'Заявка отправлена. Мы свяжемся с вами по интеграции.',
     methodWhatsApp: 'WhatsApp',
     methodTelegram: 'Telegram',
     methodPhoneCall: 'Звонок',
@@ -241,6 +254,19 @@ const LOCALES = {
     dataStorageBody: 'We store your data on secure EU-based servers. Data in transit is protected with modern TLS and HSTS; data at rest is encrypted (AES-256). Access is strictly limited and audited. We never sell your personal information. You can request deletion at any time via Support.',
     footerWhatData: 'What data do we know?',
     footerViral: 'Powered by VIA AI, I want the same widget',
+    viralModalTitle: 'Are you a real estate agency, developer, or builder?',
+    viralModalSubtitle: 'Leave a request and get your 1st month free + integration consultation',
+    viralBenefit1: 'Full integration with your property database',
+    viralBenefit2: 'Your clients communicate with your site by voice and text',
+    viralBenefit3: 'Fast property selections for your clients',
+    viralBenefit4: 'AI complements your managers and improves conversion',
+    viralPhoneLabel: 'Phone',
+    viralEmailLabel: 'Email',
+    viralConsentText: 'I consent to the processing of my data to be contacted about integration.',
+    viralContactError: 'Please provide phone or email',
+    viralConsentError: 'Please accept the Privacy Policy',
+    viralThanksTitle: 'Thank you!',
+    viralThanksBody: "Request sent. We'll contact you about integration.",
     methodWhatsApp: 'WhatsApp',
     methodTelegram: 'Telegram',
     methodPhoneCall: 'Phone Call',
@@ -378,6 +404,19 @@ const LOCALES = {
     dataStorageBody: 'Guardamos tus datos en servidores seguros de la UE. Los datos en transito estan protegidos con TLS y HSTS modernos; los datos en reposo estan cifrados (AES-256). El acceso es estrictamente limitado y auditado. Nunca vendemos tu informacion personal. Puedes solicitar la eliminacion en cualquier momento a traves de Soporte.',
     footerWhatData: 'Que datos conocemos?',
     footerViral: 'Desarrollado por VIA AI, quiero el mismo widget',
+    viralModalTitle: 'Eres una agencia inmobiliaria, promotora o desarrolladora?',
+    viralModalSubtitle: 'Deja una solicitud y recibe 1 mes gratis + consulta de integracion',
+    viralBenefit1: 'Integracion completa con tu base de propiedades',
+    viralBenefit2: 'Tus clientes hablan con tu web por voz y texto',
+    viralBenefit3: 'Selecciones rapidas de propiedades para tus clientes',
+    viralBenefit4: 'La IA complementa a tus gestores y mejora la conversion',
+    viralPhoneLabel: 'Telefono',
+    viralEmailLabel: 'Email',
+    viralConsentText: 'Acepto el tratamiento de mis datos para contacto sobre integracion.',
+    viralContactError: 'Indica telefono o email',
+    viralConsentError: 'Acepta la Politica de Privacidad',
+    viralThanksTitle: 'Gracias!',
+    viralThanksBody: 'Solicitud enviada. Te contactaremos sobre la integracion.',
     methodWhatsApp: 'WhatsApp',
     methodTelegram: 'Telegram',
     methodPhoneCall: 'Llamada',
@@ -692,6 +731,27 @@ class VoiceWidget extends HTMLElement {
     setText('#dataUnderstoodBtn', locale.understood);
     setText('#whatDataTrigger', locale.footerWhatData);
     setTextAll('.viral-link-text', locale.footerViral);
+    setText('#viralLeadTitle', locale.viralModalTitle);
+    setText('#viralLeadSubtitle', locale.viralModalSubtitle);
+    const viralList = root.getElementById('viralLeadList');
+    if (viralList) {
+      viralList.innerHTML = `
+        <li>${locale.viralBenefit1}</li>
+        <li>${locale.viralBenefit2}</li>
+        <li>${locale.viralBenefit3}</li>
+        <li>${locale.viralBenefit4}</li>
+      `;
+    }
+    setText('label[for="viralLeadPhone"]', locale.viralPhoneLabel);
+    setText('label[for="viralLeadEmail"]', locale.viralEmailLabel);
+    const viralConsentText = root.querySelector('.viral-modal__consent-text');
+    if (viralConsentText) {
+      viralConsentText.innerHTML = `${locale.viralConsentText} <a class="viral-modal__privacy-link" href="#">${locale.privacyPolicy}</a>`;
+    }
+    setText('#viralLeadContactError', locale.viralContactError);
+    setText('#viralLeadConsentError', locale.viralConsentError);
+    setText('#viralLeadCancelBtn', locale.cancel);
+    setText('#viralLeadSendBtn', locale.send);
     setText('#debugTitle', locale.debugTitle);
     setText('#debugRefreshBtn', locale.debugRefresh);
     setText('#debugCopyBtn', locale.debugCopy);
@@ -3217,6 +3277,88 @@ render() {
                     text-align:center;
                     margin-top:15px;
                 }
+                .viral-modal{
+                    width:min(360px, calc(100vw - 24px));
+                    background: var(--color-bg-card);
+                    border:1px solid var(--color-border);
+                    border-radius:16px;
+                    box-shadow: 0 14px 40px rgba(0,0,0,.35);
+                    color:var(--color-text);
+                    padding:14px;
+                    box-sizing:border-box;
+                    display:grid;
+                    gap:10px;
+                }
+                .viral-modal__title{
+                    margin:0;
+                    font:700 18px/1.25 var(--ff);
+                    color:var(--color-text);
+                }
+                .viral-modal__subtitle{
+                    margin:0;
+                    font:500 13px/1.35 var(--ff);
+                    color:var(--color-muted);
+                }
+                .viral-modal__list{
+                    margin:4px 0;
+                    padding-left:16px;
+                    display:grid;
+                    gap:6px;
+                    font:500 12px/1.35 var(--ff);
+                    color:var(--color-text);
+                }
+                .viral-modal__field{
+                    display:grid;
+                    gap:6px;
+                }
+                .viral-modal__label{
+                    font:500 11px/1.2 var(--ff);
+                    color:var(--color-muted);
+                }
+                .viral-modal__input{
+                    width:100%;
+                    height:38px;
+                    border-radius:10px;
+                    border:1px solid var(--color-border);
+                    background: var(--color-bg-soft);
+                    color: var(--color-text);
+                    padding:0 10px;
+                    box-sizing:border-box;
+                    font:500 13px/1 var(--ff);
+                }
+                .viral-modal__input.error{ border-color:#E85F62; }
+                .viral-modal__consent{ display:flex; gap:8px; align-items:flex-start; }
+                .viral-modal__checkbox{ width:12px; height:12px; margin-top:3px; }
+                .viral-modal__consent-text{ font:400 10px/1.35 var(--ff); color:var(--color-muted); }
+                .viral-modal__consent-text a{ color:var(--color-accent); text-decoration:none; }
+                .viral-modal__error{
+                    display:none;
+                    color:#E85F62;
+                    font:500 11px/1.3 var(--ff);
+                    margin-top:-2px;
+                }
+                .viral-modal__error.visible{ display:block; }
+                .viral-modal__actions{
+                    display:flex;
+                    gap:8px;
+                    justify-content:flex-end;
+                }
+                .viral-modal__btn{
+                    border-radius:10px;
+                    padding:8px 12px;
+                    font:600 12px/1 var(--ff);
+                    cursor:pointer;
+                }
+                .viral-modal__btn--ghost{
+                    border:1px solid var(--color-accent);
+                    color:var(--color-text);
+                    background:transparent;
+                }
+                .viral-modal__btn--primary{
+                    border:0;
+                    color:#fff;
+                    background:var(--color-accent);
+                }
                 
                 /* ========================= */
                 /*         Menu Overlay      */
@@ -3843,6 +3985,36 @@ render() {
           <div style="display:flex; gap:8px; justify-content:center; margin-top:8px;">
             <button class="data-btn" id="privacyCancelBtn">Cancel</button>
             <button class="data-btn" id="privacyContinueBtn">Continue</button>
+          </div>
+        </div>
+      </div>
+      <div class="data-overlay" id="viralLeadOverlay" style="display:none;">
+        <div class="viral-modal">
+          <h3 class="viral-modal__title" id="viralLeadTitle">${this.t('viralModalTitle')}</h3>
+          <p class="viral-modal__subtitle" id="viralLeadSubtitle">${this.t('viralModalSubtitle')}</p>
+          <ul class="viral-modal__list" id="viralLeadList">
+            <li>${this.t('viralBenefit1')}</li>
+            <li>${this.t('viralBenefit2')}</li>
+            <li>${this.t('viralBenefit3')}</li>
+            <li>${this.t('viralBenefit4')}</li>
+          </ul>
+          <div class="viral-modal__field">
+            <label class="viral-modal__label" for="viralLeadPhone">${this.t('viralPhoneLabel')}</label>
+            <input class="viral-modal__input" id="viralLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+34 600000000">
+          </div>
+          <div class="viral-modal__field">
+            <label class="viral-modal__label" for="viralLeadEmail">${this.t('viralEmailLabel')}</label>
+            <input class="viral-modal__input" id="viralLeadEmail" type="email" autocomplete="email" placeholder="email@domain.com">
+          </div>
+          <label class="viral-modal__consent">
+            <input class="viral-modal__checkbox" id="viralLeadConsent" type="checkbox">
+            <span class="viral-modal__consent-text">${this.t('viralConsentText')} <a class="viral-modal__privacy-link" href="#">${this.t('privacyPolicy')}</a></span>
+          </label>
+          <div class="viral-modal__error" id="viralLeadContactError">${this.t('viralContactError')}</div>
+          <div class="viral-modal__error" id="viralLeadConsentError">${this.t('viralConsentError')}</div>
+          <div class="viral-modal__actions">
+            <button class="viral-modal__btn viral-modal__btn--ghost" id="viralLeadCancelBtn" type="button">${this.t('cancel')}</button>
+            <button class="viral-modal__btn viral-modal__btn--primary" id="viralLeadSendBtn" type="button">${this.t('send')}</button>
           </div>
         </div>
       </div>
@@ -5361,10 +5533,120 @@ render() {
       if (!link) return;
       link.addEventListener('click', (e) => {
         if (String(link.getAttribute('href') || '') === '#') e.preventDefault();
+        const overlay = this.shadowRoot.getElementById('viralLeadOverlay');
+        if (overlay) overlay.style.display = 'flex';
       });
     });
   };
   try { this.setupViralLinks(); } catch {}
+
+  this.setupViralLeadForm = () => {
+    const get = (id) => this.shadowRoot.getElementById(id);
+    const overlay = get('viralLeadOverlay');
+    const closeBtn = get('viralLeadCancelBtn');
+    const sendBtn = get('viralLeadSendBtn');
+    const phoneEl = get('viralLeadPhone');
+    const emailEl = get('viralLeadEmail');
+    const consentEl = get('viralLeadConsent');
+    const contactErr = get('viralLeadContactError');
+    const consentErr = get('viralLeadConsentError');
+    if (!overlay || !sendBtn) return;
+
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const toDigits = (v) => String(v || '').replace(/\D+/g, '');
+    const isEmail = (v) => emailRe.test(String(v || '').trim());
+    const isPhone = (v) => {
+      const digits = toDigits(v);
+      return digits.length >= 9 && digits.length <= 15;
+    };
+    const showErr = (el, show, msg = '') => {
+      if (!el) return;
+      if (msg) el.textContent = msg;
+      el.classList.toggle('visible', !!show);
+    };
+    const resetErrors = () => {
+      showErr(contactErr, false);
+      showErr(consentErr, false);
+      phoneEl?.classList.remove('error');
+      emailEl?.classList.remove('error');
+    };
+    const close = () => {
+      if (overlay) overlay.style.display = 'none';
+      if (phoneEl) phoneEl.value = '';
+      if (emailEl) emailEl.value = '';
+      if (consentEl) consentEl.checked = false;
+      resetErrors();
+    };
+
+    closeBtn?.addEventListener('click', (e) => { e.preventDefault(); close(); });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    phoneEl?.addEventListener('input', resetErrors);
+    emailEl?.addEventListener('input', resetErrors);
+    consentEl?.addEventListener('change', resetErrors);
+    overlay.addEventListener('click', (e) => {
+      const link = e.target && e.target.closest ? e.target.closest('.viral-modal__privacy-link') : null;
+      if (!link) return;
+      e.preventDefault();
+      const url = 'https://probable-akubra-781.notion.site/Privacy-Policy-2c8be0766f27802fb110cb4ab372771e';
+      try { window.open(url, '_blank', 'noopener,noreferrer'); } catch { location.href = url; }
+    });
+
+    sendBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      resetErrors();
+      const phone = String(phoneEl?.value || '').trim();
+      const email = String(emailEl?.value || '').trim();
+      const consent = !!consentEl?.checked;
+      const phoneOk = !!phone && isPhone(phone);
+      const emailOk = !!email && isEmail(email);
+      if (!phoneOk && !emailOk) {
+        phoneEl?.classList.add('error');
+        emailEl?.classList.add('error');
+        showErr(contactErr, true, this.t('viralContactError'));
+        return;
+      }
+      if (!consent) {
+        showErr(consentErr, true, this.t('viralConsentError'));
+        return;
+      }
+
+      try {
+        const leadsApiUrl = this.apiUrl.replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
+        const response = await fetch(leadsApiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: this.sessionId || null,
+            source: 'widget_viral_form',
+            name: 'Viral lead',
+            phoneCountryCode: null,
+            phoneNumber: phone || null,
+            email: email || null,
+            preferredContactMethod: phoneOk ? 'phone' : 'email',
+            comment: 'CTA: I want the same widget',
+            language: (this.currentLang || this.defaultLanguage).toLowerCase(),
+            propertyId: null,
+            consent: true
+          })
+        });
+        const result = await response.json().catch(() => ({ ok: false }));
+        if (!response.ok || result?.ok !== true) {
+          showErr(contactErr, true, result?.error || this.t('submitFailed'));
+          return;
+        }
+        close();
+        this.ui?.addMessage?.({
+          type: 'assistant',
+          content: `${this.t('viralThanksTitle')}\n\n${this.t('viralThanksBody')}`,
+          timestamp: new Date(),
+          system: true
+        });
+      } catch {
+        showErr(contactErr, true, this.t('networkError'));
+      }
+    });
+  };
+  try { this.setupViralLeadForm(); } catch {}
 
   // Request: Privacy Policy confirm
   this.setupPrivacyConfirm = () => {
