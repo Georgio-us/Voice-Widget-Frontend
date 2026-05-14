@@ -3277,13 +3277,20 @@ render() {
                     text-align:center;
                     margin-top:15px;
                 }
+                #viralLeadOverlay{
+                    background: rgba(0,0,0,.28);
+                    backdrop-filter: none;
+                    -webkit-backdrop-filter: none;
+                    z-index:50;
+                    padding:16px;
+                }
                 .viral-modal{
                     width:min(360px, calc(100vw - 24px));
-                    background: var(--color-bg-card);
-                    border:1px solid var(--color-border);
+                    background: rgba(23,22,24,.98);
+                    border:1px solid rgba(255,255,255,.16);
                     border-radius:16px;
                     box-shadow: 0 14px 40px rgba(0,0,0,.35);
-                    color:var(--color-text);
+                    color:#FFFFFF;
                     padding:14px;
                     box-sizing:border-box;
                     display:grid;
@@ -3292,12 +3299,12 @@ render() {
                 .viral-modal__title{
                     margin:0;
                     font:700 18px/1.25 var(--ff);
-                    color:var(--color-text);
+                    color:#FFFFFF;
                 }
                 .viral-modal__subtitle{
                     margin:0;
                     font:500 13px/1.35 var(--ff);
-                    color:var(--color-muted);
+                    color:rgba(255,255,255,.72);
                 }
                 .viral-modal__list{
                     margin:4px 0;
@@ -3305,7 +3312,7 @@ render() {
                     display:grid;
                     gap:6px;
                     font:500 12px/1.35 var(--ff);
-                    color:var(--color-text);
+                    color:rgba(255,255,255,.88);
                 }
                 .viral-modal__field{
                     display:grid;
@@ -3313,23 +3320,24 @@ render() {
                 }
                 .viral-modal__label{
                     font:500 11px/1.2 var(--ff);
-                    color:var(--color-muted);
+                    color:rgba(255,255,255,.70);
                 }
                 .viral-modal__input{
                     width:100%;
                     height:38px;
                     border-radius:10px;
-                    border:1px solid var(--color-border);
-                    background: var(--color-bg-soft);
-                    color: var(--color-text);
+                    border:1px solid rgba(255,255,255,.18);
+                    background: rgba(255,255,255,.08);
+                    color:#FFFFFF;
                     padding:0 10px;
                     box-sizing:border-box;
                     font:500 13px/1 var(--ff);
                 }
+                .viral-modal__input::placeholder{ color:rgba(255,255,255,.46); }
                 .viral-modal__input.error{ border-color:#E85F62; }
                 .viral-modal__consent{ display:flex; gap:8px; align-items:flex-start; }
                 .viral-modal__checkbox{ width:12px; height:12px; margin-top:3px; }
-                .viral-modal__consent-text{ font:400 10px/1.35 var(--ff); color:var(--color-muted); }
+                .viral-modal__consent-text{ font:400 10px/1.35 var(--ff); color:rgba(255,255,255,.68); }
                 .viral-modal__consent-text a{ color:var(--color-accent); text-decoration:none; }
                 .viral-modal__error{
                     display:none;
@@ -3351,7 +3359,7 @@ render() {
                 }
                 .viral-modal__btn--ghost{
                     border:1px solid var(--color-accent);
-                    color:var(--color-text);
+                    color:#FFFFFF;
                     background:transparent;
                 }
                 .viral-modal__btn--primary{
@@ -3988,36 +3996,6 @@ render() {
           </div>
         </div>
       </div>
-      <div class="data-overlay" id="viralLeadOverlay" style="display:none;" aria-hidden="true">
-        <div class="viral-modal">
-          <h3 class="viral-modal__title" id="viralLeadTitle">${this.t('viralModalTitle')}</h3>
-          <p class="viral-modal__subtitle" id="viralLeadSubtitle">${this.t('viralModalSubtitle')}</p>
-          <ul class="viral-modal__list" id="viralLeadList">
-            <li>${this.t('viralBenefit1')}</li>
-            <li>${this.t('viralBenefit2')}</li>
-            <li>${this.t('viralBenefit3')}</li>
-            <li>${this.t('viralBenefit4')}</li>
-          </ul>
-          <div class="viral-modal__field">
-            <label class="viral-modal__label" for="viralLeadPhone">${this.t('viralPhoneLabel')}</label>
-            <input class="viral-modal__input" id="viralLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+34 600000000">
-          </div>
-          <div class="viral-modal__field">
-            <label class="viral-modal__label" for="viralLeadEmail">${this.t('viralEmailLabel')}</label>
-            <input class="viral-modal__input" id="viralLeadEmail" type="email" autocomplete="email" placeholder="email@domain.com">
-          </div>
-          <label class="viral-modal__consent">
-            <input class="viral-modal__checkbox" id="viralLeadConsent" type="checkbox">
-            <span class="viral-modal__consent-text">${this.t('viralConsentText')} <a class="viral-modal__privacy-link" href="#">${this.t('privacyPolicy')}</a></span>
-          </label>
-          <div class="viral-modal__error" id="viralLeadContactError">${this.t('viralContactError')}</div>
-          <div class="viral-modal__error" id="viralLeadConsentError">${this.t('viralConsentError')}</div>
-          <div class="viral-modal__actions">
-            <button class="viral-modal__btn viral-modal__btn--ghost" id="viralLeadCancelBtn" type="button">${this.t('cancel')}</button>
-            <button class="viral-modal__btn viral-modal__btn--primary" id="viralLeadSendBtn" type="button">${this.t('send')}</button>
-          </div>
-        </div>
-      </div>
       </div>
 
       <!-- Debug Screen (temporary) -->
@@ -4073,6 +4051,37 @@ render() {
               <pre class="debug-section-pre" id="debugRawPre">-</pre>
             </section>
             <a class="footer-text viral-link-text" id="debugViralLink" href="#">Powered by VIA AI, I want the same widget</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="data-overlay" id="viralLeadOverlay" style="display:none;" aria-hidden="true">
+        <div class="viral-modal">
+          <h3 class="viral-modal__title" id="viralLeadTitle">${this.t('viralModalTitle')}</h3>
+          <p class="viral-modal__subtitle" id="viralLeadSubtitle">${this.t('viralModalSubtitle')}</p>
+          <ul class="viral-modal__list" id="viralLeadList">
+            <li>${this.t('viralBenefit1')}</li>
+            <li>${this.t('viralBenefit2')}</li>
+            <li>${this.t('viralBenefit3')}</li>
+            <li>${this.t('viralBenefit4')}</li>
+          </ul>
+          <div class="viral-modal__field">
+            <label class="viral-modal__label" for="viralLeadPhone">${this.t('viralPhoneLabel')}</label>
+            <input class="viral-modal__input" id="viralLeadPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+34 600000000">
+          </div>
+          <div class="viral-modal__field">
+            <label class="viral-modal__label" for="viralLeadEmail">${this.t('viralEmailLabel')}</label>
+            <input class="viral-modal__input" id="viralLeadEmail" type="email" autocomplete="email" placeholder="email@domain.com">
+          </div>
+          <label class="viral-modal__consent">
+            <input class="viral-modal__checkbox" id="viralLeadConsent" type="checkbox">
+            <span class="viral-modal__consent-text">${this.t('viralConsentText')} <a class="viral-modal__privacy-link" href="#">${this.t('privacyPolicy')}</a></span>
+          </label>
+          <div class="viral-modal__error" id="viralLeadContactError">${this.t('viralContactError')}</div>
+          <div class="viral-modal__error" id="viralLeadConsentError">${this.t('viralConsentError')}</div>
+          <div class="viral-modal__actions">
+            <button class="viral-modal__btn viral-modal__btn--ghost" id="viralLeadCancelBtn" type="button">${this.t('cancel')}</button>
+            <button class="viral-modal__btn viral-modal__btn--primary" id="viralLeadSendBtn" type="button">${this.t('send')}</button>
           </div>
         </div>
       </div>
