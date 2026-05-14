@@ -969,7 +969,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   getLogoByTheme() {
-    return this.getTheme() === 'light' ? 'LOGO-light.svg' : 'LOGO.svg';
+    return 'website-logo-foot.svg';
   }
 
   getReturnIconByTheme() {
@@ -5644,28 +5644,12 @@ render() {
         }
       } else {
         const idx = currentIdx + 1;
-        // Queue-aware right navigation:
-        // - if next slide already rendered: go to it
-        // - otherwise (only at rendered tail): request and append one more card
         if (idx < slides.length && slides[idx]) {
           const left = slides[idx].offsetLeft;
           slider.scrollTo({ left, behavior: 'smooth' });
           try { this.updateActiveCardSlide(); } catch {}
         } else {
-          if (this._isGeneratingNext) return;
-          const variantId = active?.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
-          if (!variantId) return;
-          this._isGeneratingNext = true;
-          try { this.updateActiveCardSlide(); } catch {}
-
-          logTelemetry(TelemetryEventTypes.CARD_NEXT, {
-            propertyId: variantId,
-            index: currentIdx,
-            totalInSlider: slides.length,
-            source: 'recommendation'
-          });
-
-          this.events.emit('next_option', { variantId });
+          this.requestNextCardFromActiveSlide(active, currentIdx, slides.length, 'recommendation');
         }
       }
     }
@@ -6021,11 +6005,79 @@ render() {
       const update = () => { try { this.updateActiveCardSlide(); } catch {} };
       if (slider) {
         slider.addEventListener('scroll', update, { passive: true });
+        let touchStartX = 0;
+        let touchStartY = 0;
+        slider.addEventListener('touchstart', (e) => {
+          const t = e.changedTouches && e.changedTouches[0];
+          if (!t) return;
+          touchStartX = t.clientX;
+          touchStartY = t.clientY;
+        }, { passive: true });
+        slider.addEventListener('touchend', (e) => {
+          const t = e.changedTouches && e.changedTouches[0];
+          if (!t) return;
+          const dx = t.clientX - touchStartX;
+          const dy = t.clientY - touchStartY;
+          const absX = Math.abs(dx);
+          const absY = Math.abs(dy);
+          // Horizontal swipe only, with threshold to avoid accidental triggers.
+          if (absX < 42 || absX < absY * 1.15) return;
+          if (dx < 0) {
+            try { this.handleCardsSliderNextByGesture(slider); } catch {}
+          } else {
+            try { this.handleCardsSliderPrevByGesture(slider); } catch {}
+          }
+        }, { passive: true });
         try { window.addEventListener('resize', update); } catch {}
         requestAnimationFrame(update);
       }
     }
     return host.querySelector('.cards-track');
+  }
+
+  requestNextCardFromActiveSlide(activeSlide, currentIdx, totalSlides, source = 'recommendation') {
+    if (this._isGeneratingNext) return;
+    const variantId = activeSlide?.querySelector('[data-variant-id]')?.getAttribute('data-variant-id');
+    if (!variantId) return;
+    this._isGeneratingNext = true;
+    try { this.updateActiveCardSlide(); } catch {}
+
+    logTelemetry(TelemetryEventTypes.CARD_NEXT, {
+      propertyId: variantId,
+      index: currentIdx,
+      totalInSlider: totalSlides,
+      source
+    });
+
+    this.events.emit('next_option', { variantId });
+  }
+
+  handleCardsSliderNextByGesture(slider) {
+    if (!slider) return;
+    const slides = slider.querySelectorAll('.card-slide');
+    if (!slides.length) return;
+    const active = slider.querySelector('.card-slide.active') || slides[slides.length - 1];
+    const currentIdx = Math.max(0, Array.from(slides).indexOf(active));
+    const idx = currentIdx + 1;
+    if (idx < slides.length && slides[idx]) {
+      slider.scrollTo({ left: slides[idx].offsetLeft, behavior: 'smooth' });
+      try { this.updateActiveCardSlide(); } catch {}
+      return;
+    }
+    this.requestNextCardFromActiveSlide(active, currentIdx, slides.length, 'swipe');
+  }
+
+  handleCardsSliderPrevByGesture(slider) {
+    if (!slider) return;
+    const slides = slider.querySelectorAll('.card-slide');
+    if (!slides.length) return;
+    const active = slider.querySelector('.card-slide.active') || slides[slides.length - 1];
+    const currentIdx = Math.max(0, Array.from(slides).indexOf(active));
+    const idx = currentIdx - 1;
+    if (idx >= 0 && slides[idx]) {
+      slider.scrollTo({ left: slides[idx].offsetLeft, behavior: 'smooth' });
+      try { this.updateActiveCardSlide(); } catch {}
+    }
   }
 
   // Add single card as slide into slider
