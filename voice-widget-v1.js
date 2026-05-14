@@ -498,7 +498,6 @@ class VoiceWidget extends HTMLElement {
     }
     this.fieldName = this.getAttribute('field-name') || 'audio';
     this.responseField = this.getAttribute('response-field') || 'response';
-    try { this.setAttribute('data-launcher-side', this.launcherSide); } catch {}
 
     // модули
     this.events = new EventManager();
@@ -902,6 +901,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   connectedCallback() {
+    try { this.setAttribute('data-launcher-side', this.launcherSide); } catch {}
     this.currentLang = this.getInitialLanguage();
     this._menuLanguageCode = this.currentLang;
     this.updateInterface();
