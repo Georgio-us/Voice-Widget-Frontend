@@ -2416,7 +2416,7 @@ render() {
                 .header-action:hover img{ opacity:.82; }
                 .header-left{ justify-self:start; }
                 .header-right{ justify-self:end; }
-                .logo{ width:auto; height:24px; display:block; }
+                .logo{ width:auto; height:32px; display:block; }
                 .main-center{ flex:1; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
                 .main-hero{ width:100%; display:flex; justify-content:center; }
                 .main-copy{ width:100%; max-width:360px; text-align:center; }
@@ -2718,7 +2718,7 @@ render() {
                 .screen-header .header-action{ grid-row:1; }
                 .screen-header .header-left{ grid-column:1; justify-self:start; }
                 .screen-header .header-right{ grid-column:3; justify-self:end; }
-                .screen-header .header-logo{ grid-column:2; grid-row:1; justify-self:center; width:auto; height:18px; display:block; cursor:pointer; }
+                .screen-header .header-logo{ grid-column:2; grid-row:1; justify-self:center; width:auto; height:32px; display:block; cursor:pointer; }
                 /* скрываем крайние кнопки при открытом меню */
                 .screen-header.menu-opened .header-action{ display:none; }
                 .screen-header.menu-opened .header-logo{ display:none; }
