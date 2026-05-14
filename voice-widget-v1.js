@@ -1219,7 +1219,7 @@ render() {
 .widget-close-floating{
     position:absolute;
     top:-14px;
-    right:-6px;
+    left:-6px;
     width:34px;
     height:34px;
     border:none;
@@ -2169,7 +2169,7 @@ render() {
                 }
                 :host([data-theme="light"]),
                 :host([theme="light"]) {
-                  --color-bg: #F7F7F7;
+                  --color-bg: #FFFFFF;
                   --color-text: #3D3D3D;
                   --color-accent: #4178CF;
                   --bg-card: #D7DBE3;
@@ -2385,6 +2385,8 @@ render() {
                     padding: 16px;
                     box-sizing: border-box;
                     gap: 12px;
+                    border: 1px solid rgba(0,0,0,.08);
+                    box-shadow: 0 18px 48px rgba(15, 23, 42, .26);
                 }
                 /* Decorative grid overlay inside widget (1px lines) */
                 .bg-grid{
