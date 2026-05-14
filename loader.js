@@ -19,7 +19,7 @@
     offsetX: 20,                    // px
     offsetY: 20,                    // px
     safeArea: false,                // учитывать env(safe-area-inset-*) — по умолчанию выкл, чтобы не было лишнего отступа
-    zIndex: 9999,                   // поверх контента сайта
+    zIndex: 2147483646,             // поверх контента сайта и сторонних floating-виджетов (Jivo/WA)
     autoOpen: false,                // сразу открыть виджет
     widgetUrl: undefined,           // явный URL на voice-widget-v1.js (если не указан — берём из SCRIPT_BASE)
     assetsBase: undefined           // опционально: база для ассетов (передадим в window.__VW_ASSETS_BASE__)
