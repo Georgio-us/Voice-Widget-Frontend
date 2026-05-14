@@ -474,6 +474,7 @@ class VoiceWidget extends HTMLElement {
     this.supportedLanguages = ['RU', 'EN', 'ES'];
     this.defaultLanguage = 'EN';
     this.currentLang = this.defaultLanguage;
+    this.launcherSide = this.getInitialLauncherSide();
 
     // параметры
     const attrApi = this.getAttribute('api-url') || '';
@@ -497,6 +498,7 @@ class VoiceWidget extends HTMLElement {
     }
     this.fieldName = this.getAttribute('field-name') || 'audio';
     this.responseField = this.getAttribute('response-field') || 'response';
+    try { this.setAttribute('data-launcher-side', this.launcherSide); } catch {}
 
     // модули
     this.events = new EventManager();
@@ -522,6 +524,18 @@ class VoiceWidget extends HTMLElement {
     this.resetSessionOnPageLoad();
     this.checkBrowserSupport();
     this.initializeUI();
+  }
+
+  getInitialLauncherSide() {
+    const normalize = (value) => {
+      const v = String(value || '').trim().toLowerCase();
+      return (v === 'left' || v === 'right') ? v : null;
+    };
+    const fromAttr = normalize(this.getAttribute('data-launcher-side') || this.getAttribute('launcher-side'));
+    if (fromAttr) return fromAttr;
+    const fromGlobal = normalize(typeof window !== 'undefined' ? window.__VW_LAUNCHER_SIDE__ : null);
+    if (fromGlobal) return fromGlobal;
+    return 'right';
   }
 
   // берем id из localStorage (если ранее выдал сервер); иначе null
@@ -1045,11 +1059,21 @@ render() {
   }
 
   /* launcher/scrim */
-  .launcher{ position:absolute; left:0; right:auto; bottom:0; width:60px; height:60px; border-radius:50%;
+  .launcher{ position:absolute; right:0; left:auto; bottom:0; width:60px; height:60px; border-radius:50%;
     border:none; padding:0; cursor:pointer; z-index:10001; background:transparent; -webkit-appearance:none; appearance:none;
     box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
     transition:transform .15s ease, box-shadow .15s ease; pointer-events:auto; }
   .launcher:hover{ transform:scale(1.05); box-shadow:0 14px 32px rgba(0,0,0,.22); }
+  :host([data-launcher-side="left"]) .launcher,
+  :host([launcher-side="left"]) .launcher {
+    left: 0;
+    right: auto;
+  }
+  :host([data-launcher-side="right"]) .launcher,
+  :host([launcher-side="right"]) .launcher {
+    right: 0;
+    left: auto;
+  }
   /* Legacy icon kept in markup, not used in current launcher variants */
   .launcher__desktopIcon{ width:100%; height:100%; display:none; object-fit:contain; filter:brightness(0) invert(1); }
   .launcher__textBlock{ display:none; }
@@ -2056,8 +2080,8 @@ render() {
                     display: block;
                     position: fixed;
                     bottom: 0;
-                    left: 0;
-                    right: auto;
+                    right: 0;
+                    left: auto;
                     z-index: 9999;
                     pointer-events: auto;  /* клики только по виджету; #vw-host — pointer-events: none */
                     /* В закрытом состоянии host = только область лаунчера */
@@ -2067,6 +2091,16 @@ render() {
                 :host(.open) {
                     width: auto;
                     height: auto;
+                }
+                :host([data-launcher-side="left"]):not(.open),
+                :host([launcher-side="left"]):not(.open) {
+                    left: 0;
+                    right: auto;
+                }
+                :host([data-launcher-side="right"]):not(.open),
+                :host([launcher-side="right"]):not(.open) {
+                    right: 0;
+                    left: auto;
                 }
                 @media (min-width: 768px) {
                   :host:not(.open) {

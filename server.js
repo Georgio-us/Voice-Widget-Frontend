@@ -11,13 +11,15 @@ app.get('/runtime-config.js', (req, res) => {
     const runtimeConfig = {
         apiUrl: process.env.WIDGET_API_URL || '',
         assetsBase: process.env.WIDGET_ASSETS_BASE || '',
-        defaultTheme: process.env.WIDGET_DEFAULT_THEME || ''
+        defaultTheme: process.env.WIDGET_DEFAULT_THEME || '',
+        launcherSide: process.env.WIDGET_LAUNCHER_SIDE || ''
     };
     res.type('application/javascript');
     res.send(
         `window.__VW_API_URL__ = ${JSON.stringify(runtimeConfig.apiUrl)};\n` +
         `window.__VW_ASSETS_BASE__ = ${JSON.stringify(runtimeConfig.assetsBase)};\n` +
         `window.__VW_DEFAULT_THEME__ = ${JSON.stringify(runtimeConfig.defaultTheme)};\n`
+        + `window.__VW_LAUNCHER_SIDE__ = ${JSON.stringify(runtimeConfig.launcherSide)};\n`
     );
 });
 

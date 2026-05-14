@@ -29,6 +29,7 @@ This means client isolation depends on correct API URL wiring at publish/runtime
 | `WIDGET_API_URL` | CLIENT | Yes | `https://client-backend.up.railway.app/api/audio/upload` | Injected by `/runtime-config.js` into `window.__VW_API_URL__`. |
 | `WIDGET_ASSETS_BASE` | CLIENT | Optional | `https://client-frontend.up.railway.app/assets/` | Injected by `/runtime-config.js` into `window.__VW_ASSETS_BASE__`. |
 | `WIDGET_DEFAULT_THEME` | CLIENT | Optional | `0` or `1` | Injected by `/runtime-config.js` into `window.__VW_DEFAULT_THEME__`. `0 = light`, `1 = dark`. Startup priority: `localStorage(vw_theme)` first, then this variable. |
+| `WIDGET_LAUNCHER_SIDE` | CLIENT | Optional | `left` or `right` | Injected by `/runtime-config.js` into `window.__VW_LAUNCHER_SIDE__`. Controls only launcher side. Priority: `VoiceWidget.init({ launcherSide })` -> global var -> default `right`. |
 
 ## Target Behavior (To implement/maintain)
 

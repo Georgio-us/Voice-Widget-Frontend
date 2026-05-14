@@ -15,6 +15,7 @@
   const DEFAULTS = {
     apiUrl: undefined,
     corner: 'right-bottom',         // 'right-bottom' | 'right-top' | 'left-bottom' | 'left-top'
+    launcherSide: undefined,        // 'left' | 'right' (default: from window.__VW_LAUNCHER_SIDE__ or derived from corner)
     offsetX: 20,                    // px
     offsetY: 20,                    // px
     safeArea: false,                // учитывать env(safe-area-inset-*) — по умолчанию выкл, чтобы не было лишнего отступа
@@ -162,6 +163,14 @@
       // как fallback — через атрибут (если компонент научится его читать)
       el.setAttribute('data-api-url', options.apiUrl);
     }
+    // side for launcher: explicit option -> global runtime var -> derive from corner
+    const sideFromOptions = String(options?.launcherSide || '').toLowerCase();
+    const sideFromGlobal = String(window.__VW_LAUNCHER_SIDE__ || '').toLowerCase();
+    let launcherSide = null;
+    if (sideFromOptions === 'left' || sideFromOptions === 'right') launcherSide = sideFromOptions;
+    else if (sideFromGlobal === 'left' || sideFromGlobal === 'right') launcherSide = sideFromGlobal;
+    else launcherSide = String(options?.corner || DEFAULTS.corner).startsWith('left') ? 'left' : 'right';
+    try { el.setAttribute('data-launcher-side', launcherSide); } catch {}
     // автооткрытие
     if (options && options.autoOpen) {
       try { el.classList.add('open'); } catch {}
@@ -206,4 +215,3 @@
     }
   };
 })(window, document);
-
