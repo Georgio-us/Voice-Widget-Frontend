@@ -2092,13 +2092,13 @@ render() {
                     width: auto;
                     height: auto;
                 }
-                :host([data-launcher-side="left"]):not(.open),
-                :host([launcher-side="left"]):not(.open) {
+                :host([data-launcher-side="left"]),
+                :host([launcher-side="left"]) {
                     left: 0;
                     right: auto;
                 }
-                :host([data-launcher-side="right"]):not(.open),
-                :host([launcher-side="right"]):not(.open) {
+                :host([data-launcher-side="right"]),
+                :host([launcher-side="right"]) {
                     right: 0;
                     left: auto;
                 }
