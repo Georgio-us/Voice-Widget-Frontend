@@ -1045,7 +1045,7 @@ render() {
   }
 
   /* launcher/scrim */
-  .launcher{ position:fixed; right:20px; bottom:20px; width:60px; height:60px; border-radius:50%;
+  .launcher{ position:absolute; left:0; right:auto; bottom:0; width:60px; height:60px; border-radius:50%;
     border:none; padding:0; cursor:pointer; z-index:10001; background:transparent; -webkit-appearance:none; appearance:none;
     box-shadow:0 10px 24px rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center;
     transition:transform .15s ease, box-shadow .15s ease; pointer-events:auto; }
@@ -2055,8 +2055,9 @@ render() {
                     direction: ltr;
                     display: block;
                     position: fixed;
-                    bottom: 20px;
-                    right: 20px;
+                    bottom: 0;
+                    left: 0;
+                    right: auto;
                     z-index: 9999;
                     pointer-events: auto;  /* клики только по виджету; #vw-host — pointer-events: none */
                     /* В закрытом состоянии host = только область лаунчера */
