@@ -115,6 +115,7 @@ export class APIClient {
     try {
       if (!bundle) return;
       if (bundle.explicit) {
+        if (bundle.explicit?.type === 'action') return;
         this.widget.ui?.addSystemEventMessage?.(bundle.explicit);
         return;
       }
@@ -125,7 +126,12 @@ export class APIClient {
 
   _emitSystemSelectionAction(bundle) {
     try {
-      if (!bundle || bundle.explicit) return;
+      if (!bundle) return;
+      if (bundle.explicit?.type === 'action') {
+        this.widget.ui?.addSystemEventMessage?.(bundle.explicit);
+        return;
+      }
+      if (bundle.explicit) return;
       if (bundle.action) this.widget.ui?.addSystemEventMessage?.(bundle.action);
     } catch {}
   }

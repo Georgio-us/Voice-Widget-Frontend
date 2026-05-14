@@ -3988,7 +3988,7 @@ render() {
           </div>
         </div>
       </div>
-      <div class="data-overlay" id="viralLeadOverlay" style="display:none;">
+      <div class="data-overlay" id="viralLeadOverlay" style="display:none;" aria-hidden="true">
         <div class="viral-modal">
           <h3 class="viral-modal__title" id="viralLeadTitle">${this.t('viralModalTitle')}</h3>
           <p class="viral-modal__subtitle" id="viralLeadSubtitle">${this.t('viralModalSubtitle')}</p>
@@ -5533,8 +5533,8 @@ render() {
       if (!link) return;
       link.addEventListener('click', (e) => {
         if (String(link.getAttribute('href') || '') === '#') e.preventDefault();
-        const overlay = this.shadowRoot.getElementById('viralLeadOverlay');
-        if (overlay) overlay.style.display = 'flex';
+        e.stopPropagation();
+        this.openViralLeadModal();
       });
     });
   };
@@ -5572,6 +5572,7 @@ render() {
     };
     const close = () => {
       if (overlay) overlay.style.display = 'none';
+      if (overlay) overlay.setAttribute('aria-hidden', 'true');
       if (phoneEl) phoneEl.value = '';
       if (emailEl) emailEl.value = '';
       if (consentEl) consentEl.checked = false;
@@ -5949,6 +5950,14 @@ render() {
 
   // ---------- EVENTS / COORDINATION ----------
   bindEvents() {
+    this.shadowRoot.addEventListener('click', (e) => {
+      const viralLink = e.target && e.target.closest ? e.target.closest('.viral-link-text') : null;
+      if (!viralLink) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.openViralLeadModal();
+    });
+
     // события рекордера → UI
     this.events.on('recordingStarted', () => {
       this.showChatScreen();
@@ -6041,6 +6050,17 @@ render() {
   }
 
   // ---------- ПУБЛИЧНЫЕ МЕТОДЫ ----------
+
+  openViralLeadModal() {
+    const overlay = this.shadowRoot?.getElementById('viralLeadOverlay');
+    if (!overlay) return false;
+    overlay.style.display = 'flex';
+    overlay.setAttribute('aria-hidden', 'false');
+    try {
+      setTimeout(() => this.shadowRoot?.getElementById('viralLeadPhone')?.focus(), 0);
+    } catch {}
+    return true;
+  }
   
   // Helper function to update understanding percentage
   // Update header understanding bar only
