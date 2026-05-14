@@ -1102,7 +1102,7 @@ render() {
         clamp(10px, 1.4vw, 14px)
         clamp(12px, 1.8vw, 18px);
       border-radius:18px;
-      position:fixed;
+      position:absolute;
       background:var(--color-bg);
       overflow:hidden;
       display:flex;
@@ -2078,11 +2078,11 @@ render() {
                     text-align: left;
                     direction: ltr;
                     display: block;
-                    position: fixed;
-                    bottom: 0;
-                    right: 0;
+                    position: static;
+                    bottom: auto;
+                    right: auto;
                     left: auto;
-                    z-index: 9999;
+                    z-index: auto;
                     pointer-events: auto;  /* клики только по виджету; #vw-host — pointer-events: none */
                     /* В закрытом состоянии host = только область лаунчера */
                     width: 60px;
@@ -2091,16 +2091,6 @@ render() {
                 :host(.open) {
                     width: auto;
                     height: auto;
-                }
-                :host([data-launcher-side="left"]),
-                :host([launcher-side="left"]) {
-                    left: 0;
-                    right: auto;
-                }
-                :host([data-launcher-side="right"]),
-                :host([launcher-side="right"]) {
-                    right: 0;
-                    left: auto;
                 }
                 @media (min-width: 768px) {
                   :host:not(.open) {
