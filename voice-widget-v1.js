@@ -15045,6 +15045,7 @@ render() {
 
   // Add single card as slide into slider
   addCardSlide(normalized, options = {}) {
+    this.ensureSliderCheckpointStyles();
     const { suppressAutoscroll = false } = options || {};
     const host = this.ensureCatalogHost();
     if (!host) return;
