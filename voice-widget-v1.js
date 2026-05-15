@@ -6010,6 +6010,11 @@ class VoiceWidget extends HTMLElement {
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="2"></button>
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="3"></button>
                     <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="4"></button>
+                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="5"></button>
+                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="6"></button>
+                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="7"></button>
+                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="8"></button>
+                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="9"></button>
                   </div>
                 </div>
                 <div class="vw-access-preview-body" data-role="preview-front">
@@ -6894,7 +6899,7 @@ class VoiceWidget extends HTMLElement {
       const steps = isUaLang
         ? { 1: 'Основні параметри', 2: 'Додатково', 3: 'Попередній перегляд', 4: 'Готово' }
         : { 1: 'Основные параметры', 2: 'Дополнительно', 3: 'Предпросмотр', 4: 'Готово' };
-      const draft = { photos: Array(5).fill(''), photoFiles: Array(5).fill(null) };
+      const draft = { photos: Array(10).fill(''), photoFiles: Array(10).fill(null) };
       const priceInput = overlay.querySelector('[data-role="price"]');
       const areaInput = overlay.querySelector('[data-role="area"]');
       const roomsInput = overlay.querySelector('[data-role="rooms"]');
@@ -7036,6 +7041,31 @@ class VoiceWidget extends HTMLElement {
         selectEl.innerHTML = opts.join('');
       };
       const typeMap = { apartment: 'apartment', house: 'house', commercial: 'commercial', land: 'land' };
+      const updateSlot = (node, id, src) => {
+        node.style.backgroundImage = src ? `url("${src}")` : 'none';
+        node.classList.toggle('is-filled', !!src);
+      };
+      const promotePhotoToPrimary = (index) => {
+        if (index <= 0) return true;
+        const selectedUrl = draft.photos[index];
+        draft.photos.splice(index, 1);
+        draft.photos.unshift(selectedUrl || '');
+        draft.photos = draft.photos.slice(0, 10);
+        while (draft.photos.length < 10) draft.photos.push('');
+
+        const selectedFile = draft.photoFiles[index];
+        draft.photoFiles.splice(index, 1);
+        draft.photoFiles.unshift(selectedFile || null);
+        draft.photoFiles = draft.photoFiles.slice(0, 10);
+        while (draft.photoFiles.length < 10) draft.photoFiles.push(null);
+
+        photoSlots.forEach((node, idx) => {
+          const src = draft.photos[idx] || '';
+          updateSlot(node, src ? `photo_${idx + 1}` : '', src);
+        });
+        renderPreview();
+        return true;
+      };
       const resetForm = () => {
         overlay.querySelectorAll('input, textarea, select').forEach((el) => {
           if (el.matches('[readonly]')) return;
@@ -7043,8 +7073,8 @@ class VoiceWidget extends HTMLElement {
           else if (el.tagName === 'SELECT') el.selectedIndex = 0;
           else el.value = '';
         });
-        draft.photos = Array(5).fill('');
-        draft.photoFiles = Array(5).fill(null);
+        draft.photos = Array(10).fill('');
+        draft.photoFiles = Array(10).fill(null);
         photoSlots.forEach((slot) => updateSlot(slot, '', ''));
         clearActiveDialogs();
         setStep(1);
@@ -7092,16 +7122,16 @@ class VoiceWidget extends HTMLElement {
           else el.value = String(values[role] || '');
         });
         if (Array.isArray(saved.photos)) {
-          draft.photos = saved.photos.slice(0, 5);
-          while (draft.photos.length < 5) draft.photos.push('');
+          draft.photos = saved.photos.slice(0, 10);
+          while (draft.photos.length < 10) draft.photos.push('');
           photoSlots.forEach((slot, idx) => {
             const src = draft.photos[idx] || '';
             updateSlot(slot, src ? `photo_${idx + 1}` : '', src);
           });
         }
         if (Array.isArray(saved.photoFiles)) {
-          draft.photoFiles = saved.photoFiles.slice(0, 5);
-          while (draft.photoFiles.length < 5) draft.photoFiles.push(null);
+          draft.photoFiles = saved.photoFiles.slice(0, 10);
+          while (draft.photoFiles.length < 10) draft.photoFiles.push(null);
         }
         if (saved.checks && typeof saved.checks === 'object') {
           overlay.querySelectorAll('.vw-access-add-check-grid input[type="checkbox"][name]').forEach((el) => {
@@ -7283,7 +7313,7 @@ class VoiceWidget extends HTMLElement {
             newbuilding: !!features.newbuilding,
             parking: !!features.parking
           },
-          photos: Array.isArray(property.images) ? property.images.slice(0, 5) : [],
+          photos: Array.isArray(property.images) ? property.images.slice(0, 10) : [],
           photoFiles: []
         };
       };
@@ -7793,36 +7823,12 @@ class VoiceWidget extends HTMLElement {
           applyAutoNextId();
         }
       }
-      const promotePhotoToPrimary = (index) => {
-        if (!Number.isFinite(index) || index < 0 || index >= draft.photos.length) return false;
-        if (!draft.photos[index]) return false;
-        if (index === 0) {
-          renderPreview();
-          return true;
-        }
-        const selectedPhoto = draft.photos[index];
-        const selectedFile = draft.photoFiles[index];
-        draft.photos.splice(index, 1);
-        draft.photos.unshift(selectedPhoto);
-        draft.photos = draft.photos.slice(0, 5);
-        while (draft.photos.length < 5) draft.photos.push('');
-        draft.photoFiles.splice(index, 1);
-        draft.photoFiles.unshift(selectedFile || null);
-        draft.photoFiles = draft.photoFiles.slice(0, 5);
-        while (draft.photoFiles.length < 5) draft.photoFiles.push(null);
-        photoSlots.forEach((node, idx) => {
-          const src = draft.photos[idx] || '';
-          updateSlot(node, src ? `photo_${idx + 1}` : '', src);
-        });
-        renderPreview();
-        return true;
-      };
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
           if (!fileInput || !targetInput) return;
           const index = Number(slot.getAttribute('data-slot') || '-1');
           if (!Number.isFinite(index) || index < 0) return;
-          if (draft.photos[index]) return void promotePhotoToPrimary(index);
+          // Step 1 behavior: clicking ANY slot (even filled) replaces the photo
           targetInput.value = String(index);
           fileInput.click();
         });
@@ -11154,11 +11160,11 @@ class VoiceWidget extends HTMLElement {
         bottom: 10px;
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 8px;
+        gap: 6px;
       }
       .vw-access-preview-thumb {
-        min-height: 48px;
-        border-radius: 10px;
+        min-height: 40px;
+        border-radius: 8px;
         border: 1px solid rgba(255,255,255,0.25);
         background: rgba(255,255,255,0.12);
         background-size: cover;
