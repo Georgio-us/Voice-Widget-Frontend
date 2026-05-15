@@ -10856,39 +10856,6 @@ class VoiceWidget extends HTMLElement {
         font-size: .92rem;
         color: var(--text-secondary, rgba(255,255,255,0.82));
       }
-      .cs-image-gallery-indicator {
-        position: absolute;
-        bottom: 8px;
-        left: 8px;
-        z-index: 10;
-        background: rgba(0, 0, 0, 0.45);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 8px;
-        padding: 4px 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: #fff;
-        font-size: 0.72rem;
-        font-weight: 700;
-        pointer-events: none;
-        user-select: none;
-      }
-      .cs-image-gallery-icon {
-        width: 14px;
-        height: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.9;
-      }
-      .cs-image-gallery-icon svg {
-        width: 100%;
-        height: 100%;
-        fill: currentColor;
-      }
       .vw-access-sub-modal--add {
         width: min(720px, 100%);
         max-height: min(88vh, 760px);
@@ -12568,6 +12535,17 @@ render() {
       if (mainFrontImg?.src) push(mainFrontImg.src);
       const listMainImg = slide.querySelector('.list-card__image');
       if (listMainImg?.src) push(listMainImg.src);
+
+      // New: Check for data-gallery attribute on any wrapper
+      const galleryWrapper = slide.querySelector('[data-gallery]') || slide.closest('[data-gallery]') || slide;
+      const rawGallery = galleryWrapper.getAttribute('data-gallery');
+      if (rawGallery) {
+        try {
+          const parsed = JSON.parse(rawGallery);
+          if (Array.isArray(parsed)) parsed.forEach(url => push(url));
+        } catch {}
+      }
+
       slide.querySelectorAll('.card-front-assets .card-back-asset, .card-back-asset').forEach((asset) => {
         push(asset.getAttribute('data-full-image'));
         push(asset.getAttribute('data-thumb-image'));
@@ -15134,7 +15112,8 @@ render() {
         .filter((v) => String(v || '').trim().length > 0)
         .map((v) => `<span class="list-card__badge list-card__badge--reason">${escCardText(v)}</span>`)
         .join('');
-      const galleryLength = Array.isArray(normalized.assetImages) ? normalized.assetImages.length : 1;
+      const galleryList = (Array.isArray(normalized.assetImages) ? normalized.assetImages : []).filter(v => !!String(v || '').trim());
+      const galleryLength = galleryList.length;
       const galleryIconSvg = `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>`;
       const galleryIndicatorHtml = galleryLength > 1 
         ? `<div class="cs-image-gallery-indicator">
@@ -15142,9 +15121,10 @@ render() {
             <span class="cs-image-gallery-text">1 / ${galleryLength}</span>
            </div>`
         : '';
+      const galleryDataAttr = ` data-gallery="${JSON.stringify(galleryList).replace(/"/g, '&quot;')}"`;
 
       slide.innerHTML = `
-        <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
+        <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand"${galleryDataAttr}>
           <div class="list-card__media">
             ${normalized.image
               ? `<img class="list-card__image" src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">`
@@ -15261,7 +15241,8 @@ render() {
     const backSpecsHtml = backSpecsItems
       .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
       .join('');
-    const galleryLength = Array.isArray(normalized.assetImages) ? normalized.assetImages.length : 1;
+    const galleryList = (Array.isArray(normalized.assetImages) ? normalized.assetImages : []).filter(v => !!String(v || '').trim());
+    const galleryLength = galleryList.length;
     const galleryIconSvg = `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>`;
     const galleryIndicatorHtml = galleryLength > 1 
       ? `<div class="cs-image-gallery-indicator">
@@ -15269,10 +15250,11 @@ render() {
           <span class="cs-image-gallery-text">1 / ${galleryLength}</span>
          </div>`
       : '';
+    const galleryDataAttr = ` data-gallery="${JSON.stringify(galleryList).replace(/"/g, '&quot;')}"`;
 
     slide.innerHTML = `
       <div class="card-slide-front">
-        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-usd="${normalized.priceUSD}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-usd="${normalized.priceUSD}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}"${galleryDataAttr}>
           <div class="cs-image">
             <div class="cs-image-overlay">
               <div class="cs-badge-stack">
@@ -15650,6 +15632,39 @@ render() {
         background: var(--color-accent, #4178CF);
         color: var(--text-on-accent, #fff);
         border-color: transparent;
+      }
+      .cs-image-gallery-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        padding: 4px 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        pointer-events: none;
+        user-select: none;
+      }
+      .cs-image-gallery-icon {
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.9;
+      }
+      .cs-image-gallery-icon svg {
+        width: 100%;
+        height: 100%;
+        fill: currentColor;
       }
     `;
     document.head.appendChild(style);
@@ -17618,15 +17633,20 @@ render() {
       ...readList(raw.photos)
     ]
       .map((v) => normalizeAssetKey(v))
-      .filter(Boolean);
+      .filter(v => v.length > 0);
     
-    if (mainImageKey && !assetPool.includes(mainImageKey)) {
-      assetPool.unshift(mainImageKey);
+    // Create a unique set of images
+    let allImages = [...new Set(assetPool)];
+    
+    // If we have a main image, make sure it's first
+    if (mainImageKey) {
+      allImages = [mainImageKey, ...allImages.filter(v => v !== mainImageKey)];
     }
     
-    const uniqueImages = [...new Set(assetPool)].slice(0, 10);
-    const coverImage = uniqueImages[0] || image || '';
-    const assetImages = uniqueImages; // Now contains all up to 10 images
+    const uniqueImages = allImages.slice(0, 10).filter(v => !!v);
+    const coverImage = uniqueImages[0] || mainImageKey || image || '';
+    const assetImages = uniqueImages; 
+
 
     const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} USD` : (raw.price || raw.priceLabel || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
