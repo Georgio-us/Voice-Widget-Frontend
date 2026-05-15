@@ -7772,18 +7772,7 @@ class VoiceWidget extends HTMLElement {
         try { delete overlay._rcLoadList; } catch {}
         try { _prevAddPropertyCleanup?.(); } catch {}
       };
-      const updateSlot = (slot, fileName, imageData) => {
-        if (!slot) return;
-        if (!fileName) {
-          slot.classList.remove('is-filled');
-          slot.style.backgroundImage = 'none';
-          slot.innerHTML = '<span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span>';
-          return;
-        }
-        slot.classList.add('is-filled');
-        if (imageData) slot.style.backgroundImage = `url("${imageData}")`;
-        slot.innerHTML = '';
-      };
+
       const applyAutoNextId = async () => {
         if (isEditProperty) return;
         try {
