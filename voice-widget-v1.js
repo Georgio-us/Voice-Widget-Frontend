@@ -5893,7 +5893,7 @@ class VoiceWidget extends HTMLElement {
               <label class="vw-access-add-field">
                 <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="${langCode === 'ua' ? '* Введіть заголовок' : '* Введите заголовок'}" autocomplete="off">
               </label>
-              <div class="vw-access-add-hint">${langCode === 'ua' ? 'Можна додати до 5 фотографій до 10мб кожна' : 'Можно добавить до 5 фотографий до 10мб каждая'}</div>
+              <div class="vw-access-add-hint">${langCode === 'ua' ? 'Можна додати до 10 фотографій до 10мб кожна' : 'Можно добавить до 10 фотографий до 10мб каждая'}</div>
               <div class="vw-access-add-photo-layout">
                 <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                 <div class="vw-access-add-photo-grid">
@@ -5901,6 +5901,11 @@ class VoiceWidget extends HTMLElement {
                   <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                   <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                   <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="5" aria-label="Добавить фото 6"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="6" aria-label="Добавить фото 7"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="7" aria-label="Добавить фото 8"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="8" aria-label="Добавить фото 9"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="9" aria-label="Добавить фото 10"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
                 </div>
               </div>
               <div class="vw-access-add-row2">
@@ -10851,6 +10856,39 @@ class VoiceWidget extends HTMLElement {
         font-size: .92rem;
         color: var(--text-secondary, rgba(255,255,255,0.82));
       }
+      .cs-image-gallery-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        padding: 4px 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 700;
+        pointer-events: none;
+        user-select: none;
+      }
+      .cs-image-gallery-icon {
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.9;
+      }
+      .cs-image-gallery-icon svg {
+        width: 100%;
+        height: 100%;
+        fill: currentColor;
+      }
       .vw-access-sub-modal--add {
         width: min(720px, 100%);
         max-height: min(88vh, 760px);
@@ -10961,7 +10999,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-access-add-photo-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 10px;
       }
       .vw-access-add-photo-slot {
@@ -13934,11 +13972,11 @@ render() {
       return 4;
     };
 
-    const qOp = canonicalOperation(query.operation);
+    const qOp = canonicalOperation(query.operation || this._catalogAiLockedOperation || 'sale');
     const iOp = canonicalOperation(item.operation);
     if (qOp && iOp && qOp !== iOp) return null;
 
-    const qType = canonicalType(query.type);
+    const qType = canonicalType(query.type || this._catalogAiLockedType || 'apartment');
     const iType = canonicalType(item.property_type || item.type);
     if (qType && iType && qType !== iType) return null;
 
@@ -15096,6 +15134,15 @@ render() {
         .filter((v) => String(v || '').trim().length > 0)
         .map((v) => `<span class="list-card__badge list-card__badge--reason">${escCardText(v)}</span>`)
         .join('');
+      const galleryLength = Array.isArray(normalized.assetImages) ? normalized.assetImages.length : 1;
+      const galleryIconSvg = `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>`;
+      const galleryIndicatorHtml = galleryLength > 1 
+        ? `<div class="cs-image-gallery-indicator">
+            <span class="cs-image-gallery-icon">${galleryIconSvg}</span>
+            <span class="cs-image-gallery-text">1 / ${galleryLength}</span>
+           </div>`
+        : '';
+
       slide.innerHTML = `
         <div class="list-card" data-variant-id="${normalized.id}" data-action="list-expand">
           <div class="list-card__media">
@@ -15106,7 +15153,7 @@ render() {
               ${listPrimaryBadgeHtml}
               ${listArgBadgesHtml}
             </div>
-            <div class="list-card__assets">${listAssetTilesHtml}</div>
+            ${galleryIndicatorHtml}
             <button class="list-card__like-media card-btn like${this.isWishlistSelected(normalized.id) ? ' is-liked' : ''}" data-action="like" data-variant-id="${normalized.id}" aria-label="${escCardAttr(locale.addToWishlistAria || 'Добавить в подборку')}">
               <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
@@ -15214,14 +15261,15 @@ render() {
     const backSpecsHtml = backSpecsItems
       .map((item) => `<span class="card-back-specs__item"><span class="card-back-specs__icon">${item.icon}</span><span class="card-back-specs__text">${String(item.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></span>`)
       .join('');
-    const assetTilesHtml = assetSlots.map((assetUrl, idx) => {
-      const safeUrl = String(assetUrl || '').trim();
-      const isThumb = !!safeUrl;
-      const openUrl = safeUrl || fallbackAssetOpenUrl;
-      const cls = `card-back-asset${isThumb ? ' is-thumb' : ' is-fallback'}`;
-      const thumbData = isThumb ? ` data-thumb-image="${safeUrl.replace(/"/g, '&quot;')}"` : '';
-      return `<button type="button" class="${cls}" data-asset-index="${idx}" data-full-image="${openUrl.replace(/"/g, '&quot;')}" aria-label="${escCardAttr(locale.openImageAria || 'Open image')}"${thumbData}><span class="card-back-asset__label">img</span></button>`;
-    }).join('');
+    const galleryLength = Array.isArray(normalized.assetImages) ? normalized.assetImages.length : 1;
+    const galleryIconSvg = `<svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>`;
+    const galleryIndicatorHtml = galleryLength > 1 
+      ? `<div class="cs-image-gallery-indicator">
+          <span class="cs-image-gallery-icon">${galleryIconSvg}</span>
+          <span class="cs-image-gallery-text">1 / ${galleryLength}</span>
+         </div>`
+      : '';
+
     slide.innerHTML = `
       <div class="card-slide-front">
         <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.district}" data-rooms="${normalized.rooms}" data-price-usd="${normalized.priceUSD}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
@@ -15237,10 +15285,10 @@ render() {
                 </svg>
               </button>
             </div>
+            ${galleryIndicatorHtml}
             <div class="cs-image-click-area">
               <div class="cs-image-media">${normalized.image ? `<img src="${normalized.image}" alt="${escCardAttr(headlineTitle || String(normalized.id || '').trim() || 'Photo')}">` : 'Put image here'}</div>
             </div>
-            <div class="card-front-assets">${assetTilesHtml}</div>
           </div>
           <div class="cs-body">
             <div class="cs-row cs-row--top">
@@ -15320,12 +15368,7 @@ render() {
         this._catalogActiveId = vid;
       }
     }
-    try {
-      slide.querySelectorAll('.card-back-asset.is-thumb').forEach((assetBtn) => {
-        const thumbUrl = assetBtn.getAttribute('data-thumb-image');
-        if (thumbUrl) assetBtn.style.backgroundImage = `url("${thumbUrl}")`;
-      });
-    } catch {}
+    // Assets were removed in favor of integrated gallery counter
     try {
       const backBg = slide.querySelector('.card-slide-back__bg');
       if (backBg && normalized.image) {
@@ -17576,10 +17619,14 @@ render() {
     ]
       .map((v) => normalizeAssetKey(v))
       .filter(Boolean);
-    const uniqueAssetPool = [...new Set(assetPool)];
-    const assetImages = uniqueAssetPool
-      .filter((url) => normalizeAssetKey(url) !== mainImageKey)
-      .slice(0, 4);
+    
+    if (mainImageKey && !assetPool.includes(mainImageKey)) {
+      assetPool.unshift(mainImageKey);
+    }
+    
+    const uniqueImages = [...new Set(assetPool)].slice(0, 10);
+    const coverImage = uniqueImages[0] || image || '';
+    const assetImages = uniqueImages; // Now contains all up to 10 images
 
     const priceLabel = priceNum != null ? `${priceNum.toLocaleString('en-US')} USD` : (raw.price || raw.priceLabel || '');
     const roomsLabel = roomsNum != null ? `${roomsNum} rooms` : (raw.rooms || '');
@@ -17641,7 +17688,7 @@ render() {
 
     return {
       id: raw.id || raw.external_id || raw.externalId || raw.propertyId || raw.uid || '',
-      image,
+      image: coverImage,
       assetImages,
       city,
       district,
