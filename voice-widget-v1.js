@@ -5895,17 +5895,17 @@ class VoiceWidget extends HTMLElement {
               </label>
               <div class="vw-access-add-hint">${langCode === 'ua' ? 'Можна додати до 10 фотографій до 10мб кожна' : 'Можно добавить до 10 фотографий до 10мб каждая'}</div>
               <div class="vw-access-add-photo-layout">
-                <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
                 <div class="vw-access-add-photo-grid">
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="5" aria-label="Добавить фото 6"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="6" aria-label="Добавить фото 7"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="7" aria-label="Добавить фото 8"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="8" aria-label="Добавить фото 9"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="9" aria-label="Добавить фото 10"><span class="vw-access-add-photo-placeholder" aria-hidden="true">IMG</span></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="5" aria-label="Добавить фото 6"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="6" aria-label="Добавить фото 7"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="7" aria-label="Добавить фото 8"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="8" aria-label="Добавить фото 9"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
+                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="9" aria-label="Добавить фото 10"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
                 </div>
               </div>
               <div class="vw-access-add-row2">
@@ -10972,19 +10972,43 @@ class VoiceWidget extends HTMLElement {
       .vw-access-add-photo-slot {
         min-height: 0;
         aspect-ratio: 1 / 1;
-        border-radius: 16px;
-        border: 2px dotted rgba(92, 150, 255, 0.8);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         background: var(--bg-element, rgba(255,255,255,0.08));
-        color: rgba(255,255,255,0.65);
-        display: grid;
-        place-items: center;
-        padding: 8px;
-        font-size: 1.35rem;
+        color: rgba(255,255,255,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease;
+      }
+      .vw-access-add-photo-slot:hover {
+        border-color: rgba(92, 150, 255, 0.6);
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .vw-access-add-photo-grid .vw-access-add-photo-slot {
+        border-radius: 4px;
+      }
+      .vw-access-add-photo-slot svg {
+        width: 32%;
+        height: 32%;
+        fill: currentColor;
+      }
+      .vw-access-add-photo-slot--main svg {
+        width: 48px;
+        height: 48px;
       }
       .vw-access-add-photo-slot.is-filled {
         border-color: rgba(92, 150, 255, 0.95);
+        border-style: solid;
         color: var(--text-primary, #fff);
-        font-size: .78rem;
+        background-size: cover;
+        background-position: center;
+      }
+      .vw-access-add-photo-slot.is-filled svg {
+        display: none;
+      }
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
