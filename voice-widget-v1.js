@@ -5089,6 +5089,23 @@ class VoiceWidget extends HTMLElement {
     return [];
   }
 
+  getAccessObjectCardBgAttr(imageUrl) {
+    const raw = String(imageUrl || '').trim();
+    if (!raw || !/^(https?:|data:image\/|blob:)/i.test(raw)) return '';
+    const safe = raw
+      .replace(/[\r\n]/g, '')
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return ` style="--access-card-bg-image: url(&quot;${safe}&quot;);"`;
+  }
+
+  getAccessObjectCardBgClass(item = {}) {
+    return this.getAccessObjectCardBgAttr(item?.image) ? ' vw-access-obj-card--with-bg' : '';
+  }
+
   getAdminObjectsMockList(options = {}) {
     const safeOptions = options && typeof options === 'object' ? options : {};
     const preferFull = safeOptions.preferFull === true;
@@ -5119,6 +5136,15 @@ class VoiceWidget extends HTMLElement {
           : '—';
         const operation = String(item?.operation || item?.listingOperation || '').trim().toLowerCase();
         const propertyType = String(item?.property_type || item?.propertyType || item?.type || '').trim().toLowerCase();
+        const imageFromArray = Array.isArray(item?.images)
+          ? item.images.find((src) => typeof src === 'string' && src.trim())
+          : '';
+        const imageFromMedia = Array.isArray(item?.media)
+          ? item.media
+              .map((mediaItem) => (typeof mediaItem === 'string' ? mediaItem : (mediaItem?.url || mediaItem?.src || mediaItem?.imageUrl || '')))
+              .find((src) => typeof src === 'string' && src.trim())
+          : '';
+        const image = String(item?.image || item?.imageUrl || imageFromArray || imageFromMedia || '').trim();
         return {
           id,
           title,
@@ -5129,7 +5155,8 @@ class VoiceWidget extends HTMLElement {
           priceValue: Number.isFinite(normalizedUsd) && normalizedUsd > 0 ? normalizedUsd : null,
           areaValue: Number.isFinite(areaRaw) && areaRaw > 0 ? areaRaw : null,
           operation: ['sale', 'rent'].includes(operation) ? operation : '',
-          propertyType
+          propertyType,
+          image
         };
       })
       .filter(Boolean);
@@ -6054,7 +6081,7 @@ class VoiceWidget extends HTMLElement {
       }
       if (safeSection === 'properties') {
         const rows = list.map((item) => `
-          <article class="vw-access-obj-card vw-access-obj-card--admin" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}">
+          <article class="vw-access-obj-card vw-access-obj-card--admin${this.getAccessObjectCardBgClass(item)}" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}"${this.getAccessObjectCardBgAttr(item.image)}>
             <div class="vw-access-obj-side">
               <button
                 type="button"
@@ -6119,7 +6146,7 @@ class VoiceWidget extends HTMLElement {
       }
       if (safeSection === 'wishlist') {
         const rows = list.map((item) => `
-          <article class="vw-access-obj-card" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}">
+          <article class="vw-access-obj-card${this.getAccessObjectCardBgClass(item)}" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}"${this.getAccessObjectCardBgAttr(item.image)}>
             <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
             <div class="vw-access-obj-main">
               <div class="vw-access-obj-badges">
@@ -11446,6 +11473,9 @@ class VoiceWidget extends HTMLElement {
         align-content: start;
       }
       .vw-access-obj-card {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: start;
@@ -11456,6 +11486,33 @@ class VoiceWidget extends HTMLElement {
         padding: 12px 10px;
         min-height: 104px;
         cursor: pointer;
+      }
+      .vw-access-obj-card--with-bg::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-image: var(--access-card-bg-image);
+        background-size: cover;
+        background-position: center;
+        opacity: .16;
+        filter: saturate(1.12) contrast(1.06);
+        transform: scale(1.02);
+        pointer-events: none;
+      }
+      .vw-access-obj-card--with-bg::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background:
+          linear-gradient(90deg, color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 94%, #000) 0%, transparent 58%),
+          color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 76%, transparent);
+        pointer-events: none;
+      }
+      .vw-access-obj-card > * {
+        position: relative;
+        z-index: 1;
       }
       .vw-access-obj-card.is-selected {
         border-color: rgba(45, 143, 225, 0.75);
@@ -13451,7 +13508,12 @@ render() {
     const firstImage = Array.isArray(raw.images) && raw.images.length
       ? raw.images.find((src) => typeof src === 'string' && src.trim())
       : (typeof raw.images === 'string' ? raw.images : '');
-    const image = raw.image || raw.imageUrl || firstImage || '';
+    const firstMediaImage = Array.isArray(raw.media)
+      ? raw.media
+          .map((item) => (typeof item === 'string' ? item : (item?.url || item?.src || item?.imageUrl || '')))
+          .find((src) => typeof src === 'string' && src.trim())
+      : '';
+    const image = raw.image || raw.imageUrl || firstImage || firstMediaImage || '';
     const priceUSD = raw.priceUSD ?? raw.price_usd ?? raw.priceUsd ?? raw.price_amount ?? raw.priceAmount ?? raw.priceEUR ?? null;
     const price = raw.price ?? priceUSD ?? null;
     const areaM2 = raw.area_m2 ?? raw.specs_area_m2 ?? raw.specs?.area_m2 ?? null;
