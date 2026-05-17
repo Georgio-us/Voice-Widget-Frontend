@@ -11495,7 +11495,7 @@ class VoiceWidget extends HTMLElement {
         background-image: var(--access-card-bg-image);
         background-size: cover;
         background-position: center;
-        opacity: .16;
+        opacity: .2;
         filter: saturate(1.12) contrast(1.06);
         transform: scale(1.02);
         pointer-events: none;
@@ -11506,8 +11506,8 @@ class VoiceWidget extends HTMLElement {
         inset: 0;
         z-index: 0;
         background:
-          linear-gradient(90deg, color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 94%, #000) 0%, transparent 58%),
-          color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 76%, transparent);
+          linear-gradient(90deg, color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 90%, #000) 0%, rgba(0,0,0,0.16) 58%),
+          color-mix(in srgb, var(--bg-element, rgba(255,255,255,0.12)) 70%, rgba(0,0,0,0.42));
         pointer-events: none;
       }
       .vw-access-obj-card > * {
