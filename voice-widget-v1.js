@@ -1863,26 +1863,36 @@ class APIClient {
 
   async _validateResidentialComplexInQuery(query = {}) {
     const out = { ...(query && typeof query === 'object' ? query : {}) };
-    const rcRaw = String(out.residentialComplex || '').trim();
-    if (!rcRaw) return out;
-    const normalized = this._normalizeResidentialComplexName(rcRaw);
-    if (!normalized) {
+    const rcItems = Array.isArray(out.residentialComplex)
+      ? out.residentialComplex.map((item) => String(item || '').trim()).filter(Boolean)
+      : String(out.residentialComplex || '').split(',').map((item) => String(item || '').trim()).filter(Boolean);
+    if (!rcItems.length) return out;
+    const normalizedItems = rcItems.map((item) => ({
+      raw: item,
+      normalized: this._normalizeResidentialComplexName(item)
+    })).filter((item) => item.normalized);
+    if (!normalizedItems.length) {
       delete out.residentialComplex;
       return out;
     }
-    const hasCached = this._residentialComplexCatalog && this._residentialComplexCatalog.has(normalized);
-    if (!hasCached) {
-      try {
-        const list = await this.fetchResidentialComplexes({ q: rcRaw, limit: 80 });
-        this._rememberResidentialComplexes(list);
-      } catch {}
+    const validated = [];
+    for (const item of normalizedItems) {
+      const hasCached = this._residentialComplexCatalog && this._residentialComplexCatalog.has(item.normalized);
+      if (!hasCached) {
+        try {
+          const list = await this.fetchResidentialComplexes({ q: item.raw, limit: 80 });
+          this._rememberResidentialComplexes(list);
+        } catch {}
+      }
+      if (this._residentialComplexCatalog && this._residentialComplexCatalog.has(item.normalized)) {
+        validated.push(this._residentialComplexCatalog.get(item.normalized) || item.raw);
+      } else {
+        // Keep non-exact names: backend RC matcher can expand group names like "Альтаир".
+        validated.push(item.raw);
+      }
     }
-    if (this._residentialComplexCatalog && this._residentialComplexCatalog.has(normalized)) {
-      out.residentialComplex = this._residentialComplexCatalog.get(normalized) || rcRaw;
-      return out;
-    }
-    // Keep rcOnly fallback behavior, but do not commit invalid specific complex name.
-    delete out.residentialComplex;
+    out.residentialComplex = Array.from(new Set(validated));
+    if (out.residentialComplex.length === 1) out.residentialComplex = out.residentialComplex[0];
     return out;
   }
 
@@ -8980,13 +8990,16 @@ class VoiceWidget extends HTMLElement {
       patch.minArea = areaMin;
     }
 
-    let rcInsight = String(insights?.residentialComplex || '').trim();
-    if (rcInsight) {
+    let rcInsight = Array.isArray(insights?.residentialComplex)
+      ? insights.residentialComplex.map((item) => String(item || '').trim()).filter(Boolean)
+      : String(insights?.residentialComplex || '').split(',').map((item) => String(item || '').trim()).filter(Boolean);
+    if (rcInsight.length) {
       // Normalize common whisper typos for known complexes
-      rcInsight = rcInsight.replace(/Аль-Таир/i, 'Альтаир');
+      rcInsight = rcInsight.map((item) => item.replace(/Аль-Таир/i, 'Альтаир')).filter(Boolean);
     }
-    if (rcInsight && looksLikeComplexName(rcInsight)) {
-      patch.residentialComplex = rcInsight;
+    const rcInsightValid = rcInsight.filter((item) => looksLikeComplexName(item));
+    if (rcInsightValid.length) {
+      patch.residentialComplex = rcInsightValid.length === 1 ? rcInsightValid[0] : rcInsightValid;
     } else {
       let rcFromLocation = extractResidentialComplexFromLocation(locRaw);
       if (rcFromLocation) {
@@ -9237,7 +9250,9 @@ class VoiceWidget extends HTMLElement {
       parking: query.parking === true,
       balconyLoggia: query.balconyLoggia === true,
       residentialComplexOnly: query.rcOnly === true,
-      residentialComplex: query.residentialComplex != null ? String(query.residentialComplex) : ''
+      residentialComplex: query.residentialComplex != null
+        ? (Array.isArray(query.residentialComplex) ? query.residentialComplex.join(', ') : String(query.residentialComplex))
+        : ''
     };
   }
 
@@ -9318,14 +9333,17 @@ class VoiceWidget extends HTMLElement {
     try {
       // Keep UI/debug in sync with validated RC value (or its removal),
       // so raw AI garbage does not stay visible in filters state.
-      const requestedRc = String(query?.residentialComplex || '').trim();
-      const validatedRc = String(requestQuery?.residentialComplex || '').trim();
+      const packRc = (value) => Array.isArray(value)
+        ? value.map((item) => String(item || '').trim()).filter(Boolean).join(', ')
+        : String(value || '').trim();
+      const requestedRc = packRc(query?.residentialComplex);
+      const validatedRc = packRc(requestQuery?.residentialComplex);
       if (requestedRc !== validatedRc) {
         const manualRc = String(this._catalogManualFilterOverrides?.residentialComplex || '').trim();
         const currentInsights = (this.understanding?.export?.() && typeof this.understanding.export() === 'object')
           ? this.understanding.export()
           : null;
-        const currentRc = String(currentInsights?.residentialComplex || '').trim();
+        const currentRc = packRc(currentInsights?.residentialComplex);
         if (currentInsights && !manualRc && currentRc && currentRc === requestedRc) {
           this.understanding.import({
             ...currentInsights,
@@ -16487,8 +16505,12 @@ render() {
       }
       if (filtersForMatch.rcOnly === true) addCheck('rcOnly', true, hasComplex, hasComplex ? `card=ЖК(${complexName})` : 'card=без ЖК');
       if (filterIsSet(filtersForMatch.residentialComplex)) {
-        const wantComplex = normalizeRcName(filtersForMatch.residentialComplex);
-        addCheck('residentialComplex', true, !!wantComplex && complexName === wantComplex, `card=${complexName || 'n/a'} expected=${wantComplex || 'n/a'}`);
+        const wantComplexes = (Array.isArray(filtersForMatch.residentialComplex)
+          ? filtersForMatch.residentialComplex
+          : String(filtersForMatch.residentialComplex || '').split(',')
+        ).map((value) => normalizeRcName(value)).filter(Boolean);
+        const pass = !!complexName && wantComplexes.some((want) => complexName === want || complexName.includes(want));
+        addCheck('residentialComplex', true, pass, `card=${complexName || 'n/a'} expected=${wantComplexes.join('|') || 'n/a'}`);
       }
       if (filtersForMatch.parking === true) addCheck('parking', true, hasParking, hasParking ? 'card=yes' : 'card=no');
       if (filtersForMatch.balconyLoggia === true) addCheck('balconyLoggia', true, hasBalconyLoggia, hasBalconyLoggia ? 'card=yes' : 'card=no');
@@ -16606,11 +16628,14 @@ render() {
       ['preValidationQuery', preValidationChainQuery],
       ['postValidationQuery(last applied)', postValidationQuery]
     ];
-    const rcAiRaw = String(aiSourceInsights?.residentialComplex || '').trim();
-    const rcCanonical = String(canonicalAiPatch?.residentialComplex || '').trim();
-    const rcPreValidation = String(preValidationChainQuery?.residentialComplex || '').trim();
-    const rcPostValidation = String(postValidationQuery?.residentialComplex || '').trim();
-    const rcManual = String(manualFilters?.residentialComplex || '').trim();
+    const packRcDebug = (value) => Array.isArray(value)
+      ? value.map((item) => String(item || '').trim()).filter(Boolean).join(', ')
+      : String(value || '').trim();
+    const rcAiRaw = packRcDebug(aiSourceInsights?.residentialComplex);
+    const rcCanonical = packRcDebug(canonicalAiPatch?.residentialComplex);
+    const rcPreValidation = packRcDebug(preValidationChainQuery?.residentialComplex);
+    const rcPostValidation = packRcDebug(postValidationQuery?.residentialComplex);
+    const rcManual = packRcDebug(manualFilters?.residentialComplex);
     const rcOnlyAi = canonicalAiPatch?.rcOnly === true || aiSourceInsights?.rcOnly === true;
     const rcOnlyPre = preValidationChainQuery?.rcOnly === true;
     const rcOnlyPost = postValidationQuery?.rcOnly === true;
