@@ -1188,11 +1188,11 @@
   .loading.active{ display:flex; }
   .loading-text{ color:var(--text-primary); font-size:16px; font-weight:400; font-family: var(--ff); display:flex; align-items:center; gap:4px; }
   .loading-text .dots{ display:inline-flex; gap:2px; margin-left:2px; }
-  .loading-text .dots span{ display:inline-block; opacity:.2; animation:dotBlink 1.2s infinite ease-in-out; }
+  .loading-text .dots span{ display:inline-block; opacity:.35; animation:dotJump 850ms infinite ease-in-out; will-change:transform, opacity; }
   .loading-text .dots .d1{ animation-delay:0s; }
-  .loading-text .dots .d2{ animation-delay:.15s; }
-  .loading-text .dots .d3{ animation-delay:.3s; }
-  @keyframes dotBlink{ 0%,100%{ opacity:.2; transform:translateY(0); } 50%{ opacity:1; transform:translateY(-2px); } }
+  .loading-text .dots .d2{ animation-delay:.12s; }
+  .loading-text .dots .d3{ animation-delay:.24s; }
+  @keyframes dotJump{ 0%, 80%, 100%{ opacity:.35; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-5px); } }
 
   /* ===== УДАЛЕНО: старая overlay lead‑форма v1 (.lead-panel/.lead-box и т.д.).
      Важно: inline lead поток (renderInlineLeadStep) ранее использовал классы .lead-box/.lead-input/.lead-select/.lead-textarea.
@@ -1745,14 +1745,15 @@
                     height: 6px;
                     border-radius: 50%;
                     background: currentColor;
-                    opacity: .25;
-                    animation: thinkingPulse 1s infinite ease-in-out;
+                    opacity: .35;
+                    animation: thinkingJump 850ms infinite ease-in-out;
+                    will-change: transform, opacity;
                 }
-                .thinking-dots span:nth-child(2) { animation-delay: .15s; }
-                .thinking-dots span:nth-child(3) { animation-delay: .3s; }
-                @keyframes thinkingPulse {
-                    0%, 100% { opacity: .25; transform: translateY(0); }
-                    50% { opacity: 1; transform: translateY(-1px); }
+                .thinking-dots span:nth-child(2) { animation-delay: .12s; }
+                .thinking-dots span:nth-child(3) { animation-delay: .24s; }
+                @keyframes thinkingJump {
+                    0%, 80%, 100% { opacity: .35; transform: translateY(0); }
+                    40% { opacity: 1; transform: translateY(-5px); }
                 }
                 
                 /* Стили для Context Screen */

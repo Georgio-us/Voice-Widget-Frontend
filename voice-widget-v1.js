@@ -796,8 +796,9 @@ class UIManager {
           height: 7px;
           border-radius: 50%;
           background: currentColor;
-          opacity: .32;
+          opacity: .35;
           animation: demoFxThinkingPulseHard 900ms infinite ease-in-out;
+          will-change: transform, opacity;
           box-shadow: 0 0 0 rgba(65,120,207,0);
         }
         .demo-fx .thinking-dots span:nth-child(2) { animation-delay: .12s; }
