@@ -18146,6 +18146,29 @@ const autoMount = () => {
   if (tg) {
     try { tg.ready(); } catch {}
     try { tg.expand(); } catch {}
+    try {
+      const user = tg?.initDataUnsafe?.user || null;
+      const userId = user?.id != null ? String(user.id).trim() : '';
+      if (userId) {
+        const url = String(backendUrl || '').replace(/\/upload\/?$/i, '/miniapp-open');
+        const headers = { 'Content-Type': 'application/json' };
+        const initData = String(tg?.initData || '').trim();
+        if (initData) headers['X-Telegram-Init-Data'] = initData;
+        fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            tgUserId: userId,
+            tgUsername: user?.username ? String(user.username).trim() : null,
+            tgFirstName: user?.first_name ? String(user.first_name).trim() : null,
+            tgLastName: user?.last_name ? String(user.last_name).trim() : null,
+            tgLanguageCode: user?.language_code ? String(user.language_code).trim() : null,
+            startParam: tg?.initDataUnsafe?.start_param ? String(tg.initDataUnsafe.start_param).trim() : null
+          }),
+          keepalive: true
+        }).catch(() => {});
+      }
+    } catch {}
   }
 };
 
