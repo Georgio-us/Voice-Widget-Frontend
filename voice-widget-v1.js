@@ -1441,23 +1441,54 @@ class UIManager {
     const { thread } = this.elements;
     if (!thread) return null;
 
+    const phrasesRaw = this.t('thinkingPhrases');
+    const phrases = (Array.isArray(phrasesRaw) ? phrasesRaw : [this.t('loadingText') || 'Thinking'])
+      .map((item) => String(item || '').trim())
+      .filter(Boolean);
+    let phraseIndex = Math.floor(Math.random() * Math.max(1, phrases.length));
+
     const wrapper = document.createElement('div');
     wrapper.className = 'message assistant thinking-message';
     wrapper.setAttribute('data-thinking', '1');
 
     const bubble = document.createElement('div');
     bubble.className = 'message-bubble widget-bubble thinking-bubble';
-    bubble.innerHTML = `<span class="thinking-dots" aria-label="${this.t('loadingText') || 'Thinking'}"><span></span><span></span><span></span></span>`;
+    const phrase = document.createElement('span');
+    phrase.className = 'thinking-phrase';
+    phrase.textContent = phrases[phraseIndex] || '';
+    const dots = document.createElement('span');
+    dots.className = 'thinking-dots';
+    dots.setAttribute('aria-label', this.t('loadingText') || 'Thinking');
+    dots.innerHTML = '<span></span><span></span><span></span>';
+    bubble.appendChild(phrase);
+    bubble.appendChild(dots);
     wrapper.appendChild(bubble);
     thread.appendChild(wrapper);
+    if (phrases.length > 1) {
+      wrapper._thinkingPhraseTimer = setInterval(() => {
+        if (!wrapper.isConnected) {
+          clearInterval(wrapper._thinkingPhraseTimer);
+          return;
+        }
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        phrase.classList.remove('is-swapping');
+        void phrase.offsetWidth;
+        phrase.textContent = phrases[phraseIndex];
+        phrase.classList.add('is-swapping');
+      }, 2200);
+    }
     this._scrollToBottom();
     return wrapper;
   }
   hideThinkingIndicator(node = null) {
+    if (node?._thinkingPhraseTimer) clearInterval(node._thinkingPhraseTimer);
     if (node?.parentNode) node.parentNode.removeChild(node);
     this.getRoot()
       ?.querySelectorAll?.('.thinking-message[data-thinking="1"]')
-      ?.forEach((el) => el.remove());
+      ?.forEach((el) => {
+        if (el?._thinkingPhraseTimer) clearInterval(el._thinkingPhraseTimer);
+        el.remove();
+      });
   }
   showNotification(m) { console.log('📢', m); }
   showWarning(m) { console.log('⚠️', m); }
@@ -2826,6 +2857,12 @@ const LOCALES = {
     inputPlaceholder: 'Задайте вопрос...',
     recordingLabel: 'Идет запись',
     loadingText: 'Обрабатываю запрос',
+    thinkingPhrases: [
+      'Обрабатываю запрос',
+      'Ищу лучшие варианты',
+      'Сверяю параметры',
+      'Еще секундочку'
+    ],
     menuLanguage: 'Выбрать язык',
     menuThemeToLight: 'Светлая тема',
     menuThemeToDark: 'Тёмная тема',
@@ -3048,6 +3085,12 @@ const LOCALES = {
     inputPlaceholder: 'Поставте запитання...',
     recordingLabel: 'Йде запис',
     loadingText: 'Обробляю запит',
+    thinkingPhrases: [
+      'Обробляю запит',
+      'Шукаю найкращі варіанти',
+      'Звіряю параметри',
+      'Ще секундочку'
+    ],
     menuLanguage: 'Обрати мову',
     menuThemeToLight: 'Світла тема',
     menuThemeToDark: 'Темна тема',

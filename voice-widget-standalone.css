@@ -212,12 +212,12 @@
     opacity: 1;
     cursor: pointer;
     max-width: 78%;
-    box-shadow: 0 8px 18px rgba(65, 120, 207, 0.22);
-    transition: background .15s ease, transform .08s ease, opacity .15s ease, box-shadow .15s ease;
+    box-shadow: none;
+    transition: background .15s ease, transform .08s ease, opacity .15s ease;
   }
   .system-event-text--action:hover{
     background: #3A6CB9;
-    box-shadow: 0 10px 22px rgba(65, 120, 207, 0.3);
+    box-shadow: none;
   }
   .system-event-text--action:active{
     transform: translateY(1px);
@@ -1758,16 +1758,33 @@
 
                 .thinking-bubble {
                     min-width: 52px;
+                    max-width: min(78vw, 310px);
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
+                    gap: 9px;
                     padding: 10px 14px;
+                }
+                .thinking-phrase {
+                    display: inline-block;
+                    max-width: 220px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    color: var(--text-primary);
+                    font-size: 13px;
+                    font-weight: 650;
+                    line-height: 1.2;
+                }
+                .thinking-phrase.is-swapping {
+                    animation: thinkingPhraseSwap 360ms ease;
                 }
                 .thinking-dots {
                     display: inline-flex;
                     align-items: center;
                     gap: 4px;
                     height: 10px;
+                    flex: 0 0 auto;
                 }
                 .thinking-dots span {
                     width: 6px;
@@ -1783,6 +1800,10 @@
                 @keyframes thinkingJump {
                     0%, 80%, 100% { opacity: .35; transform: translateY(0); }
                     40% { opacity: 1; transform: translateY(-5px); }
+                }
+                @keyframes thinkingPhraseSwap {
+                    0% { opacity: .45; transform: translateY(3px); }
+                    100% { opacity: 1; transform: translateY(0); }
                 }
                 
                 /* Стили для Context Screen */
