@@ -2915,6 +2915,7 @@ const LOCALES = {
     accessAdminOlxSyncDone: 'OLX импорт: {count} объектов',
     accessAdminOlxSyncFailed: 'Не удалось импортировать объекты OLX',
     accessAdminOlxSyncLocked: 'Сначала подключите OLX',
+    accessAdminOlxReconnectRequired: 'Сессия OLX истекла. Переподключите OLX',
     accessAdminOlxClearing: 'Очищаю импортированные...',
     accessAdminOlxClearDone: 'Очищено импортированных объектов: {count}',
     accessAdminOlxClearFailed: 'Не удалось очистить импортированные объекты',
@@ -3143,6 +3144,7 @@ const LOCALES = {
     accessAdminOlxSyncDone: 'OLX імпорт: {count} обʼєктів',
     accessAdminOlxSyncFailed: 'Не вдалося імпортувати обʼєкти OLX',
     accessAdminOlxSyncLocked: 'Спочатку підключіть OLX',
+    accessAdminOlxReconnectRequired: 'Сесія OLX закінчилась. Перепідключіть OLX',
     accessAdminOlxClearing: 'Очищаю імпортовані...',
     accessAdminOlxClearDone: 'Очищено імпортованих обʼєктів: {count}',
     accessAdminOlxClearFailed: 'Не вдалося очистити імпортовані обʼєкти',
@@ -4646,6 +4648,18 @@ class VoiceWidget extends HTMLElement {
       const message = String(error?.message || '');
       if (message.includes('OLX_NOT_CONNECTED')) {
         this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxSyncLocked || 'Connect OLX first'}`);
+        return;
+      }
+      if (message.includes('OLX_RECONNECT_REQUIRED')) {
+        this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxReconnectRequired || 'OLX session expired. Reconnect OLX'}`);
+        try {
+          const overlay = this.accessOverlay || this.getRoot()?.querySelector?.('.vw-access-overlay');
+          const connectButton = overlay?.querySelector?.('[data-role="olx-connect"]') || null;
+          if (connectButton) {
+            connectButton.dataset.olxConnected = '1';
+            this.setAccessButtonLabel(connectButton, locale.accessAdminOlxConnected || 'OLX connected (reconnect)');
+          }
+        } catch {}
         return;
       }
       this.ui?.showNotification?.(`⚠️ ${locale.accessAdminOlxSyncFailed || 'Failed to sync OLX adverts'}`);
