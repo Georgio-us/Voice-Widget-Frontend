@@ -2563,6 +2563,34 @@ voice-widget,
   color: var(--text-primary);
 }
 
+.vw-app .pill-overlay-lane .pill-action-btn.is-highlight-filters{
+  border-color: color-mix(in srgb, var(--color-accent) 82%, #7cf9ff);
+  background:
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--color-accent) 34%, var(--bg-pill)) 0%,
+      color-mix(in srgb, var(--color-accent) 18%, var(--bg-pill)) 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 58%, transparent),
+    0 0 0 7px color-mix(in srgb, var(--color-accent) 13%, transparent),
+    0 10px 26px color-mix(in srgb, var(--color-accent) 42%, transparent);
+  animation: filtersButtonHighlight 1.15s ease-in-out 3;
+}
+
+.vw-app .pill-overlay-lane .pill-action-btn.is-highlight-filters .pill-action-icon{
+  color: var(--text-on-accent, #FFFFFF);
+}
+
+@keyframes filtersButtonHighlight {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    filter: saturate(1.05);
+  }
+  45% {
+    transform: translateY(-1px) scale(1.08);
+    filter: saturate(1.45);
+  }
+}
+
 .vw-app .pill-overlay-lane .pill-action-btn--view .icon-slider{
   display: none;
 }

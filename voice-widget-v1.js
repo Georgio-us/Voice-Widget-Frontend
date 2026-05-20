@@ -2243,6 +2243,17 @@ class APIClient {
     }
   }
 
+  renderBackendUiHighlights(data) {
+    try {
+      const target = String(data?.ui?.highlight || data?.ui?.highlightTarget || '').trim();
+      if (target === 'filters') {
+        this.widget?.highlightFiltersButton?.();
+      }
+    } catch (e) {
+      console.warn('renderBackendUiHighlights failed:', e);
+    }
+  }
+
   _canUseDebugSessionEndpoint() {
     return this.widget?.accessFlags?.isSuperAdmin === true;
   }
@@ -2403,6 +2414,7 @@ class APIClient {
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
       this.renderBackendSystemEvent(data);
+      this.renderBackendUiHighlights(data);
       const explicitSystemAction = String(data?.ui?.systemEvent?.action || '').trim();
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
@@ -2538,6 +2550,7 @@ class APIClient {
       };
       this.widget.ui.addMessage(assistantMessage);
       this.renderBackendSystemEvent(data);
+      this.renderBackendUiHighlights(data);
       const explicitSystemAction = String(data?.ui?.systemEvent?.action || '').trim();
       
       // Логируем assistant_reply после получения ответа (аудио)
@@ -8362,6 +8375,20 @@ class VoiceWidget extends HTMLElement {
     } catch {}
   }
 
+  highlightFiltersButton() {
+    try {
+      const btn = this.$byId('pillFiltersButton');
+      if (!btn) return;
+      if (this._filtersHighlightTimer) clearTimeout(this._filtersHighlightTimer);
+      btn.classList.remove('is-highlight-filters');
+      void btn.offsetWidth;
+      btn.classList.add('is-highlight-filters');
+      this._filtersHighlightTimer = setTimeout(() => {
+        btn.classList.remove('is-highlight-filters');
+      }, 3600);
+    } catch {}
+  }
+
   formatPickerNumber(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return '0';
@@ -12274,7 +12301,11 @@ render() {
   const pillFiltersButton = this.$byId('pillFiltersButton');
   pillFiltersButton?.setAttribute('aria-expanded', 'false');
   pillFiltersButton?.addEventListener('click', () => {
-    try { this.openFiltersOverlay(); } catch {}
+    try {
+      pillFiltersButton.classList.remove('is-highlight-filters');
+      if (this._filtersHighlightTimer) clearTimeout(this._filtersHighlightTimer);
+      this.openFiltersOverlay();
+    } catch {}
   });
   const pillViewButton = this.$byId('pillViewButton');
   pillViewButton?.addEventListener('click', () => {
