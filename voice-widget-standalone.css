@@ -198,6 +198,35 @@
     text-overflow: clip;
     max-width: 100%;
   }
+  .system-event-text--action{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height: 30px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--color-accent, #4178CF);
+    background: var(--color-accent, #4178CF);
+    color: var(--text-on-accent, #FFFFFF);
+    font-weight: 800;
+    opacity: 1;
+    cursor: pointer;
+    max-width: 78%;
+    box-shadow: 0 8px 18px rgba(65, 120, 207, 0.22);
+    transition: background .15s ease, transform .08s ease, opacity .15s ease, box-shadow .15s ease;
+  }
+  .system-event-text--action:hover{
+    background: #3A6CB9;
+    box-shadow: 0 10px 22px rgba(65, 120, 207, 0.3);
+  }
+  .system-event-text--action:active{
+    transform: translateY(1px);
+    opacity: .9;
+  }
+  .system-event-text--action:focus-visible{
+    outline: 1px solid rgba(65,120,207,.65);
+    outline-offset: 2px;
+  }
   /* ==================================================
      Demo FX mode (cinematic capture only)
      Enabled by root class: .demo-fx

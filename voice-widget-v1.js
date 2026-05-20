@@ -1213,12 +1213,30 @@ class UIManager {
     this.updateMessageCount();
   }
 
-  addSystemEventMessage(text = '') {
-    const payload = String(text || '').trim();
+  addSystemEventMessage(event = '') {
+    const isObjectEvent = event && typeof event === 'object';
+    const payload = String(isObjectEvent ? (event.text || event.content || '') : event || '').trim();
     if (!payload) return;
+    const systemType = isObjectEvent ? String(event.type || '').trim() : '';
+    const action = isObjectEvent ? String(event.action || '').trim() : '';
+    const eventId = isObjectEvent
+      ? String(event.eventId || event?.payload?.eventId || '').trim()
+      : '';
     const last = this.widget.messages?.[this.widget.messages.length - 1];
-    if (last && last.type === 'system' && String(last.content || '').trim() === payload) return;
-    this.addMessage({ type: 'system', content: payload, timestamp: new Date() });
+    if (last && last.type === 'system') {
+      const sameEvent = eventId && String(last.eventId || last?.payload?.eventId || '') === eventId;
+      const sameText = String(last.content || '').trim() === payload && String(last.action || '') === action;
+      if (sameEvent || sameText) return;
+    }
+    this.addMessage({
+      type: 'system',
+      content: payload,
+      systemType,
+      action,
+      payload: isObjectEvent ? (event.payload || null) : null,
+      eventId,
+      timestamp: new Date()
+    });
     this.triggerDemoFxGlow();
   }
 
@@ -1233,21 +1251,41 @@ class UIManager {
       const systemText = document.createElement('span');
       systemText.className = 'system-event-text';
       systemText.textContent = String(message.content || '');
-      systemText.setAttribute('role', 'button');
+      const isAction = message.systemType === 'action' && ['open_results', 'open_manager'].includes(String(message.action || ''));
+      systemText.setAttribute('role', isAction ? 'button' : 'button');
       systemText.setAttribute('tabindex', '0');
-      systemText.setAttribute('aria-expanded', 'false');
-      systemText.title = this.t('systemExpandTitle') || 'Нажмите, чтобы раскрыть';
-      const toggleExpanded = () => {
-        const expanded = systemText.classList.toggle('is-expanded');
-        systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      };
-      systemText.addEventListener('click', toggleExpanded);
-      systemText.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          toggleExpanded();
-        }
-      });
+      if (isAction) {
+        systemText.classList.add('system-event-text--action');
+        systemText.title = String(message.content || '');
+        const trigger = () => {
+          this.widget?.handleSystemEventAction?.({
+            action: message.action,
+            payload: message.payload || null,
+            eventId: message.eventId || message?.payload?.eventId || null
+          });
+        };
+        systemText.addEventListener('click', trigger);
+        systemText.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            trigger();
+          }
+        });
+      } else {
+        systemText.setAttribute('aria-expanded', 'false');
+        systemText.title = this.t('systemExpandTitle') || 'Нажмите, чтобы раскрыть';
+        const toggleExpanded = () => {
+          const expanded = systemText.classList.toggle('is-expanded');
+          systemText.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        };
+        systemText.addEventListener('click', toggleExpanded);
+        systemText.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleExpanded();
+          }
+        });
+      }
       systemLine.appendChild(systemText);
       wrapper.appendChild(systemLine);
       thread.appendChild(wrapper);
@@ -2194,6 +2232,17 @@ class APIClient {
     }
   }
 
+  renderBackendSystemEvent(data) {
+    try {
+      const event = data?.ui?.systemEvent;
+      if (event && typeof event === 'object') {
+        this.widget.ui?.addSystemEventMessage?.(event);
+      }
+    } catch (e) {
+      console.warn('renderBackendSystemEvent failed:', e);
+    }
+  }
+
   _canUseDebugSessionEndpoint() {
     return this.widget?.accessFlags?.isSuperAdmin === true;
   }
@@ -2353,6 +2402,8 @@ class APIClient {
       const parsed = this.extractHiddenCommands(assistantRaw);
       const assistantMessage = { type: 'assistant', content: parsed.cleaned, timestamp: new Date() };
       if (assistantMessage.content) this.widget.ui.addMessage(assistantMessage);
+      this.renderBackendSystemEvent(data);
+      const explicitSystemAction = String(data?.ui?.systemEvent?.action || '').trim();
       // Dispatch hidden commands (after showing text)
       for (const c of parsed.commands) await this.dispatchHiddenCommand(c);
 
@@ -2361,14 +2412,14 @@ class APIClient {
       // (sendCardInteraction('select', id) → /interaction select → handoff UX).
       try {
         const autoId = data?.ui?.autoSelectCardId || null;
-        if (autoId) {
+        if (!explicitSystemAction && autoId) {
           await this.sendCardInteraction('select', String(autoId));
         }
       } catch {}
 
       // 🃏 карточки по предложению (после текста агента) — legacy flow
       try {
-        if (!this.disableServerUI && data?.ui?.suggestShowCard === true) {
+        if (!explicitSystemAction && !this.disableServerUI && data?.ui?.suggestShowCard === true) {
           await this.widget.renderPropertiesFromCatalog();
         }
       } catch (e) { console.warn('Cards handling error:', e); }
@@ -2486,6 +2537,8 @@ class APIClient {
         timestamp: new Date()
       };
       this.widget.ui.addMessage(assistantMessage);
+      this.renderBackendSystemEvent(data);
+      const explicitSystemAction = String(data?.ui?.systemEvent?.action || '').trim();
       
       // Логируем assistant_reply после получения ответа (аудио)
       const cardsForLog = Array.isArray(data.cards) && data.cards.length > 0
@@ -2512,14 +2565,14 @@ class APIClient {
       // RMv3 / Sprint 4 / Task 4.4: demo-only словесный выбор объекта (audio)
       try {
         const autoId = data?.ui?.autoSelectCardId || null;
-        if (autoId) {
+        if (!explicitSystemAction && autoId) {
           await this.sendCardInteraction('select', String(autoId));
         }
       } catch {}
 
       // 🃏 карточки по предложению (audio) — legacy flow
       try {
-        if (!this.disableServerUI && data?.ui?.suggestShowCard === true) {
+        if (!explicitSystemAction && !this.disableServerUI && data?.ui?.suggestShowCard === true) {
           await this.widget.renderPropertiesFromCatalog();
         }
       } catch (e) { console.warn('Cards handling error (audio):', e); }
@@ -17122,6 +17175,33 @@ render() {
       const popup = this.getRoot().querySelector('#vwContactManagerOverlay');
       if (popup && popup.parentElement) popup.parentElement.removeChild(popup);
     } catch {}
+  }
+
+  async handleSystemEventAction({ action, payload, eventId } = {}) {
+    const normalizedAction = String(action || '').trim();
+    if (normalizedAction === 'open_manager') {
+      try {
+        this.openContactManagerPopup({
+          source: 'tg_manager_cta',
+          systemEventId: eventId || payload?.eventId || null,
+          systemEventReason: payload?.reason || null
+        });
+        return true;
+      } catch (e) {
+        console.warn('open_manager system event failed:', e);
+        return false;
+      }
+    }
+    if (normalizedAction === 'open_results') {
+      try {
+        await this.renderPropertiesFromCatalog?.();
+        return true;
+      } catch (e) {
+        console.warn('open_results system event failed:', e);
+        return false;
+      }
+    }
+    return false;
   }
 
   openContactManagerPopup(context = {}) {
