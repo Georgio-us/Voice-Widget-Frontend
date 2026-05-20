@@ -2905,6 +2905,7 @@ const LOCALES = {
     accessAdminOlxConnect: 'Подключить OLX',
     accessAdminOlxConnectOpening: 'Открываю OLX...',
     accessAdminOlxConnected: 'OLX подключен (переподключить)',
+    accessAdminOlxReconnect: 'Переподключить OLX',
     accessAdminOlxChecking: 'Проверяю OLX...',
     accessAdminOlxError: 'Не удалось проверить статус OLX',
     accessAdminOlxSuccessToast: 'OLX успешно подключен',
@@ -3134,6 +3135,7 @@ const LOCALES = {
     accessAdminOlxConnect: 'Підключити OLX',
     accessAdminOlxConnectOpening: 'Відкриваю OLX...',
     accessAdminOlxConnected: 'OLX підключено (перепідключити)',
+    accessAdminOlxReconnect: 'Перепідключити OLX',
     accessAdminOlxChecking: 'Перевіряю OLX...',
     accessAdminOlxError: 'Не вдалося перевірити статус OLX',
     accessAdminOlxSuccessToast: 'OLX успішно підключено',
@@ -4563,11 +4565,14 @@ class VoiceWidget extends HTMLElement {
       });
       const payload = await response.json().catch(() => ({}));
       const connected = Boolean(response.ok && payload?.ok && payload?.connected);
+      const reconnectRequired = Boolean(response.ok && payload?.ok && payload?.reconnectRequired);
       const hasImported = Number(payload?.activeImportedCount || 0) > 0;
-      button.dataset.olxConnected = connected ? '1' : '0';
-      this.setAccessButtonLabel(button, connected
-        ? (locale.accessAdminOlxConnected || 'OLX connected (reconnect)')
-        : (locale.accessAdminOlxConnect || 'Connect OLX'));
+      button.dataset.olxConnected = (connected || reconnectRequired) ? '1' : '0';
+      this.setAccessButtonLabel(button, reconnectRequired
+        ? (locale.accessAdminOlxReconnect || locale.accessAdminOlxConnected || 'Reconnect OLX')
+        : (connected
+          ? (locale.accessAdminOlxConnected || 'OLX connected (reconnect)')
+          : (locale.accessAdminOlxConnect || 'Connect OLX')));
       button.disabled = false;
       if (syncButton) {
         syncButton.disabled = false;
@@ -4632,7 +4637,9 @@ class VoiceWidget extends HTMLElement {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload?.ok !== true) {
-        throw new Error(payload?.error || `HTTP_${response.status}`);
+        const error = new Error(payload?.error || `HTTP_${response.status}`);
+        error.details = payload?.details || null;
+        throw error;
       }
 
       const imported = Number(payload?.imported || 0);
@@ -4657,7 +4664,19 @@ class VoiceWidget extends HTMLElement {
           const connectButton = overlay?.querySelector?.('[data-role="olx-connect"]') || null;
           if (connectButton) {
             connectButton.dataset.olxConnected = '1';
-            this.setAccessButtonLabel(connectButton, locale.accessAdminOlxConnected || 'OLX connected (reconnect)');
+            this.setAccessButtonLabel(connectButton, locale.accessAdminOlxReconnect || locale.accessAdminOlxConnected || 'Reconnect OLX');
+            setTimeout(() => {
+              try {
+                this.openOlxConnectFlow(connectButton);
+              } catch {}
+            }, 650);
+          } else {
+            const reconnectUrl = this.buildOlxConnectUrl({ reauth: true });
+            if (reconnectUrl) {
+              setTimeout(() => {
+                window.location.href = reconnectUrl + '#';
+              }, 650);
+            }
           }
         } catch {}
         return;
