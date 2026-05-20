@@ -13645,7 +13645,7 @@ render() {
     try {
       const u = new URL(String(this.apiUrl || ''));
       const base = `${u.protocol}//${u.host}`;
-      return [`${base}/api/cards/search?limit=2000`, ...defaults];
+      return [`${base}/api/cards/search?mode=allActive&limit=2000`, ...defaults];
     } catch {
       return defaults;
     }
