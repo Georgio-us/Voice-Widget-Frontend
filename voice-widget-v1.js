@@ -1672,6 +1672,7 @@ class APIClient {
 
     const allowed = [
       'city', 'district', 'rooms', 'type', 'operation',
+      'microdistrict', 'neighborhood',
       'minPrice', 'maxPrice',
       'minArea', 'maxArea',
       'minFloor', 'maxFloor',
@@ -2471,6 +2472,7 @@ class APIClient {
     const sendButton = this.widget.$byId('sendButton');
     const messageText = textInput?.value?.trim();
     if (!messageText) return;
+    this.widget._lastCatalogUserText = messageText;
 
     textInput.value = '';
     if (sendButton) { sendButton.disabled = true; sendButton.classList.remove('active'); }
@@ -2642,6 +2644,7 @@ class APIClient {
 
       // обновляем транскрипцию в последнем пользовательском сообщении
       if (data.transcription) {
+        this.widget._lastCatalogUserText = data.transcription;
         const lastUserMessage = this.widget.messages[this.widget.messages.length - 1];
         if (lastUserMessage && lastUserMessage.type === 'user') {
           lastUserMessage.content = data.transcription;
@@ -9030,6 +9033,20 @@ class VoiceWidget extends HTMLElement {
       if (/аванг|avang/.test(raw)) return 'malinovsky';
       return '';
     };
+    const normalizeMicrodistrictSlug = (value) => {
+      const raw = String(value || '').trim().toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/ї/g, 'и')
+        .replace(/і/g, 'и')
+        .replace(/є/g, 'е');
+      if (!raw) return '';
+      if (/молдаван|moldav/.test(raw)) return 'moldavanka';
+      if (/черемуш|cheremush/.test(raw)) return 'cheremushky';
+      if (/слобод|slobid|slobod/.test(raw)) return 'slobidka';
+      if (/таир|tairo/.test(raw)) return 'tairovo';
+      if (/котовск|котовськ|kotov/.test(raw)) return 'kotovskoho';
+      return '';
+    };
     const splitMulti = (value) => {
       if (value == null) return [];
       const arr = Array.isArray(value) ? value : [value];
@@ -9152,6 +9169,22 @@ class VoiceWidget extends HTMLElement {
     ));
     if (districtMulti.length) patch.district = districtMulti;
     const locRaw = districtTokens[0] || String(insights?.location || '').trim();
+    const microdistrictTokens = [
+      ...splitMulti(insights?.microdistrict),
+      ...splitMulti(insights?.neighborhood),
+      ...splitMulti(insights?.district),
+      ...splitMulti(insights?.location),
+      String(this._lastCatalogUserText || '')
+    ];
+    const microdistrictMulti = Array.from(new Set(
+      microdistrictTokens.map((token) => normalizeMicrodistrictSlug(token)).filter(Boolean)
+    ));
+    if (microdistrictMulti.length) {
+      patch.microdistrict = microdistrictMulti;
+      // A named microdistrict is narrower than an AI-guessed administrative district.
+      // Do not let "Молдаванка" degrade into all Малиновский, etc.
+      delete patch.district;
+    }
 
     const roomTokens = splitMulti(insights?.rooms);
     const roomsMulti = Array.from(new Set(roomTokens.flatMap((token) => extractRoomsTokens(token)).filter(Boolean)));
@@ -14241,6 +14274,20 @@ render() {
       if (d === 'peresypskyi') return 'suvorovsky';
       return d;
     };
+    const canonicalMicrodistrict = (value) => {
+      const raw = String(value || '').trim().toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/ї/g, 'и')
+        .replace(/і/g, 'и')
+        .replace(/є/g, 'е');
+      if (!raw) return '';
+      if (/молдаван|moldav/.test(raw)) return 'moldavanka';
+      if (/черемуш|cheremush/.test(raw)) return 'cheremushky';
+      if (/слобод|slobid|slobod/.test(raw)) return 'slobidka';
+      if (/таир|tairo/.test(raw)) return 'tairovo';
+      if (/котовск|котовськ|kotov/.test(raw)) return 'kotovskoho';
+      return '';
+    };
     const normalizeDistrictList = (value) => {
       const src = Array.isArray(value) ? value : [value];
       return Array.from(new Set(
@@ -14298,10 +14345,30 @@ render() {
     if (qType && iType && qType !== iType) return null;
 
     const qDistrictsRaw = normalizeDistrictList(query.district);
+    const qMicrodistricts = Array.from(new Set(
+      (Array.isArray(query.microdistrict) ? query.microdistrict : [query.microdistrict])
+        .map((value) => canonicalMicrodistrict(value))
+        .filter(Boolean)
+    ));
     const hasArcadia = query.arcadia === true;
     const hasCenter = query.center === true;
     const qDistricts = (hasArcadia || hasCenter) ? ['primorsky'] : qDistrictsRaw;
     const iDistrict = canonicalDistrict(item.district || item.neighborhood || item.city || '');
+    const itemMicroText = [
+      item.neighborhood,
+      item.location_neighborhood,
+      item.title
+    ].map((value) => String(value || '')).join(' ');
+    if (qMicrodistricts.length) {
+      const itemMicros = new Set(
+        itemMicroText
+          .split(/\s*(?:,|\/|\\|\||;|·|-)\s*/i)
+          .map((value) => canonicalMicrodistrict(value))
+          .filter(Boolean)
+      );
+      const hasExactMicro = qMicrodistricts.some((value) => itemMicros.has(value));
+      if (!hasExactMicro) return null;
+    }
 
     const qRc = text(query.residentialComplex);
     const iRc = text(item?.features?.complex || item?.features?.display_specs?.complex);
@@ -16612,6 +16679,20 @@ render() {
       .replace(/[«»"'`]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
+    const normalizeMicrodistrict = (value) => {
+      const raw = String(value || '').trim().toLowerCase()
+        .replace(/ё/g, 'е')
+        .replace(/ї/g, 'и')
+        .replace(/і/g, 'и')
+        .replace(/є/g, 'е');
+      if (!raw) return '';
+      if (/молдаван|moldav/.test(raw)) return 'moldavanka';
+      if (/черемуш|cheremush/.test(raw)) return 'cheremushky';
+      if (/слобод|slobid|slobod/.test(raw)) return 'slobidka';
+      if (/таир|tairo/.test(raw)) return 'tairovo';
+      if (/котовск|котовськ|kotov/.test(raw)) return 'kotovskoho';
+      return '';
+    };
     const readTotalFloors = (item = {}) => {
       const variants = [
         item?.total_floors,
@@ -16666,6 +16747,9 @@ render() {
       );
       const neighborhoodRaw = String(normalized.neighborhood || '').trim().toLowerCase();
       const titleRaw = String(normalized.title || '').trim().toLowerCase();
+      const cardMicrodistricts = new Set([normalized.neighborhood, normalized.location_neighborhood, normalized.title]
+        .map((value) => normalizeMicrodistrict(value))
+        .filter(Boolean));
       const isCenter = neighborhoodRaw === 'центр' || neighborhoodRaw === 'center';
       const isArcadia = (
         neighborhoodRaw.includes('аркад')
@@ -16694,6 +16778,13 @@ render() {
         districtSelected || districtFallback,
         `card=${district || 'n/a'} expected=${manualDistricts.join('|') || 'n/a'} source=${districtSelected ? 'selected by user' : (districtFallback ? 'fallback from relaxed' : 'no match')}`
       );
+      const microFilters = Array.isArray(filtersForMatch.microdistrict)
+        ? filtersForMatch.microdistrict.map((value) => normalizeMicrodistrict(value)).filter(Boolean)
+        : (filterIsSet(filtersForMatch.microdistrict) ? [normalizeMicrodistrict(filtersForMatch.microdistrict)].filter(Boolean) : []);
+      if (microFilters.length) {
+        const microSelected = microFilters.some((value) => cardMicrodistricts.has(value));
+        addCheck('microdistrict', true, microSelected, `card=${Array.from(cardMicrodistricts).join('|') || 'n/a'} expected=${microFilters.join('|')}`);
+      }
       if (filtersForMatch.smart === true) {
         addCheck('smart', true, smartFlat === true, `card=${smartFlat ? 'true' : 'false'}`);
       } else {
