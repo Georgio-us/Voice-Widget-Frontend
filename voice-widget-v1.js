@@ -35,6 +35,44 @@ function renderMarkdown(text) {
   return isInlineMessage(text) ? renderMarkdownInline(text) : renderMarkdownBlock(text);
 }
 
+function __vwFormatDistrictLabel(value, langCode = 'ua') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const key = raw
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/ї/g, 'и')
+    .replace(/і/g, 'и')
+    .replace(/є/g, 'е')
+    .replace(/район/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const isUa = String(langCode || '').toLowerCase().slice(0, 2) === 'ua';
+  const map = {
+    приморский: { ua: 'Приморський', ru: 'Приморский' },
+    приморський: { ua: 'Приморський', ru: 'Приморский' },
+    приморськии: { ua: 'Приморський', ru: 'Приморский' },
+    primorsky: { ua: 'Приморський', ru: 'Приморский' },
+    kievsky: { ua: 'Київський', ru: 'Киевский' },
+    kyivsky: { ua: 'Київський', ru: 'Киевский' },
+    киевский: { ua: 'Київський', ru: 'Киевский' },
+    киівський: { ua: 'Київський', ru: 'Киевский' },
+    киивський: { ua: 'Київський', ru: 'Киевский' },
+    київськии: { ua: 'Київський', ru: 'Киевский' },
+    малиновский: { ua: 'Малиновський', ru: 'Малиновский' },
+    малиновський: { ua: 'Малиновський', ru: 'Малиновский' },
+    малиновськии: { ua: 'Малиновський', ru: 'Малиновский' },
+    malinovsky: { ua: 'Малиновський', ru: 'Малиновский' },
+    суворовский: { ua: 'Суворовський', ru: 'Суворовский' },
+    суворовський: { ua: 'Суворовський', ru: 'Суворовский' },
+    суворовськии: { ua: 'Суворовський', ru: 'Суворовский' },
+    suvorovsky: { ua: 'Суворовський', ru: 'Суворовский' }
+  };
+  const hit = map[key];
+  if (hit) return isUa ? hit.ua : hit.ru;
+  return raw;
+}
+
 // modules/telemetryClient.js
 /**
  * Клиент для отправки телеметрии на бэкенд
@@ -4203,12 +4241,6 @@ class VoiceWidget extends HTMLElement {
       const fromStorage = normalize(localStorage.getItem('vw_lang'));
       if (fromStorage) return fromStorage;
     } catch {}
-
-    const fromDocument = normalize(document?.documentElement?.lang || '');
-    if (fromDocument) return fromDocument;
-
-    const fromNavigator = normalize(navigator?.language || '');
-    if (fromNavigator) return fromNavigator;
 
     return this.defaultLanguage;
   }
@@ -15322,7 +15354,7 @@ render() {
     const escCardAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const headlineTitle = this._cardFrontHeadline(normalized);
     const districtLine = (() => {
-      const district = String(normalized.district || '').trim();
+      const district = String(normalized.districtDisplay || this.formatDistrictLabel(normalized.district) || '').trim();
       const neighborhood = String(normalized.neighborhood || '').trim();
       if (district && neighborhood && district.toLowerCase() !== neighborhood.toLowerCase()) {
         return `${district} · ${neighborhood}`;
@@ -17624,6 +17656,12 @@ render() {
       // Submit to backend (/api/leads), isolated from other forms
       const leadsApiUrl = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/leads');
       const language = (this.currentLang || this.defaultLanguage).toLowerCase();
+      const slide = formRoot?.closest?.('.card-slide') || null;
+      const propertyId = String(
+        slide?.id ||
+        slide?.querySelector?.('.cs')?.getAttribute?.('data-variant-id') ||
+        ''
+      ).trim() || null;
       const payload = {
         sessionId: this.sessionId || null,
         source: 'widget_in_dialog',
@@ -17634,7 +17672,7 @@ render() {
         preferredContactMethod: 'phone',
         comment: null,
         language: language,
-        propertyId: null,
+        propertyId,
         consent: true
       };
 
@@ -17833,6 +17871,7 @@ render() {
     const bathroomsNum = toInt(raw.bathrooms);
     const city = raw.city || raw.location || '';
     const district = raw.district || raw.area || '';
+    const districtDisplay = __vwFormatDistrictLabel(district, this.getLangCode());
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
     const operationRaw = String(raw.operation || raw.listingMode || '').trim().toLowerCase();
@@ -18007,6 +18046,7 @@ render() {
       assetImages,
       city,
       district,
+      districtDisplay,
       neighborhood,
       title,
       description: raw.description || '',
@@ -18045,6 +18085,10 @@ render() {
   getLangCode() {
     const code = String(this.currentLang || this.defaultLanguage || 'UA').trim().toLowerCase().slice(0, 2);
     return ['ua', 'ru'].includes(code) ? code : 'ua';
+  }
+
+  formatDistrictLabel(value) {
+    return __vwFormatDistrictLabel(value, this.getLangCode());
   }
 
  
