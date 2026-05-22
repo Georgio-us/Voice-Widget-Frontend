@@ -35,19 +35,30 @@ function renderMarkdown(text) {
   return isInlineMessage(text) ? renderMarkdownInline(text) : renderMarkdownBlock(text);
 }
 
-function __vwFormatDistrictLabel(value, langCode = 'ua') {
+function __vwFormatLocationLabel(value, langCode = 'ua') {
   const raw = String(value || '').trim();
   if (!raw) return '';
-  const key = raw
+  const isUa = String(langCode || '').toLowerCase().slice(0, 2) === 'ua';
+  if (/[\/|]/.test(raw)) {
+    return raw
+      .split(/([\/|])/)
+      .map((part) => /[\/|]/.test(part) ? ` ${part.trim()} ` : __vwFormatLocationLabel(part, langCode))
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  const normalizeKey = (valueLike) => String(valueLike || '')
     .toLowerCase()
     .replace(/ё/g, 'е')
     .replace(/ї/g, 'и')
     .replace(/і/g, 'и')
     .replace(/є/g, 'е')
     .replace(/район/g, '')
+    .replace(/селище/g, 'поселок')
+    .replace(/поселок\s+/g, 'поселок ')
     .replace(/\s+/g, ' ')
     .trim();
-  const isUa = String(langCode || '').toLowerCase().slice(0, 2) === 'ua';
+  const key = normalizeKey(raw);
   const map = {
     приморский: { ua: 'Приморський', ru: 'Приморский' },
     приморський: { ua: 'Приморський', ru: 'Приморский' },
@@ -66,11 +77,45 @@ function __vwFormatDistrictLabel(value, langCode = 'ua') {
     суворовский: { ua: 'Суворовський', ru: 'Суворовский' },
     суворовський: { ua: 'Суворовський', ru: 'Суворовский' },
     суворовськии: { ua: 'Суворовський', ru: 'Суворовский' },
-    suvorovsky: { ua: 'Суворовський', ru: 'Суворовский' }
+    suvorovsky: { ua: 'Суворовський', ru: 'Суворовский' },
+    молдаванка: { ua: 'Молдаванка', ru: 'Молдаванка' },
+    слободка: { ua: 'Слобідка', ru: 'Слободка' },
+    слобидка: { ua: 'Слобідка', ru: 'Слободка' },
+    черемушки: { ua: 'Черемушки', ru: 'Черемушки' },
+    таирова: { ua: 'Таїрова', ru: 'Таирова' },
+    таїрова: { ua: 'Таїрова', ru: 'Таирова' },
+    аркадия: { ua: 'Аркадія', ru: 'Аркадия' },
+    аркадія: { ua: 'Аркадія', ru: 'Аркадия' },
+    центр: { ua: 'Центр', ru: 'Центр' },
+    фонтан: { ua: 'Фонтан', ru: 'Фонтан' },
+    'большой фонтан': { ua: 'Великий Фонтан', ru: 'Большой Фонтан' },
+    'великий фонтан': { ua: 'Великий Фонтан', ru: 'Большой Фонтан' },
+    'малый фонтан': { ua: 'Малий Фонтан', ru: 'Малый Фонтан' },
+    'малий фонтан': { ua: 'Малий Фонтан', ru: 'Малый Фонтан' },
+    лиманка: { ua: 'Лиманка', ru: 'Лиманка' },
+    авангард: { ua: 'Авангард', ru: 'Авангард' },
+    котовского: { ua: 'Котовського', ru: 'Котовского' },
+    котовського: { ua: 'Котовського', ru: 'Котовского' },
+    'поселок котовского': { ua: 'селище Котовського', ru: 'поселок Котовского' },
+    'поселок котовського': { ua: 'селище Котовського', ru: 'поселок Котовского' },
+    черноморка: { ua: 'Чорноморка', ru: 'Черноморка' },
+    чорноморка: { ua: 'Чорноморка', ru: 'Черноморка' },
+    совиньон: { ua: 'Совіньйон', ru: 'Совиньон' },
+    совіньйон: { ua: 'Совіньйон', ru: 'Совиньон' },
+    пересыпь: { ua: 'Пересип', ru: 'Пересыпь' },
+    пересип: { ua: 'Пересип', ru: 'Пересыпь' },
+    'ближние мельницы': { ua: 'Ближні Млини', ru: 'Ближние Мельницы' },
+    'ближні млини': { ua: 'Ближні Млини', ru: 'Ближние Мельницы' },
+    'дальние мельницы': { ua: 'Дальні Млини', ru: 'Дальние Мельницы' },
+    'дальні млини': { ua: 'Дальні Млини', ru: 'Дальние Мельницы' }
   };
   const hit = map[key];
   if (hit) return isUa ? hit.ua : hit.ru;
   return raw;
+}
+
+function __vwFormatDistrictLabel(value, langCode = 'ua') {
+  return __vwFormatLocationLabel(value, langCode);
 }
 
 // modules/telemetryClient.js
@@ -3887,7 +3932,7 @@ class VoiceWidget extends HTMLElement {
     const areaLabel = Number.isFinite(areaNum) && areaNum > 0
       ? `${String(areaNum).replace(/\.0+$/, '').replace('.', ',')} м²`
       : '—';
-    const districtLabel = String(normalized.district || normalized.neighborhood || normalized.city || '—').trim() || '—';
+    const districtLabel = String(this.formatLocationLabel(normalized.district || normalized.neighborhood || normalized.city || '—')).trim() || '—';
     return [
       locale.sharePropertyIntro || 'Подобрал объект, который может вам подойти.',
       `${locale.shareTypeLabel || 'Тип'}: ${typeWithRooms}`,
@@ -5306,7 +5351,7 @@ class VoiceWidget extends HTMLElement {
         const id = String(item?.external_id || item?.externalId || item?.id || item?.variantId || item?._id || '').trim();
         if (!id) return null;
         const title = String(item?.title || item?.description || `Объект ${idx + 1}`).trim();
-        const district = String(item?.district || item?.neighborhood || item?.city || '—').trim() || '—';
+        const district = String(this.formatLocationLabel(item?.district || item?.neighborhood || item?.city || '—')).trim() || '—';
         const roomsRaw = Number(item?.rooms);
         const rooms = Number.isFinite(roomsRaw) && roomsRaw > 0 ? String(Math.round(roomsRaw)) : '—';
         const areaRaw = Number(item?.area_m2 || item?.area || item?.specs_area_m2);
@@ -6179,11 +6224,11 @@ class VoiceWidget extends HTMLElement {
                 <label class="vw-access-add-field">
                   <select class="vw-access-add-input" data-role="microdistrict" name="microdistrict">
                     <option value="">${langCode === 'ua' ? 'Мікрорайон' : 'Микрорайон'}</option>
-                    <option value="Черемушки">Черемушки</option>
-                    <option value="Фонтан">Фонтан</option>
-                    <option value="Таирова">Таирова</option>
-                    <option value="Центр">Центр</option>
-                    <option value="Аркадия">Аркадия</option>
+                    <option value="Черемушки">${this.formatLocationLabel('Черемушки')}</option>
+                    <option value="Фонтан">${this.formatLocationLabel('Фонтан')}</option>
+                    <option value="Таирова">${this.formatLocationLabel('Таирова')}</option>
+                    <option value="Центр">${this.formatLocationLabel('Центр')}</option>
+                    <option value="Аркадия">${this.formatLocationLabel('Аркадия')}</option>
                   </select>
                 </label>
               </div>
@@ -6291,7 +6336,7 @@ class VoiceWidget extends HTMLElement {
                 <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
               </div>
               <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
-              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${langCode === 'ua' ? 'кімн' : 'комн'} · ${item.district}</div>
+              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${langCode === 'ua' ? 'кімн' : 'комн'} · ${this.formatLocationLabel(item.district)}</div>
             </div>
           </article>
         `).join('');
@@ -6340,7 +6385,7 @@ class VoiceWidget extends HTMLElement {
                 <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
               </div>
               <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
-              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${isUaLang ? 'кімн' : 'комн'} · ${item.district}</div>
+              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${isUaLang ? 'кімн' : 'комн'} · ${this.formatLocationLabel(item.district)}</div>
             </div>
           </article>
         `).join('');
@@ -7556,7 +7601,9 @@ class VoiceWidget extends HTMLElement {
         const previewHeadline = String(titleInput?.value || '').trim() || '—';
         overlay.querySelector('[data-role="preview-title"]') && (overlay.querySelector('[data-role="preview-title"]').textContent = previewHeadline);
         overlay.querySelector('[data-role="preview-price"]') && (overlay.querySelector('[data-role="preview-price"]').textContent = `${fmtPrice} USD`);
-        const districtMeta = [String(data.district || '').trim(), String(data.microdistrict || '').trim()].filter(Boolean);
+        const districtMeta = [this.formatLocationLabel(data.district), this.formatLocationLabel(data.microdistrict)]
+          .map((value) => String(value || '').trim())
+          .filter(Boolean);
         overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = districtMeta.length ? districtMeta.join(' · ') : '—');
         overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
         overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = `📐 ${data.area} m²`);
@@ -10285,16 +10332,16 @@ class VoiceWidget extends HTMLElement {
                     <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
                   </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="primorsky" aria-checked="false">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Приморский</span>
+                    <span class="vw-filters-multi-item__check">✓</span><span>${this.formatLocationLabel('Приморский')}</span>
                   </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="kievsky" aria-checked="false">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Киевский</span>
+                    <span class="vw-filters-multi-item__check">✓</span><span>${this.formatLocationLabel('Киевский')}</span>
                   </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="malinovsky" aria-checked="false">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Малиновский</span>
+                    <span class="vw-filters-multi-item__check">✓</span><span>${this.formatLocationLabel('Малиновский')}</span>
                   </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="suvorovsky" aria-checked="false">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Суворовский</span>
+                    <span class="vw-filters-multi-item__check">✓</span><span>${this.formatLocationLabel('Суворовский')}</span>
                   </button>
                 </div>
               </div>
@@ -10376,7 +10423,7 @@ class VoiceWidget extends HTMLElement {
             <label class="vw-filters-check-item"><input type="checkbox" data-role="rcOnly"> Только ЖК</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="smart"> Смарт</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="parking"> Есть паркинг</label>
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="arcadia"> Аркадия</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="arcadia"> ${this.formatLocationLabel('Аркадия')}</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="balconyLoggia"> Балкон/лоджия</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="center"> Центр</label>
           </div>
@@ -14948,7 +14995,7 @@ render() {
       if (normalized.rooms) specs.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
       if (normalized.area_m2 != null && normalized.area_m2 !== '') specs.push(`📐 ${normalized.area_m2} м²`);
       if (normalized.floor) specs.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
-      const metaRow = [normalized.priceLabel, normalized.district].filter(Boolean).join('  ·  ') || '—';
+      const metaRow = [normalized.priceLabel, normalized.districtDisplay || this.formatLocationLabel(normalized.district)].filter(Boolean).join('  ·  ') || '—';
       const scoreValue = (() => {
         const raw = Number(normalized.score);
         if (!Number.isFinite(raw)) return 0;
@@ -15355,7 +15402,7 @@ render() {
     const headlineTitle = this._cardFrontHeadline(normalized);
     const districtLine = (() => {
       const district = String(normalized.districtDisplay || this.formatDistrictLabel(normalized.district) || '').trim();
-      const neighborhood = String(normalized.neighborhood || '').trim();
+      const neighborhood = String(normalized.neighborhoodDisplay || this.formatLocationLabel(normalized.neighborhood) || '').trim();
       if (district && neighborhood && district.toLowerCase() !== neighborhood.toLowerCase()) {
         return `${district} · ${neighborhood}`;
       }
@@ -17873,6 +17920,7 @@ render() {
     const district = raw.district || raw.area || '';
     const districtDisplay = __vwFormatDistrictLabel(district, this.getLangCode());
     const neighborhood = raw.neighborhood || raw.neiborhood || raw.neiborhood || '';
+    const neighborhoodDisplay = __vwFormatLocationLabel(neighborhood, this.getLangCode());
     const propertyType = raw.property_type || raw.propertyType || raw.type || '';
     const operationRaw = String(raw.operation || raw.listingMode || '').trim().toLowerCase();
     const isUaLang = this.getLangCode() === 'ua';
@@ -17993,7 +18041,7 @@ render() {
 
     const dynamicBackFeatureItems = [];
     pushExtra(dynamicBackFeatureItems, '🏠', isUaLang ? 'Тип' : 'Тип', mapPropertyTypeLabel(propertyType || rawFeatures.type || rawFeatures.propertyType || rawFeatures.buildingType));
-    pushExtra(dynamicBackFeatureItems, '📍', isUaLang ? 'Мікрорайон' : 'Микрорайон', neighborhood);
+    pushExtra(dynamicBackFeatureItems, '📍', isUaLang ? 'Мікрорайон' : 'Микрорайон', neighborhoodDisplay);
     pushExtra(dynamicBackFeatureItems, '🏘️', 'ЖК', canonicalComplex);
     if (canonicalExclusive) pushExtra(dynamicBackFeatureItems, '⭐', isUaLang ? 'Ексклюзив' : 'Эксклюзив', isUaLang ? 'так' : 'да');
     const penthouseFlag = truthyLabel(rawFeatures.penthouse);
@@ -18048,6 +18096,7 @@ render() {
       district,
       districtDisplay,
       neighborhood,
+      neighborhoodDisplay,
       title,
       description: raw.description || '',
       rooms: roomsNum != null ? String(roomsNum) : (raw.rooms || ''),
@@ -18089,6 +18138,10 @@ render() {
 
   formatDistrictLabel(value) {
     return __vwFormatDistrictLabel(value, this.getLangCode());
+  }
+
+  formatLocationLabel(value) {
+    return __vwFormatLocationLabel(value, this.getLangCode());
   }
 
  
