@@ -1788,20 +1788,20 @@
                     margin-top: 6px;
                 }
                 .thinking-dots span {
-                    width: 4px;
-                    height: 4px;
+                    width: 4.5px;
+                    height: 4.5px;
                     border-radius: 50%;
                     background: currentColor;
-                    opacity: .2;
-                    animation: thinkingBlink 1.2s infinite ease-in-out;
+                    opacity: 0.15;
+                    animation: thinkingBlink 1.4s infinite ease-in-out;
                     will-change: opacity;
                 }
                 .thinking-dots span:nth-child(1) { animation-delay: 0s; }
-                .thinking-dots span:nth-child(2) { animation-delay: .2s; }
-                .thinking-dots span:nth-child(3) { animation-delay: .4s; }
+                .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+                .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
                 @keyframes thinkingBlink {
-                    0%, 80%, 100% { opacity: .2; }
-                    40% { opacity: 1; }
+                    0%, 40%, 100% { opacity: 0.15; }
+                    20% { opacity: 1; box-shadow: 0 0 4px currentColor; }
                 }
                 @keyframes thinkingPhraseSwap {
                     0% { opacity: .45; transform: translateY(3px); }
