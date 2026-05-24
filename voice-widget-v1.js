@@ -1679,6 +1679,7 @@ class APIClient {
       'floorNotFirst', 'floorNotLast',
       'smart', 'arcadia', 'rcOnly', 'residentialComplex',
       'exclusive', 'center', 'parking', 'balconyLoggia',
+      'governmentProgram', 'eoselia', 'evidnovlennia',
       'limit'
     ];
     for (const k of allowed) {
@@ -5897,7 +5898,10 @@ class VoiceWidget extends HTMLElement {
             parking: 'Паркінг',
             balconyLoggia: 'Балкон/лоджія',
             arcadia: 'Аркадія',
-            center: 'Центр'
+            center: 'Центр',
+            governmentProgram: 'Держпрограми',
+            eoselia: 'єОселя',
+            evidnovlennia: 'єВідновлення'
           };
           const labelMapRu = {
             operation: 'Операция',
@@ -5914,7 +5918,10 @@ class VoiceWidget extends HTMLElement {
             parking: 'Паркинг',
             balconyLoggia: 'Балкон/лоджия',
             arcadia: 'Аркадия',
-            center: 'Центр'
+            center: 'Центр',
+            governmentProgram: 'Госпрограммы',
+            eoselia: 'єОселя',
+            evidnovlennia: 'єВідновлення'
           };
           const map = isUaLang ? labelMapUa : labelMapRu;
           const normValue = (key, value) => {
@@ -5932,7 +5939,7 @@ class VoiceWidget extends HTMLElement {
               if (raw === 'commercial') return isUaLang ? 'Комерція' : 'Коммерция';
               if (raw === 'land') return isUaLang ? 'Ділянка' : 'Участок';
             }
-            if (['rcOnly', 'parking', 'balconyLoggia', 'arcadia', 'center'].includes(key)) {
+            if (['rcOnly', 'parking', 'balconyLoggia', 'arcadia', 'center', 'governmentProgram', 'eoselia', 'evidnovlennia'].includes(key)) {
               if (raw === 'true') return isUaLang ? 'Так' : 'Да';
               if (raw === 'false') return isUaLang ? 'Ні' : 'Нет';
             }
@@ -6244,6 +6251,8 @@ class VoiceWidget extends HTMLElement {
                 <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>${langCode === 'ua' ? 'Тераса' : 'Терраса'}</span></label>
                 <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>${langCode === 'ua' ? 'Новобудова' : 'Новострой'}</span></label>
                 <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>${langCode === 'ua' ? 'Є паркінг' : 'Есть паркинг'}</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="eoselia"><span>єОселя</span></label>
+                <label class="vw-access-add-check-item"><input type="checkbox" name="evidnovlennia"><span>єВідновлення</span></label>
               </div>
               <label class="vw-access-add-field">
                 <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="${langCode === 'ua' ? 'Опишіть квартиру' : 'Опишите квартиру'}"></textarea>
@@ -7499,7 +7508,10 @@ class VoiceWidget extends HTMLElement {
             smartFlat: pickCheck('smartFlat'),
             terrace: pickCheck('terrace'),
             newbuilding: pickCheck('newbuilding'),
-            parking: pickCheck('parking')
+            parking: pickCheck('parking'),
+            governmentProgram: pickCheck('eoselia') || pickCheck('evidnovlennia'),
+            eoselia: pickCheck('eoselia'),
+            evidnovlennia: pickCheck('evidnovlennia')
           }
         };
       };
@@ -7571,7 +7583,10 @@ class VoiceWidget extends HTMLElement {
             smartFlat: !!features.smartFlat,
             terrace: !!(features.terrace ?? property.terrace),
             newbuilding: !!features.newbuilding,
-            parking: !!features.parking
+            parking: !!features.parking,
+            governmentProgram: !!(features.governmentProgram || features.eoselia || features.evidnovlennia || (Array.isArray(features.governmentPrograms) && features.governmentPrograms.length)),
+            eoselia: !!features.eoselia,
+            evidnovlennia: !!features.evidnovlennia
           },
           photos: Array.isArray(property.images) ? property.images.slice(0, 10) : [],
           photoFiles: []
@@ -8806,6 +8821,7 @@ class VoiceWidget extends HTMLElement {
       center: !!overlay.querySelector('[data-role="center"]')?.checked,
       parking: !!overlay.querySelector('[data-role="parking"]')?.checked,
       balconyLoggia: !!overlay.querySelector('[data-role="balconyLoggia"]')?.checked,
+      governmentProgram: !!overlay.querySelector('[data-role="governmentProgram"]')?.checked,
       residentialComplexOnly: !!overlay.querySelector('[data-role="rcOnly"]')?.checked,
       residentialComplex: String(overlay.querySelector('[data-role="filters-rc-hidden"]')?.value || '').trim()
     };
@@ -8888,6 +8904,7 @@ class VoiceWidget extends HTMLElement {
     setCheck('center', payload.center);
     setCheck('parking', payload.parking);
     setCheck('balconyLoggia', payload.balconyLoggia);
+    setCheck('governmentProgram', payload.governmentProgram);
     setCheck('rcOnly', payload.residentialComplexOnly);
     const rcHid = overlay.querySelector('[data-role="filters-rc-hidden"]');
     if (rcHid) rcHid.value = String(payload.residentialComplex || '').trim();
@@ -8979,6 +8996,9 @@ class VoiceWidget extends HTMLElement {
     if (Object.prototype.hasOwnProperty.call(source, 'center')) out.center = source.center === true;
     if (Object.prototype.hasOwnProperty.call(source, 'parking')) out.parking = source.parking === true;
     if (Object.prototype.hasOwnProperty.call(source, 'balconyLoggia')) out.balconyLoggia = source.balconyLoggia === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'governmentProgram')) out.governmentProgram = source.governmentProgram === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'eoselia')) out.eoselia = source.eoselia === true;
+    if (Object.prototype.hasOwnProperty.call(source, 'evidnovlennia')) out.evidnovlennia = source.evidnovlennia === true;
     const hasAnyCriteriaExceptOperation = Object.entries(out).some(([key, value]) => {
       if (key === 'operation') return false;
       if (value == null) return false;
@@ -9087,6 +9107,7 @@ class VoiceWidget extends HTMLElement {
       if (srcInsights?.preferences != null) raw.push(srcInsights.preferences);
       if (srcInsights?.location != null) raw.push(srcInsights.location);
       if (srcInsights?.floor != null) raw.push(srcInsights.floor);
+      if (this._lastCatalogUserText) raw.push(this._lastCatalogUserText);
       const text = raw.map((v) => String(v || '').toLowerCase()).join(' ');
       return {
         text,
@@ -9095,6 +9116,9 @@ class VoiceWidget extends HTMLElement {
         center: /(центр|center|central)/i.test(text),
         parking: /(паркинг|парковк|parking|garage)/i.test(text),
         balconyLoggia: /(балкон|лоджи|balcony|loggia)/i.test(text),
+        governmentProgram: /(гос\s*программ|держ\s*програм|державн|сертификат|сертифікат|ваучер|voucher|є\s*осел|е\s*осел|єосел|еосел|є\s*віднов|е\s*віднов|євіднов|евіднов|відновлен|видновлен)/i.test(text),
+        eoselia: /(є\s*осел|е\s*осел|єосел|еосел|eosel)/i.test(text),
+        evidnovlennia: /(є\s*віднов|е\s*віднов|євіднов|евіднов|відновлен|видновлен|evidnov)/i.test(text),
         rcOnly: /(?:^|\s)(?:[жз]к|[жз]\/к)(?:\s|$)|(?:только|лишь|исключительно)\s+(?:в\s+)?(?:[жз]к|[жз]\/к|жил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?)|\bв\s*[жз]к\b|\bжил(?:ой|ого|ому|ом|ые|ых|ыми|ая|ую)?\s+комплекс(?:ы|а|у|е|ом|ах|ами|ов)?\b|\bв\s+жил(?:ом|ых|ой)\s+комплекс(?:е|ах|ов)?\b|residential\s+complex(?:es)?/i.test(text),
         floorNotFirst: /(не\s*перв|not\s*first)/i.test(text),
         floorNotLast: /(не\s*послед|не\s*остан|not\s*last)/i.test(text)
@@ -9290,6 +9314,15 @@ class VoiceWidget extends HTMLElement {
     if (insights?.arcadia === true) patch.arcadia = true;
     if (insights?.center === true) patch.center = true;
     if (insights?.smart === true) patch.smart = true;
+    if (insights?.governmentProgram === true) patch.governmentProgram = true;
+    if (insights?.eoselia === true) {
+      patch.eoselia = true;
+      patch.governmentProgram = true;
+    }
+    if (insights?.evidnovlennia === true) {
+      patch.evidnovlennia = true;
+      patch.governmentProgram = true;
+    }
     if (insights?.floorNotFirst === true) patch.floorNotFirst = true;
     if (insights?.floorNotLast === true) patch.floorNotLast = true;
 
@@ -9299,6 +9332,15 @@ class VoiceWidget extends HTMLElement {
     if (featureFlags.center) patch.center = true;
     if (featureFlags.parking) patch.parking = true;
     if (featureFlags.balconyLoggia) patch.balconyLoggia = true;
+    if (featureFlags.governmentProgram) patch.governmentProgram = true;
+    if (featureFlags.eoselia) {
+      patch.eoselia = true;
+      patch.governmentProgram = true;
+    }
+    if (featureFlags.evidnovlennia) {
+      patch.evidnovlennia = true;
+      patch.governmentProgram = true;
+    }
     if (featureFlags.rcOnly) patch.rcOnly = true;
     if (featureFlags.floorNotFirst) patch.floorNotFirst = true;
     if (featureFlags.floorNotLast) patch.floorNotLast = true;
@@ -9518,6 +9560,7 @@ class VoiceWidget extends HTMLElement {
       center: query.center === true,
       parking: query.parking === true,
       balconyLoggia: query.balconyLoggia === true,
+      governmentProgram: query.governmentProgram === true,
       residentialComplexOnly: query.rcOnly === true,
       residentialComplex: query.residentialComplex != null
         ? (Array.isArray(query.residentialComplex) ? query.residentialComplex.join(', ') : String(query.residentialComplex))
@@ -9732,7 +9775,7 @@ class VoiceWidget extends HTMLElement {
     this._closeAllFiltersMultiMenus(overlay);
     const propertyType = overlay.querySelector('[data-role="propertyType"]');
     if (propertyType) propertyType.selectedIndex = 0;
-    ['rcOnly', 'smart', 'arcadia', 'center', 'parking', 'balconyLoggia'].forEach((role) => {
+    ['rcOnly', 'smart', 'arcadia', 'center', 'parking', 'balconyLoggia', 'governmentProgram'].forEach((role) => {
       const el = overlay.querySelector(`[data-role="${role}"]`);
       if (el) el.checked = false;
     });
@@ -10459,6 +10502,7 @@ class VoiceWidget extends HTMLElement {
             <label class="vw-filters-check-item"><input type="checkbox" data-role="arcadia"> ${this.formatLocationLabel('Аркадия')}</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="balconyLoggia"> Балкон/лоджия</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="center"> Центр</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="governmentProgram"> Держпрограми</label>
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-rc-wrap">
@@ -14268,6 +14312,22 @@ render() {
       if (['0', 'false', 'no', 'n', 'нет', 'ні'].includes(t)) return false;
       return null;
     };
+    const hasGovernmentProgram = (source = {}, program = '') => {
+      const features = source?.features && typeof source.features === 'object' ? source.features : {};
+      const programList = Array.isArray(features.governmentPrograms)
+        ? features.governmentPrograms.map((item) => text(item)).filter(Boolean)
+        : [];
+      const programToken = text(program);
+      if (programToken) {
+        return boolish(features[programToken]) === true || programList.includes(programToken);
+      }
+      return (
+        boolish(features.governmentProgram) === true
+        || boolish(features.eoselia) === true
+        || boolish(features.evidnovlennia) === true
+        || programList.length > 0
+      );
+    };
     const canonicalDistrict = (value) => {
       const d = this._normalizeDistrictForRelax(value || '');
       if (d === 'hadzhibeyskyi') return 'malinovsky';
@@ -14343,6 +14403,12 @@ render() {
     const qType = canonicalType(query.type || this._catalogAiLockedType || 'apartment');
     const iType = canonicalType(item.property_type || item.type);
     if (qType && iType && qType !== iType) return null;
+
+    // State-program filters are hard gates. Relaxed mode may soften price/rooms/etc.,
+    // but it must never leak listings outside the requested program layer.
+    if (query.governmentProgram === true && !hasGovernmentProgram(item)) return null;
+    if (query.eoselia === true && !hasGovernmentProgram(item, 'eoselia')) return null;
+    if (query.evidnovlennia === true && !hasGovernmentProgram(item, 'evidnovlennia')) return null;
 
     const qDistrictsRaw = normalizeDistrictList(query.district);
     const qMicrodistricts = Array.from(new Set(
@@ -16523,6 +16589,9 @@ render() {
       ['Floor', insights.floor],
       ['Residential Complex', insights.residentialComplex],
       ['RC only', insights.rcOnly],
+      ['Government Program', insights.governmentProgram],
+      ['єОселя', insights.eoselia],
+      ['єВідновлення', insights.evidnovlennia],
       ['Features', insights.features]
     ];
     const mappingRows = [
@@ -16543,6 +16612,9 @@ render() {
       ['residentialComplex', effectiveFilters.residentialComplex],
       ['parking', effectiveFilters.parking],
       ['balconyLoggia', effectiveFilters.balconyLoggia],
+      ['governmentProgram', effectiveFilters.governmentProgram],
+      ['eoselia', effectiveFilters.eoselia],
+      ['evidnovlennia', effectiveFilters.evidnovlennia],
       ['exclusive', effectiveFilters.exclusive],
       ['arcadia', effectiveFilters.arcadia],
       ['center', effectiveFilters.center]
@@ -16565,6 +16637,9 @@ render() {
       ['residentialComplex', manualFilters.residentialComplex],
       ['parking', manualFilters.parking],
       ['balconyLoggia', manualFilters.balconyLoggia],
+      ['governmentProgram', manualFilters.governmentProgram],
+      ['eoselia', manualFilters.eoselia],
+      ['evidnovlennia', manualFilters.evidnovlennia],
       ['exclusive', manualFilters.exclusive],
       ['arcadia', manualFilters.arcadia],
       ['center', manualFilters.center]
@@ -16741,6 +16816,17 @@ render() {
         || toBool(normalized?.features?.has_balcony) === true
         || toBool(normalized?.balcony) === true
       );
+      const governmentPrograms = Array.isArray(normalized?.features?.governmentPrograms)
+        ? normalized.features.governmentPrograms.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+      const hasGovernmentProgram = (
+        toBool(normalized?.features?.governmentProgram) === true
+        || toBool(normalized?.features?.eoselia) === true
+        || toBool(normalized?.features?.evidnovlennia) === true
+        || governmentPrograms.length > 0
+      );
+      const hasEoselia = toBool(normalized?.features?.eoselia) === true || governmentPrograms.includes('eoselia');
+      const hasEvidnovlennia = toBool(normalized?.features?.evidnovlennia) === true || governmentPrograms.includes('evidnovlennia');
       const isExclusive = (
         toBool(normalized?.exclusive) === true
         || toBool(normalized?.features?.exclusive) === true
@@ -16845,6 +16931,9 @@ render() {
       }
       if (filtersForMatch.parking === true) addCheck('parking', true, hasParking, hasParking ? 'card=yes' : 'card=no');
       if (filtersForMatch.balconyLoggia === true) addCheck('balconyLoggia', true, hasBalconyLoggia, hasBalconyLoggia ? 'card=yes' : 'card=no');
+      if (filtersForMatch.governmentProgram === true) addCheck('governmentProgram', true, hasGovernmentProgram, hasGovernmentProgram ? 'card=yes' : 'card=no');
+      if (filtersForMatch.eoselia === true) addCheck('eoselia', true, hasEoselia, hasEoselia ? 'card=yes' : 'card=no');
+      if (filtersForMatch.evidnovlennia === true) addCheck('evidnovlennia', true, hasEvidnovlennia, hasEvidnovlennia ? 'card=yes' : 'card=no');
       if (filtersForMatch.exclusive === true) addCheck('exclusive', true, isExclusive, isExclusive ? 'card=yes' : 'card=no');
       if (filtersForMatch.arcadia === true) addCheck('arcadia', true, isArcadia, isArcadia ? 'card=yes' : 'card=no');
       if (filtersForMatch.center === true) addCheck('center', true, isCenter, isCenter ? 'card=yes' : 'card=no');
@@ -18157,6 +18246,21 @@ render() {
     if (parkingFlag === true) pushExtra(dynamicBackFeatureItems, '🚗', isUaLang ? 'Паркінг' : 'Паркинг', boolYesLabel(parkingFlag));
     if (parkingFlag !== true && canonicalParking) {
       pushExtra(dynamicBackFeatureItems, '🚗', isUaLang ? 'Паркінг' : 'Паркинг', isUaLang ? 'є' : 'есть');
+    }
+    const programList = Array.isArray(rawFeatures.governmentPrograms)
+      ? rawFeatures.governmentPrograms.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean)
+      : [];
+    const hasGovernmentProgram = (
+      truthyLabel(rawFeatures.governmentProgram) === true
+      || truthyLabel(rawFeatures.eoselia) === true
+      || truthyLabel(rawFeatures.evidnovlennia) === true
+      || programList.length > 0
+    );
+    if (hasGovernmentProgram) {
+      const labels = [];
+      if (truthyLabel(rawFeatures.eoselia) === true || programList.includes('eoselia')) labels.push('єОселя');
+      if (truthyLabel(rawFeatures.evidnovlennia) === true || programList.includes('evidnovlennia')) labels.push('єВідновлення');
+      pushExtra(dynamicBackFeatureItems, '🏛️', isUaLang ? 'Держпрограми' : 'Госпрограммы', labels.length ? labels.join(', ') : boolYesLabel(true));
     }
     const terraceFlag = truthyLabel(rawFeatures.terrace);
     if (terraceFlag === true) pushExtra(dynamicBackFeatureItems, '🌿', isUaLang ? 'Тераса' : 'Терраса', boolYesLabel(terraceFlag));
