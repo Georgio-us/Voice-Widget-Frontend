@@ -6204,6 +6204,9 @@ class VoiceWidget extends HTMLElement {
                   </select>
                 </label>
               </div>
+              <label class="vw-access-add-field" data-role="land-area-field" hidden>
+                <input class="vw-access-add-input" type="text" name="landAreaSotka" data-role="land-area-sotka" placeholder="${langCode === 'ua' ? 'Площа ділянки, сотки' : 'Площадь участка, сотки'}" autocomplete="off">
+              </label>
               <div class="vw-access-add-actions">
                 <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
                 <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
@@ -7157,13 +7160,14 @@ class VoiceWidget extends HTMLElement {
         fracPart = String(fracPart || '').replace(/[^\d]/g, '').slice(0, Math.max(0, Number(fractionDigits) || 0));
         return fracPart ? `${intPart}.${fracPart}` : intPart;
       };
-      const formatAreaLabel = (value) => {
+      const stripAreaUnit = (value) => String(value || '').replace(/\s*(?:м²|м2|m²|m2|сот\.?|соток|сотки)\s*$/i, '').trim();
+      const formatAreaLabel = (value, unit = 'м²') => {
         const normalized = normalizeDecimalString(value, 2);
         if (!normalized) return '';
         const [intPart = '0', fracPart = ''] = normalized.split('.');
         const groupedInt = String(intPart).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
         const cleanFrac = String(fracPart || '').replace(/0+$/g, '');
-        return cleanFrac ? `${groupedInt},${cleanFrac} м²` : `${groupedInt} м²`;
+        return cleanFrac ? `${groupedInt},${cleanFrac} ${unit}` : `${groupedInt} ${unit}`;
       };
       const steps = isUaLang
         ? { 1: 'Основні параметри', 2: 'Додатково', 3: 'Попередній перегляд', 4: 'Готово' }
@@ -7171,6 +7175,8 @@ class VoiceWidget extends HTMLElement {
       const draft = { photos: Array(10).fill(''), photoFiles: Array(10).fill(null) };
       const priceInput = overlay.querySelector('[data-role="price"]');
       const areaInput = overlay.querySelector('[data-role="area"]');
+      const landAreaInput = overlay.querySelector('[data-role="land-area-sotka"]');
+      const landAreaField = overlay.querySelector('[data-role="land-area-field"]');
       const roomsInput = overlay.querySelector('[data-role="rooms"]');
       const districtInput = overlay.querySelector('[data-role="district"]');
       const titleInput = overlay.querySelector('[data-role="title"]');
@@ -7190,6 +7196,23 @@ class VoiceWidget extends HTMLElement {
       const textFields = Array.from(overlay.querySelectorAll('input[type="text"]:not([readonly]), textarea'));
       const focusableFields = Array.from(overlay.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([readonly]), textarea, select'));
       let activeField = null;
+      const getSelectedPropertyType = () => String(typeInput?.value || '').trim().toLowerCase();
+      const syncAddPropertyAreaUx = (options = {}) => {
+        const propertyType = getSelectedPropertyType();
+        const isHouse = propertyType === 'house';
+        const isLand = propertyType === 'land';
+        if (areaInput) {
+          areaInput.placeholder = isLand
+            ? (isUaLang ? '* Площа ділянки, сотки' : '* Площадь участка, сотки')
+            : (isHouse ? (isUaLang ? '* Площа будинку' : '* Площадь дома') : (isUaLang ? '* Вкажіть площу' : '* Укажите площадь'));
+        }
+        if (landAreaField) landAreaField.hidden = !isHouse;
+        if (!isHouse && landAreaInput) landAreaInput.value = '';
+        if (options.clearArea === true) {
+          if (areaInput) areaInput.value = '';
+          if (landAreaInput) landAreaInput.value = '';
+        }
+      };
       const getKeyboardInset = () => {
         try {
           const vv = window.visualViewport;
@@ -7356,6 +7379,7 @@ class VoiceWidget extends HTMLElement {
           })();
         }
         try { updateComplexLabel(); } catch {}
+        syncAddPropertyAreaUx();
       };
       const collectCurrentDraftState = () => {
         const values = {};
@@ -7412,6 +7436,7 @@ class VoiceWidget extends HTMLElement {
         const step = Number(saved.step || 1);
         setStep(step >= 1 && step <= 3 ? step : 1);
         try { updateComplexLabel(); } catch {}
+        syncAddPropertyAreaUx();
       };
       const hasUnsavedChanges = () => {
         if (draft.photos.some(Boolean)) return true;
@@ -7480,10 +7505,12 @@ class VoiceWidget extends HTMLElement {
         });
       };
       const getDraftData = () => {
-        const areaRaw = String(areaInput?.value || '').replace(/\s*м²$/i, '').trim();
+        const areaRaw = stripAreaUnit(areaInput?.value || '');
+        const landAreaRaw = stripAreaUnit(landAreaInput?.value || '');
         const priceRaw = String(priceInput?.value || '').replace(/\s*USD\s*$/i, '').trim();
         const pickCheck = (name) => !!overlay.querySelector(`.vw-access-add-check-grid input[name="${name}"]`)?.checked;
         const opRaw = String(overlay.querySelector('[data-role="listing-operation"]')?.value || '').trim().toLowerCase();
+        const propertyType = typeMap[String(typeInput?.value || '')] || 'apartment';
         return {
           id: String(reservedIdInput?.value || (isEditProperty ? editPropertyId : '') || '').trim() || '—',
           operation: opRaw === 'rent' ? 'rent' : 'sale',
@@ -7492,12 +7519,14 @@ class VoiceWidget extends HTMLElement {
           price: priceRaw || '0',
           rooms: String(roomsInput?.value || '').trim() || '0',
           area: areaRaw || '0',
+          areaUnit: propertyType === 'land' ? 'сот.' : 'м²',
+          landAreaSotka: landAreaRaw || '',
           floor: String(floorInput?.value || '').trim() || '0',
           floorsTotal: String(floorsTotalInput?.value || '').trim() || '',
           complex: String(overlay.querySelector('[data-role="complex"]')?.value || '').trim() || '',
           microdistrict: String(overlay.querySelector('[data-role="microdistrict"]')?.value || '').trim() || '',
           description: String(descriptionInput?.value || '').trim() || 'Описание не добавлено.',
-          type: typeMap[String(typeInput?.value || '')] || 'apartment',
+          type: propertyType,
           photos: draft.photos.filter(Boolean),
           photoFiles: draft.photoFiles.filter((f) => f instanceof File),
           checks: {
@@ -7568,6 +7597,7 @@ class VoiceWidget extends HTMLElement {
             price: parsePrice(),
             rooms: parseRooms(),
             area: parseArea(),
+            'land-area-sotka': String(features.landAreaSotka || features.land_area_sotka || '').trim(),
             district: String(property.district || property.location_district || '').trim(),
             floor: parseFloor(),
             'floors-total': parseFloorsTotal(),
@@ -7624,7 +7654,10 @@ class VoiceWidget extends HTMLElement {
           .filter(Boolean);
         overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = districtMeta.length ? districtMeta.join(' · ') : '—');
         overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
-        overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = `📐 ${data.area} m²`);
+        const previewAreaText = data.type === 'house' && data.landAreaSotka
+          ? `📐 ${data.area} м² · ${data.landAreaSotka} сот.`
+          : `📐 ${data.area} ${data.areaUnit || 'м²'}`;
+        overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = previewAreaText);
         overlay.querySelector('[data-role="preview-floor"]') && (overlay.querySelector('[data-role="preview-floor"]').textContent = `🏢 ${data.floor} floor`);
         previewThumbs.forEach((thumb, idx) => {
           const src = imageList[idx] || '';
@@ -7755,15 +7788,15 @@ class VoiceWidget extends HTMLElement {
           });
           return;
         }
-        if (fieldEl === areaInput) {
+        if (fieldEl === areaInput || fieldEl === landAreaInput) {
           attachInlineFieldActions(fieldEl, {
             onInput: (el) => {
               el.value = String(el.value || '')
-                .replace(/\s*м²$/i, '')
+                .replace(/\s*(?:м²|м2|m²|m2|сот\.?|соток|сотки)\s*$/i, '')
                 .replace(/[^\d\s,.\u00A0]/g, '');
             },
             onApply: (el) => {
-              const raw = String(el.value || '').replace(/\s*м²$/i, '').trim();
+              const raw = stripAreaUnit(el.value || '');
               if (!raw) return true;
               if (/[^\d\s,.\u00A0]/.test(raw)) {
                 setFieldError(el, 'Введите цифры');
@@ -7774,12 +7807,13 @@ class VoiceWidget extends HTMLElement {
                 setFieldError(el, 'Введите цифры');
                 return false;
               }
-              el.value = formatAreaLabel(normalized);
+              const unit = (el === landAreaInput || (el === areaInput && getSelectedPropertyType() === 'land')) ? 'сот.' : 'м²';
+              el.value = formatAreaLabel(normalized, unit);
               return true;
             }
           });
           fieldEl.addEventListener('focus', () => {
-            fieldEl.value = String(fieldEl.value || '').replace(/\s*м²$/i, '');
+            fieldEl.value = stripAreaUnit(fieldEl.value || '');
           });
           return;
         }
@@ -8089,6 +8123,10 @@ class VoiceWidget extends HTMLElement {
           applyAutoNextId();
         }
       }
+      typeInput?.addEventListener('change', () => {
+        syncAddPropertyAreaUx({ clearArea: true });
+      });
+      syncAddPropertyAreaUx();
       photoSlots.forEach((slot) => {
         slot.addEventListener('click', () => {
           if (!fileInput || !targetInput) return;
@@ -8174,7 +8212,7 @@ class VoiceWidget extends HTMLElement {
             complex: data.complex,
             price: String(data.price || '').replace(/[^\d]/g, ''),
             rooms: data.rooms,
-            area: normalizeDecimalString(String(data.area || '').replace(/\s*м²$/i, ''), 2),
+            area: normalizeDecimalString(stripAreaUnit(data.area || ''), 2),
             floor: data.floor,
             floorsTotal: data.floorsTotal,
             existingImages,
@@ -8600,6 +8638,15 @@ class VoiceWidget extends HTMLElement {
       }
       return opts;
     }
+    if (type === 'landAreaMin' || type === 'landAreaMax') {
+      const sotkaSteps = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 17, 20, 25, 30, 40, 50, 75, 100];
+      if (type === 'landAreaMin') opts.push({ value: '', label: 'От min' });
+      if (type === 'landAreaMax') opts.push({ value: 'max', label: 'До max' });
+      for (const v of sotkaSteps) {
+        opts.push({ value: String(v), label: `${v} сот.` });
+      }
+      return opts;
+    }
     if (type === 'floorMin' || type === 'floorMax') {
       const floorSteps = [];
       for (let v = 1; v <= 10; v += 1) floorSteps.push(v);
@@ -8624,6 +8671,20 @@ class VoiceWidget extends HTMLElement {
     if (!selectEl) return;
     const options = this.buildFilterPickerOptions(type, operation);
     selectEl.innerHTML = options.map((opt) => `<option value="${String(opt.value).replace(/"/g, '&quot;')}">${String(opt.label)}</option>`).join('');
+  }
+
+  syncFiltersAreaUx(overlay) {
+    if (!overlay) return;
+    const propertyType = String(overlay.querySelector('[data-role="propertyType"]')?.value || '').trim();
+    const areaBlock = overlay.querySelector('[data-role="area-range-block"]');
+    const landAreaBlock = overlay.querySelector('[data-role="land-area-range-block"]');
+    const areaName = overlay.querySelector('[data-role="area-range-name"]');
+    const isHouse = propertyType === 'house';
+    const isLand = propertyType === 'land';
+    if (areaBlock) areaBlock.hidden = isLand;
+    if (landAreaBlock) landAreaBlock.hidden = !(isHouse || isLand);
+    if (areaName) areaName.textContent = isHouse ? 'Площадь дома' : 'Площадь';
+    this.syncFilterPickerLabels(overlay);
   }
 
   syncFiltersSelectAllLabels(overlay) {
@@ -8910,6 +8971,7 @@ class VoiceWidget extends HTMLElement {
     if (rcHid) rcHid.value = String(payload.residentialComplex || '').trim();
     try { overlay._syncFiltersRcLabel?.(); } catch {}
     this.syncFiltersSelectAllLabels(overlay);
+    this.syncFiltersAreaUx(overlay);
     this.syncFilterPickerLabels(overlay);
   }
 
@@ -9766,6 +9828,8 @@ class VoiceWidget extends HTMLElement {
 
   resetFiltersOverlayForm(overlay) {
     if (!overlay) return;
+    overlay.dataset.listingModeTouched = '0';
+    overlay.dataset.listingModeImplicit = '';
     overlay.querySelectorAll('[data-role="listingMode"]').forEach((btn) => {
       btn.classList.remove('is-active');
     });
@@ -9775,6 +9839,14 @@ class VoiceWidget extends HTMLElement {
     this._closeAllFiltersMultiMenus(overlay);
     const propertyType = overlay.querySelector('[data-role="propertyType"]');
     if (propertyType) propertyType.selectedIndex = 0;
+    ['areaMin', 'areaMax', 'landAreaMin', 'landAreaMax', 'floorMin'].forEach((picker) => {
+      const el = overlay.querySelector(`select[data-picker="${picker}"]`);
+      if (el) el.value = '';
+    });
+    ['priceMax', 'areaMax', 'landAreaMax', 'floorMax'].forEach((picker) => {
+      const el = overlay.querySelector(`select[data-picker="${picker}"]`);
+      if (el && Array.from(el.options || []).some((opt) => opt.value === 'max')) el.value = 'max';
+    });
     ['rcOnly', 'smart', 'arcadia', 'center', 'parking', 'balconyLoggia', 'governmentProgram'].forEach((role) => {
       const el = overlay.querySelector(`[data-role="${role}"]`);
       if (el) el.checked = false;
@@ -9783,6 +9855,7 @@ class VoiceWidget extends HTMLElement {
     if (rcHid) rcHid.value = '';
     try { overlay._syncFiltersRcLabel?.(); } catch {}
     this.syncFiltersSelectAllLabels(overlay);
+    this.syncFiltersAreaUx(overlay);
     this.syncFilterPickerLabels(overlay);
   }
 
@@ -9828,6 +9901,7 @@ class VoiceWidget extends HTMLElement {
         const picker = String(selectEl.getAttribute('data-picker') || '');
         if (picker.startsWith('price')) this.normalizeFilterRangePair(overlay, 'price', picker);
         if (picker.startsWith('area')) this.normalizeFilterRangePair(overlay, 'area', picker);
+        if (picker.startsWith('landArea')) this.normalizeFilterRangePair(overlay, 'landArea', picker);
         if (picker.startsWith('floor')) this.normalizeFilterRangePair(overlay, 'floor', picker);
         this.syncFilterPickerLabels(overlay);
       });
@@ -9836,7 +9910,13 @@ class VoiceWidget extends HTMLElement {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       selectEl.addEventListener('change', () => {
+        const selectedType = String(selectEl.value || '').trim();
+        this.resetFiltersOverlayForm(overlay);
+        if (selectedType) selectEl.value = selectedType;
+        overlay.dataset.listingModeTouched = '0';
+        overlay.dataset.listingModeImplicit = '';
         this.syncFiltersSelectAllLabels(overlay);
+        this.syncFiltersAreaUx(overlay);
       });
     });
     // Keep only one dropdown open at a time:
@@ -10214,6 +10294,9 @@ class VoiceWidget extends HTMLElement {
         gap: 10px;
         align-items: center;
       }
+      .vw-filters-range-block[hidden] {
+        display: none !important;
+      }
       .vw-filters-range-name {
         font-size: .75rem;
         font-weight: 500;
@@ -10466,8 +10549,8 @@ class VoiceWidget extends HTMLElement {
               </label>
             </div>
           </div>
-          <div class="vw-filters-range-block">
-            <span class="vw-filters-range-name">Площадь</span>
+          <div class="vw-filters-range-block" data-role="area-range-block">
+            <span class="vw-filters-range-name" data-role="area-range-name">Площадь</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
                 <span class="vw-filters-picker-label" data-display="areaMin">От min</span>
@@ -10477,6 +10560,20 @@ class VoiceWidget extends HTMLElement {
               <label class="vw-filters-picker-field--in-dual">
                 <span class="vw-filters-picker-label" data-display="areaMax">До max</span>
                 <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="Площадь до"></select>
+              </label>
+            </div>
+          </div>
+          <div class="vw-filters-range-block" data-role="land-area-range-block" hidden>
+            <span class="vw-filters-range-name">Площадь участка</span>
+            <div class="vw-filters-range-dual">
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="landAreaMin">От min</span>
+                <select class="vw-filters-picker-select" data-picker="landAreaMin" aria-label="Площадь участка от"></select>
+              </label>
+              <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
+              <label class="vw-filters-picker-field--in-dual">
+                <span class="vw-filters-picker-label" data-display="landAreaMax">До max</span>
+                <select class="vw-filters-picker-select" data-picker="landAreaMax" aria-label="Площадь участка до"></select>
               </label>
             </div>
           </div>
@@ -10530,6 +10627,7 @@ class VoiceWidget extends HTMLElement {
       this.fillFilterPickerSelect(sel, pickerType, currentOp);
     });
     this.applyFiltersOverlayPayload(overlay, payload);
+    this.syncFiltersAreaUx(overlay);
     this.bindFiltersOverlayEvents(overlay);
     this.bindFiltersResidentialComplexPicker(overlay);
     overlay.querySelector('[data-role="close"]')?.addEventListener('click', () => this.closeFiltersOverlay());
