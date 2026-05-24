@@ -1772,9 +1772,9 @@
                     text-overflow: ellipsis;
                     white-space: nowrap;
                     color: var(--text-primary);
-                    font-size: 13px;
-                    font-weight: 650;
-                    line-height: 1.2;
+                    font-size: 14px;
+                    font-weight: 400;
+                    line-height: 1.4;
                 }
                 .thinking-phrase.is-swapping {
                     animation: thinkingPhraseSwap 360ms ease;

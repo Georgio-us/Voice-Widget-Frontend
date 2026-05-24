@@ -11921,9 +11921,9 @@ class VoiceWidget extends HTMLElement {
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
         padding: 0 10px;
-        font: inherit;
-        font-size: .83em;
-        font-weight: 600;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 400;
       }
       .vw-access-sort-select:focus {
         outline: none;
