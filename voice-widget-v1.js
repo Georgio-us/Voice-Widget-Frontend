@@ -729,6 +729,9 @@ class UnderstandingManager {
       area: pick('area'),
       areaMin: pick('areaMin'),
       areaMax: pick('areaMax'),
+      landArea: pick('landArea'),
+      landAreaMin: pick('landAreaMin'),
+      landAreaMax: pick('landAreaMax'),
       floor: pick('floor'),
       floorNotFirst: pick('floorNotFirst'),
       floorNotLast: pick('floorNotLast'),
@@ -1674,7 +1677,7 @@ class APIClient {
       'city', 'district', 'rooms', 'type', 'operation',
       'microdistrict', 'neighborhood',
       'minPrice', 'maxPrice',
-      'minArea', 'maxArea',
+      'minArea', 'maxArea', 'minLandArea', 'maxLandArea',
       'minFloor', 'maxFloor',
       'floorNotFirst', 'floorNotLast',
       'smart', 'arcadia', 'rcOnly', 'residentialComplex',
@@ -8969,6 +8972,8 @@ class VoiceWidget extends HTMLElement {
       priceTo: read('priceMax'),
       areaFrom: read('areaMin'),
       areaTo: read('areaMax'),
+      landAreaFrom: read('landAreaMin'),
+      landAreaTo: read('landAreaMax'),
       floorFrom: floorNotFirst ? '' : floorFromRaw,
       floorTo: floorNotLast ? 'max' : floorToRaw,
       floorNotFirst,
@@ -9049,6 +9054,8 @@ class VoiceWidget extends HTMLElement {
     setPicker('priceMax', payload.priceTo);
     setPicker('areaMin', payload.areaFrom);
     setPicker('areaMax', payload.areaTo);
+    setPicker('landAreaMin', payload.landAreaFrom);
+    setPicker('landAreaMax', payload.landAreaTo);
     setPicker('floorMin', payload.floorNotFirst === true ? 'not_first' : payload.floorFrom);
     setPicker('floorMax', payload.floorNotLast === true ? 'not_last' : payload.floorTo);
     const roomsMulti = Array.isArray(payload.roomsMulti) && payload.roomsMulti.length
@@ -9107,6 +9114,8 @@ class VoiceWidget extends HTMLElement {
     const maxPrice = parseNum(source.priceTo);
     const minArea = parseNum(source.areaFrom);
     const maxArea = parseNum(source.areaTo);
+    const minLandArea = parseNum(source.landAreaFrom);
+    const maxLandArea = parseNum(source.landAreaTo);
     const minFloor = parseNum(source.floorFrom);
     const maxFloor = parseNum(source.floorTo);
     if (Object.prototype.hasOwnProperty.call(source, 'floorNotFirst')) out.floorNotFirst = source.floorNotFirst === true;
@@ -9120,6 +9129,8 @@ class VoiceWidget extends HTMLElement {
     }
     if (minArea != null) out.minArea = minArea;
     if (maxArea != null) out.maxArea = maxArea;
+    if (minLandArea != null) out.minLandArea = minLandArea;
+    if (maxLandArea != null) out.maxLandArea = maxLandArea;
     if (minFloor != null) out.minFloor = minFloor;
     if (maxFloor != null) out.maxFloor = maxFloor;
     const roomsMultiRaw = [
@@ -9445,6 +9456,20 @@ class VoiceWidget extends HTMLElement {
       patch.minArea = areaMin;
     }
 
+    const landArea = parseNum(insights?.landArea);
+    const landAreaMin = parseNum(insights?.landAreaMin);
+    const landAreaMax = parseNum(insights?.landAreaMax);
+    if (landAreaMin != null && landAreaMax != null) {
+      patch.minLandArea = Math.min(landAreaMin, landAreaMax);
+      patch.maxLandArea = Math.max(landAreaMin, landAreaMax);
+    } else if (landAreaMax != null) {
+      patch.maxLandArea = landAreaMax;
+    } else if (landArea != null) {
+      patch.maxLandArea = landArea;
+    } else if (landAreaMin != null) {
+      patch.minLandArea = landAreaMin;
+    }
+
     let rcInsight = Array.isArray(insights?.residentialComplex)
       ? insights.residentialComplex.map((item) => String(item || '').trim()).filter(Boolean)
       : String(insights?.residentialComplex || '').split(',').map((item) => String(item || '').trim()).filter(Boolean);
@@ -9681,6 +9706,9 @@ class VoiceWidget extends HTMLElement {
     if (merged.minArea != null && merged.maxArea != null && Number(merged.minArea) > Number(merged.maxArea)) {
       merged.maxArea = merged.minArea;
     }
+    if (merged.minLandArea != null && merged.maxLandArea != null && Number(merged.minLandArea) > Number(merged.maxLandArea)) {
+      merged.maxLandArea = merged.minLandArea;
+    }
     if (merged.minFloor != null && merged.maxFloor != null && Number(merged.minFloor) > Number(merged.maxFloor)) {
       merged.maxFloor = merged.minFloor;
     }
@@ -9708,6 +9736,8 @@ class VoiceWidget extends HTMLElement {
       priceTo: query.maxPrice != null ? String(query.maxPrice) : '',
       areaFrom: query.minArea != null ? String(query.minArea) : '',
       areaTo: query.maxArea != null ? String(query.maxArea) : '',
+      landAreaFrom: query.minLandArea != null ? String(query.minLandArea) : '',
+      landAreaTo: query.maxLandArea != null ? String(query.maxLandArea) : '',
       floorFrom: query.minFloor != null ? String(query.minFloor) : '',
       floorTo: query.maxFloor != null ? String(query.maxFloor) : '',
       floorNotFirst: query.floorNotFirst === true,
@@ -9779,6 +9809,11 @@ class VoiceWidget extends HTMLElement {
     if (qMinArea != null && qMaxArea != null) query.__areaAnchor = Math.round((qMinArea + qMaxArea) / 2);
     else query.__areaAnchor = qMinArea ?? qMaxArea ?? null;
 
+    const qMinLandArea = toNum(query.minLandArea);
+    const qMaxLandArea = toNum(query.maxLandArea);
+    if (qMinLandArea != null && qMaxLandArea != null) query.__landAreaAnchor = Math.round((qMinLandArea + qMaxLandArea) / 2);
+    else query.__landAreaAnchor = qMinLandArea ?? qMaxLandArea ?? null;
+
     const qRoomsRaw = Array.isArray(query.rooms)
       ? String(query.rooms[0] || '').trim()
       : String(query.rooms || '').trim();
@@ -9798,6 +9833,7 @@ class VoiceWidget extends HTMLElement {
       delete preValidationDebug.__budgetAnchor;
       delete preValidationDebug.__priceAnchor;
       delete preValidationDebug.__areaAnchor;
+      delete preValidationDebug.__landAreaAnchor;
       delete preValidationDebug.__roomsAnchor;
       this._debugLastPreValidationQuery = preValidationDebug;
     } catch {}
@@ -9829,6 +9865,7 @@ class VoiceWidget extends HTMLElement {
     delete requestQuery.__budgetAnchor;
     delete requestQuery.__priceAnchor;
     delete requestQuery.__areaAnchor;
+    delete requestQuery.__landAreaAnchor;
     delete requestQuery.__roomsAnchor;
     try {
       const postValidationDebug = { ...requestQuery };
@@ -14704,6 +14741,18 @@ render() {
       }
     }
 
+    const qMinLandArea = toNum(query.minLandArea);
+    const qMaxLandArea = toNum(query.maxLandArea);
+    if (qMinLandArea != null || qMaxLandArea != null) {
+      const iLandArea = toNum(item.land_area_sotka ?? item.landAreaSotka);
+      if (iLandArea == null) {
+        requireStage(4);
+      } else {
+        if (qMinLandArea != null && iLandArea < qMinLandArea) requireStage(4);
+        if (qMaxLandArea != null && iLandArea > qMaxLandArea) requireStage(4);
+      }
+    }
+
     // 5) budget soft-off
     const qMinPrice = toNum(query.minPrice);
     const qMaxPrice = toNum(query.maxPrice);
@@ -16823,6 +16872,9 @@ render() {
       ['Budget Max', insights.budgetMax],
       ['Area Min', insights.areaMin],
       ['Area Max', insights.areaMax],
+      ['Land Area', insights.landArea],
+      ['Land Area Min', insights.landAreaMin],
+      ['Land Area Max', insights.landAreaMax],
       ['Floor', insights.floor],
       ['Residential Complex', insights.residentialComplex],
       ['RC only', insights.rcOnly],
@@ -16841,6 +16893,8 @@ render() {
       ['maxPrice', effectiveFilters.maxPrice],
       ['minArea', effectiveFilters.minArea],
       ['maxArea', effectiveFilters.maxArea],
+      ['minLandArea', effectiveFilters.minLandArea],
+      ['maxLandArea', effectiveFilters.maxLandArea],
       ['minFloor', effectiveFilters.minFloor],
       ['maxFloor', effectiveFilters.maxFloor],
       ['floorNotFirst', effectiveFilters.floorNotFirst],
@@ -16866,6 +16920,8 @@ render() {
       ['maxPrice', manualFilters.maxPrice],
       ['minArea', manualFilters.minArea],
       ['maxArea', manualFilters.maxArea],
+      ['minLandArea', manualFilters.minLandArea],
+      ['maxLandArea', manualFilters.maxLandArea],
       ['minFloor', manualFilters.minFloor],
       ['maxFloor', manualFilters.maxFloor],
       ['floorNotFirst', manualFilters.floorNotFirst],
@@ -17039,6 +17095,7 @@ render() {
       const smartFlat = normalized?.features?.smartFlat === true;
       const priceNum = toNum(normalized.priceUSD ?? normalized.priceEUR ?? normalized.price_amount ?? normalized.price);
       const areaNum = toNum(normalized.area_m2);
+      const landAreaNum = toNum(normalized.land_area_sotka ?? normalized.landAreaSotka);
       const floorNum = toNum(normalized.floor);
       const totalFloors = readTotalFloors(normalized);
       const hasComplex = normalizeRcName(normalized?.features?.complex || normalized?.display_specs?.complex || normalized?.residentialComplex || normalized?.residential_complex || normalized?.complex || '') !== '';
@@ -17141,6 +17198,12 @@ render() {
         const maxA = toNum(filtersForMatch.maxArea);
         const pass = areaNum != null && (minA == null || areaNum >= minA) && (maxA == null || areaNum <= maxA);
         addCheck('area', true, pass, `card=${areaNum ?? 'n/a'} expected=${minA ?? '-'}..${maxA ?? '-'}`);
+      }
+      if (filterIsSet(filtersForMatch.minLandArea) || filterIsSet(filtersForMatch.maxLandArea)) {
+        const minLA = toNum(filtersForMatch.minLandArea);
+        const maxLA = toNum(filtersForMatch.maxLandArea);
+        const pass = landAreaNum != null && (minLA == null || landAreaNum >= minLA) && (maxLA == null || landAreaNum <= maxLA);
+        addCheck('landArea', true, pass, `card=${landAreaNum ?? 'n/a'} expected=${minLA ?? '-'}..${maxLA ?? '-'} сот.`);
       }
       if (filterIsSet(filtersForMatch.minFloor) || filterIsSet(filtersForMatch.maxFloor)) {
         const minF = toNum(filtersForMatch.minFloor);
@@ -17276,6 +17339,9 @@ render() {
       ['source.area', aiSourceInsights?.area],
       ['source.areaMin', aiSourceInsights?.areaMin],
       ['source.areaMax', aiSourceInsights?.areaMax],
+      ['source.landArea', aiSourceInsights?.landArea],
+      ['source.landAreaMin', aiSourceInsights?.landAreaMin],
+      ['source.landAreaMax', aiSourceInsights?.landAreaMax],
       ['source.floor', aiSourceInsights?.floor],
       ['source.floorNotFirst', aiSourceInsights?.floorNotFirst],
       ['source.floorNotLast', aiSourceInsights?.floorNotLast],
