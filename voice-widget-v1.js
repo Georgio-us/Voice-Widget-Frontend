@@ -5370,6 +5370,8 @@ class VoiceWidget extends HTMLElement {
           : '—';
         const operation = String(item?.operation || item?.listingOperation || '').trim().toLowerCase();
         const propertyType = String(item?.property_type || item?.propertyType || item?.type || '').trim().toLowerCase();
+        const createdAtRaw = item?.created_at || item?.createdAt || item?.importedAt || item?.updated_at || item?.updatedAt || null;
+        const createdAtMs = createdAtRaw ? Date.parse(String(createdAtRaw)) : NaN;
         const imageFromArray = Array.isArray(item?.images)
           ? item.images.find((src) => typeof src === 'string' && src.trim())
           : '';
@@ -5390,6 +5392,9 @@ class VoiceWidget extends HTMLElement {
           areaValue: Number.isFinite(areaRaw) && areaRaw > 0 ? areaRaw : null,
           operation: ['sale', 'rent'].includes(operation) ? operation : '',
           propertyType,
+          sourceKind: this.getAdminObjectSourceKind(id),
+          createdAtValue: Number.isFinite(createdAtMs) ? createdAtMs : null,
+          originalIndex: idx,
           image
         };
       })
@@ -5417,6 +5422,7 @@ class VoiceWidget extends HTMLElement {
     const operationFilter = String(safeOptions.operationFilter || 'all').toLowerCase();
     const sortBy = String(safeOptions.sortBy || '').toLowerCase();
     const sortDir = String(safeOptions.sortDir || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc';
+    const sortMode = String(safeOptions.sortMode || 'latest').toLowerCase();
 
     let filtered = list;
     if (onlyLiked) {
@@ -5424,6 +5430,45 @@ class VoiceWidget extends HTMLElement {
     }
     if (operationFilter === 'sale' || operationFilter === 'rent') {
       filtered = filtered.filter((item) => String(item?.operation || '').toLowerCase() === operationFilter);
+    }
+    if (sortMode === 'source_olx' || sortMode === 'source_manual' || sortMode === 'source_database') {
+      const expected = sortMode.replace('source_', '');
+      filtered = filtered.filter((item) => String(item?.sourceKind || this.getAdminObjectSourceKind(item?.id)).toLowerCase() === expected);
+    }
+    const sortNumeric = (key, dir = 'asc') => {
+      const dirFactor = dir === 'desc' ? -1 : 1;
+      filtered.sort((a, b) => {
+        const av = Number(a?.[key]);
+        const bv = Number(b?.[key]);
+        const aOk = Number.isFinite(av);
+        const bOk = Number.isFinite(bv);
+        if (!aOk && !bOk) return 0;
+        if (!aOk) return 1;
+        if (!bOk) return -1;
+        if (av === bv) return 0;
+        return av > bv ? dirFactor : -dirFactor;
+      });
+    };
+    if (sortMode === 'latest' || sortMode === 'source_olx' || sortMode === 'source_manual' || sortMode === 'source_database') {
+      filtered.sort((a, b) => {
+        const av = Number(a?.createdAtValue);
+        const bv = Number(b?.createdAtValue);
+        const aOk = Number.isFinite(av);
+        const bOk = Number.isFinite(bv);
+        if (aOk && bOk && av !== bv) return bv - av;
+        if (aOk && !bOk) return -1;
+        if (!aOk && bOk) return 1;
+        return Number(b?.originalIndex || 0) - Number(a?.originalIndex || 0);
+      });
+      return filtered;
+    }
+    if (sortMode === 'price_asc') {
+      sortNumeric('priceValue', 'asc');
+      return filtered;
+    }
+    if (sortMode === 'price_desc') {
+      sortNumeric('priceValue', 'desc');
+      return filtered;
     }
     if (sortBy === 'price' || sortBy === 'area') {
       const dirFactor = sortDir === 'desc' ? -1 : 1;
@@ -5440,6 +5485,16 @@ class VoiceWidget extends HTMLElement {
       });
     }
     return filtered;
+  }
+
+  getAdminObjectSourceKind(idOrItem = '') {
+    const rawId = typeof idOrItem === 'object'
+      ? String(idOrItem?.id || idOrItem?.external_id || idOrItem?.externalId || '').trim()
+      : String(idOrItem || '').trim();
+    const upper = rawId.toUpperCase();
+    if (upper.startsWith('OLX')) return 'olx';
+    if (upper.startsWith('A')) return 'manual';
+    return 'database';
   }
 
   getAdminObjectOperationLabel(item) {
@@ -6104,6 +6159,7 @@ class VoiceWidget extends HTMLElement {
       onlyLiked: safeOptions.onlyLiked === true || String(safeOptions.onlyLiked || '').toLowerCase() === 'true',
       sortBy: String(safeOptions.sortBy || '').toLowerCase(),
       sortDir: String(safeOptions.sortDir || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc',
+      sortMode: String(safeOptions.sortMode || 'latest').toLowerCase(),
       operationFilter: String(safeOptions.operationFilter || 'all').toLowerCase()
     };
     const adminRawList = this.getAdminObjectsMockList({ preferFull: safeSection === 'properties' });
@@ -6355,18 +6411,27 @@ class VoiceWidget extends HTMLElement {
             </div>
           </article>
         `).join('');
+        const sortOptions = [
+          ['latest', langCode === 'ua' ? 'Останні додані' : 'Последние добавленные'],
+          ['price_asc', langCode === 'ua' ? 'Найдешевші' : 'Самые дешёвые'],
+          ['price_desc', langCode === 'ua' ? 'Найдорожчі' : 'Самые дорогие'],
+          ['source_olx', langCode === 'ua' ? 'Імпортовані з OLX' : 'Импортированные с OLX'],
+          ['source_manual', langCode === 'ua' ? 'Додані вручну' : 'Добавленные вручную'],
+          ['source_database', langCode === 'ua' ? 'Додані з бази' : 'Добавленные из базы']
+        ];
+        const activeSortMode = sortOptions.some(([value]) => value === adminViewOptions.sortMode)
+          ? adminViewOptions.sortMode
+          : 'latest';
+        const sortSelectLabel = langCode === 'ua' ? 'Сортувати за' : 'Сортировать по';
         return `
           <div class="vw-access-objects-layout">
             <div class="vw-access-objects-topbar">
               <div class="vw-access-objects-total">${langCode === 'ua' ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
               <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${langCode === 'ua' ? 'Обрати все' : 'Выбрать всё'}</button>
               <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="sort-trigger">
-                  <span>Сортировать по</span>
-                  <svg viewBox="0 0 16 16" aria-hidden="true">
-                    <path d="M2 4h12M4 8h8M6 12h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                  </svg>
-                </button>
+                <select class="vw-access-sort-select" data-role="sort-select" aria-label="${sortSelectLabel}" title="${sortSelectLabel}">
+                  ${sortOptions.map(([value, label]) => `<option value="${value}"${value === activeSortMode ? ' selected' : ''}>${label}</option>`).join('')}
+                </select>
               </div>
             </div>
             <div class="vw-access-objects-scroll">
@@ -6809,120 +6874,14 @@ class VoiceWidget extends HTMLElement {
         const selectedCount = checks.filter((check) => check.checked).length;
         setAllSelected(selectedCount !== checks.length);
       });
-      overlay.querySelector('[data-role="sort-trigger"]')?.addEventListener('click', () => {
-        const cycleDeal = (current) => {
-          if (current === 'all') return 'sale';
-          if (current === 'sale') return 'rent';
-          return 'all';
-        };
-        const reopenWith = (patch = {}) => {
-          this.openAccessSubOverlay('properties', { ...adminViewOptions, ...patch });
-        };
-        const draft = {
-          onlyLiked: !!adminViewOptions.onlyLiked,
-          sortBy: String(adminViewOptions.sortBy || ''),
-          sortDir: adminViewOptions.sortDir === 'desc' ? 'desc' : 'asc',
-          operationFilter: ['all', 'sale', 'rent'].includes(adminViewOptions.operationFilter) ? adminViewOptions.operationFilter : 'all'
-        };
-        const layer = document.createElement('div');
-        layer.className = 'vw-access-add-dialog-layer';
-        layer.innerHTML = `
-          <div class="vw-access-add-dialog">
-            <div class="vw-access-add-dialog-head">
-              <div class="vw-access-add-dialog-title">${locale.accessAdminSort || 'Сортировка'}</div>
-              <button type="button" class="vw-access-add-dialog-close" data-role="sort-close" aria-label="${locale.close || 'Закрыть'}">×</button>
-            </div>
-            <div class="vw-access-add-dialog-actions">
-              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-liked"></button>
-              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-price"></button>
-              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-area"></button>
-              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-deal"></button>
-            </div>
-            <div class="vw-access-add-dialog-actions">
-              <button type="button" class="vw-access-add-dialog-btn is-neutral" data-role="sort-reset">${locale.accessAdminSortReset || 'Сброс'}</button>
-              <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="sort-apply">${locale.accessAdminSortApply || 'Применить'}</button>
-            </div>
-          </div>
-        `;
-        overlay.appendChild(layer);
-        const close = () => { try { layer.remove(); } catch {} };
-        const getLabelPrice = () => (
-          draft.sortBy === 'price'
-            ? (draft.sortDir === 'desc' ? (locale.accessAdminSortPriceDesc || 'Цена ↓') : (locale.accessAdminSortPriceAsc || 'Цена ↑'))
-            : (locale.accessAdminSortPriceAsc || 'Цена ↑')
-        );
-        const getLabelArea = () => (
-          draft.sortBy === 'area'
-            ? (draft.sortDir === 'desc' ? (locale.accessAdminSortAreaDesc || 'Площадь ↓') : (locale.accessAdminSortAreaAsc || 'Площадь ↑'))
-            : (locale.accessAdminSortAreaAsc || 'Площадь ↑')
-        );
-        const getLabelDeal = () => (
-          draft.operationFilter === 'sale'
-            ? (locale.accessAdminSortDealSale || 'Сделка: продажа')
-            : draft.operationFilter === 'rent'
-              ? (locale.accessAdminSortDealRent || 'Сделка: аренда')
-              : (locale.accessAdminSortDealAll || 'Сделка: все')
-        );
-        const syncState = () => {
-          const likedBtn = layer.querySelector('[data-role="sort-liked"]');
-          const priceBtn = layer.querySelector('[data-role="sort-price"]');
-          const areaBtn = layer.querySelector('[data-role="sort-area"]');
-          const dealBtn = layer.querySelector('[data-role="sort-deal"]');
-          if (likedBtn) {
-            likedBtn.textContent = draft.onlyLiked ? (locale.accessAdminShowAll || 'Все') : (locale.accessAdminShowLiked || 'Лайкнутые');
-            likedBtn.classList.toggle('is-active', draft.onlyLiked);
-          }
-          if (priceBtn) {
-            priceBtn.textContent = getLabelPrice();
-            priceBtn.classList.toggle('is-active', draft.sortBy === 'price');
-          }
-          if (areaBtn) {
-            areaBtn.textContent = getLabelArea();
-            areaBtn.classList.toggle('is-active', draft.sortBy === 'area');
-          }
-          if (dealBtn) {
-            dealBtn.textContent = getLabelDeal();
-            dealBtn.classList.toggle('is-active', draft.operationFilter !== 'all');
-          }
-        };
-        syncState();
-        layer.addEventListener('click', (event) => {
-          if (event.target === layer) close();
-        });
-        layer.querySelector('[data-role="sort-close"]')?.addEventListener('click', close);
-        layer.querySelector('[data-role="sort-liked"]')?.addEventListener('click', () => {
-          draft.onlyLiked = !draft.onlyLiked;
-          syncState();
-        });
-        layer.querySelector('[data-role="sort-price"]')?.addEventListener('click', () => {
-          draft.sortDir = draft.sortBy === 'price' && draft.sortDir === 'asc' ? 'desc' : 'asc';
-          draft.sortBy = 'price';
-          syncState();
-        });
-        layer.querySelector('[data-role="sort-area"]')?.addEventListener('click', () => {
-          draft.sortDir = draft.sortBy === 'area' && draft.sortDir === 'asc' ? 'desc' : 'asc';
-          draft.sortBy = 'area';
-          syncState();
-        });
-        layer.querySelector('[data-role="sort-deal"]')?.addEventListener('click', () => {
-          draft.operationFilter = cycleDeal(draft.operationFilter);
-          syncState();
-        });
-        layer.querySelector('[data-role="sort-reset"]')?.addEventListener('click', () => {
-          draft.onlyLiked = false;
-          draft.sortBy = '';
-          draft.sortDir = 'asc';
-          draft.operationFilter = 'all';
-          syncState();
-        });
-        layer.querySelector('[data-role="sort-apply"]')?.addEventListener('click', () => {
-          close();
-          reopenWith({
-            onlyLiked: draft.onlyLiked,
-            sortBy: draft.sortBy,
-            sortDir: draft.sortDir,
-            operationFilter: draft.operationFilter
-          });
+      overlay.querySelector('[data-role="sort-select"]')?.addEventListener('change', (event) => {
+        const sortMode = String(event.target?.value || 'latest').trim().toLowerCase() || 'latest';
+        this.openAccessSubOverlay('properties', {
+          ...adminViewOptions,
+          sortMode,
+          sortBy: '',
+          sortDir: 'asc',
+          operationFilter: 'all'
         });
       });
       const shareSelection = (preferNative = false) => {
@@ -11935,6 +11894,23 @@ class VoiceWidget extends HTMLElement {
         min-height: 34px;
         border-radius: 10px;
         padding: 0 6px;
+      }
+      .vw-access-sort-select {
+        min-height: 34px;
+        max-width: min(210px, 44vw);
+        border-radius: 10px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.12));
+        color: var(--text-primary, #fff);
+        padding: 0 10px;
+        font: inherit;
+        font-size: .83em;
+        font-weight: 600;
+      }
+      .vw-access-sort-select:focus {
+        outline: none;
+        border-color: rgba(92, 150, 255, 0.7);
+        box-shadow: 0 0 0 2px rgba(92, 150, 255, 0.18);
       }
       .vw-access-objects-bottombar--wishlist {
         grid-template-columns: repeat(2, minmax(0, 1fr));
