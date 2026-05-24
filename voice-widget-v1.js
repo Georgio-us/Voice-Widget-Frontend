@@ -3936,9 +3936,21 @@ class VoiceWidget extends HTMLElement {
     const typeWithRooms = roomsLabel ? `${typeLabel}, ${roomsLabel}` : typeLabel;
     const priceLabel = String(normalized.priceLabel || '—').trim() || '—';
     const areaNum = Number(normalized.area_m2);
-    const areaLabel = Number.isFinite(areaNum) && areaNum > 0
-      ? `${String(areaNum).replace(/\.0+$/, '').replace('.', ',')} м²`
-      : '—';
+    const landAreaNum = Number(normalized.landAreaSotka ?? normalized.land_area_sotka);
+    const propertyType = String(normalized.propertyType || normalized.property_type || '').trim().toLowerCase();
+    const isHouse = propertyType === 'house';
+    const isLand = propertyType === 'land';
+    const isUa = String(this.currentLang || this.defaultLanguage || 'UA').toUpperCase() === 'UA';
+    const areaParts = [];
+    if (!isLand && Number.isFinite(areaNum) && areaNum > 0) {
+      const areaText = `${String(areaNum).replace(/\.0+$/, '').replace('.', ',')} м²`;
+      areaParts.push(isHouse ? `${isUa ? 'будинок' : 'дом'} ${areaText}` : areaText);
+    }
+    if ((isHouse || isLand) && Number.isFinite(landAreaNum) && landAreaNum > 0) {
+      const landText = `${String(landAreaNum).replace(/\.0+$/, '').replace('.', ',')} ${isUa ? 'сот.' : 'сот.'}`;
+      areaParts.push(`${isUa ? 'ділянка' : 'участок'} ${landText}`);
+    }
+    const areaLabel = areaParts.join('; ') || '—';
     const districtLabel = String(this.formatLocationLabel(normalized.district || normalized.neighborhood || normalized.city || '—')).trim() || '—';
     return [
       locale.sharePropertyIntro || 'Подобрал объект, который может вам подойти.',
@@ -5749,6 +5761,16 @@ class VoiceWidget extends HTMLElement {
             { label: isUaLang ? 'Вперше зайшов' : 'Впервые зашел', value: formatDate(client?.first_seen_at) },
             { label: isUaLang ? 'Остання активність' : 'Последняя активность', value: formatDate(client?.last_seen_at || client?.last_session_at) },
             { label: isUaLang ? 'Заявок' : 'Заявок', value: safeNum(client?.leads_count) },
+            {
+              label: isUaLang ? 'Останній обʼєкт заявки' : 'Последний объект заявки',
+              value: (() => {
+                const id = String(client?.last_lead_property_id || '').trim();
+                if (!id) return '—';
+                const url = String(client?.last_lead_property_url || '').trim();
+                return `${esc(id)}${url ? ` <a class="vw-stats-tg-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isUaLang ? 'посилання' : 'ссылка')}</a>` : ''}`;
+              })(),
+              html: true
+            },
             { label: isUaLang ? 'Сесій' : 'Сессий', value: safeNum(client?.sessions_count) },
             { label: isUaLang ? 'Остання сесія' : 'Последняя сессия', value: client?.last_session_id || '—' },
             { label: isUaLang ? 'Повідомлень' : 'Сообщений', value: safeNum(session?.messagesCount) },
@@ -5903,15 +5925,17 @@ class VoiceWidget extends HTMLElement {
       };
       const showDigest = (targetEl, digest, sessionId, leadMeta = {}) => {
         if (!targetEl) return;
-        const renderRow = (emoji, label, value, compact = false) => {
+        const renderRow = (emoji, label, value, compact = false, valueIsHtml = false) => {
           const valueText = String(value ?? '').trim() || '—';
-          return `<div class="vw-stats-digest-row${compact ? ' is-compact' : ''}"><span class="vw-stats-digest-label">${emoji} ${esc(label)}</span><span class="vw-stats-digest-value">${esc(valueText)}</span></div>`;
+          return `<div class="vw-stats-digest-row${compact ? ' is-compact' : ''}"><span class="vw-stats-digest-label">${emoji} ${esc(label)}</span><span class="vw-stats-digest-value">${valueIsHtml ? valueText : esc(valueText)}</span></div>`;
         };
-        if (!digest) {
-          targetEl.style.display = '';
-          targetEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'немає даних' : 'нет данных'}</div></div>`;
-          return;
-        }
+        const propertyIdPart = String(leadMeta?.propertyId || '').trim();
+        const propertyUrl = String(leadMeta?.propertyUrl || '').trim();
+        const propertySummary = String(leadMeta?.propertySummary || '').trim();
+        const propertyTitle = String(leadMeta?.propertyTitle || '').trim();
+        const propertyHtml = propertyIdPart
+          ? `<button type="button" class="vw-stats-lead-details-btn" data-role="stats-open-property" data-property-id="${esc(propertyIdPart)}">${esc(propertyIdPart)}</button>${propertyUrl ? ` <a class="vw-stats-tg-link" href="${esc(propertyUrl)}" target="_blank" rel="noopener noreferrer">${esc(isUaLang ? 'посилання' : 'ссылка')}</a>` : ''}`
+          : '—';
         const lastUserText = String(digest?.lastUserText || '').trim();
         const assistantText = String(digest?.lastAssistantText || '').trim();
         const insights = digest?.lastInsights && typeof digest.lastInsights === 'object' ? digest.lastInsights : null;
@@ -6012,14 +6036,15 @@ class VoiceWidget extends HTMLElement {
           return parts.length ? esc(parts.join(' · ')) : '—';
         })();
         const sourcePart = sourceLabel(leadMeta?.source || '');
-        const propertyIdPart = String(leadMeta?.propertyId || '').trim();
         const leftLead = leadMeta?.leftLead;
         const leftLeadText = leftLead === true ? (isUaLang ? 'Так' : 'Да') : (leftLead === false ? (isUaLang ? 'Ні' : 'Нет') : '—');
         const rows = [
           renderRow('🧩', isUaLang ? 'Сесія' : 'Сессия', sessionId || digest?.sessionId || '—', true),
           renderRow('✅', isUaLang ? 'Залишив заявку' : 'Оставил заявку', leftLeadText, true),
           renderRow('📍', isUaLang ? 'Джерело заявки' : 'Источник заявки', sourcePart),
-          renderRow('🏠', isUaLang ? 'ID обʼєкта' : 'ID объекта', propertyIdPart || '—'),
+          renderRow('🏠', isUaLang ? 'ID обʼєкта' : 'ID объекта', propertyHtml, false, true),
+          propertyTitle ? renderRow('🏷️', isUaLang ? 'Обʼєкт' : 'Объект', propertyTitle) : '',
+          propertySummary ? renderRow('📌', isUaLang ? 'Коротко' : 'Кратко', propertySummary) : '',
           renderRow('💬', isUaLang ? 'Повідомлень' : 'Сообщений', String(digest?.messagesCount ?? '—'), true),
           renderRow('🗂️', isUaLang ? 'Показано обʼєктів за сесію' : 'Показано объектов за сессию', String(digest?.shownObjectsCount ?? '—'), true),
           renderRow('🗣️', isUaLang ? 'Останній запит' : 'Последний запрос', lastUserText || '—'),
@@ -6027,7 +6052,18 @@ class VoiceWidget extends HTMLElement {
           `<div class="vw-stats-digest-row"><span class="vw-stats-digest-label">🔎 ${isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент'}</span><span class="vw-stats-digest-value">${prettyInsights}</span></div>`
         ];
         targetEl.style.display = '';
-        targetEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div>${rows.join('')}</div>`;
+        targetEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div>${rows.filter(Boolean).join('')}</div>`;
+        targetEl.querySelectorAll('[data-role="stats-open-property"]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = String(btn.getAttribute('data-property-id') || '').trim();
+            if (!id) return;
+            try {
+              this.closeAccessSubOverlay?.();
+              this.closeAccessOverlay?.();
+              await this.renderSinglePropertyById(id);
+            } catch {}
+          });
+        });
       };
       if (recentEl) {
         const rows = Array.isArray(stats.recentLeads) ? stats.recentLeads : [];
@@ -6054,8 +6090,11 @@ class VoiceWidget extends HTMLElement {
             const sessionId = String(row?.session_id || '').trim();
             const sourceRaw = String(row?.source || '').trim();
             const propRaw = String(row?.property_id || row?.propertyId || '').trim();
+            const propUrl = String(row?.property_url || row?.propertyUrl || '').trim();
+            const propTitle = String(row?.property_title || row?.propertyTitle || '').trim();
+            const propSummary = String(row?.property_summary || row?.propertySummary || '').trim();
             const detailsBtn = sessionId
-              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}" data-source="${esc(sourceRaw)}" data-property-id="${esc(propRaw)}">${isUaLang ? 'деталі' : 'детали'}</button>`
+              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-session-id="${esc(sessionId)}" data-source="${esc(sourceRaw)}" data-property-id="${esc(propRaw)}" data-property-url="${esc(propUrl)}" data-property-title="${esc(propTitle)}" data-property-summary="${esc(propSummary)}">${isUaLang ? 'деталі' : 'детали'}</button>`
               : '';
             return `<span class="vw-stats-lead-row"><span class="vw-stats-lead-name">${esc(who)}</span>${tgPart ? `<span>·</span>${tgPart}` : ''}${detailsBtn ? `<span>·</span>${detailsBtn}` : ''}</span>`;
           });
@@ -6067,13 +6106,16 @@ class VoiceWidget extends HTMLElement {
               if (!sessionId) return;
               const source = String(btn.getAttribute('data-source') || '').trim();
               const propertyId = String(btn.getAttribute('data-property-id') || '').trim();
+              const propertyUrl = String(btn.getAttribute('data-property-url') || '').trim();
+              const propertyTitle = String(btn.getAttribute('data-property-title') || '').trim();
+              const propertySummary = String(btn.getAttribute('data-property-summary') || '').trim();
               if (leadsDigestEl) {
                 leadsDigestEl.style.display = '';
                 leadsDigestEl.innerHTML = `<div class="vw-stats-digest"><div class="vw-stats-digest-title">🧾 ${isUaLang ? 'Деталі сесії' : 'Детали сессии'}</div><div class="vw-stats-digest-empty">${isUaLang ? 'завантаження…' : 'загрузка…'}</div></div>`;
               }
               try {
                 const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
-                showDigest(leadsDigestEl, digest, sessionId, { source, propertyId, leftLead: true });
+                showDigest(leadsDigestEl, digest, sessionId, { source, propertyId, propertyUrl, propertyTitle, propertySummary, leftLead: true });
               } catch (error) {
                 if (leadsDigestEl) {
                   leadsDigestEl.style.display = '';
@@ -6108,8 +6150,11 @@ class VoiceWidget extends HTMLElement {
             const sessionId = String(row?.session_id || '').trim();
             const sourceRaw = String(row?.lead_source || '').trim();
             const propRaw = String(row?.lead_property_id || '').trim();
+            const propUrl = String(row?.property_url || row?.propertyUrl || '').trim();
+            const propTitle = String(row?.property_title || row?.propertyTitle || '').trim();
+            const propSummary = String(row?.property_summary || row?.propertySummary || '').trim();
             const detailsBtn = sessionId
-              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-left-lead="${row?.left_lead === true ? '1' : '0'}" data-session-id="${esc(sessionId)}" data-source="${esc(sourceRaw)}" data-property-id="${esc(propRaw)}">${isUaLang ? 'деталі' : 'детали'}</button>`
+              ? `<button type="button" class="vw-stats-lead-details-btn" data-role="lead-details" data-left-lead="${row?.left_lead === true ? '1' : '0'}" data-session-id="${esc(sessionId)}" data-source="${esc(sourceRaw)}" data-property-id="${esc(propRaw)}" data-property-url="${esc(propUrl)}" data-property-title="${esc(propTitle)}" data-property-summary="${esc(propSummary)}">${isUaLang ? 'деталі' : 'детали'}</button>`
               : '';
             return `<span class="vw-stats-lead-row"><span class="vw-stats-lead-name">${esc(who)}</span>${tgPart ? `<span>·</span>${tgPart}` : ''}${detailsBtn ? `<span>·</span>${detailsBtn}` : ''}</span>`;
           });
@@ -6121,6 +6166,9 @@ class VoiceWidget extends HTMLElement {
               if (!sessionId) return;
               const source = String(btn.getAttribute('data-source') || '').trim();
               const propertyId = String(btn.getAttribute('data-property-id') || '').trim();
+              const propertyUrl = String(btn.getAttribute('data-property-url') || '').trim();
+              const propertyTitle = String(btn.getAttribute('data-property-title') || '').trim();
+              const propertySummary = String(btn.getAttribute('data-property-summary') || '').trim();
               const leftLead = String(btn.getAttribute('data-left-lead') || '').trim() === '1';
               if (activityDigestEl) {
                 activityDigestEl.style.display = '';
@@ -6128,7 +6176,7 @@ class VoiceWidget extends HTMLElement {
               }
               try {
                 const digest = await this.api?.fetchAdminSessionDigest?.(sessionId);
-                showDigest(activityDigestEl, digest, sessionId, { source, propertyId, leftLead });
+                showDigest(activityDigestEl, digest, sessionId, { source, propertyId, propertyUrl, propertyTitle, propertySummary, leftLead });
               } catch (error) {
                 if (activityDigestEl) {
                   activityDigestEl.style.display = '';
