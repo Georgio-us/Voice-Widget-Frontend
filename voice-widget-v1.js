@@ -7612,12 +7612,30 @@ class VoiceWidget extends HTMLElement {
           .map((value) => String(value || '').trim())
           .filter(Boolean);
         overlay.querySelector('[data-role="preview-district"]') && (overlay.querySelector('[data-role="preview-district"]').textContent = districtMeta.length ? districtMeta.join(' · ') : '—');
-        overlay.querySelector('[data-role="preview-rooms"]') && (overlay.querySelector('[data-role="preview-rooms"]').textContent = `🛏️ ${data.rooms} rooms`);
-        const previewAreaText = data.type === 'house' && data.landAreaSotka
-          ? `📐 ${data.area} м² · ${data.landAreaSotka} сот.`
-          : `📐 ${data.area} ${data.areaUnit || 'м²'}`;
-        overlay.querySelector('[data-role="preview-area"]') && (overlay.querySelector('[data-role="preview-area"]').textContent = previewAreaText);
-        overlay.querySelector('[data-role="preview-floor"]') && (overlay.querySelector('[data-role="preview-floor"]').textContent = `🏢 ${data.floor} floor`);
+        const previewRoomsEl = overlay.querySelector('[data-role="preview-rooms"]');
+        const previewAreaEl = overlay.querySelector('[data-role="preview-area"]');
+        const previewFloorEl = overlay.querySelector('[data-role="preview-floor"]');
+        if (previewRoomsEl) {
+          previewRoomsEl.style.display = data.type === 'land' ? 'none' : '';
+          previewRoomsEl.textContent = `🛏️ ${data.rooms} rooms`;
+        }
+        if (previewAreaEl) {
+          previewAreaEl.textContent = data.type === 'land'
+            ? `🌿 ${data.landAreaSotka || data.area} сот.`
+            : `📐 ${data.area} м²`;
+        }
+        if (previewFloorEl) {
+          if (data.type === 'house') {
+            previewFloorEl.style.display = data.landAreaSotka ? '' : 'none';
+            previewFloorEl.textContent = `🌿 ${data.landAreaSotka} сот.`;
+          } else if (data.type === 'land') {
+            previewFloorEl.style.display = 'none';
+            previewFloorEl.textContent = '';
+          } else {
+            previewFloorEl.style.display = '';
+            previewFloorEl.textContent = `🏢 ${data.floor} floor`;
+          }
+        }
         previewThumbs.forEach((thumb, idx) => {
           const src = imageList[idx] || '';
           thumb.classList.toggle('is-filled', !!src);
@@ -15325,10 +15343,15 @@ render() {
       const escCardAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
       const headlineTitle = this._cardFrontHeadline(normalized) || '—';
       const isUa = this.getLangCode() === 'ua';
+      const propertyTypeNorm = String(normalized.propertyType || normalized.property_type || '').trim().toLowerCase();
+      const isLand = propertyTypeNorm === 'land';
+      const isHouse = propertyTypeNorm === 'house';
+      const landAreaSotka = normalized.landAreaSotka ?? normalized.land_area_sotka ?? null;
       const specs = [];
-      if (normalized.rooms) specs.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
-      if (normalized.area_m2 != null && normalized.area_m2 !== '') specs.push(`📐 ${normalized.area_m2} м²`);
-      if (normalized.floor) specs.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
+      if (!isLand && normalized.rooms) specs.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
+      if (!isLand && normalized.area_m2 != null && normalized.area_m2 !== '') specs.push(`📐 ${normalized.area_m2} м²`);
+      if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') specs.push(`🌿 ${landAreaSotka} ${isUa ? 'сот.' : 'сот.'}`);
+      if (!isLand && !isHouse && normalized.floor) specs.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
       const metaRow = [normalized.priceLabel, normalized.districtDisplay || this.formatLocationLabel(normalized.district)].filter(Boolean).join('  ·  ') || '—';
       const scoreValue = (() => {
         const raw = Number(normalized.score);
@@ -15341,10 +15364,11 @@ render() {
       const backSpecsItemsBase = [];
       if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
       if (normalized.propertyTypeBadgeLabel) backSpecsItemsBase.push({ icon: '🏠', text: `${isUa ? 'Тип' : 'Тип'}: ${normalized.propertyTypeBadgeLabel}` });
-      if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
-      if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
-      if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
-      if (normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
+      if (!isLand && normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
+      if (!isLand && normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isHouse ? (isUa ? 'Площа будинку' : 'Площадь дома') : (isUa ? 'Площа' : 'Площадь')}: ${normalized.area_m2} м²` });
+      if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') backSpecsItemsBase.push({ icon: '🌿', text: `${isUa ? 'Площа ділянки' : 'Площадь участка'}: ${landAreaSotka} сот.` });
+      if (!isLand && normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
+      if (!isLand && !isHouse && normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
       if (normalized.bathrooms) backSpecsItemsBase.push({ icon: '🛁', text: `${isUa ? 'Санвузлів' : 'Санузлов'}: ${normalized.bathrooms}` });
       const dynamicExtras = Array.isArray(normalized.backFeatureItems) ? normalized.backFeatureItems : [];
       const backSpecsItems = [...backSpecsItemsBase, ...dynamicExtras].filter((item) => {
@@ -15761,20 +15785,26 @@ render() {
         || normalized?.display_specs?.complex
         || ''
       ).trim();
+      const propertyTypeNorm = String(normalized.propertyType || normalized.property_type || '').trim().toLowerCase();
+      const isLand = propertyTypeNorm === 'land';
+      const isHouse = propertyTypeNorm === 'house';
+      const landAreaSotka = normalized.landAreaSotka ?? normalized.land_area_sotka ?? null;
       const listPrimaryParts = [];
       if (normalized.priceLabel) listPrimaryParts.push(`<span class="list-card__meta-item list-card__meta-item--strong">${escCardText(normalized.priceLabel)}</span>`);
-      if (normalized.rooms) listPrimaryParts.push(`<span class="list-card__meta-item list-card__meta-item--strong">${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімнат' : 'комнат')}</span>`);
-      if (normalized.area_m2 != null && normalized.area_m2 !== '') listPrimaryParts.push(`<span class="list-card__meta-item">${escCardText(normalized.area_m2)} м²</span>`);
+      if (!isLand && normalized.rooms) listPrimaryParts.push(`<span class="list-card__meta-item list-card__meta-item--strong">${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімнат' : 'комнат')}</span>`);
+      if (!isLand && normalized.area_m2 != null && normalized.area_m2 !== '') listPrimaryParts.push(`<span class="list-card__meta-item">${escCardText(normalized.area_m2)} м²</span>`);
+      if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') listPrimaryParts.push(`<span class="list-card__meta-item">${escCardText(landAreaSotka)} сот.</span>`);
       const listSecondaryParts = [];
-      if (normalized.floor) listSecondaryParts.push(`<span class="list-card__meta-item">${escCardText(this.getLangCode() === 'ua' ? 'Поверх' : 'Этаж')} ${escCardText(normalized.floor)}</span>`);
+      if (!isLand && !isHouse && normalized.floor) listSecondaryParts.push(`<span class="list-card__meta-item">${escCardText(this.getLangCode() === 'ua' ? 'Поверх' : 'Этаж')} ${escCardText(normalized.floor)}</span>`);
       if (complexLine) listSecondaryParts.push(`<span class="list-card__meta-item">${escCardText(this.getLangCode() === 'ua' ? 'ЖК' : 'ЖК')} ${escCardText(complexLine)}</span>`);
       const listLocationText = districtLine || '—';
       const listPrimaryHtml = listPrimaryParts.join('') || '<span class="list-card__meta-item">—</span>';
       const listSecondaryHtml = listSecondaryParts.join('') || '<span class="list-card__meta-item list-card__meta-item--muted">—</span>';
       const listSpecChips = [];
-      if (normalized.rooms) listSpecChips.push(`🛏️ ${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
-      if (normalized.area_m2 != null && normalized.area_m2 !== '') listSpecChips.push(`📐 ${escCardText(normalized.area_m2)} м²`);
-      if (normalized.floor) listSpecChips.push(`🏢 ${escCardText(normalized.floor)} ${escCardText(this.getLangCode() === 'ua' ? 'пов.' : 'этаж')}`);
+      if (!isLand && normalized.rooms) listSpecChips.push(`🛏️ ${escCardText(normalized.rooms)} ${escCardText(this.getLangCode() === 'ua' ? 'кімн.' : 'комн.')}`);
+      if (!isLand && normalized.area_m2 != null && normalized.area_m2 !== '') listSpecChips.push(`📐 ${escCardText(normalized.area_m2)} м²`);
+      if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') listSpecChips.push(`🌿 ${escCardText(landAreaSotka)} сот.`);
+      if (!isLand && !isHouse && normalized.floor) listSpecChips.push(`🏢 ${escCardText(normalized.floor)} ${escCardText(this.getLangCode() === 'ua' ? 'пов.' : 'этаж')}`);
       const [listBadgePrimary, listBadgeArg1, listBadgeArg2] = this._getDynamicFrontBadges(
         normalized,
         this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
@@ -15881,10 +15911,15 @@ render() {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
     const isUa = this.getLangCode() === 'ua';
+    const propertyTypeNorm = String(normalized.propertyType || normalized.property_type || '').trim().toLowerCase();
+    const isLand = propertyTypeNorm === 'land';
+    const isHouse = propertyTypeNorm === 'house';
+    const landAreaSotka = normalized.landAreaSotka ?? normalized.land_area_sotka ?? null;
     const specsPills = [];
-    if (normalized.rooms) specsPills.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
-    if (normalized.area_m2 != null && normalized.area_m2 !== '') specsPills.push(`📐 ${normalized.area_m2} м²`);
-    if (normalized.floor) specsPills.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
+    if (!isLand && normalized.rooms) specsPills.push(`🛏️ ${normalized.rooms} ${isUa ? 'кімн.' : 'комн.'}`);
+    if (!isLand && normalized.area_m2 != null && normalized.area_m2 !== '') specsPills.push(`📐 ${normalized.area_m2} м²`);
+    if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') specsPills.push(`🌿 ${landAreaSotka} сот.`);
+    if (!isLand && !isHouse && normalized.floor) specsPills.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
     const [frontBadgePrimary, frontBadgeArg1, frontBadgeArg2] = this._getDynamicFrontBadges(
       normalized,
       this._catalogStrictQuery && typeof this._catalogStrictQuery === 'object' ? this._catalogStrictQuery : null
@@ -15900,10 +15935,11 @@ render() {
     const backSpecsItemsBase = [];
     if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
     if (normalized.propertyTypeBadgeLabel) backSpecsItemsBase.push({ icon: '🏠', text: `${isUa ? 'Тип' : 'Тип'}: ${normalized.propertyTypeBadgeLabel}` });
-    if (normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
-    if (normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isUa ? 'Площа' : 'Площадь'}: ${normalized.area_m2} м²` });
-    if (normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
-    if (normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
+    if (!isLand && normalized.rooms) backSpecsItemsBase.push({ icon: '🛏️', text: `${isUa ? 'Кімнат' : 'Комнат'}: ${normalized.rooms}` });
+    if (!isLand && normalized.area_m2 != null && normalized.area_m2 !== '') backSpecsItemsBase.push({ icon: '📐', text: `${isHouse ? (isUa ? 'Площа будинку' : 'Площадь дома') : (isUa ? 'Площа' : 'Площадь')}: ${normalized.area_m2} м²` });
+    if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') backSpecsItemsBase.push({ icon: '🌿', text: `${isUa ? 'Площа ділянки' : 'Площадь участка'}: ${landAreaSotka} сот.` });
+    if (!isLand && normalized.pricePerM2Label) backSpecsItemsBase.push({ icon: '💰', text: `${isUa ? 'Ціна за м²' : 'Цена за м²'}: ${normalized.pricePerM2Label} $` });
+    if (!isLand && !isHouse && normalized.floor) backSpecsItemsBase.push({ icon: '🏢', text: `${isUa ? 'Поверх' : 'Этаж'}: ${normalized.floor}` });
     if (normalized.bathrooms) backSpecsItemsBase.push({ icon: '🛁', text: `${isUa ? 'Санвузлів' : 'Санузлов'}: ${normalized.bathrooms}` });
     const dynamicExtras = Array.isArray(normalized.backFeatureItems) ? normalized.backFeatureItems : [];
     const backSpecsItems = [...backSpecsItemsBase, ...dynamicExtras].filter((item) => {
@@ -18361,6 +18397,14 @@ render() {
     const title = String(raw.title ?? '').trim();
     const rawFeatures = parseObject(raw.features) || {};
     const displaySpecs = parseObject(raw.display_specs) || parseObject(rawFeatures.display_specs) || null;
+    const landAreaSotkaNum = toDecimal(
+      raw.land_area_sotka
+      ?? raw.landAreaSotka
+      ?? raw.specs?.land_area_sotka
+      ?? rawFeatures.landAreaSotka
+      ?? rawFeatures.land_area_sotka
+      ?? displaySpecs?.land_area_sotka
+    );
     const canonicalComplex = String(rawFeatures.complex || displaySpecs?.complex || '').trim();
     const canonicalExclusive = truthyLabel(rawFeatures.exclusive) === true;
     const canonicalParking = truthyLabel(rawFeatures.parking) === true;
@@ -18500,6 +18544,8 @@ render() {
       floor: floorNum != null ? String(floorNum) : (raw.floor || ''),
       floorLabel,
       area_m2: areaNum != null ? areaNum : (raw.area_m2 ?? null),
+      landAreaSotka: landAreaSotkaNum != null ? landAreaSotkaNum : null,
+      land_area_sotka: landAreaSotkaNum != null ? landAreaSotkaNum : null,
       price_per_m2: pricePerM2Num != null ? pricePerM2Num : (raw.price_per_m2 ?? null),
       pricePerM2Label,
       bathrooms: bathroomsNum != null ? String(bathroomsNum) : (raw.bathrooms ?? null),
