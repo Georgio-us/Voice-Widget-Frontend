@@ -8606,8 +8606,124 @@ class VoiceWidget extends HTMLElement {
     return num.toLocaleString('ru-RU');
   }
 
+  getFiltersCopy() {
+    const isUa = this.getLangCode() === 'ua';
+    return isUa ? {
+      aria: 'Фільтри',
+      title: 'Фільтри підбірки',
+      close: 'Закрити',
+      operation: 'Тип операції',
+      sale: 'Продаж',
+      rent: 'Оренда',
+      propertyType: 'Тип нерухомості',
+      chooseAll: 'Вибрати все',
+      selectedAll: 'Вибрано все',
+      selectedCount: 'Вибрано',
+      choice: 'Вибір',
+      apartment: 'Квартира',
+      house: 'Будинок',
+      commercial: 'Комерційна',
+      land: 'Ділянка',
+      district: 'Район',
+      rooms: 'Кількість кімнат',
+      roomOne: '1 кімната',
+      roomFew: 'кімнати',
+      roomMany: 'кімнат',
+      cost: 'Вартість',
+      priceFrom: 'Ціна від',
+      priceTo: 'Ціна до',
+      fromMin: 'Від min',
+      toMax: 'До max',
+      area: 'Площа',
+      houseArea: 'Площа будинку',
+      landArea: 'Площа ділянки',
+      areaFrom: 'Площа від',
+      areaTo: 'Площа до',
+      floor: 'Поверх',
+      floorFrom: 'Поверх від',
+      floorTo: 'Поверх до',
+      notFirst: 'Не перший',
+      notLast: 'Не останній',
+      rcOnly: 'Тільки ЖК',
+      smart: 'Смарт',
+      parking: 'Є паркінг',
+      balconyLoggia: 'Балкон/лоджія',
+      governmentProgram: 'Держпрограми',
+      rcSearch: 'Пошук по ЖК',
+      rcClear: 'Очистити ЖК',
+      rcChoose: 'Вибір ЖК',
+      rcTitle: 'Житловий комплекс',
+      rcEmpty: 'Нічого не знайдено',
+      rcLoadError: 'Не вдалося завантажити список',
+      apply: 'Застосувати',
+      reset: 'Скинути',
+      applied: 'Фільтри застосовано',
+      resetDone: 'Фільтри скинуто',
+      found: 'знайдено',
+      objects: 'обʼєктів',
+      applyError: 'Не вдалося застосувати фільтри',
+      resetError: 'Не вдалося скинути фільтри'
+    } : {
+      aria: 'Фильтры',
+      title: 'Фильтры подборки',
+      close: 'Закрыть',
+      operation: 'Тип операции',
+      sale: 'Продажа',
+      rent: 'Аренда',
+      propertyType: 'Тип недвижимости',
+      chooseAll: 'Выбрать всё',
+      selectedAll: 'Выбрано всё',
+      selectedCount: 'Выбрано',
+      choice: 'Выбор',
+      apartment: 'Квартира',
+      house: 'Дом',
+      commercial: 'Коммерческая',
+      land: 'Участок',
+      district: 'Район',
+      rooms: 'Количество комнат',
+      roomOne: '1 комната',
+      roomFew: 'комнаты',
+      roomMany: 'комнат',
+      cost: 'Стоимость',
+      priceFrom: 'Цена от',
+      priceTo: 'Цена до',
+      fromMin: 'От min',
+      toMax: 'До max',
+      area: 'Площадь',
+      houseArea: 'Площадь дома',
+      landArea: 'Площадь участка',
+      areaFrom: 'Площадь от',
+      areaTo: 'Площадь до',
+      floor: 'Этаж',
+      floorFrom: 'Этаж от',
+      floorTo: 'Этаж до',
+      notFirst: 'Не первый',
+      notLast: 'Не последний',
+      rcOnly: 'Только ЖК',
+      smart: 'Смарт',
+      parking: 'Есть паркинг',
+      balconyLoggia: 'Балкон/лоджия',
+      governmentProgram: 'Госпрограммы',
+      rcSearch: 'Поиск по ЖК',
+      rcClear: 'Очистить ЖК',
+      rcChoose: 'Выбор ЖК',
+      rcTitle: 'Жилой комплекс',
+      rcEmpty: 'Ничего не найдено',
+      rcLoadError: 'Не удалось загрузить список',
+      apply: 'Применить',
+      reset: 'Сбросить',
+      applied: 'Фильтры применены',
+      resetDone: 'Фильтры сброшены',
+      found: 'найдено',
+      objects: 'объектов',
+      applyError: 'Не удалось применить фильтры',
+      resetError: 'Не удалось сбросить фильтры'
+    };
+  }
+
   buildFilterPickerOptions(type, operation = 'sale') {
     const opts = [];
+    const copy = this.getFiltersCopy();
     const areaSteps = [
       5, 10, 15, 20, 25, 30, 35, 40,
       50, 60, 70, 80, 90, 100,
@@ -8622,8 +8738,8 @@ class VoiceWidget extends HTMLElement {
     ];
 
     if (type === 'priceMin' || type === 'priceMax') {
-      if (type === 'priceMin') opts.push({ value: '', label: 'От min' });
-      if (type === 'priceMax') opts.push({ value: 'max', label: 'До max' });
+      if (type === 'priceMin') opts.push({ value: '', label: copy.fromMin });
+      if (type === 'priceMax') opts.push({ value: 'max', label: copy.toMax });
       const steps = operation === 'rent' ? rentSteps : saleSteps;
       for (const v of steps) {
         opts.push({ value: String(v), label: this.formatPickerNumber(v) });
@@ -8631,8 +8747,8 @@ class VoiceWidget extends HTMLElement {
       return opts;
     }
     if (type === 'areaMin' || type === 'areaMax') {
-      if (type === 'areaMin') opts.push({ value: '', label: 'От min' });
-      if (type === 'areaMax') opts.push({ value: 'max', label: 'До max' });
+      if (type === 'areaMin') opts.push({ value: '', label: copy.fromMin });
+      if (type === 'areaMax') opts.push({ value: 'max', label: copy.toMax });
       for (const v of areaSteps) {
         opts.push({ value: String(v), label: `${v} м²` });
       }
@@ -8640,8 +8756,8 @@ class VoiceWidget extends HTMLElement {
     }
     if (type === 'landAreaMin' || type === 'landAreaMax') {
       const sotkaSteps = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 17, 20, 25, 30, 40, 50, 75, 100];
-      if (type === 'landAreaMin') opts.push({ value: '', label: 'От min' });
-      if (type === 'landAreaMax') opts.push({ value: 'max', label: 'До max' });
+      if (type === 'landAreaMin') opts.push({ value: '', label: copy.fromMin });
+      if (type === 'landAreaMax') opts.push({ value: 'max', label: copy.toMax });
       for (const v of sotkaSteps) {
         opts.push({ value: String(v), label: `${v} сот.` });
       }
@@ -8652,12 +8768,12 @@ class VoiceWidget extends HTMLElement {
       for (let v = 1; v <= 10; v += 1) floorSteps.push(v);
       for (let v = 12; v <= 30; v += 2) floorSteps.push(v);
       if (type === 'floorMin') {
-        opts.push({ value: '', label: 'От min' });
-        opts.push({ value: 'not_first', label: 'Не первый' });
+        opts.push({ value: '', label: copy.fromMin });
+        opts.push({ value: 'not_first', label: copy.notFirst });
       }
       if (type === 'floorMax') {
-        opts.push({ value: 'max', label: 'До max' });
-        opts.push({ value: 'not_last', label: 'Не последний' });
+        opts.push({ value: 'max', label: copy.toMax });
+        opts.push({ value: 'not_last', label: copy.notLast });
       }
       for (const v of floorSteps) {
         opts.push({ value: String(v), label: String(v) });
@@ -8675,6 +8791,7 @@ class VoiceWidget extends HTMLElement {
 
   syncFiltersAreaUx(overlay) {
     if (!overlay) return;
+    const copy = this.getFiltersCopy();
     const propertyType = String(overlay.querySelector('[data-role="propertyType"]')?.value || '').trim();
     const areaBlock = overlay.querySelector('[data-role="area-range-block"]');
     const landAreaBlock = overlay.querySelector('[data-role="land-area-range-block"]');
@@ -8683,18 +8800,19 @@ class VoiceWidget extends HTMLElement {
     const isLand = propertyType === 'land';
     if (areaBlock) areaBlock.hidden = isLand;
     if (landAreaBlock) landAreaBlock.hidden = !(isHouse || isLand);
-    if (areaName) areaName.textContent = isHouse ? 'Площадь дома' : 'Площадь';
+    if (areaName) areaName.textContent = isHouse ? copy.houseArea : copy.area;
     this.syncFilterPickerLabels(overlay);
   }
 
   syncFiltersSelectAllLabels(overlay) {
     if (!overlay) return;
+    const copy = this.getFiltersCopy();
     ['propertyType'].forEach((role) => {
       const selectEl = overlay.querySelector(`[data-role="${role}"]`);
       if (!selectEl) return;
       const allOption = Array.from(selectEl.options || []).find((opt) => String(opt.value || '').trim() === 'all');
       if (!allOption) return;
-      allOption.textContent = String(selectEl.value || '').trim() === 'all' ? 'Выбрано всё' : 'Выбрать всё';
+      allOption.textContent = String(selectEl.value || '').trim() === 'all' ? copy.selectedAll : copy.chooseAll;
     });
   }
 
@@ -8728,30 +8846,31 @@ class VoiceWidget extends HTMLElement {
   _syncFiltersMultiSummary(overlay, role) {
     const wrap = this._getFiltersMultiControl(overlay, role);
     if (!wrap) return;
+    const copy = this.getFiltersCopy();
     const values = this._getFiltersMultiValues(overlay, role);
     const triggerText = wrap.querySelector('[data-role="multi-trigger-text"]');
-    const title = String(wrap.getAttribute('data-title') || '').trim() || 'Выбор';
+    const title = String(wrap.getAttribute('data-title') || '').trim() || copy.choice;
     const formatSingleValueLabel = (selectedValue) => {
       const selectedEl = wrap.querySelector(`[data-option][data-value="${String(selectedValue || '').replace(/"/g, '\\"')}"] span:last-child`);
       const rawLabel = String(selectedEl?.textContent || selectedValue || '').trim();
       if (!rawLabel) return '';
       if (role === 'rooms') {
         const token = rawLabel.toLowerCase();
-        if (token === '5+' || token === '5plus') return '5+ комнат';
+        if (token === '5+' || token === '5plus') return `5+ ${copy.roomMany}`;
         const n = Number(rawLabel);
         if (Number.isFinite(n)) {
-          if (n === 1) return '1 комната';
-          if (n >= 2 && n <= 4) return `${n} комнаты`;
-          return `${n} комнат`;
+          if (n === 1) return copy.roomOne;
+          if (n >= 2 && n <= 4) return `${n} ${copy.roomFew}`;
+          return `${n} ${copy.roomMany}`;
         }
       }
       return rawLabel;
     };
     if (triggerText) {
       if (values.length === 1) {
-        triggerText.textContent = formatSingleValueLabel(values[0]) || `Выбрано: ${values.length}`;
+        triggerText.textContent = formatSingleValueLabel(values[0]) || `${copy.selectedCount}: ${values.length}`;
       } else {
-        triggerText.textContent = values.length > 0 ? `Выбрано: ${values.length}` : title;
+        triggerText.textContent = values.length > 0 ? `${copy.selectedCount}: ${values.length}` : title;
       }
       triggerText.style.opacity = values.length > 0 ? '1' : '0.76';
     }
@@ -9787,6 +9906,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   async applyCatalogFilters(payload = {}) {
+    const copy = this.getFiltersCopy();
     const normalized = this.normalizeCatalogFilterOverrides(payload);
     const next = Object.keys(normalized).length ? normalized : null;
     // Filter mode is active only when there are real user-selected filters after Apply.
@@ -9795,7 +9915,7 @@ class VoiceWidget extends HTMLElement {
     this._catalogLastRefineMode = 'filters';
     try {
       const list = await this.refreshCatalogByEffectiveQuery();
-      this.ui?.showNotification?.(`Фильтры применены: ${list.length}`);
+      this.ui?.showNotification?.(`${copy.applied}: ${list.length}`);
       if (Array.isArray(list) && list.length > 0) {
         this.ui?.addSystemEventMessage?.(this.t('selectionUpdatedFound', { count: list.length }) || `Подборка обновлена · найдено ${list.length} объектов`);
       } else {
@@ -9803,11 +9923,12 @@ class VoiceWidget extends HTMLElement {
       }
     } catch (error) {
       console.error('filters.apply failed:', error);
-      this.ui?.showNotification?.('Не удалось применить фильтры');
+      this.ui?.showNotification?.(copy.applyError);
     }
   }
 
   async resetCatalogFiltersToAll(overlay = null) {
+    const copy = this.getFiltersCopy();
     // Full reset restores browse mode.
     this._catalogFilterModeActive = false;
     this._catalogManualFilterOverrides = null;
@@ -9818,11 +9939,11 @@ class VoiceWidget extends HTMLElement {
     if (overlay) this.resetFiltersOverlayForm(overlay);
     try {
       const list = await this.refreshCatalogByEffectiveQuery({});
-      this.ui?.showNotification?.(`Фильтры сброшены: ${list.length}`);
-      this.ui?.addSystemEventMessage?.(`Фильтры сброшены · найдено ${list.length} объектов`);
+      this.ui?.showNotification?.(`${copy.resetDone}: ${list.length}`);
+      this.ui?.addSystemEventMessage?.(`${copy.resetDone} · ${copy.found} ${list.length} ${copy.objects}`);
     } catch (error) {
       console.error('filters.reset failed:', error);
-      this.ui?.showNotification?.('Не удалось сбросить фильтры');
+      this.ui?.showNotification?.(copy.resetError);
     }
   }
 
@@ -9942,6 +10063,7 @@ class VoiceWidget extends HTMLElement {
   bindFiltersResidentialComplexPicker(overlay) {
     if (!overlay) return;
     try { this.ensureResidentialComplexPickerStyles(); } catch {}
+    const copy = this.getFiltersCopy();
     const rcHidden = overlay.querySelector('[data-role="filters-rc-hidden"]');
     const rcTrigger = overlay.querySelector('[data-role="filters-rc-trigger"]');
     const rcLabel = overlay.querySelector('[data-role="filters-rc-label"]');
@@ -9949,7 +10071,7 @@ class VoiceWidget extends HTMLElement {
     const syncLabel = () => {
       if (!rcLabel) return;
       const v = String(rcHidden?.value || '').trim();
-      rcLabel.textContent = v || 'Поиск по ЖК';
+      rcLabel.textContent = v || copy.rcSearch;
       rcLabel.style.opacity = v ? '1' : '0.62';
       if (rcClear) {
         rcClear.classList.toggle('is-hidden', !v);
@@ -9980,13 +10102,13 @@ class VoiceWidget extends HTMLElement {
         layer.className = 'vw-access-rc-layer';
         layer.setAttribute('data-role', 'filters-rc-layer');
         layer.innerHTML = `
-            <div class="vw-access-rc-panel vw-filters-rc-panel" role="dialog" aria-modal="true" aria-label="Выбор ЖК">
+            <div class="vw-access-rc-panel vw-filters-rc-panel" role="dialog" aria-modal="true" aria-label="${copy.rcChoose}">
               <div class="vw-access-rc-head">
-                <div class="vw-access-rc-title">Жилой комплекс</div>
-                <button type="button" class="vw-access-rc-close" data-role="rc-close" aria-label="Закрыть">×</button>
+                <div class="vw-access-rc-title">${copy.rcTitle}</div>
+                <button type="button" class="vw-access-rc-close" data-role="rc-close" aria-label="${copy.close}">×</button>
               </div>
               <div class="vw-access-rc-search-wrap">
-                <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="Поиск по ЖК" enterkeyhint="search" autocomplete="off">
+                <input type="search" class="vw-access-add-input" data-role="rc-search" placeholder="${copy.rcSearch}" enterkeyhint="search" autocomplete="off">
                 <span class="vw-access-rc-search-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
                 </span>
@@ -10024,7 +10146,7 @@ class VoiceWidget extends HTMLElement {
           if (!listEl) return;
           const arr = Array.isArray(items) ? items : [];
           if (!arr.length) {
-            listEl.innerHTML = '<div class="vw-access-rc-empty" data-role="rc-empty">Ничего не найдено</div>';
+            listEl.innerHTML = `<div class="vw-access-rc-empty" data-role="rc-empty">${copy.rcEmpty}</div>`;
             return;
           }
           listEl.innerHTML = arr.map((row) => {
@@ -10048,7 +10170,7 @@ class VoiceWidget extends HTMLElement {
           } catch (err) {
             console.warn('rc.list', err);
             if (listEl) {
-              listEl.innerHTML = '<div class="vw-access-rc-empty">Не удалось загрузить список</div>';
+              listEl.innerHTML = `<div class="vw-access-rc-empty">${copy.rcLoadError}</div>`;
             }
           }
         };
@@ -10452,43 +10574,44 @@ class VoiceWidget extends HTMLElement {
   openFiltersOverlay() {
     this.closeFiltersOverlay();
     this.ensureFiltersOverlayStyles();
+    const copy = this.getFiltersCopy();
     const overlay = document.createElement('div');
     overlay.id = 'vwFiltersOverlay';
     overlay.className = 'vw-filters-overlay';
     overlay.innerHTML = `
-      <div class="vw-filters-modal" role="dialog" aria-modal="true" aria-label="Фильтры">
+      <div class="vw-filters-modal" role="dialog" aria-modal="true" aria-label="${copy.aria}">
         <div class="vw-filters-head">
-          <div class="vw-filters-title">Фильтры подборки</div>
-          <button type="button" class="vw-filters-close" data-role="close" aria-label="Закрыть">×</button>
+          <div class="vw-filters-title">${copy.title}</div>
+          <button type="button" class="vw-filters-close" data-role="close" aria-label="${copy.close}">×</button>
         </div>
         <hr class="vw-filters-divider">
         <div class="vw-filters-list">
           <div class="vw-filters-block-top">
             <div class="vw-filters-top-grid">
-              <div class="vw-filters-segmented" role="group" aria-label="Сделка">
-                <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="sale">Продажа</button>
-                <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="rent">Аренда</button>
+              <div class="vw-filters-segmented" role="group" aria-label="${copy.operation}">
+                <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="sale">${copy.sale}</button>
+                <button type="button" class="vw-filters-segment" data-role="listingMode" data-value="rent">${copy.rent}</button>
               </div>
-              <select class="vw-filters-select" data-role="propertyType" aria-label="Тип недвижимости">
-                <option value="" selected disabled>Тип недвижимости</option>
-                <option value="all">Выбрать всё</option>
-                <option value="apartment">Квартира</option>
-                <option value="house">Дом</option>
-                <option value="commercial">Коммерческая</option>
-                <option value="land">Участок</option>
+              <select class="vw-filters-select" data-role="propertyType" aria-label="${copy.propertyType}">
+                <option value="" selected disabled>${copy.propertyType}</option>
+                <option value="all">${copy.chooseAll}</option>
+                <option value="apartment">${copy.apartment}</option>
+                <option value="house">${copy.house}</option>
+                <option value="commercial">${copy.commercial}</option>
+                <option value="land">${copy.land}</option>
               </select>
             </div>
             <div class="vw-filters-top-grid">
-              <div class="vw-filters-multi" data-role="district" data-title="Район">
-                <button type="button" class="vw-filters-multi-trigger" data-role="multi-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Район">
-                  <span data-role="multi-trigger-text">Район</span>
+              <div class="vw-filters-multi" data-role="district" data-title="${copy.district}">
+                <button type="button" class="vw-filters-multi-trigger" data-role="multi-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="${copy.district}">
+                  <span data-role="multi-trigger-text">${copy.district}</span>
                 </button>
-                <div class="vw-filters-multi-menu" role="listbox" aria-label="Район">
+                <div class="vw-filters-multi-menu" role="listbox" aria-label="${copy.district}">
                   <div class="vw-filters-multi-head" aria-hidden="true">
-                    <span class="vw-filters-multi-head__check">✓</span><span>Район</span>
+                    <span class="vw-filters-multi-head__check">✓</span><span>${copy.district}</span>
                   </div>
                   <button type="button" class="vw-filters-multi-item" data-role="multi-all">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
+                    <span class="vw-filters-multi-item__check">✓</span><span>${copy.chooseAll}</span>
                   </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="primorsky" aria-checked="false">
                     <span class="vw-filters-multi-item__check">✓</span><span>${this.formatLocationLabel('Приморский')}</span>
@@ -10504,16 +10627,16 @@ class VoiceWidget extends HTMLElement {
                   </button>
                 </div>
               </div>
-              <div class="vw-filters-multi" data-role="rooms" data-title="Количество комнат">
-                <button type="button" class="vw-filters-multi-trigger" data-role="multi-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Количество комнат">
-                  <span data-role="multi-trigger-text">Количество комнат</span>
+              <div class="vw-filters-multi" data-role="rooms" data-title="${copy.rooms}">
+                <button type="button" class="vw-filters-multi-trigger" data-role="multi-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="${copy.rooms}">
+                  <span data-role="multi-trigger-text">${copy.rooms}</span>
                 </button>
-                <div class="vw-filters-multi-menu" role="listbox" aria-label="Количество комнат">
+                <div class="vw-filters-multi-menu" role="listbox" aria-label="${copy.rooms}">
                   <div class="vw-filters-multi-head" aria-hidden="true">
-                    <span class="vw-filters-multi-head__check">✓</span><span>Количество комнат</span>
+                    <span class="vw-filters-multi-head__check">✓</span><span>${copy.rooms}</span>
                   </div>
                   <button type="button" class="vw-filters-multi-item" data-role="multi-all">
-                    <span class="vw-filters-multi-item__check">✓</span><span>Выбрать всё</span>
+                    <span class="vw-filters-multi-item__check">✓</span><span>${copy.chooseAll}</span>
                   </button>
                   <button type="button" class="vw-filters-multi-item" data-option data-value="1" aria-checked="false">
                     <span class="vw-filters-multi-item__check">✓</span><span>1</span>
@@ -10536,83 +10659,83 @@ class VoiceWidget extends HTMLElement {
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-range-block">
-            <span class="vw-filters-range-name">Стоимость</span>
+            <span class="vw-filters-range-name">${copy.cost}</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="priceMin">От min</span>
-                <select class="vw-filters-picker-select" data-picker="priceMin" aria-label="Цена от"></select>
+                <span class="vw-filters-picker-label" data-display="priceMin">${copy.fromMin}</span>
+                <select class="vw-filters-picker-select" data-picker="priceMin" aria-label="${copy.priceFrom}"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="priceMax">До max</span>
-                <select class="vw-filters-picker-select" data-picker="priceMax" aria-label="Цена до"></select>
+                <span class="vw-filters-picker-label" data-display="priceMax">${copy.toMax}</span>
+                <select class="vw-filters-picker-select" data-picker="priceMax" aria-label="${copy.priceTo}"></select>
               </label>
             </div>
           </div>
           <div class="vw-filters-range-block" data-role="area-range-block">
-            <span class="vw-filters-range-name" data-role="area-range-name">Площадь</span>
+            <span class="vw-filters-range-name" data-role="area-range-name">${copy.area}</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="areaMin">От min</span>
-                <select class="vw-filters-picker-select" data-picker="areaMin" aria-label="Площадь от"></select>
+                <span class="vw-filters-picker-label" data-display="areaMin">${copy.fromMin}</span>
+                <select class="vw-filters-picker-select" data-picker="areaMin" aria-label="${copy.areaFrom}"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="areaMax">До max</span>
-                <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="Площадь до"></select>
+                <span class="vw-filters-picker-label" data-display="areaMax">${copy.toMax}</span>
+                <select class="vw-filters-picker-select" data-picker="areaMax" aria-label="${copy.areaTo}"></select>
               </label>
             </div>
           </div>
           <div class="vw-filters-range-block" data-role="land-area-range-block" hidden>
-            <span class="vw-filters-range-name">Площадь участка</span>
+            <span class="vw-filters-range-name">${copy.landArea}</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="landAreaMin">От min</span>
-                <select class="vw-filters-picker-select" data-picker="landAreaMin" aria-label="Площадь участка от"></select>
+                <span class="vw-filters-picker-label" data-display="landAreaMin">${copy.fromMin}</span>
+                <select class="vw-filters-picker-select" data-picker="landAreaMin" aria-label="${copy.areaFrom}"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="landAreaMax">До max</span>
-                <select class="vw-filters-picker-select" data-picker="landAreaMax" aria-label="Площадь участка до"></select>
+                <span class="vw-filters-picker-label" data-display="landAreaMax">${copy.toMax}</span>
+                <select class="vw-filters-picker-select" data-picker="landAreaMax" aria-label="${copy.areaTo}"></select>
               </label>
             </div>
           </div>
           <div class="vw-filters-range-block">
-            <span class="vw-filters-range-name">Этаж</span>
+            <span class="vw-filters-range-name">${copy.floor}</span>
             <div class="vw-filters-range-dual">
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="floorMin">От min</span>
-                <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="Этаж от"></select>
+                <span class="vw-filters-picker-label" data-display="floorMin">${copy.fromMin}</span>
+                <select class="vw-filters-picker-select" data-picker="floorMin" aria-label="${copy.floorFrom}"></select>
               </label>
               <div class="vw-filters-range-dual-divider" aria-hidden="true"></div>
               <label class="vw-filters-picker-field--in-dual">
-                <span class="vw-filters-picker-label" data-display="floorMax">До max</span>
-                <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="Этаж до"></select>
+                <span class="vw-filters-picker-label" data-display="floorMax">${copy.toMax}</span>
+                <select class="vw-filters-picker-select" data-picker="floorMax" aria-label="${copy.floorTo}"></select>
               </label>
             </div>
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-check-grid">
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="rcOnly"> Только ЖК</label>
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="smart"> Смарт</label>
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="parking"> Есть паркинг</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="rcOnly"> ${copy.rcOnly}</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="smart"> ${copy.smart}</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="parking"> ${copy.parking}</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="arcadia"> ${this.formatLocationLabel('Аркадия')}</label>
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="balconyLoggia"> Балкон/лоджия</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="balconyLoggia"> ${copy.balconyLoggia}</label>
             <label class="vw-filters-check-item"><input type="checkbox" data-role="center"> Центр</label>
-            <label class="vw-filters-check-item"><input type="checkbox" data-role="governmentProgram"> Держпрограми</label>
+            <label class="vw-filters-check-item"><input type="checkbox" data-role="governmentProgram"> ${copy.governmentProgram}</label>
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-rc-wrap">
             <input type="hidden" value="" data-role="filters-rc-hidden" autocomplete="off">
             <button type="button" class="vw-filters-rc-trigger" data-role="filters-rc-trigger" aria-haspopup="listbox" aria-expanded="false">
-              <span class="vw-filters-rc-trigger__label" data-role="filters-rc-label">Поиск по ЖК</span>
+              <span class="vw-filters-rc-trigger__label" data-role="filters-rc-label">${copy.rcSearch}</span>
             </button>
-            <button type="button" class="vw-filters-rc-clear" data-role="filters-rc-clear" aria-label="Очистить ЖК" title="Очистить ЖК">×</button>
+            <button type="button" class="vw-filters-rc-clear" data-role="filters-rc-clear" aria-label="${copy.rcClear}" title="${copy.rcClear}">×</button>
           </div>
           <hr class="vw-filters-divider">
           <div class="vw-filters-actions">
-            <button type="button" class="vw-filters-apply" data-role="apply">Применить</button>
-            <button type="button" class="vw-filters-reset" data-role="reset">Сбросить</button>
+            <button type="button" class="vw-filters-apply" data-role="apply">${copy.apply}</button>
+            <button type="button" class="vw-filters-reset" data-role="reset">${copy.reset}</button>
           </div>
         </div>
       </div>
