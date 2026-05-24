@@ -8212,7 +8212,11 @@ class VoiceWidget extends HTMLElement {
             complex: data.complex,
             price: String(data.price || '').replace(/[^\d]/g, ''),
             rooms: data.rooms,
-            area: normalizeDecimalString(stripAreaUnit(data.area || ''), 2),
+            area: data.type === 'land' ? '' : normalizeDecimalString(stripAreaUnit(data.area || ''), 2),
+            landAreaSotka: normalizeDecimalString(
+              stripAreaUnit(data.landAreaSotka || (data.type === 'land' ? data.area : '')),
+              2
+            ),
             floor: data.floor,
             floorsTotal: data.floorsTotal,
             existingImages,
