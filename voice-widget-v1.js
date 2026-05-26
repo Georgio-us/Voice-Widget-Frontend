@@ -2009,12 +2009,31 @@ class APIClient {
     if (!this._residentialComplexCatalog) this._residentialComplexCatalog = new Map();
     const arr = Array.isArray(items) ? items : [];
     arr.forEach((row) => {
-      const raw = String(row?.name || '').trim();
-      if (!raw) return;
-      const normalized = this._normalizeResidentialComplexName(raw);
-      if (!normalized) return;
-      if (!this._residentialComplexCatalog.has(normalized)) {
-        this._residentialComplexCatalog.set(normalized, raw);
+      const canonical = String(row?.name || '').trim();
+      if (!canonical) return;
+      const aliases = [
+        canonical,
+        row?.displayName,
+        row?.nameTranslations?.ru,
+        row?.nameTranslations?.ua
+      ];
+      aliases.forEach((alias) => {
+        const normalized = this._normalizeResidentialComplexName(alias);
+        if (!normalized) return;
+        if (!this._residentialComplexCatalog.has(normalized)) {
+          this._residentialComplexCatalog.set(normalized, canonical);
+        }
+      });
+      if (row?.nameTranslations && typeof row.nameTranslations === 'string') {
+        try {
+          const parsed = JSON.parse(row.nameTranslations);
+          [parsed?.ru, parsed?.ua].forEach((alias) => {
+            const normalized = this._normalizeResidentialComplexName(alias);
+            if (normalized && !this._residentialComplexCatalog.has(normalized)) {
+              this._residentialComplexCatalog.set(normalized, canonical);
+            }
+          });
+        } catch {}
       }
     });
   }
@@ -2060,6 +2079,8 @@ class APIClient {
     const q = String(params.q || '').trim();
     if (q) u.searchParams.set('q', q);
     if (params.limit != null) u.searchParams.set('limit', String(params.limit));
+    const lang = String(params.lang || this.widget?.getLangCode?.() || 'ua').toLowerCase().slice(0, 2) === 'ru' ? 'ru' : 'ua';
+    u.searchParams.set('lang', lang);
     const res = await fetch(u.toString());
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data?.ok === false) {
@@ -7855,7 +7876,8 @@ class VoiceWidget extends HTMLElement {
       const updateComplexLabel = () => {
         if (!complexLabelEl || !complexHidden) return;
         const v = String(complexHidden.value || '').trim();
-        complexLabelEl.textContent = v || 'Название ЖК';
+        const display = v ? String(complexHidden.dataset.displayName || '').trim() : '';
+        complexLabelEl.textContent = display || v || (langCode === 'ua' ? 'Назва ЖК' : 'Название ЖК');
         complexLabelEl.style.opacity = v ? '1' : '';
       };
       const ensureRcPickerStyles = () => {
@@ -7943,9 +7965,10 @@ class VoiceWidget extends HTMLElement {
           const addPanel = layer.querySelector('[data-role="rc-add-panel"]');
           const addInput = layer.querySelector('[data-role="rc-add-input"]');
           const addInline = layer.querySelector('[data-role="rc-add-inline"]');
-          const bindRow = (name) => {
+          const bindRow = (name, displayName = '') => {
             if (!complexHidden) return;
             complexHidden.value = String(name || '').trim();
+            complexHidden.dataset.displayName = String(displayName || name || '').trim();
             updateComplexLabel();
             closeRcLayer(layer);
             try { complexTrigger?.focus?.(); } catch {}
@@ -7960,30 +7983,35 @@ class VoiceWidget extends HTMLElement {
             listEl.innerHTML = arr.map((row) => {
               const id = String(row?.id ?? '').trim();
               const nameRaw = String(row?.name || '');
-              const nameHtml = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+              const displayRaw = String(row?.displayName || row?.name || '');
+              const nameHtml = displayRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+              const canonicalAttr = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+              const displayAttr = displayRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
               return (
                 '<div class="vw-access-rc-row-wrap" role="presentation">' +
-                `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}">${nameHtml}</button>` +
+                `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}" data-rc-name="${canonicalAttr}" data-rc-display="${displayAttr}">${nameHtml}</button>` +
                 `<button type="button" class="vw-access-rc-row-delete" data-rc-id="${id.replace(/"/g, '&quot;')}" aria-label="Удалить из справочника">удалить</button>` +
                 '</div>'
               );
             }).join('');
             listEl.querySelectorAll('.vw-access-rc-row--main').forEach((btn) => {
-              btn.addEventListener('click', () => bindRow(btn.textContent));
+              btn.addEventListener('click', () => bindRow(btn.getAttribute('data-rc-name') || btn.textContent, btn.getAttribute('data-rc-display') || btn.textContent));
             });
             listEl.querySelectorAll('.vw-access-rc-row-delete').forEach((delBtn) => {
               delBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const rid = String(delBtn.getAttribute('data-rc-id') || '').trim();
                 const row = arr.find((r) => String(r?.id ?? '') === rid);
-                const nm = String(row?.name || delBtn.closest('.vw-access-rc-row-wrap')?.querySelector('.vw-access-rc-row--main')?.textContent || '').trim();
+                const nm = String(row?.name || '').trim();
+                const displayNm = String(row?.displayName || row?.name || delBtn.closest('.vw-access-rc-row-wrap')?.querySelector('.vw-access-rc-row--main')?.textContent || '').trim();
                 if (!rid) return;
-                if (!window.confirm(`Удалить «${nm || 'этот ЖК'}» из справочника?`)) return;
+                if (!window.confirm(`Удалить «${displayNm || 'этот ЖК'}» из справочника?`)) return;
                 try {
                   await this.api?.deleteResidentialComplex?.(rid);
                   const cur = String(complexHidden?.value || '').trim();
                   if (cur && nm && cur === nm) {
                     if (complexHidden) complexHidden.value = '';
+                    if (complexHidden) complexHidden.dataset.displayName = '';
                     updateComplexLabel();
                   }
                   this.ui?.showNotification?.('ЖК удалён из списка');
@@ -10137,7 +10165,8 @@ class VoiceWidget extends HTMLElement {
     const syncLabel = () => {
       if (!rcLabel) return;
       const v = String(rcHidden?.value || '').trim();
-      rcLabel.textContent = v || copy.rcSearch;
+      const display = v ? String(rcHidden?.dataset?.displayName || '').trim() : '';
+      rcLabel.textContent = display || v || copy.rcSearch;
       rcLabel.style.opacity = v ? '1' : '0.62';
       if (rcClear) {
         rcClear.classList.toggle('is-hidden', !v);
@@ -10201,9 +10230,10 @@ class VoiceWidget extends HTMLElement {
         layer.querySelector('[data-role="rc-close"]')?.addEventListener('click', () => closeRcLayer(layer));
         const listEl = layer.querySelector('[data-role="rc-list"]');
         const searchEl = layer.querySelector('[data-role="rc-search"]');
-        const bindRow = (name) => {
+        const bindRow = (name, displayName = '') => {
           if (!rcHidden) return;
           rcHidden.value = String(name || '').trim();
+          rcHidden.dataset.displayName = String(displayName || name || '').trim();
           syncLabel();
           closeRcLayer(layer);
           try { rcTrigger?.focus?.(); } catch {}
@@ -10218,15 +10248,18 @@ class VoiceWidget extends HTMLElement {
           listEl.innerHTML = arr.map((row) => {
             const id = String(row?.id ?? '').trim();
             const nameRaw = String(row?.name || '');
-            const nameHtml = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            const displayRaw = String(row?.displayName || row?.name || '');
+            const nameHtml = displayRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            const canonicalAttr = nameRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            const displayAttr = displayRaw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
             return (
               '<div class="vw-access-rc-row-wrap vw-filters-rc-row" role="presentation">' +
-              `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}">${nameHtml}</button>` +
+              `<button type="button" class="vw-access-rc-row--main" data-rc-id="${id.replace(/"/g, '&quot;')}" data-rc-name="${canonicalAttr}" data-rc-display="${displayAttr}">${nameHtml}</button>` +
               '</div>'
             );
           }).join('');
           listEl.querySelectorAll('.vw-access-rc-row--main').forEach((btn) => {
-            btn.addEventListener('click', () => bindRow(btn.textContent));
+            btn.addEventListener('click', () => bindRow(btn.getAttribute('data-rc-name') || btn.textContent, btn.getAttribute('data-rc-display') || btn.textContent));
           });
         };
         const loadList = async (q = '') => {
