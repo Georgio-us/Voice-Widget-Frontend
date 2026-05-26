@@ -9837,7 +9837,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   async refreshCatalogByEffectiveQuery(insightsSource = null) {
-    const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 2000 };
+    const query = { ...this.getCatalogEffectiveSearchParams(insightsSource), limit: 3000 };
     
     // Phase 2 Smart Overwrite Policy: lock global operation/type after first use.
     // Only lock if the user explicitly triggered this (AI request or manual filter apply).
@@ -14157,7 +14157,7 @@ render() {
     try {
       const u = new URL(String(this.apiUrl || ''));
       const base = `${u.protocol}//${u.host}`;
-      return [`${base}/api/cards/search?mode=allActive&limit=2000`, ...defaults];
+      return [`${base}/api/cards/search?mode=allActive&limit=3000`, ...defaults];
     } catch {
       return defaults;
     }
@@ -15030,11 +15030,11 @@ render() {
           appendSource(Array.isArray(window?.appState?.allProperties) ? window.appState.allProperties : []);
           await ensureFullCatalogSource();
           if (!source.length) {
-            const payload = await this.api?.fetchSessionCandidates?.(2000);
+            const payload = await this.api?.fetchSessionCandidates?.(3000);
             appendSource(Array.isArray(payload?.cards) ? payload.cards : []);
           }
         } else {
-          const payload = await this.api?.fetchSessionCandidates?.(2000);
+          const payload = await this.api?.fetchSessionCandidates?.(3000);
           appendSource(Array.isArray(payload?.cards) ? payload.cards : []);
           await ensureFullCatalogSource();
         }
