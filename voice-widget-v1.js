@@ -3033,8 +3033,24 @@ const LOCALES = {
     accessAdminOlxClearFailed: 'Не удалось очистить импортированные объекты',
     accessUserEmpty: 'Здесь появятся объекты, которые вы добавите в избранное (Wishlist)',
     accessUserWishlist: 'Моя подборка',
+    accessUserWantSell: 'Хочу продать',
     accessUserWantBot: 'Хочу такого бота!',
     accessUserBotSectionTitle: 'Хочу такого бота!',
+    accessUserSellSectionTitle: 'Хочу продать',
+    accessUserSellTitle: '🏠 Профессиональная продажа недвижимости',
+    accessUserSellIntro: 'Продажа недвижимости — это не просто объявление. Это стратегия, глубокое знание рынка и абсолютная юридическая безопасность. Мы сопровождаем вас от первой консультации до момента получения денег. 🤝',
+    accessUserSellListTitle: 'Что мы делаем для результата:',
+    accessUserSellBenefit1: 'Экспертная оценка: определяем реальную цену объекта.',
+    accessUserSellBenefit2: 'Анализ рынка: изучаем конкурентов и спрос.',
+    accessUserSellBenefit3: 'Профессиональная упаковка: делаем объект привлекательным для покупателя.',
+    accessUserSellBenefit4: 'Юридический аудит: проверяем документы для безопасной сделки.',
+    accessUserSellBenefit5: 'Рекламная кампания: запускаем мощное продвижение на всех площадках.',
+    accessUserSellBenefit6: 'Переговоры: отстаиваем ваши финансовые интересы.',
+    accessUserSellBenefit7: 'Сделка: гарантируем безопасный расчет и передачу имущества.',
+    accessUserSellOutro: 'Мы не просто выставляем объявление на OLX — мы создаем ажиотаж вокруг вашей недвижимости. Наша цель — продать ваш объект по самой высокой цене в четко определенные сроки. 📈',
+    accessUserSellQuestion: '🎯 Хотите узнать реальную стоимость вашей квартиры сегодня? Закажите бесплатную экспертную оценку уже сейчас! 👇',
+    accessUserSellCtaSell: 'Хочу продать',
+    accessUserSellCtaEstimate: 'Оценить стоимость',
     accessUserBotIntro: 'Вы риэлтор, агентство недвижимости или работаете в недвижимости?',
     accessUserBotSubtitle: 'Подайте заявку на интеграцию и получите бесплатную 7-дневную подписку, чтобы оценить все преимущества.',
     accessUserBotBenefit1: 'Полная интеграция с вашей базой объектов (включая OLX).',
@@ -3055,6 +3071,7 @@ const LOCALES = {
     send: 'Отправить',
     cancel: 'Отмена',
     close: 'Закрыть',
+    lightboxCloseHint: 'Нажмите ЗДЕСЬ, чтобы вернуться',
     continue: 'Продолжить',
     understood: 'Понятно',
     thanksTitle: 'Спасибо!',
@@ -3263,8 +3280,24 @@ const LOCALES = {
     accessAdminOlxClearFailed: 'Не вдалося очистити імпортовані обʼєкти',
     accessUserEmpty: "Тут з'являться об'єкти, які ви додасте до обраного (Wishlist)",
     accessUserWishlist: 'Моя добірка',
+    accessUserWantSell: 'Хочу продати',
     accessUserWantBot: 'Хочу такого бота!',
     accessUserBotSectionTitle: 'Хочу такого бота!',
+    accessUserSellSectionTitle: 'Хочу продати',
+    accessUserSellTitle: '🏠 Професійний продаж нерухомості',
+    accessUserSellIntro: 'Продаж нерухомості — це не просто оголошення. Це стратегія, глибоке знання ринку та абсолютна юридична безпека. Ми супроводжуємо вас від першої консультації до моменту отримання грошей. 🤝',
+    accessUserSellListTitle: 'Що ми робимо для результату:',
+    accessUserSellBenefit1: 'Експертна оцінка: Визначаємо реальну ціну обʼєкта.',
+    accessUserSellBenefit2: 'Аналіз ринку: Вивчаємо конкурентів та попит.',
+    accessUserSellBenefit3: 'Професійна упаковка: Робимо обʼєкт привабливим для покупця.',
+    accessUserSellBenefit4: 'Юридичний аудит: Перевіряємо документи для безпечної угоди.',
+    accessUserSellBenefit5: 'Рекламна кампанія: Запускаємо потужне просування на всіх майданчиках.',
+    accessUserSellBenefit6: 'Переговори: Відстоюємо ваші фінансові інтереси.',
+    accessUserSellBenefit7: 'Угода: Гарантуємо безпечний розрахунок та передачу майна.',
+    accessUserSellOutro: 'Ми не просто виставляємо оголошення на OLX — ми створюємо ажіотаж навколо вашої нерухомості. Наша мета — продати ваш об’єкт за найвищою ціною у чітко визначені терміни. 📈',
+    accessUserSellQuestion: '🎯 Бажаєте дізнатися реальну вартість вашої квартири сьогодні? Замовте безкоштовну експертну оцінку вже зараз! 👇',
+    accessUserSellCtaSell: 'Хочу продати',
+    accessUserSellCtaEstimate: 'Оцінити вартість',
     accessUserBotIntro: 'Ви рієлтор, агентство нерухомості або працюєте в нерухомості?',
     accessUserBotSubtitle: 'Подайте заявку на інтеграцію і отримайте безкоштовну 7-денну підписку, щоб оцінити всі переваги.',
     accessUserBotBenefit1: 'Повна інтеграція з вашою базою обʼєктів (включно з OLX).',
@@ -3285,6 +3318,7 @@ const LOCALES = {
     send: 'Надіслати',
     cancel: 'Скасувати',
     close: 'Закрити',
+    lightboxCloseHint: 'Натисніть ТУТ, щоб повернутися',
     continue: 'Продовжити',
     understood: 'Зрозуміло',
     thanksTitle: 'Дякуємо!',
@@ -5932,6 +5966,8 @@ class VoiceWidget extends HTMLElement {
           tg_header_main: 'Хедер (звʼязок)',
           guest_want_bot_trial: 'Хочу такого бота (тест)',
           guest_want_bot_consult: 'Хочу такого бота (консультація)',
+          guest_want_sell_submit: 'Хочу продати',
+          guest_want_sell_estimate: 'Оцінити вартість',
           tg_mini_app: 'Мініапп Telegram'
         };
         const mapRu = {
@@ -5939,6 +5975,8 @@ class VoiceWidget extends HTMLElement {
           tg_header_main: 'Хедер (связь)',
           guest_want_bot_trial: 'Хочу такого бота (тест)',
           guest_want_bot_consult: 'Хочу такого бота (консультация)',
+          guest_want_sell_submit: 'Хочу продать',
+          guest_want_sell_estimate: 'Оценить стоимость',
           tg_mini_app: 'Миниапп Telegram'
         };
         const map = isUaLang ? mapUa : mapRu;
@@ -6576,6 +6614,30 @@ class VoiceWidget extends HTMLElement {
           </div>
         `;
       }
+      if (safeSection === 'want-sell') {
+        return `
+          <div class="vw-want-bot vw-want-sell">
+            <div class="vw-want-bot__title">${locale.accessUserSellTitle || '🏠 Професійний продаж нерухомості'}</div>
+            <div class="vw-want-bot__subtitle">${locale.accessUserSellIntro || ''}</div>
+            <div class="vw-want-sell__section-title">${locale.accessUserSellListTitle || ''}</div>
+            <div class="vw-want-bot__list">
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">✅</span><span>${locale.accessUserSellBenefit1 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📊</span><span>${locale.accessUserSellBenefit2 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📸</span><span>${locale.accessUserSellBenefit3 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">⚖️</span><span>${locale.accessUserSellBenefit4 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🚀</span><span>${locale.accessUserSellBenefit5 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🗣</span><span>${locale.accessUserSellBenefit6 || ''}</span></div>
+              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">💰</span><span>${locale.accessUserSellBenefit7 || ''}</span></div>
+            </div>
+            <div class="vw-want-bot__subtitle vw-want-sell__outro">${locale.accessUserSellOutro || ''}</div>
+            <div class="vw-want-bot__title vw-want-sell__question">${locale.accessUserSellQuestion || ''}</div>
+          </div>
+          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--want-bot">
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-sell-submit">${locale.accessUserSellCtaSell || 'Хочу продати'}</button>
+            <button type="button" class="vw-access-sub-btn" data-role="want-sell-estimate">${locale.accessUserSellCtaEstimate || 'Оцінити вартість'}</button>
+          </div>
+        `;
+      }
       if (safeSection === 'want-bot') {
         return `
           <div class="vw-want-bot">
@@ -6716,6 +6778,8 @@ class VoiceWidget extends HTMLElement {
       ? (isUaLang ? "Мої об'єкти" : 'Мои объекты')
       : safeSection === 'wishlist'
         ? (locale.accessUserWishlist || 'Моя подборка')
+      : safeSection === 'want-sell'
+        ? (locale.accessUserSellSectionTitle || 'Хочу продати')
       : safeSection === 'want-bot'
         ? (locale.accessUserBotSectionTitle || 'Хочу такого бота!')
       : isAddProperty
@@ -7046,6 +7110,13 @@ class VoiceWidget extends HTMLElement {
       overlay.querySelector('[data-role="share-inline"]')?.addEventListener('click', () => shareSelection(false));
       overlay.querySelector('[data-role="share"]')?.addEventListener('click', () => shareSelection(false));
       this.updateAdminObjectsSelectionState(overlay);
+    }
+    if (safeSection === 'want-sell') {
+      const openSellLead = (source = 'guest_want_sell') => {
+        try { this.openContactManagerPopup({ source }); } catch {}
+      };
+      overlay.querySelector('[data-role="want-sell-submit"]')?.addEventListener('click', () => openSellLead('guest_want_sell_submit'));
+      overlay.querySelector('[data-role="want-sell-estimate"]')?.addEventListener('click', () => openSellLead('guest_want_sell_estimate'));
     }
     if (safeSection === 'want-bot') {
       const openConsult = (source = 'guest_want_bot') => {
@@ -11320,6 +11391,19 @@ class VoiceWidget extends HTMLElement {
         gap: 8px;
         margin-top: 4px;
       }
+      .vw-want-sell__section-title {
+        margin-top: 2px;
+        font-size: .86rem;
+        line-height: 1.35;
+        font-weight: 800;
+        color: var(--text-primary, #fff);
+      }
+      .vw-want-sell__outro {
+        margin-top: 4px;
+      }
+      .vw-want-sell__question {
+        margin-top: 2px;
+      }
       .vw-want-bot__item {
         display: grid;
         grid-template-columns: 20px 1fr;
@@ -12349,6 +12433,10 @@ class VoiceWidget extends HTMLElement {
               <span class="vw-access-item__label">${locale.accessUserWishlist || 'Моя подборка'}</span>
               <span class="vw-access-item__count" data-role="user-wishlist-count">0</span>
             </button>
+            <button type="button" class="vw-access-item" data-role="user-want-sell">
+              <span class="vw-access-item__icon" aria-hidden="true">🏠</span>
+              <span class="vw-access-item__label">${locale.accessUserWantSell || 'Хочу продати'}</span>
+            </button>
             <button type="button" class="vw-access-item" data-role="user-want-bot">
               <span class="vw-access-item__icon" aria-hidden="true">🤖</span>
               <span class="vw-access-item__label">${locale.accessUserWantBot || 'Хочу такого бота!'}</span>
@@ -12403,6 +12491,7 @@ class VoiceWidget extends HTMLElement {
       this.openAccessSubOverlay('keygen');
     });
     overlay.querySelector('[data-role="user-wishlist"]')?.addEventListener('click', () => this.openAccessSubOverlay('wishlist'));
+    overlay.querySelector('[data-role="user-want-sell"]')?.addEventListener('click', () => this.openAccessSubOverlay('want-sell'));
     overlay.querySelector('[data-role="user-want-bot"]')?.addEventListener('click', () => this.openAccessSubOverlay('want-bot'));
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) this.closeAccessOverlay();
@@ -12665,7 +12754,7 @@ render() {
     <img id="imgLightboxImg" alt="">
     <button type="button" class="img-lightbox-nav img-lightbox-nav--next" id="imgLightboxNext" aria-label="Next image">›</button>
     <div class="lightbox-counter" id="imgLightboxCounter">1 / 1</div>
-    <div class="lightbox-close-hint"><span class="tap-icon"></span>Click to close</div>
+    <div class="lightbox-close-hint"><span class="tap-icon"></span>${this.t('lightboxCloseHint')}</div>
   </div>
 
   
