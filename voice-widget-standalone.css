@@ -2155,7 +2155,6 @@
     transform:translateX(-50%);
     display:inline-flex;
     align-items:center;
-    gap:10px;
     color:var(--text-primary);
     font-size:var(--fs-small);
     line-height:1.2;
@@ -2173,43 +2172,6 @@
     pointer-events:none;
     user-select:none;
     white-space:nowrap;
-  }
-  .img-lightbox .lightbox-close-hint .tap-icon{
-    width:14px;
-    height:14px;
-    position:relative;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:50%;
-    background:var(--text-primary);
-    box-shadow:0 0 0 2px var(--border-light);
-  }
-  .img-lightbox .lightbox-close-hint .tap-icon::before{
-    content:"";
-    position:absolute;
-    inset:-6px;
-    border-radius:50%;
-    border:1.2px solid var(--border-light);
-    opacity:0;
-    transform:scale(.55);
-    animation:hintPulseInner 1.6s ease-out infinite;
-  }
-  .img-lightbox .lightbox-close-hint .tap-icon::after{
-    content:"";
-    position:absolute;
-    inset:-12px;
-    border:1.2px solid var(--border-light);
-    border-radius:50%;
-    opacity:0;
-    transform:scale(.45);
-    animation:hintPulseOuter 1.6s ease-out infinite;
-    animation-delay:.2s;
-  }
-  @keyframes hintPulseInner{
-    0%{ opacity:.55; transform:scale(.55); }
-    70%{ opacity:.2; }
-    100%{ opacity:0; transform:scale(1.45); }
   }
   @media (max-width: 720px){
     .img-lightbox .img-lightbox-nav{
@@ -2233,11 +2195,6 @@
       white-space:normal;
       text-align:center;
     }
-  }
-  @keyframes hintPulseOuter{
-    0%{ opacity:.45; transform:scale(.45); }
-    65%{ opacity:.16; }
-    100%{ opacity:0; transform:scale(1.95); }
   }
 }
 

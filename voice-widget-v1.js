@@ -12754,7 +12754,7 @@ render() {
     <img id="imgLightboxImg" alt="">
     <button type="button" class="img-lightbox-nav img-lightbox-nav--next" id="imgLightboxNext" aria-label="Next image">›</button>
     <div class="lightbox-counter" id="imgLightboxCounter">1 / 1</div>
-    <div class="lightbox-close-hint"><span class="tap-icon"></span>${this.t('lightboxCloseHint')}</div>
+    <div class="lightbox-close-hint">${this.t('lightboxCloseHint')}</div>
   </div>
 
   
