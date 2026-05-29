@@ -12754,7 +12754,7 @@ render() {
     <img id="imgLightboxImg" alt="">
     <button type="button" class="img-lightbox-nav img-lightbox-nav--next" id="imgLightboxNext" aria-label="Next image">›</button>
     <div class="lightbox-counter" id="imgLightboxCounter">1 / 1</div>
-    <div class="lightbox-close-hint">${this.t('lightboxCloseHint')}</div>
+    <button type="button" class="lightbox-close-hint" id="imgLightboxCloseHint">${this.t('lightboxCloseHint')}</button>
   </div>
 
   
@@ -13398,6 +13398,7 @@ render() {
     const img = this.$byId('imgLightboxImg');
     const prevBtn = this.$byId('imgLightboxPrev');
     const nextBtn = this.$byId('imgLightboxNext');
+    const closeHint = this.$byId('imgLightboxCloseHint');
     if (box) {
       if (prevBtn) prevBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -13409,8 +13410,14 @@ render() {
         e.stopPropagation();
         this.stepImageOverlay(1);
       });
+      if (closeHint) closeHint.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.closeImageOverlay();
+      });
       box.addEventListener('click', (e) => {
         if (e.target?.closest?.('.img-lightbox-nav')) return;
+        if (e.target?.closest?.('.lightbox-close-hint')) return;
         if (img && !img.contains(e.target)) {
           e.stopPropagation();
           this.closeImageOverlay();
@@ -15572,14 +15579,6 @@ render() {
       if ((isLand || isHouse) && landAreaSotka != null && landAreaSotka !== '') specs.push(`🌿 ${landAreaSotka} ${isUa ? 'сот.' : 'сот.'}`);
       if (!isLand && !isHouse && normalized.floor) specs.push(`🏢 ${normalized.floor} ${isUa ? 'пов.' : 'этаж'}`);
       const metaRow = [normalized.priceLabel, normalized.districtDisplay || this.formatLocationLabel(normalized.district)].filter(Boolean).join('  ·  ') || '—';
-      const scoreValue = (() => {
-        const raw = Number(normalized.score);
-        if (!Number.isFinite(raw)) return 0;
-        return Math.max(0, Math.min(100, Math.round(raw)));
-      })();
-      const scoreTier = String(normalized.matchTier || '').toLowerCase();
-      const scoreTierClass = ['high', 'mid', 'low'].includes(scoreTier) ? ` card-back-header__score--${scoreTier}` : '';
-      const scoreLabel = `Score: ${scoreValue}%`;
       const backSpecsItemsBase = [];
       if (normalized.operationBadgeLabel) backSpecsItemsBase.push({ icon: '📌', text: `${isUa ? 'Операція' : 'Операция'}: ${normalized.operationBadgeLabel}` });
       if (normalized.propertyTypeBadgeLabel) backSpecsItemsBase.push({ icon: '🏠', text: `${isUa ? 'Тип' : 'Тип'}: ${normalized.propertyTypeBadgeLabel}` });
@@ -15609,7 +15608,7 @@ render() {
         <div class="list-card-full__bg${normalized.image ? '' : ' list-card-full__bg--fallback'}" aria-hidden="true"></div>
         <div class="card-back-header">
           <button type="button" class="card-back-header__close list-card-full__back" data-action="list-full-close" aria-label="Back">Назад</button>
-          <span class="card-back-header__score${scoreTierClass}" aria-hidden="true">${scoreLabel}</span>
+          <span class="card-back-header__score" aria-hidden="true">${escCardText(normalized.id || '')}</span>
         </div>
         <div class="list-card-full__body">
           <div class="card-back-scroll">
