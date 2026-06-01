@@ -5705,65 +5705,562 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
-  async loadAccessClientsList(overlay) {
-    if (!overlay) return;
-    const isUaLang = this.getLangCode() === 'ua';
-    const esc = (value) => String(value ?? '')
+  buildAdminBroadcastEditorHtml({ isUaLang, esc, targetCount, draft }) {
+    const currentDraft = draft && typeof draft === 'object' ? draft : {};
+    const messageText = String(currentDraft.messageText || '').trim();
+    const ctaText = String(currentDraft.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim();
+    const photoFile = currentDraft.photoFile instanceof File ? currentDraft.photoFile : null;
+    const photoPreview = String(currentDraft.photoPreview || '').trim();
+    return `
+      <input class="vw-access-add-file" data-role="broadcast-photo-input" type="file" accept="image/*">
+      <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${targetCount}</strong></div>
+      <div class="vw-broadcast-field">
+        <label>${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
+        <textarea id="vw-broadcast-text" class="vw-access-add-textarea vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(messageText)}</textarea>
+      </div>
+      <div class="vw-broadcast-field">
+        <label>${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
+        <input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}">
+      </div>
+      <div class="vw-broadcast-field">
+        <label>${isUaLang ? 'Фото для розсилки' : 'Фото для рассылки'}</label>
+        <div class="vw-broadcast-photo-row">
+          <button type="button" class="vw-access-add-photo-slot vw-broadcast-photo-slot${photoPreview ? ' is-filled' : ''}" data-action="broadcast-photo-pick" aria-label="${isUaLang ? 'Додати фото' : 'Добавить фото'}" style="${photoPreview ? `background-image:url('${esc(photoPreview)}')` : ''}">
+            <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>
+          </button>
+          <div class="vw-broadcast-photo-copy">
+            <div>${photoFile ? esc(photoFile.name || (isUaLang ? 'Фото додано' : 'Фото добавлено')) : (isUaLang ? 'Додати фото з пристрою' : 'Добавить фото с устройства')}</div>
+            <span>${isUaLang ? 'Опційно. Фото піде всередину розсилки.' : 'Опционально. Фото уйдет внутри рассылки.'}</span>
+            ${photoFile ? `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="broadcast-photo-remove">${isUaLang ? 'Прибрати фото' : 'Убрать фото'}</button>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="vw-broadcast-actions">
+        <button type="button" class="vw-access-sub-btn" data-action="broadcast-back">${isUaLang ? 'Назад' : 'Назад'}</button>
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-preview">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
+      </div>
+    `;
+  }
+
+  buildAdminBroadcastPreviewHtml({ isUaLang, esc, targetCount, draft }) {
+    const currentDraft = draft && typeof draft === 'object' ? draft : {};
+    const messageText = String(currentDraft.messageText || '').trim();
+    const ctaText = String(currentDraft.ctaText || '').trim();
+    const photoPreview = String(currentDraft.photoPreview || '').trim();
+    return `
+      <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${targetCount}</strong></div>
+      <div class="vw-broadcast-preview-card">
+        ${photoPreview ? `<img src="${esc(photoPreview)}" alt="">` : ''}
+        <div class="vw-broadcast-preview-text">${esc(messageText || (isUaLang ? 'Без тексту' : 'Без текста'))}</div>
+        ${ctaText ? `<div class="vw-broadcast-preview-cta">${esc(ctaText)}</div>` : ''}
+      </div>
+      <div class="vw-broadcast-actions vw-broadcast-actions--stack">
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
+        <button type="button" class="vw-access-sub-btn" data-action="broadcast-edit">${isUaLang ? 'Назад до редактора' : 'Назад к редактору'}</button>
+      </div>
+    `;
+  }
+
+  collectAdminBroadcastDraft(root, draft = {}) {
+    const nextDraft = draft && typeof draft === 'object' ? draft : {};
+    nextDraft.messageText = String(root?.querySelector?.('#vw-broadcast-text')?.value || '').trim();
+    nextDraft.ctaText = String(root?.querySelector?.('#vw-broadcast-cta')?.value || '').trim();
+    return nextDraft;
+  }
+
+  async sendAdminBroadcast({ adminApiBase, targetUserIds, messageText, ctaText, photoFile }) {
+    const body = new FormData();
+    body.append('targetUserIds', JSON.stringify(Array.isArray(targetUserIds) ? targetUserIds : []));
+    body.append('messageText', String(messageText || '').trim());
+    body.append('ctaText', String(ctaText || '').trim());
+    if (photoFile instanceof File) body.append('image', photoFile, photoFile.name || 'broadcast.jpg');
+    this.api?.appendTelegramUserToFormData?.(body);
+    const tgIdentity = this.api?.getTelegramUserIdentity?.();
+    if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) {
+      body.append('devAdmin', '1');
+    }
+    const res = await fetch(`${adminApiBase}/broadcast`, {
+      method: 'POST',
+      headers: this.api?.buildTelegramAuthHeaders?.(),
+      body
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok || result?.ok === false) {
+      throw new Error(String(result?.error || `BROADCAST_FAILED_${res.status}`));
+    }
+    return result;
+  }
+
+  getAdminClientDisplayName(client = {}) {
+    const full = [client?.first_name, client?.last_name]
+      .map((v) => String(v || '').trim())
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    return full || String(client?.telegram_username || '').replace(/^@/, '') || `ID ${client?.telegram_user_id || '—'}`;
+  }
+
+  buildAdminClientTelegramLink(client = {}, esc = (v) => String(v ?? '')) {
+    const usernameRaw = String(client?.telegram_username || '').trim();
+    const idRaw = String(client?.telegram_user_id || '').trim();
+    if (usernameRaw) {
+      const uname = usernameRaw.replace(/^@/, '');
+      return `<a class="vw-stats-tg-link" href="https://t.me/${encodeURIComponent(uname)}" target="_blank" rel="noopener noreferrer">@${esc(uname)}</a>`;
+    }
+    if (/^\d{5,20}$/.test(idRaw)) {
+      return `<a class="vw-stats-tg-link" href="tg://user?id=${encodeURIComponent(idRaw)}">id:${esc(idRaw)}</a>`;
+    }
+    return '—';
+  }
+
+  buildAdminClientsSummaryHtml({ isUaLang, esc, safeNum, summary }) {
+    return `
+      <div class="vw-access-sub-item vw-stats-combined" style="display:flex; flex-direction:column; gap:8px; font-size:14px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between;"><span>👥 ${isUaLang ? 'Клієнтів у боті' : 'Клиентов в боте'}:</span> <strong>${safeNum(summary.totalClients)}</strong></div>
+        <div style="display:flex; justify-content:space-between;"><span>📝 ${isUaLang ? 'Заявки залишали' : 'Оставляли заявки'}:</span> <strong>${safeNum(summary.withLeads)}</strong></div>
+        <div style="display:flex; justify-content:space-between;"><span>🔥 ${isUaLang ? 'Активні за 7 днів' : 'Активные за 7 дней'}:</span> <strong>${safeNum(summary.active7Days)}</strong></div>
+      </div>
+      <div style="font-weight:600; margin-bottom:12px; font-size:16px;">${isUaLang ? 'Мої клієнти' : 'Мои клиенты'}</div>
+      <div class="vw-admin-clients-actions">
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="select-all">${isUaLang ? 'Обрати всі' : 'Выбрать все'}</button>
+        <select class="vw-access-sort-select vw-admin-clients-sort" data-action="sort-by" aria-label="${isUaLang ? 'Сортувати клієнтів' : 'Сортировать клиентов'}">
+          <option value="latest">${isUaLang ? 'Останні активні' : 'Последние активные'}</option>
+          <option value="leads_desc">${isUaLang ? 'Більше заявок' : 'Больше заявок'}</option>
+          <option value="name_asc">${isUaLang ? 'За імʼям' : 'По имени'}</option>
+        </select>
+      </div>
+    `;
+  }
+
+  getSortedAdminClients(clients = [], sortMode = 'latest', isUaLang = false) {
+    const getClientDateValue = (client) => {
+      const raw = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || client?.first_seen_at || '';
+      const ts = Date.parse(raw);
+      return Number.isFinite(ts) ? ts : 0;
+    };
+    const getClientLeadsValue = (client) => Number(client?.leads_count || 0);
+    const getClientNameValue = (client) => this.getAdminClientDisplayName(client).toLowerCase();
+    const filtered = Array.isArray(clients) ? clients.slice() : [];
+    filtered.sort((a, b) => {
+      if (sortMode === 'leads_desc') return getClientLeadsValue(b) - getClientLeadsValue(a);
+      if (sortMode === 'name_asc') return getClientNameValue(a).localeCompare(getClientNameValue(b), isUaLang ? 'uk' : 'ru');
+      return getClientDateValue(b) - getClientDateValue(a);
+    });
+    return filtered;
+  }
+
+  buildAdminClientRowsHtml({ clients, visibleClients, selectedIds, isUaLang, esc, formatDate }) {
+    const selectedSet = selectedIds instanceof Set ? selectedIds : new Set();
+    return visibleClients.map((client) => {
+      const originalIdx = clients.indexOf(client);
+      const name = this.getAdminClientDisplayName(client);
+      const leads = Number(client?.leads_count || 0);
+      const last = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || null;
+      const uid = String(client?.telegram_user_id || '');
+      const isSelected = uid && selectedSet.has(uid);
+      return `
+        <div class="vw-client-card${isSelected ? ' is-selected' : ''}" data-role="client-card" data-client-index="${originalIdx}" role="button" tabindex="0">
+          <span class="vw-client-card__main">
+            <span class="vw-client-card__name">${esc(name)}</span>
+            <span class="vw-client-card__tg">${this.buildAdminClientTelegramLink(client, esc)}</span>
+          </span>
+          <span class="vw-client-card__meta">${leads} ${isUaLang ? 'заяв.' : 'заяв.'} · ${formatDate(last)}</span>
+          <button type="button" class="vw-client-select${isSelected ? ' is-selected' : ''}" data-action="toggle-select" data-client-id="${esc(uid)}" aria-label="${isUaLang ? 'Обрати клієнта' : 'Выбрать клиента'}" aria-pressed="${isSelected ? 'true' : 'false'}"></button>
+        </div>
+        <div class="vw-client-details" data-role="client-details" data-client-index="${originalIdx}" style="display:none;"></div>
+      `;
+    }).join('');
+  }
+
+  renderAdminClientInsights(insights, { isUaLang, esc }) {
+    if (!insights || typeof insights !== 'object') return '—';
+    const labels = isUaLang
+      ? { operation: 'Операція', type: 'Тип', district: 'Район', location: 'Локація', rooms: 'Кімнати', budget: 'Бюджет', budgetMax: 'Бюджет до' }
+      : { operation: 'Операция', type: 'Тип', district: 'Район', location: 'Локация', rooms: 'Комнаты', budget: 'Бюджет', budgetMax: 'Бюджет до' };
+    const normalize = (key, value) => {
+      if (value === null || value === undefined) return '';
+      if (Array.isArray(value)) return value.map((x) => normalize(key, x)).filter(Boolean).join(', ');
+      const raw = String(value).trim();
+      if (!raw || key === 'progress') return '';
+      if (key === 'operation') {
+        if (raw === 'buy' || raw === 'sale') return isUaLang ? 'Купівля' : 'Покупка';
+        if (raw === 'rent') return isUaLang ? 'Оренда' : 'Аренда';
+      }
+      if (key === 'type' && raw === 'apartment') return isUaLang ? 'Квартира' : 'Квартира';
+      return raw;
+    };
+    const parts = Object.entries(insights).map(([key, value]) => {
+      const v = normalize(key, value);
+      return v ? `${labels[key] || key}: ${v}` : '';
+    }).filter(Boolean);
+    return parts.length ? esc(parts.join(' · ')) : '—';
+  }
+
+  buildAdminClientDetailsHtml({ client, isUaLang, esc, safeNum, formatDate }) {
+    const session = client?.latest_session && typeof client.latest_session === 'object' ? client.latest_session : {};
+    const rows = [
+      { label: 'Telegram ID', value: client?.telegram_user_id || '—' },
+      { label: isUaLang ? 'Username' : 'Username', value: client?.telegram_username || '—' },
+      { label: isUaLang ? 'Вперше зайшов' : 'Впервые зашел', value: formatDate(client?.first_seen_at) },
+      { label: isUaLang ? 'Остання активність' : 'Последняя активность', value: formatDate(client?.last_seen_at || client?.last_session_at) },
+      { label: isUaLang ? 'Заявок' : 'Заявок', value: safeNum(client?.leads_count) },
+      {
+        label: isUaLang ? 'Останній обʼєкт заявки' : 'Последний объект заявки',
+        value: (() => {
+          const id = String(client?.last_lead_property_id || '').trim();
+          if (!id) return '—';
+          const url = String(client?.last_lead_property_url || '').trim();
+          return `${esc(id)}${url ? ` <a class="vw-stats-tg-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isUaLang ? 'посилання' : 'ссылка')}</a>` : ''}`;
+        })(),
+        html: true
+      },
+      { label: isUaLang ? 'Сесій' : 'Сессий', value: safeNum(client?.sessions_count) },
+      { label: isUaLang ? 'Остання сесія' : 'Последняя сессия', value: client?.last_session_id || '—' },
+      { label: isUaLang ? 'Повідомлень' : 'Сообщений', value: safeNum(session?.messagesCount) },
+      { label: isUaLang ? 'Показано обʼєктів' : 'Показано объектов', value: safeNum(session?.shownObjectsCount) },
+      { label: isUaLang ? 'Останній запит' : 'Последний запрос', value: session?.lastUserText || '—' },
+      { label: isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент', value: this.renderAdminClientInsights(session?.lastInsights, { isUaLang, esc }), html: true }
+    ];
+    return `<div class="vw-client-details__inner">${rows.map((row) => `<div class="vw-client-details__row"><span>${esc(row.label)}</span><strong>${row.html ? row.value : esc(row.value)}</strong></div>`).join('')}</div>`;
+  }
+
+  normalizeAdminBroadcastTargets(targetUserIds) {
+    return Array.isArray(targetUserIds)
+      ? targetUserIds.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+  }
+
+  normalizeAdminBroadcastDraft(draft = {}, isUaLang = false) {
+    return {
+      messageText: String(draft?.messageText || '').trim(),
+      ctaText: String(draft?.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim(),
+      photoFile: draft?.photoFile instanceof File ? draft.photoFile : null,
+      photoPreview: String(draft?.photoPreview || '').trim()
+    };
+  }
+
+  renderAdminBroadcastEditorScreen({
+    root,
+    isUaLang,
+    esc,
+    targetUserIds,
+    draft,
+    setSectionTitle,
+    onBack,
+    onPreview,
+    onRenderEditor
+  }) {
+    if (!root) return;
+    setSectionTitle?.(isUaLang ? 'Розсилка клієнтам' : 'Рассылка клиентам');
+    const safeTargetUserIds = this.normalizeAdminBroadcastTargets(targetUserIds);
+    const currentDraft = this.normalizeAdminBroadcastDraft(draft, isUaLang);
+    root.innerHTML = this.buildAdminBroadcastEditorHtml({
+      isUaLang,
+      esc,
+      targetCount: safeTargetUserIds.length,
+      draft: currentDraft
+    });
+    const syncDraftFromFields = () => this.collectAdminBroadcastDraft(root, currentDraft);
+    root.onclick = (event) => {
+      if (event.target?.closest?.('[data-action="broadcast-back"]')) {
+        onBack?.();
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-photo-pick"]')) {
+        syncDraftFromFields();
+        root.querySelector('[data-role="broadcast-photo-input"]')?.click();
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-photo-remove"]')) {
+        syncDraftFromFields();
+        currentDraft.photoFile = null;
+        currentDraft.photoPreview = '';
+        onRenderEditor?.(safeTargetUserIds, currentDraft);
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-preview"]')) {
+        onPreview?.(safeTargetUserIds, syncDraftFromFields());
+      }
+    };
+    root.onchange = (event) => {
+      const fileInput = event.target?.closest?.('[data-role="broadcast-photo-input"]');
+      if (!fileInput) return;
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      syncDraftFromFields();
+      const fileSizeMb = Number(file.size || 0) / (1024 * 1024);
+      if (fileSizeMb > 5) {
+        const proceed = window.confirm(`Фото "${file.name}" весит ${fileSizeMb.toFixed(2)} MB.\nЭто больше рекомендуемых 5 MB.\n\nПродолжить и добавить фото?`);
+        if (!proceed) {
+          fileInput.value = '';
+          return;
+        }
+      }
+      currentDraft.photoFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        currentDraft.photoPreview = typeof reader.result === 'string' ? reader.result : '';
+        onRenderEditor?.(safeTargetUserIds, currentDraft);
+      };
+      reader.readAsDataURL(file);
+      fileInput.value = '';
+    };
+    root.onkeydown = null;
+  }
+
+  renderAdminBroadcastPreviewScreen({
+    root,
+    isUaLang,
+    esc,
+    adminApiBase,
+    targetUserIds,
+    draft,
+    setSectionTitle,
+    onEdit,
+    onDone
+  }) {
+    if (!root) return;
+    setSectionTitle?.(isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр');
+    const safeTargetUserIds = this.normalizeAdminBroadcastTargets(targetUserIds);
+    const currentDraft = this.normalizeAdminBroadcastDraft(draft, isUaLang);
+    root.innerHTML = this.buildAdminBroadcastPreviewHtml({
+      isUaLang,
+      esc,
+      targetCount: safeTargetUserIds.length,
+      draft: currentDraft
+    });
+    root.onclick = async (event) => {
+      if (event.target?.closest?.('[data-action="broadcast-edit"]')) {
+        onEdit?.(safeTargetUserIds, currentDraft);
+        return;
+      }
+      const sendBtn = event.target?.closest?.('[data-action="broadcast-send"]');
+      if (!sendBtn) return;
+      sendBtn.disabled = true;
+      sendBtn.textContent = isUaLang ? 'Відправка...' : 'Отправка...';
+      try {
+        const result = await this.sendAdminBroadcast({
+          adminApiBase,
+          targetUserIds: safeTargetUserIds,
+          messageText: currentDraft.messageText,
+          ctaText: currentDraft.ctaText,
+          photoFile: currentDraft.photoFile
+        });
+        alert(`${isUaLang ? 'Розсилку завершено!' : 'Рассылка завершена!'}\n${isUaLang ? 'Успішно' : 'Успешно'}: ${result.results?.success ?? 0}\n${isUaLang ? 'Помилок' : 'Ошибок'}: ${result.results?.failed ?? 0}`);
+        onDone?.();
+      } catch (err) {
+        alert((isUaLang ? 'Помилка: ' : 'Ошибка: ') + (err?.message || err));
+        sendBtn.disabled = false;
+        sendBtn.textContent = isUaLang ? 'Відправити розсилку' : 'Отправить рассылку';
+      }
+    };
+    root.onchange = null;
+    root.onkeydown = null;
+  }
+
+  updateAdminClientsBroadcastButtons({ root, isUaLang }) {
+    const count = this.selectedClientsForBroadcast?.size || 0;
+    const btnSend = root?.querySelector?.('[data-action="broadcast-create"]');
+    const btnClear = root?.querySelector?.('[data-action="broadcast-clear"]');
+    if (btnSend) {
+      btnSend.textContent = `${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (${count})`;
+      if (count > 0) {
+        btnSend.disabled = false;
+        btnSend.removeAttribute('disabled');
+      } else {
+        btnSend.disabled = true;
+        btnSend.setAttribute('disabled', '');
+      }
+    }
+    if (btnClear) {
+      if (count > 0) {
+        btnClear.disabled = false;
+        btnClear.removeAttribute('disabled');
+      } else {
+        btnClear.disabled = true;
+        btnClear.setAttribute('disabled', '');
+      }
+    }
+  }
+
+  renderAdminClientsRows({ root, clients, sortMode, isUaLang, esc, formatDate }) {
+    const visibleClients = this.getSortedAdminClients(clients, sortMode, isUaLang);
+    const list = root?.querySelector?.('[data-role="clients-list"]');
+    if (!list) return;
+    if (!visibleClients.length) {
+      list.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Немає клієнтів для цього фільтра' : 'Нет клиентов для этого фильтра'}</strong></div>`;
+      this.updateAdminClientsBroadcastButtons({ root, isUaLang });
+      return;
+    }
+    list.innerHTML = this.buildAdminClientRowsHtml({
+      clients,
+      visibleClients,
+      selectedIds: this.selectedClientsForBroadcast,
+      isUaLang,
+      esc,
+      formatDate
+    });
+    this.updateAdminClientsBroadcastButtons({ root, isUaLang });
+  }
+
+  toggleAdminClientDetails({ root, clients, card, isUaLang, esc, safeNum, formatDate }) {
+    const idx = Number(card?.getAttribute?.('data-client-index'));
+    const client = clients?.[idx];
+    if (!client) return;
+    const details = root?.querySelector?.(`[data-role="client-details"][data-client-index="${idx}"]`);
+    if (!details) return;
+    const isOpen = details.style.display !== 'none';
+    root.querySelectorAll('[data-role="client-details"]').forEach((el) => {
+      el.style.display = 'none';
+      el.innerHTML = '';
+    });
+    if (isOpen) return;
+    details.innerHTML = this.buildAdminClientDetailsHtml({ client, isUaLang, esc, safeNum, formatDate });
+    details.style.display = 'block';
+  }
+
+  toggleAdminClientBroadcastSelection(uid, onUpdate) {
+    const safeUid = String(uid || '').trim();
+    if (!safeUid) return;
+    if (!this.selectedClientsForBroadcast) this.selectedClientsForBroadcast = new Set();
+    if (this.selectedClientsForBroadcast.has(safeUid)) {
+      this.selectedClientsForBroadcast.delete(safeUid);
+    } else {
+      this.selectedClientsForBroadcast.add(safeUid);
+    }
+    onUpdate?.();
+  }
+
+  renderAdminClientsScreen({
+    root,
+    isUaLang,
+    esc,
+    safeNum,
+    formatDate,
+    summary,
+    clients,
+    getSortMode,
+    setSortMode,
+    setSectionTitle,
+    onCreateBroadcast
+  }) {
+    if (!root) return;
+    setSectionTitle?.(isUaLang ? 'Клієнти' : 'Клиенты');
+    const summaryHtml = this.buildAdminClientsSummaryHtml({ isUaLang, esc, safeNum, summary });
+    if (!Array.isArray(clients) || !clients.length) {
+      root.innerHTML = `${summaryHtml}<div class="vw-access-sub-item"><strong>${isUaLang ? 'Клієнтів поки немає' : 'Клиентов пока нет'}</strong></div>`;
+      root.onclick = null;
+      root.onchange = null;
+      root.onkeydown = null;
+      return;
+    }
+
+    root.innerHTML = `${summaryHtml}<div class="vw-clients-list" data-role="clients-list"></div>
+      <div class="vw-admin-broadcast-bar">
+        <button type="button" class="vw-access-sub-btn" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
+      </div>`;
+
+    const renderRows = () => this.renderAdminClientsRows({
+      root,
+      clients,
+      sortMode: getSortMode?.() || 'latest',
+      isUaLang,
+      esc,
+      formatDate
+    });
+
+    renderRows();
+
+    root.onclick = (event) => {
+      const selectBtn = event.target?.closest?.('[data-action="toggle-select"]');
+      if (selectBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.toggleAdminClientBroadcastSelection(selectBtn.getAttribute('data-client-id'), renderRows);
+        return;
+      }
+      if (event.target?.closest?.('[data-action="select-all"]')) {
+        clients.forEach((client) => {
+          if (client?.telegram_user_id) this.selectedClientsForBroadcast.add(String(client.telegram_user_id));
+        });
+        renderRows();
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-clear"]')) {
+        this.selectedClientsForBroadcast.clear();
+        renderRows();
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-create"]')) {
+        if (this.selectedClientsForBroadcast.size === 0) return;
+        onCreateBroadcast?.(Array.from(this.selectedClientsForBroadcast));
+        return;
+      }
+      if (event.target?.closest?.('a')) return;
+      const card = event.target?.closest?.('[data-role="client-card"]');
+      if (card) this.toggleAdminClientDetails({ root, clients, card, isUaLang, esc, safeNum, formatDate });
+    };
+
+    root.onchange = (event) => {
+      if (!event.target?.matches?.('[data-action="sort-by"]')) return;
+      setSortMode?.(String(event.target?.value || 'latest'));
+      renderRows();
+    };
+    root.onkeydown = (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const card = event.target?.closest?.('[data-role="client-card"]');
+      if (!card) return;
+      event.preventDefault();
+      this.toggleAdminClientDetails({ root, clients, card, isUaLang, esc, safeNum, formatDate });
+    };
+  }
+
+  escapeAdminHtml(value) {
+    return String(value ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-    const safeNum = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '0');
-    const formatDate = (value) => {
-      if (!value) return '—';
-      try {
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return '—';
-        return d.toLocaleDateString(isUaLang ? 'uk-UA' : 'ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
-      } catch {
-        return '—';
-      }
-    };
-    const clientName = (client) => {
-      const full = [client?.first_name, client?.last_name].map((v) => String(v || '').trim()).filter(Boolean).join(' ').trim();
-      return full || String(client?.telegram_username || '').replace(/^@/, '') || `ID ${client?.telegram_user_id || '—'}`;
-    };
-    const tgLink = (client) => {
-      const usernameRaw = String(client?.telegram_username || '').trim();
-      const idRaw = String(client?.telegram_user_id || '').trim();
-      if (usernameRaw) {
-        const uname = usernameRaw.replace(/^@/, '');
-        return `<a class="vw-stats-tg-link" href="https://t.me/${encodeURIComponent(uname)}" target="_blank" rel="noopener noreferrer">@${esc(uname)}</a>`;
-      }
-      if (/^\d{5,20}$/.test(idRaw)) {
-        return `<a class="vw-stats-tg-link" href="tg://user?id=${encodeURIComponent(idRaw)}">id:${esc(idRaw)}</a>`;
-      }
+  }
+
+  safeAdminNumber(value, fallback = '0') {
+    return Number.isFinite(Number(value)) ? String(Number(value)) : fallback;
+  }
+
+  formatAdminClientDate(value, isUaLang = false) {
+    if (!value) return '—';
+    try {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '—';
+      return date.toLocaleDateString(isUaLang ? 'uk-UA' : 'ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit'
+      });
+    } catch {
       return '—';
-    };
-    const renderInsights = (insights) => {
-      if (!insights || typeof insights !== 'object') return '—';
-      const labels = isUaLang
-        ? { operation: 'Операція', type: 'Тип', district: 'Район', location: 'Локація', rooms: 'Кімнати', budget: 'Бюджет', budgetMax: 'Бюджет до' }
-        : { operation: 'Операция', type: 'Тип', district: 'Район', location: 'Локация', rooms: 'Комнаты', budget: 'Бюджет', budgetMax: 'Бюджет до' };
-      const normalize = (key, value) => {
-        if (value === null || value === undefined) return '';
-        if (Array.isArray(value)) return value.map((x) => normalize(key, x)).filter(Boolean).join(', ');
-        const raw = String(value).trim();
-        if (!raw || key === 'progress') return '';
-        if (key === 'operation') {
-          if (raw === 'buy' || raw === 'sale') return isUaLang ? 'Купівля' : 'Покупка';
-          if (raw === 'rent') return isUaLang ? 'Оренда' : 'Аренда';
-        }
-        if (key === 'type' && raw === 'apartment') return isUaLang ? 'Квартира' : 'Квартира';
-        return raw;
-      };
-      const parts = Object.entries(insights).map(([key, value]) => {
-        const v = normalize(key, value);
-        return v ? `${labels[key] || key}: ${v}` : '';
-      }).filter(Boolean);
-      return parts.length ? esc(parts.join(' · ')) : '—';
-    };
+    }
+  }
+
+  setAccessSubTitle(overlay, value) {
+    const titleEl = overlay?.querySelector?.('.vw-access-sub-title');
+    if (titleEl) titleEl.textContent = value;
+  }
+
+  getAdminApiBaseUrl() {
+    return String(this.api?.apiUrl || this.apiUrl || '')
+      .replace(/\/api\/audio\/upload\/?$/i, '/api/admin')
+      .replace(/\/$/, '');
+  }
+
+  async loadAccessClientsList(overlay) {
+    if (!overlay) return;
+    const isUaLang = this.getLangCode() === 'ua';
+    const esc = (value) => this.escapeAdminHtml(value);
+    const safeNum = (value) => this.safeAdminNumber(value, '0');
+    const formatDate = (value) => this.formatAdminClientDate(value, isUaLang);
     const root = overlay.querySelector('[data-role="admin-clients-list"]');
     if (!root) return;
     root.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Завантаження...' : 'Загрузка...'}</strong></div>`;
@@ -5774,357 +6271,52 @@ class VoiceWidget extends HTMLElement {
 
       this.selectedClientsForBroadcast = new Set();
       let clientsSortMode = 'latest';
-      const adminApiBase = String(this.api?.apiUrl || this.apiUrl || '')
-        .replace(/\/api\/audio\/upload\/?$/i, '/api/admin')
-        .replace(/\/$/, '');
-      const setSectionTitle = (value) => {
-        const titleEl = overlay.querySelector('.vw-access-sub-title');
-        if (titleEl) titleEl.textContent = value;
-      };
-      const updateBroadcastButtons = () => {
-        const count = this.selectedClientsForBroadcast.size;
-        const btnSend = root.querySelector('[data-action="broadcast-create"]');
-        const btnClear = root.querySelector('[data-action="broadcast-clear"]');
-        if (btnSend) {
-          btnSend.textContent = `${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (${count})`;
-          if (count > 0) {
-            btnSend.disabled = false;
-            btnSend.removeAttribute('disabled');
-          } else {
-            btnSend.disabled = true;
-            btnSend.setAttribute('disabled', '');
-          }
-        }
-        if (btnClear) {
-          if (count > 0) {
-            btnClear.disabled = false;
-            btnClear.removeAttribute('disabled');
-          } else {
-            btnClear.disabled = true;
-            btnClear.setAttribute('disabled', '');
-          }
-        }
-      };
-      const getClientDateValue = (client) => {
-        const raw = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || client?.first_seen_at || '';
-        const ts = Date.parse(raw);
-        return Number.isFinite(ts) ? ts : 0;
-      };
-      const getClientLeadsValue = (client) => Number(client?.leads_count || 0);
-      const getClientNameValue = (client) => clientName(client).toLowerCase();
-      const getVisibleClients = () => {
-        const filtered = clients.slice();
-        filtered.sort((a, b) => {
-          if (clientsSortMode === 'leads_desc') return getClientLeadsValue(b) - getClientLeadsValue(a);
-          if (clientsSortMode === 'name_asc') return getClientNameValue(a).localeCompare(getClientNameValue(b), isUaLang ? 'uk' : 'ru');
-          return getClientDateValue(b) - getClientDateValue(a);
-        });
-        return filtered;
-      };
-      const renderRows = () => {
-        const visibleClients = getVisibleClients();
-        const list = root.querySelector('[data-role="clients-list"]');
-        if (!list) return;
-        if (!visibleClients.length) {
-          list.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Немає клієнтів для цього фільтра' : 'Нет клиентов для этого фильтра'}</strong></div>`;
-          updateBroadcastButtons();
-          return;
-        }
-        list.innerHTML = visibleClients.map((client) => {
-          const originalIdx = clients.indexOf(client);
-          const name = clientName(client);
-          const leads = Number(client?.leads_count || 0);
-          const last = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || null;
-          const uid = String(client?.telegram_user_id || '');
-          const isSelected = uid && this.selectedClientsForBroadcast.has(uid);
-          return `
-            <div class="vw-client-card${isSelected ? ' is-selected' : ''}" data-role="client-card" data-client-index="${originalIdx}" role="button" tabindex="0">
-              <span class="vw-client-card__main">
-                <span class="vw-client-card__name">${esc(name)}</span>
-                <span class="vw-client-card__tg">${tgLink(client)}</span>
-              </span>
-              <span class="vw-client-card__meta">${leads} ${isUaLang ? 'заяв.' : 'заяв.'} · ${formatDate(last)}</span>
-              <button type="button" class="vw-client-select${isSelected ? ' is-selected' : ''}" data-action="toggle-select" data-client-id="${esc(uid)}" aria-label="${isUaLang ? 'Обрати клієнта' : 'Выбрать клиента'}" aria-pressed="${isSelected ? 'true' : 'false'}"></button>
-            </div>
-            <div class="vw-client-details" data-role="client-details" data-client-index="${originalIdx}" style="display:none;"></div>
-          `;
-        }).join('');
-        updateBroadcastButtons();
-      };
+      const adminApiBase = this.getAdminApiBaseUrl();
+      const setSectionTitle = (value) => this.setAccessSubTitle(overlay, value);
       let renderBroadcastPreview = null;
       const renderBroadcastEditor = (targetUserIds, draft = {}) => {
-        setSectionTitle(isUaLang ? 'Розсилка клієнтам' : 'Рассылка клиентам');
-        const safeTargetUserIds = Array.isArray(targetUserIds)
-          ? targetUserIds.map((id) => String(id || '').trim()).filter(Boolean)
-          : [];
-        const currentDraft = {
-          messageText: String(draft.messageText || '').trim(),
-          ctaText: String(draft.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim(),
-          photoFile: draft.photoFile instanceof File ? draft.photoFile : null,
-          photoPreview: String(draft.photoPreview || '').trim()
-        };
-        root.innerHTML = `
-          <input class="vw-access-add-file" data-role="broadcast-photo-input" type="file" accept="image/*">
-          <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${safeTargetUserIds.length}</strong></div>
-          <div class="vw-broadcast-field">
-            <label>${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
-            <textarea id="vw-broadcast-text" class="vw-access-add-textarea vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(currentDraft.messageText)}</textarea>
-          </div>
-          <div class="vw-broadcast-field">
-            <label>${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
-            <input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(currentDraft.ctaText)}">
-          </div>
-          <div class="vw-broadcast-field">
-            <label>${isUaLang ? 'Фото для розсилки' : 'Фото для рассылки'}</label>
-            <div class="vw-broadcast-photo-row">
-              <button type="button" class="vw-access-add-photo-slot vw-broadcast-photo-slot${currentDraft.photoPreview ? ' is-filled' : ''}" data-action="broadcast-photo-pick" aria-label="${isUaLang ? 'Додати фото' : 'Добавить фото'}" style="${currentDraft.photoPreview ? `background-image:url('${esc(currentDraft.photoPreview)}')` : ''}">
-                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>
-              </button>
-              <div class="vw-broadcast-photo-copy">
-                <div>${currentDraft.photoFile ? esc(currentDraft.photoFile.name || (isUaLang ? 'Фото додано' : 'Фото добавлено')) : (isUaLang ? 'Додати фото з пристрою' : 'Добавить фото с устройства')}</div>
-                <span>${isUaLang ? 'Опційно. Фото піде всередину розсилки.' : 'Опционально. Фото уйдет внутри рассылки.'}</span>
-                ${currentDraft.photoFile ? `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="broadcast-photo-remove">${isUaLang ? 'Прибрати фото' : 'Убрать фото'}</button>` : ''}
-              </div>
-            </div>
-          </div>
-          <div class="vw-broadcast-actions">
-            <button type="button" class="vw-access-sub-btn" data-action="broadcast-back">${isUaLang ? 'Назад' : 'Назад'}</button>
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-preview">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
-          </div>
-        `;
-        const syncDraftFromFields = () => {
-          currentDraft.messageText = String(root.querySelector('#vw-broadcast-text')?.value || '').trim();
-          currentDraft.ctaText = String(root.querySelector('#vw-broadcast-cta')?.value || '').trim();
-          return currentDraft;
-        };
-        root.onclick = (event) => {
-          if (event.target?.closest?.('[data-action="broadcast-back"]')) {
-            renderClientsScreen();
-            return;
-          }
-          if (event.target?.closest?.('[data-action="broadcast-photo-pick"]')) {
-            syncDraftFromFields();
-            root.querySelector('[data-role="broadcast-photo-input"]')?.click();
-            return;
-          }
-          if (event.target?.closest?.('[data-action="broadcast-photo-remove"]')) {
-            syncDraftFromFields();
-            currentDraft.photoFile = null;
-            currentDraft.photoPreview = '';
-            renderBroadcastEditor(safeTargetUserIds, currentDraft);
-            return;
-          }
-          if (event.target?.closest?.('[data-action="broadcast-preview"]')) {
-            renderBroadcastPreview(safeTargetUserIds, syncDraftFromFields());
-          }
-        };
-        root.onchange = (event) => {
-          const fileInput = event.target?.closest?.('[data-role="broadcast-photo-input"]');
-          if (!fileInput) return;
-          const file = fileInput.files?.[0];
-          if (!file) return;
-          syncDraftFromFields();
-          const fileSizeMb = Number(file.size || 0) / (1024 * 1024);
-          if (fileSizeMb > 5) {
-            const proceed = window.confirm(`Фото "${file.name}" весит ${fileSizeMb.toFixed(2)} MB.\nЭто больше рекомендуемых 5 MB.\n\nПродолжить и добавить фото?`);
-            if (!proceed) {
-              fileInput.value = '';
-              return;
-            }
-          }
-          currentDraft.photoFile = file;
-          const reader = new FileReader();
-          reader.onload = () => {
-            currentDraft.photoPreview = typeof reader.result === 'string' ? reader.result : '';
-            renderBroadcastEditor(safeTargetUserIds, currentDraft);
-          };
-          reader.readAsDataURL(file);
-          fileInput.value = '';
-        };
-        root.onkeydown = null;
+        this.renderAdminBroadcastEditorScreen({
+          root,
+          isUaLang,
+          esc,
+          targetUserIds,
+          draft,
+          setSectionTitle,
+          onBack: renderClientsScreen,
+          onPreview: renderBroadcastPreview,
+          onRenderEditor: renderBroadcastEditor
+        });
       };
       renderBroadcastPreview = (targetUserIds, draft = {}) => {
-        setSectionTitle(isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр');
-        const safeTargetUserIds = Array.isArray(targetUserIds)
-          ? targetUserIds.map((id) => String(id || '').trim()).filter(Boolean)
-          : [];
-        const messageText = String(draft.messageText || '').trim();
-        const ctaText = String(draft.ctaText || '').trim();
-        const photoPreview = String(draft.photoPreview || '').trim();
-        const photoFile = draft.photoFile instanceof File ? draft.photoFile : null;
-        root.innerHTML = `
-          <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${safeTargetUserIds.length}</strong></div>
-          <div class="vw-broadcast-preview-card">
-            ${photoPreview ? `<img src="${esc(photoPreview)}" alt="">` : ''}
-            <div class="vw-broadcast-preview-text">${esc(messageText || (isUaLang ? 'Без тексту' : 'Без текста'))}</div>
-            ${ctaText ? `<div class="vw-broadcast-preview-cta">${esc(ctaText)}</div>` : ''}
-          </div>
-          <div class="vw-broadcast-actions vw-broadcast-actions--stack">
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
-            <button type="button" class="vw-access-sub-btn" data-action="broadcast-edit">${isUaLang ? 'Назад до редактора' : 'Назад к редактору'}</button>
-          </div>
-        `;
-        root.onclick = async (event) => {
-          if (event.target?.closest?.('[data-action="broadcast-edit"]')) {
-            renderBroadcastEditor(safeTargetUserIds, draft);
-            return;
-          }
-          const sendBtn = event.target?.closest?.('[data-action="broadcast-send"]');
-          if (!sendBtn) return;
-          sendBtn.disabled = true;
-          sendBtn.textContent = isUaLang ? 'Відправка...' : 'Отправка...';
-          try {
-            const body = new FormData();
-            body.append('targetUserIds', JSON.stringify(safeTargetUserIds));
-            body.append('messageText', messageText);
-            body.append('ctaText', ctaText);
-            if (photoFile) body.append('image', photoFile, photoFile.name || 'broadcast.jpg');
-            this.api?.appendTelegramUserToFormData?.(body);
-            const tgIdentity = this.api?.getTelegramUserIdentity?.();
-            if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) {
-              body.append('devAdmin', '1');
-            }
-            const res = await fetch(`${adminApiBase}/broadcast`, {
-              method: 'POST',
-              headers: this.api?.buildTelegramAuthHeaders?.(),
-              body
-            });
-            const result = await res.json().catch(() => ({}));
-            if (!res.ok || result?.ok === false) {
-              throw new Error(String(result?.error || `BROADCAST_FAILED_${res.status}`));
-            }
-            alert(`${isUaLang ? 'Розсилку завершено!' : 'Рассылка завершена!'}\n${isUaLang ? 'Успішно' : 'Успешно'}: ${result.results?.success ?? 0}\n${isUaLang ? 'Помилок' : 'Ошибок'}: ${result.results?.failed ?? 0}`);
+        this.renderAdminBroadcastPreviewScreen({
+          root,
+          isUaLang,
+          esc,
+          adminApiBase,
+          targetUserIds,
+          draft,
+          setSectionTitle,
+          onEdit: renderBroadcastEditor,
+          onDone: () => {
             this.selectedClientsForBroadcast.clear();
             renderClientsScreen();
-          } catch (err) {
-            alert((isUaLang ? 'Помилка: ' : 'Ошибка: ') + (err?.message || err));
-            sendBtn.disabled = false;
-            sendBtn.textContent = isUaLang ? 'Відправити розсилку' : 'Отправить рассылку';
           }
-        };
-        root.onkeydown = null;
+        });
       };
       const renderClientsScreen = () => {
-      setSectionTitle(isUaLang ? 'Клієнти' : 'Клиенты');
-
-      const summaryHtml = `
-        <div class="vw-access-sub-item vw-stats-combined" style="display:flex; flex-direction:column; gap:8px; font-size:14px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:16px;">
-          <div style="display:flex; justify-content:space-between;"><span>👥 ${isUaLang ? 'Клієнтів у боті' : 'Клиентов в боте'}:</span> <strong>${safeNum(summary.totalClients)}</strong></div>
-          <div style="display:flex; justify-content:space-between;"><span>📝 ${isUaLang ? 'Заявки залишали' : 'Оставляли заявки'}:</span> <strong>${safeNum(summary.withLeads)}</strong></div>
-          <div style="display:flex; justify-content:space-between;"><span>🔥 ${isUaLang ? 'Активні за 7 днів' : 'Активные за 7 дней'}:</span> <strong>${safeNum(summary.active7Days)}</strong></div>
-        </div>
-        <div style="font-weight:600; margin-bottom:12px; font-size:16px;">${isUaLang ? 'Мої клієнти' : 'Мои клиенты'}</div>
-        <div class="vw-admin-clients-actions">
-          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="select-all">${isUaLang ? 'Обрати всі' : 'Выбрать все'}</button>
-          <select class="vw-access-sort-select vw-admin-clients-sort" data-action="sort-by" aria-label="${isUaLang ? 'Сортувати клієнтів' : 'Сортировать клиентов'}">
-            <option value="latest">${isUaLang ? 'Останні активні' : 'Последние активные'}</option>
-            <option value="leads_desc">${isUaLang ? 'Більше заявок' : 'Больше заявок'}</option>
-            <option value="name_asc">${isUaLang ? 'За імʼям' : 'По имени'}</option>
-          </select>
-        </div>
-      `;
-      if (!clients.length) {
-        root.innerHTML = `${summaryHtml}<div class="vw-access-sub-item"><strong>${isUaLang ? 'Клієнтів поки немає' : 'Клиентов пока нет'}</strong></div>`;
-        return;
-      }
-      root.innerHTML = `${summaryHtml}<div class="vw-clients-list" data-role="clients-list"></div>
-        <div class="vw-admin-broadcast-bar">
-          <button type="button" class="vw-access-sub-btn" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
-          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
-        </div>`;
-      const toggleClientDetails = (card) => {
-        const idx = Number(card?.getAttribute?.('data-client-index'));
-        const client = clients[idx];
-        if (!client) return;
-        const details = root.querySelector(`[data-role="client-details"][data-client-index="${idx}"]`);
-        if (!details) return;
-        const isOpen = details.style.display !== 'none';
-        root.querySelectorAll('[data-role="client-details"]').forEach((el) => {
-          el.style.display = 'none';
-          el.innerHTML = '';
+        this.renderAdminClientsScreen({
+          root,
+          isUaLang,
+          esc,
+          safeNum,
+          formatDate,
+          summary,
+          clients,
+          getSortMode: () => clientsSortMode,
+          setSortMode: (nextSortMode) => { clientsSortMode = nextSortMode; },
+          setSectionTitle,
+          onCreateBroadcast: renderBroadcastEditor
         });
-        if (isOpen) return;
-        const session = client?.latest_session && typeof client.latest_session === 'object' ? client.latest_session : {};
-        const rows = [
-          { label: 'Telegram ID', value: client?.telegram_user_id || '—' },
-          { label: isUaLang ? 'Username' : 'Username', value: client?.telegram_username || '—' },
-          { label: isUaLang ? 'Вперше зайшов' : 'Впервые зашел', value: formatDate(client?.first_seen_at) },
-          { label: isUaLang ? 'Остання активність' : 'Последняя активность', value: formatDate(client?.last_seen_at || client?.last_session_at) },
-          { label: isUaLang ? 'Заявок' : 'Заявок', value: safeNum(client?.leads_count) },
-          {
-            label: isUaLang ? 'Останній обʼєкт заявки' : 'Последний объект заявки',
-            value: (() => {
-              const id = String(client?.last_lead_property_id || '').trim();
-              if (!id) return '—';
-              const url = String(client?.last_lead_property_url || '').trim();
-              return `${esc(id)}${url ? ` <a class="vw-stats-tg-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isUaLang ? 'посилання' : 'ссылка')}</a>` : ''}`;
-            })(),
-            html: true
-          },
-          { label: isUaLang ? 'Сесій' : 'Сессий', value: safeNum(client?.sessions_count) },
-          { label: isUaLang ? 'Остання сесія' : 'Последняя сессия', value: client?.last_session_id || '—' },
-          { label: isUaLang ? 'Повідомлень' : 'Сообщений', value: safeNum(session?.messagesCount) },
-          { label: isUaLang ? 'Показано обʼєктів' : 'Показано объектов', value: safeNum(session?.shownObjectsCount) },
-          { label: isUaLang ? 'Останній запит' : 'Последний запрос', value: session?.lastUserText || '—' },
-          { label: isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент', value: renderInsights(session?.lastInsights), html: true }
-        ];
-        details.innerHTML = `<div class="vw-client-details__inner">${rows.map((row) => `<div class="vw-client-details__row"><span>${esc(row.label)}</span><strong>${row.html ? row.value : esc(row.value)}</strong></div>`).join('')}</div>`;
-        details.style.display = 'block';
-      };
-      const toggleClientSelection = (uid) => {
-        const safeUid = String(uid || '').trim();
-        if (!safeUid) return;
-        if (this.selectedClientsForBroadcast.has(safeUid)) {
-          this.selectedClientsForBroadcast.delete(safeUid);
-        } else {
-          this.selectedClientsForBroadcast.add(safeUid);
-        }
-        renderRows();
-      };
-      renderRows();
-
-      root.onclick = (event) => {
-        const selectBtn = event.target?.closest?.('[data-action="toggle-select"]');
-        if (selectBtn) {
-          event.preventDefault();
-          event.stopPropagation();
-          toggleClientSelection(selectBtn.getAttribute('data-client-id'));
-          return;
-        }
-        if (event.target?.closest?.('[data-action="select-all"]')) {
-          clients.forEach(c => {
-            if(c.telegram_user_id) this.selectedClientsForBroadcast.add(c.telegram_user_id);
-          });
-          renderRows();
-          return;
-        }
-        if (event.target?.closest?.('[data-action="broadcast-clear"]')) {
-          this.selectedClientsForBroadcast.clear();
-          renderRows();
-          return;
-        }
-        if (event.target?.closest?.('[data-action="broadcast-create"]')) {
-          if (this.selectedClientsForBroadcast.size === 0) return;
-          renderBroadcastEditor(Array.from(this.selectedClientsForBroadcast));
-          return;
-        }
-        if (event.target?.closest?.('a')) return;
-        const card = event.target?.closest?.('[data-role="client-card"]');
-        if (card) toggleClientDetails(card);
-      };
-
-      root.onchange = (event) => {
-        if (!event.target?.matches?.('[data-action="sort-by"]')) return;
-        clientsSortMode = String(event.target?.value || 'latest');
-        renderRows();
-      };
-      root.onkeydown = (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        const card = event.target?.closest?.('[data-role="client-card"]');
-        if (!card) return;
-        event.preventDefault();
-        toggleClientDetails(card);
-      };
       };
       renderClientsScreen();
 
