@@ -5903,20 +5903,28 @@ class VoiceWidget extends HTMLElement {
 
       this.selectedClientsForBroadcast = new Set();
       let clientsSortMode = 'latest';
-      let showOnlyUnselected = false;
       const updateBroadcastButtons = () => {
         const count = this.selectedClientsForBroadcast.size;
         const btnSend = root.querySelector('[data-action="broadcast-create"]');
         const btnClear = root.querySelector('[data-action="broadcast-clear"]');
-        const btnUnselected = root.querySelector('[data-action="show-unselected"]');
         if (btnSend) {
           btnSend.textContent = `${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (${count})`;
-          btnSend.disabled = count === 0;
+          if (count > 0) {
+            btnSend.disabled = false;
+            btnSend.removeAttribute('disabled');
+          } else {
+            btnSend.disabled = true;
+            btnSend.setAttribute('disabled', '');
+          }
         }
-        if (btnClear) btnClear.disabled = count === 0;
-        if (btnUnselected) {
-          btnUnselected.classList.toggle('is-active', showOnlyUnselected);
-          btnUnselected.setAttribute('aria-pressed', showOnlyUnselected ? 'true' : 'false');
+        if (btnClear) {
+          if (count > 0) {
+            btnClear.disabled = false;
+            btnClear.removeAttribute('disabled');
+          } else {
+            btnClear.disabled = true;
+            btnClear.setAttribute('disabled', '');
+          }
         }
       };
       const getClientDateValue = (client) => {
@@ -5927,9 +5935,7 @@ class VoiceWidget extends HTMLElement {
       const getClientLeadsValue = (client) => Number(client?.leads_count || 0);
       const getClientNameValue = (client) => clientName(client).toLowerCase();
       const getVisibleClients = () => {
-        const filtered = showOnlyUnselected
-          ? clients.filter((client) => !this.selectedClientsForBroadcast.has(String(client?.telegram_user_id || '')))
-          : clients.slice();
+        const filtered = clients.slice();
         filtered.sort((a, b) => {
           if (clientsSortMode === 'leads_desc') return getClientLeadsValue(b) - getClientLeadsValue(a);
           if (clientsSortMode === 'name_asc') return getClientNameValue(a).localeCompare(getClientNameValue(b), isUaLang ? 'uk' : 'ru');
@@ -5965,7 +5971,6 @@ class VoiceWidget extends HTMLElement {
             <div class="vw-client-details" data-role="client-details" data-client-index="${originalIdx}" style="display:none;"></div>
           `;
         }).join('');
-        bindClientRows();
         updateBroadcastButtons();
       };
 
@@ -5983,7 +5988,6 @@ class VoiceWidget extends HTMLElement {
             <option value="leads_desc">${isUaLang ? 'Більше заявок' : 'Больше заявок'}</option>
             <option value="name_asc">${isUaLang ? 'За імʼям' : 'По имени'}</option>
           </select>
-          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="show-unselected" aria-pressed="false">${isUaLang ? 'Необрані' : 'Невыбранные'}</button>
         </div>
       `;
       if (!clients.length) {
@@ -5995,104 +5999,99 @@ class VoiceWidget extends HTMLElement {
           <button type="button" class="vw-access-sub-btn" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
           <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
         </div>`;
-      const bindClientRows = () => root.querySelectorAll('[data-role="client-card"]').forEach((btn) => {
-        const toggle = () => {
-          const idx = Number(btn.getAttribute('data-client-index'));
-          const client = clients[idx];
-          if (!client) return;
-          const details = root.querySelector(`[data-role="client-details"][data-client-index="${idx}"]`);
-          if (!details) return;
-          const isOpen = details.style.display !== 'none';
-          root.querySelectorAll('[data-role="client-details"]').forEach((el) => {
-            el.style.display = 'none';
-            el.innerHTML = '';
-          });
-          if (isOpen) return;
-          const session = client?.latest_session && typeof client.latest_session === 'object' ? client.latest_session : {};
-          const rows = [
-            { label: 'Telegram ID', value: client?.telegram_user_id || '—' },
-            { label: isUaLang ? 'Username' : 'Username', value: client?.telegram_username || '—' },
-            { label: isUaLang ? 'Вперше зайшов' : 'Впервые зашел', value: formatDate(client?.first_seen_at) },
-            { label: isUaLang ? 'Остання активність' : 'Последняя активность', value: formatDate(client?.last_seen_at || client?.last_session_at) },
-            { label: isUaLang ? 'Заявок' : 'Заявок', value: safeNum(client?.leads_count) },
-            {
-              label: isUaLang ? 'Останній обʼєкт заявки' : 'Последний объект заявки',
-              value: (() => {
-                const id = String(client?.last_lead_property_id || '').trim();
-                if (!id) return '—';
-                const url = String(client?.last_lead_property_url || '').trim();
-                return `${esc(id)}${url ? ` <a class="vw-stats-tg-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isUaLang ? 'посилання' : 'ссылка')}</a>` : ''}`;
-              })(),
-              html: true
-            },
-            { label: isUaLang ? 'Сесій' : 'Сессий', value: safeNum(client?.sessions_count) },
-            { label: isUaLang ? 'Остання сесія' : 'Последняя сессия', value: client?.last_session_id || '—' },
-            { label: isUaLang ? 'Повідомлень' : 'Сообщений', value: safeNum(session?.messagesCount) },
-            { label: isUaLang ? 'Показано обʼєктів' : 'Показано объектов', value: safeNum(session?.shownObjectsCount) },
-            { label: isUaLang ? 'Останній запит' : 'Последний запрос', value: session?.lastUserText || '—' },
-            { label: isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент', value: renderInsights(session?.lastInsights), html: true }
-          ];
-          details.innerHTML = `<div class="vw-client-details__inner">${rows.map((row) => `<div class="vw-client-details__row"><span>${esc(row.label)}</span><strong>${row.html ? row.value : esc(row.value)}</strong></div>`).join('')}</div>`;
-          details.style.display = 'block';
-        };
-        btn.addEventListener('click', (event) => {
-          if (event.target?.closest?.('a')) return;
-          const selectBtn = event.target?.closest?.('[data-action="toggle-select"]');
-          if (selectBtn) {
-            const uid = selectBtn.getAttribute('data-client-id');
-            if (this.selectedClientsForBroadcast.has(uid)) {
-              this.selectedClientsForBroadcast.delete(uid);
-            } else {
-              this.selectedClientsForBroadcast.add(uid);
-            }
-            renderRows();
-            return;
-          }
-          toggle();
+      const toggleClientDetails = (card) => {
+        const idx = Number(card?.getAttribute?.('data-client-index'));
+        const client = clients[idx];
+        if (!client) return;
+        const details = root.querySelector(`[data-role="client-details"][data-client-index="${idx}"]`);
+        if (!details) return;
+        const isOpen = details.style.display !== 'none';
+        root.querySelectorAll('[data-role="client-details"]').forEach((el) => {
+          el.style.display = 'none';
+          el.innerHTML = '';
         });
-        btn.addEventListener('keydown', (event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
-          event.preventDefault();
-          toggle();
-        });
-      });
+        if (isOpen) return;
+        const session = client?.latest_session && typeof client.latest_session === 'object' ? client.latest_session : {};
+        const rows = [
+          { label: 'Telegram ID', value: client?.telegram_user_id || '—' },
+          { label: isUaLang ? 'Username' : 'Username', value: client?.telegram_username || '—' },
+          { label: isUaLang ? 'Вперше зайшов' : 'Впервые зашел', value: formatDate(client?.first_seen_at) },
+          { label: isUaLang ? 'Остання активність' : 'Последняя активность', value: formatDate(client?.last_seen_at || client?.last_session_at) },
+          { label: isUaLang ? 'Заявок' : 'Заявок', value: safeNum(client?.leads_count) },
+          {
+            label: isUaLang ? 'Останній обʼєкт заявки' : 'Последний объект заявки',
+            value: (() => {
+              const id = String(client?.last_lead_property_id || '').trim();
+              if (!id) return '—';
+              const url = String(client?.last_lead_property_url || '').trim();
+              return `${esc(id)}${url ? ` <a class="vw-stats-tg-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(isUaLang ? 'посилання' : 'ссылка')}</a>` : ''}`;
+            })(),
+            html: true
+          },
+          { label: isUaLang ? 'Сесій' : 'Сессий', value: safeNum(client?.sessions_count) },
+          { label: isUaLang ? 'Остання сесія' : 'Последняя сессия', value: client?.last_session_id || '—' },
+          { label: isUaLang ? 'Повідомлень' : 'Сообщений', value: safeNum(session?.messagesCount) },
+          { label: isUaLang ? 'Показано обʼєктів' : 'Показано объектов', value: safeNum(session?.shownObjectsCount) },
+          { label: isUaLang ? 'Останній запит' : 'Последний запрос', value: session?.lastUserText || '—' },
+          { label: isUaLang ? 'Що шукає клієнт' : 'Что ищет клиент', value: renderInsights(session?.lastInsights), html: true }
+        ];
+        details.innerHTML = `<div class="vw-client-details__inner">${rows.map((row) => `<div class="vw-client-details__row"><span>${esc(row.label)}</span><strong>${row.html ? row.value : esc(row.value)}</strong></div>`).join('')}</div>`;
+        details.style.display = 'block';
+      };
+      const toggleClientSelection = (uid) => {
+        const safeUid = String(uid || '').trim();
+        if (!safeUid) return;
+        if (this.selectedClientsForBroadcast.has(safeUid)) {
+          this.selectedClientsForBroadcast.delete(safeUid);
+        } else {
+          this.selectedClientsForBroadcast.add(safeUid);
+        }
+        renderRows();
+      };
       renderRows();
 
       // Actions bindings
-      const btnSelectAll = root.querySelector('[data-action="select-all"]');
-      if (btnSelectAll) {
-        btnSelectAll.addEventListener('click', () => {
+      root.addEventListener('click', (event) => {
+        const selectBtn = event.target?.closest?.('[data-action="toggle-select"]');
+        if (selectBtn) {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleClientSelection(selectBtn.getAttribute('data-client-id'));
+          return;
+        }
+        if (event.target?.closest?.('[data-action="select-all"]')) {
           clients.forEach(c => {
             if(c.telegram_user_id) this.selectedClientsForBroadcast.add(c.telegram_user_id);
           });
           renderRows();
-        });
-      }
-
-      const btnClear = root.querySelector('[data-action="broadcast-clear"]');
-      if (btnClear) {
-        btnClear.addEventListener('click', () => {
+          return;
+        }
+        if (event.target?.closest?.('[data-action="broadcast-clear"]')) {
           this.selectedClientsForBroadcast.clear();
           renderRows();
-        });
-      }
+          return;
+        }
+        if (event.target?.closest?.('[data-action="broadcast-create"]')) {
+          if (this.selectedClientsForBroadcast.size === 0) return;
+          this.openBroadcastEditor(Array.from(this.selectedClientsForBroadcast));
+          return;
+        }
+        if (event.target?.closest?.('a')) return;
+        const card = event.target?.closest?.('[data-role="client-card"]');
+        if (card) toggleClientDetails(card);
+      });
 
       root.querySelector('[data-action="sort-by"]')?.addEventListener('change', (event) => {
         clientsSortMode = String(event.target?.value || 'latest');
         renderRows();
       });
-      root.querySelector('[data-action="show-unselected"]')?.addEventListener('click', () => {
-        showOnlyUnselected = !showOnlyUnselected;
-        renderRows();
+      root.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const card = event.target?.closest?.('[data-role="client-card"]');
+        if (!card) return;
+        event.preventDefault();
+        toggleClientDetails(card);
       });
-
-      const btnCreate = root.querySelector('[data-action="broadcast-create"]');
-      if (btnCreate) {
-        btnCreate.addEventListener('click', () => {
-          if (this.selectedClientsForBroadcast.size === 0) return;
-          this.openBroadcastEditor(Array.from(this.selectedClientsForBroadcast));
-        });
-      }
 
     } catch (error) {
       root.innerHTML = `<div class="vw-access-sub-item"><strong>${esc(error?.message || 'load_failed')}</strong></div>`;
@@ -11517,7 +11516,7 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-admin-clients-actions {
         display: grid;
-        grid-template-columns: minmax(0, auto) minmax(132px, 1fr) minmax(0, auto);
+        grid-template-columns: minmax(0, auto) minmax(132px, 1fr);
         gap: 8px;
         align-items: center;
         margin-bottom: 16px;
@@ -11573,6 +11572,7 @@ class VoiceWidget extends HTMLElement {
         background: rgba(255,255,255,0.92);
         color: #fff;
         cursor: pointer;
+        z-index: 2;
       }
       .vw-client-select.is-selected {
         border-color: rgba(45, 143, 225, 0.95);
@@ -11670,10 +11670,6 @@ class VoiceWidget extends HTMLElement {
       @media (max-width: 430px) {
         .vw-admin-clients-actions {
           grid-template-columns: 1fr 1fr;
-        }
-        .vw-admin-clients-sort {
-          grid-column: 1 / -1;
-          order: 3;
         }
       }
       .vw-client-details {
