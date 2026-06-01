@@ -5777,6 +5777,10 @@ class VoiceWidget extends HTMLElement {
       const adminApiBase = String(this.api?.apiUrl || this.apiUrl || '')
         .replace(/\/api\/audio\/upload\/?$/i, '/api/admin')
         .replace(/\/$/, '');
+      const setSectionTitle = (value) => {
+        const titleEl = overlay.querySelector('.vw-access-sub-title');
+        if (titleEl) titleEl.textContent = value;
+      };
       const updateBroadcastButtons = () => {
         const count = this.selectedClientsForBroadcast.size;
         const btnSend = root.querySelector('[data-action="broadcast-create"]');
@@ -5849,60 +5853,111 @@ class VoiceWidget extends HTMLElement {
       };
       let renderBroadcastPreview = null;
       const renderBroadcastEditor = (targetUserIds, draft = {}) => {
+        setSectionTitle(isUaLang ? 'Розсилка клієнтам' : 'Рассылка клиентам');
         const safeTargetUserIds = Array.isArray(targetUserIds)
           ? targetUserIds.map((id) => String(id || '').trim()).filter(Boolean)
           : [];
-        const messageText = String(draft.messageText || '').trim();
-        const ctaText = String(draft.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim();
-        const photoUrl = String(draft.photoUrl || '').trim();
+        const currentDraft = {
+          messageText: String(draft.messageText || '').trim(),
+          ctaText: String(draft.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim(),
+          photoFile: draft.photoFile instanceof File ? draft.photoFile : null,
+          photoPreview: String(draft.photoPreview || '').trim()
+        };
         root.innerHTML = `
-          <div class="vw-access-sub-item" style="margin-bottom:8px;">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${safeTargetUserIds.length}</strong></div>
-          <div class="vw-access-sub-item vw-broadcast-field">
-            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
-            <textarea id="vw-broadcast-text" class="vw-broadcast-input vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(messageText)}</textarea>
+          <input class="vw-access-add-file" data-role="broadcast-photo-input" type="file" accept="image/*">
+          <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${safeTargetUserIds.length}</strong></div>
+          <div class="vw-broadcast-field">
+            <label>${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
+            <textarea id="vw-broadcast-text" class="vw-access-add-textarea vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(currentDraft.messageText)}</textarea>
           </div>
-          <div class="vw-access-sub-item vw-broadcast-field">
-            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
-            <input type="text" id="vw-broadcast-cta" class="vw-broadcast-input" value="${esc(ctaText)}">
+          <div class="vw-broadcast-field">
+            <label>${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
+            <input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(currentDraft.ctaText)}">
           </div>
-          <div class="vw-access-sub-item vw-broadcast-field">
-            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Посилання на фото (опційно)' : 'Ссылка на фото (опционально)'}</label>
-            <input type="url" id="vw-broadcast-photo-url" class="vw-broadcast-input" value="${esc(photoUrl)}" placeholder="https://...">
+          <div class="vw-broadcast-field">
+            <label>${isUaLang ? 'Фото для розсилки' : 'Фото для рассылки'}</label>
+            <div class="vw-broadcast-photo-row">
+              <button type="button" class="vw-access-add-photo-slot vw-broadcast-photo-slot${currentDraft.photoPreview ? ' is-filled' : ''}" data-action="broadcast-photo-pick" aria-label="${isUaLang ? 'Додати фото' : 'Добавить фото'}" style="${currentDraft.photoPreview ? `background-image:url('${esc(currentDraft.photoPreview)}')` : ''}">
+                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg>
+              </button>
+              <div class="vw-broadcast-photo-copy">
+                <div>${currentDraft.photoFile ? esc(currentDraft.photoFile.name || (isUaLang ? 'Фото додано' : 'Фото добавлено')) : (isUaLang ? 'Додати фото з пристрою' : 'Добавить фото с устройства')}</div>
+                <span>${isUaLang ? 'Опційно. Фото піде всередину розсилки.' : 'Опционально. Фото уйдет внутри рассылки.'}</span>
+                ${currentDraft.photoFile ? `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="broadcast-photo-remove">${isUaLang ? 'Прибрати фото' : 'Убрать фото'}</button>` : ''}
+              </div>
+            </div>
           </div>
           <div class="vw-broadcast-actions">
             <button type="button" class="vw-access-sub-btn" data-action="broadcast-back">${isUaLang ? 'Назад' : 'Назад'}</button>
             <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-preview">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
           </div>
         `;
+        const syncDraftFromFields = () => {
+          currentDraft.messageText = String(root.querySelector('#vw-broadcast-text')?.value || '').trim();
+          currentDraft.ctaText = String(root.querySelector('#vw-broadcast-cta')?.value || '').trim();
+          return currentDraft;
+        };
         root.onclick = (event) => {
           if (event.target?.closest?.('[data-action="broadcast-back"]')) {
             renderClientsScreen();
             return;
           }
-          if (event.target?.closest?.('[data-action="broadcast-preview"]')) {
-            const nextDraft = {
-              messageText: String(root.querySelector('#vw-broadcast-text')?.value || '').trim(),
-              ctaText: String(root.querySelector('#vw-broadcast-cta')?.value || '').trim(),
-              photoUrl: String(root.querySelector('#vw-broadcast-photo-url')?.value || '').trim()
-            };
-            renderBroadcastPreview(safeTargetUserIds, nextDraft);
+          if (event.target?.closest?.('[data-action="broadcast-photo-pick"]')) {
+            syncDraftFromFields();
+            root.querySelector('[data-role="broadcast-photo-input"]')?.click();
+            return;
           }
+          if (event.target?.closest?.('[data-action="broadcast-photo-remove"]')) {
+            syncDraftFromFields();
+            currentDraft.photoFile = null;
+            currentDraft.photoPreview = '';
+            renderBroadcastEditor(safeTargetUserIds, currentDraft);
+            return;
+          }
+          if (event.target?.closest?.('[data-action="broadcast-preview"]')) {
+            renderBroadcastPreview(safeTargetUserIds, syncDraftFromFields());
+          }
+        };
+        root.onchange = (event) => {
+          const fileInput = event.target?.closest?.('[data-role="broadcast-photo-input"]');
+          if (!fileInput) return;
+          const file = fileInput.files?.[0];
+          if (!file) return;
+          syncDraftFromFields();
+          const fileSizeMb = Number(file.size || 0) / (1024 * 1024);
+          if (fileSizeMb > 5) {
+            const proceed = window.confirm(`Фото "${file.name}" весит ${fileSizeMb.toFixed(2)} MB.\nЭто больше рекомендуемых 5 MB.\n\nПродолжить и добавить фото?`);
+            if (!proceed) {
+              fileInput.value = '';
+              return;
+            }
+          }
+          currentDraft.photoFile = file;
+          const reader = new FileReader();
+          reader.onload = () => {
+            currentDraft.photoPreview = typeof reader.result === 'string' ? reader.result : '';
+            renderBroadcastEditor(safeTargetUserIds, currentDraft);
+          };
+          reader.readAsDataURL(file);
+          fileInput.value = '';
         };
         root.onkeydown = null;
       };
       renderBroadcastPreview = (targetUserIds, draft = {}) => {
+        setSectionTitle(isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр');
         const safeTargetUserIds = Array.isArray(targetUserIds)
           ? targetUserIds.map((id) => String(id || '').trim()).filter(Boolean)
           : [];
         const messageText = String(draft.messageText || '').trim();
         const ctaText = String(draft.ctaText || '').trim();
-        const photoUrl = String(draft.photoUrl || '').trim();
+        const photoPreview = String(draft.photoPreview || '').trim();
+        const photoFile = draft.photoFile instanceof File ? draft.photoFile : null;
         root.innerHTML = `
-          <div class="vw-access-sub-item" style="margin-bottom:8px;">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${safeTargetUserIds.length}</strong></div>
-          <div style="background:rgba(0,0,0,0.3); border-radius:12px; overflow:hidden; margin-bottom:12px; font-family:sans-serif;">
-            ${photoUrl ? `<img src="${esc(photoUrl)}" style="width:100%; height:auto; display:block;">` : ''}
-            <div style="padding:12px; font-size:14px; white-space:pre-wrap; line-height:1.4;">${esc(messageText || (isUaLang ? 'Без тексту' : 'Без текста'))}</div>
-            ${ctaText ? `<div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05); text-align:center; color:var(--vw-color-primary, #3390ec); font-weight:500;">${esc(ctaText)}</div>` : ''}
+          <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${safeTargetUserIds.length}</strong></div>
+          <div class="vw-broadcast-preview-card">
+            ${photoPreview ? `<img src="${esc(photoPreview)}" alt="">` : ''}
+            <div class="vw-broadcast-preview-text">${esc(messageText || (isUaLang ? 'Без тексту' : 'Без текста'))}</div>
+            ${ctaText ? `<div class="vw-broadcast-preview-cta">${esc(ctaText)}</div>` : ''}
           </div>
           <div class="vw-broadcast-actions vw-broadcast-actions--stack">
             <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
@@ -5919,15 +5974,20 @@ class VoiceWidget extends HTMLElement {
           sendBtn.disabled = true;
           sendBtn.textContent = isUaLang ? 'Відправка...' : 'Отправка...';
           try {
+            const body = new FormData();
+            body.append('targetUserIds', JSON.stringify(safeTargetUserIds));
+            body.append('messageText', messageText);
+            body.append('ctaText', ctaText);
+            if (photoFile) body.append('image', photoFile, photoFile.name || 'broadcast.jpg');
+            this.api?.appendTelegramUserToFormData?.(body);
+            const tgIdentity = this.api?.getTelegramUserIdentity?.();
+            if (!tgIdentity?.id && this.widget?.accessFlags?.isAdmin) {
+              body.append('devAdmin', '1');
+            }
             const res = await fetch(`${adminApiBase}/broadcast`, {
               method: 'POST',
-              headers: this.api.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
-              body: JSON.stringify({
-                targetUserIds: safeTargetUserIds,
-                messageText,
-                ctaText,
-                photoUrl: photoUrl || null
-              })
+              headers: this.api?.buildTelegramAuthHeaders?.(),
+              body
             });
             const result = await res.json().catch(() => ({}));
             if (!res.ok || result?.ok === false) {
@@ -5945,6 +6005,7 @@ class VoiceWidget extends HTMLElement {
         root.onkeydown = null;
       };
       const renderClientsScreen = () => {
+      setSectionTitle(isUaLang ? 'Клієнти' : 'Клиенты');
 
       const summaryHtml = `
         <div class="vw-access-sub-item vw-stats-combined" style="display:flex; flex-direction:column; gap:8px; font-size:14px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:16px;">
@@ -11602,30 +11663,87 @@ class VoiceWidget extends HTMLElement {
         overflow: hidden;
         text-overflow: ellipsis;
       }
+      .vw-broadcast-count {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        border-radius: 14px;
+        font-size: .92rem;
+        font-weight: 700;
+      }
       .vw-broadcast-field {
-        flex-direction: column;
+        display: grid;
         gap: 8px;
       }
-      .vw-broadcast-input {
-        width: 100%;
-        min-height: 42px;
-        border-radius: 10px;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(0,0,0,0.22);
+      .vw-broadcast-field label {
+        font-size: .9rem;
+        line-height: 1.25;
+        font-weight: 800;
         color: var(--text-primary, #fff);
-        padding: 10px 12px;
-        font-family: inherit;
-        font-size: 14px;
-        outline: none;
-      }
-      .vw-broadcast-input:focus {
-        border-color: rgba(92, 150, 255, 0.72);
-        box-shadow: 0 0 0 2px rgba(92, 150, 255, 0.18);
       }
       .vw-broadcast-textarea {
-        min-height: 110px;
+        min-height: 150px;
         resize: vertical;
-        line-height: 1.35;
+        line-height: 1.4;
+      }
+      .vw-broadcast-photo-row {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: var(--bg-element, rgba(255,255,255,0.08));
+        padding: 10px;
+      }
+      .vw-broadcast-photo-slot {
+        width: 86px;
+        min-height: 86px;
+        border-radius: 12px;
+        background-size: cover;
+        background-position: center;
+      }
+      .vw-broadcast-photo-copy {
+        display: grid;
+        gap: 5px;
+        min-width: 0;
+        font-size: .86rem;
+        line-height: 1.25;
+        font-weight: 800;
+        color: var(--text-primary, #fff);
+      }
+      .vw-broadcast-photo-copy span {
+        font-size: .76rem;
+        line-height: 1.3;
+        font-weight: 600;
+        color: var(--text-secondary, rgba(255,255,255,0.64));
+      }
+      .vw-broadcast-preview-card {
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(0,0,0,0.24);
+      }
+      .vw-broadcast-preview-card img {
+        display: block;
+        width: 100%;
+        max-height: 240px;
+        object-fit: cover;
+      }
+      .vw-broadcast-preview-text {
+        padding: 14px;
+        font-size: .9rem;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        color: var(--text-primary, #fff);
+      }
+      .vw-broadcast-preview-cta {
+        padding: 12px 14px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        text-align: center;
+        color: var(--color-accent, #2d8fe1);
+        font-size: .9rem;
+        font-weight: 800;
       }
       .vw-broadcast-actions {
         display: grid;
@@ -11638,12 +11756,22 @@ class VoiceWidget extends HTMLElement {
         gap: 10px;
       }
       .vw-broadcast-actions .vw-access-sub-btn {
-        min-height: 42px;
-        border-radius: 12px;
+        min-height: 52px;
+        border-radius: 14px;
+        font-size: .92rem;
+        font-weight: 800;
+        line-height: 1.2;
       }
       @media (max-width: 430px) {
         .vw-admin-clients-actions {
           grid-template-columns: 1fr 1fr;
+        }
+        .vw-broadcast-photo-row {
+          grid-template-columns: 72px minmax(0, 1fr);
+        }
+        .vw-broadcast-photo-slot {
+          width: 72px;
+          min-height: 72px;
         }
       }
       .vw-client-details {
