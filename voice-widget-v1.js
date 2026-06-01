@@ -5708,7 +5708,7 @@ class VoiceWidget extends HTMLElement {
   openBroadcastEditor(targetUserIds) {
     const isUaLang = this.getLangCode() === 'ua';
     const overlay = document.createElement('div');
-    overlay.className = 'vw-access-overlay';
+    overlay.className = 'vw-access-overlay vw-broadcast-overlay';
     const mountRoot = this.getRoot?.() || document.body;
     mountRoot.appendChild(overlay);
 
@@ -6085,12 +6085,6 @@ class VoiceWidget extends HTMLElement {
       root.querySelector('[data-action="sort-by"]')?.addEventListener('change', (event) => {
         clientsSortMode = String(event.target?.value || 'latest');
         renderRows();
-      });
-      root.querySelector('[data-action="broadcast-create"]')?.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (this.selectedClientsForBroadcast.size === 0) return;
-        this.openBroadcastEditor(Array.from(this.selectedClientsForBroadcast));
       });
       root.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -11196,6 +11190,9 @@ class VoiceWidget extends HTMLElement {
         place-items: center;
         background: rgba(0, 0, 0, 0.56);
         padding: 16px;
+      }
+      .vw-broadcast-overlay {
+        z-index: 1320;
       }
       .vw-access-modal {
         width: min(420px, 100%);
