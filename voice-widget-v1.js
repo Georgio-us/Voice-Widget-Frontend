@@ -5708,42 +5708,49 @@ class VoiceWidget extends HTMLElement {
   openBroadcastEditor(targetUserIds) {
     const isUaLang = this.getLangCode() === 'ua';
     const overlay = document.createElement('div');
-    overlay.className = 'vw-modal-overlay vw-modal-overlay--active';
-    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; overflow-y:auto;';
+    overlay.className = 'vw-access-overlay';
     document.body.appendChild(overlay);
 
     let currentPhotoUrl = null;
-    let ctaText = 'Посмотреть';
+    let ctaText = isUaLang ? 'Подивитись' : 'Посмотреть';
 
     const renderEditor = () => {
       overlay.innerHTML = `
-        <div class="vw-modal-content" style="background:#1C1C1E; color:#fff; padding:24px; border-radius:16px; width:100%; max-width:400px; position:relative; max-height:90vh; overflow-y:auto;">
-          <h2 style="margin:0 0 16px 0; font-size:18px;">${isUaLang ? 'Розсилка' : 'Рассылка'}</h2>
-          <div style="font-size:14px; margin-bottom:16px; color:#aaa;">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} ${targetUserIds.length}</div>
-          
-          <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600;">${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
-          <textarea id="vw-broadcast-text" style="width:100%; height:100px; padding:12px; border-radius:8px; border:1px solid #333; background:#2C2C2E; color:#fff; resize:vertical; font-family:inherit; margin-bottom:16px;" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}"></textarea>
-          
-          <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600;">${isUaLang ? 'Налаштування CTA-кнопки' : 'Настройка CTA-кнопки'}</label>
-          <div style="display:flex; gap:8px; margin-bottom:16px;">
-            <input type="text" id="vw-broadcast-cta" value="${ctaText}" style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid #333; background:#2C2C2E; color:#fff; font-family:inherit;">
-            <button class="vw-btn" id="vw-btn-save-cta" style="background:rgba(255,255,255,0.1); padding:0 16px;">✅</button>
+        <div class="vw-access-modal">
+          <div class="vw-access-head">
+            <div class="vw-access-title">${isUaLang ? 'Розсилка клієнтам' : 'Рассылка клиентам'}</div>
+            <div class="vw-access-close" id="vw-btn-close">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L11 11M1 11L11 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
           </div>
 
-          <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600;">${isUaLang ? 'Фото (Опціонально)' : 'Фото (Опционально)'}</label>
-          <input type="file" id="vw-broadcast-photo" accept="image/jpeg, image/png, image/webp" style="margin-bottom:8px; width:100%;">
-          <div id="vw-broadcast-photo-status" style="font-size:12px; color:#aaa; margin-bottom:16px;">${currentPhotoUrl ? 'Загружено' : ''}</div>
+          <div class="vw-access-sub-item" style="margin-bottom:8px;">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${targetUserIds.length}</strong></div>
+          
+          <div class="vw-access-sub-item" style="flex-direction:column; gap:8px;">
+            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
+            <textarea id="vw-broadcast-text" style="width:100%; height:100px; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; resize:vertical; font-family:inherit; font-size:14px;" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}"></textarea>
+          </div>
+          
+          <div class="vw-access-sub-item" style="flex-direction:column; gap:8px;">
+            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
+            <input type="text" id="vw-broadcast-cta" value="${ctaText}" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-family:inherit; font-size:14px;">
+          </div>
 
-          <div style="display:flex; gap:12px; margin-top:24px;">
+          <div class="vw-access-sub-item" style="flex-direction:column; gap:8px;">
+            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Фото (Опціонально)' : 'Фото (Опционально)'}</label>
+            <input type="file" id="vw-broadcast-photo" accept="image/jpeg, image/png, image/webp" style="font-size:13px; color:rgba(255,255,255,0.7);">
+            <div id="vw-broadcast-photo-status" style="font-size:12px; color:var(--vw-color-primary, #3390ec); margin-top:4px;">${currentPhotoUrl ? '✅ Загружено' : ''}</div>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:12px;">
             <button class="vw-btn" id="vw-btn-cancel" style="background:rgba(255,255,255,0.1); flex:1;">${isUaLang ? 'Скасувати' : 'Отменить'}</button>
-            <button class="vw-btn vw-btn--primary" id="vw-btn-preview" style="flex:2;">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
+            <button class="vw-btn vw-btn--primary" id="vw-btn-preview" style="flex:1;">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
           </div>
         </div>
       `;
 
-      overlay.querySelector('#vw-btn-save-cta').addEventListener('click', () => {
-        ctaText = overlay.querySelector('#vw-broadcast-cta').value;
-      });
+      overlay.querySelector('#vw-btn-close').addEventListener('click', () => overlay.remove());
+      overlay.querySelector('#vw-btn-cancel').addEventListener('click', () => overlay.remove());
 
       overlay.querySelector('#vw-broadcast-photo').addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -5756,7 +5763,7 @@ class VoiceWidget extends HTMLElement {
           formData.append('images', file);
           const response = await fetch(this.api.apiBaseUrl + '/api/admin/properties', {
             method: 'POST',
-            headers: this.api._getAuthHeaders(),
+            headers: this.api.buildTelegramAuthHeaders(),
             body: formData
           });
           const res = await response.json();
@@ -5771,7 +5778,6 @@ class VoiceWidget extends HTMLElement {
         }
       });
 
-      overlay.querySelector('#vw-btn-cancel').addEventListener('click', () => overlay.remove());
       overlay.querySelector('#vw-btn-preview').addEventListener('click', () => {
         ctaText = overlay.querySelector('#vw-broadcast-cta').value;
         const text = overlay.querySelector('#vw-broadcast-text').value;
@@ -5780,26 +5786,29 @@ class VoiceWidget extends HTMLElement {
     };
 
     const renderPreview = (text) => {
-      // Mockup of Telegram message
       overlay.innerHTML = `
-        <div class="vw-modal-content" style="background:#1C1C1E; color:#fff; padding:24px; border-radius:16px; width:100%; max-width:400px; position:relative; max-height:90vh; overflow-y:auto;">
-          <h2 style="margin:0 0 16px 0; font-size:18px;">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</h2>
+        <div class="vw-access-modal">
+          <div class="vw-access-head">
+            <div class="vw-access-title">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</div>
+            <div class="vw-access-close" id="vw-btn-close-preview">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L11 11M1 11L11 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
           
-          <div style="background:#2C2C2E; border-radius:12px; overflow:hidden; margin-bottom:24px; font-family:sans-serif;">
+          <div style="background:rgba(0,0,0,0.3); border-radius:12px; overflow:hidden; margin-bottom:12px; font-family:sans-serif;">
             ${currentPhotoUrl ? `<img src="${currentPhotoUrl}" style="width:100%; height:auto; display:block;">` : ''}
-            <div style="padding:12px; font-size:15px; white-space:pre-wrap;">${text}</div>
-            ${ctaText ? `<div style="padding:12px; border-top:1px solid rgba(255,255,255,0.1); text-align:center; color:#3390ec; font-weight:600;">${ctaText}</div>` : ''}
+            <div style="padding:12px; font-size:14px; white-space:pre-wrap; line-height:1.4;">${text || (isUaLang ? 'Без тексту' : 'Без текста')}</div>
+            ${ctaText ? `<div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05); text-align:center; color:var(--vw-color-primary, #3390ec); font-weight:500;">${ctaText}</div>` : ''}
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:10px;">
             <button class="vw-btn vw-btn--primary" id="vw-btn-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
-            <button class="vw-btn" id="vw-btn-back" style="background:rgba(255,255,255,0.1);">${isUaLang ? 'Назад' : 'Назад'}</button>
-            <button class="vw-btn" id="vw-btn-cancel" style="background:transparent; color:#ff453a;">${isUaLang ? 'Скасувати' : 'Отменить'}</button>
+            <button class="vw-btn" id="vw-btn-back" style="background:rgba(255,255,255,0.1);">${isUaLang ? 'Назад до редактора' : 'Назад к редактору'}</button>
           </div>
         </div>
       `;
 
-      overlay.querySelector('#vw-btn-cancel').addEventListener('click', () => overlay.remove());
+      overlay.querySelector('#vw-btn-close-preview').addEventListener('click', () => overlay.remove());
       overlay.querySelector('#vw-btn-back').addEventListener('click', () => renderEditor());
       
       overlay.querySelector('#vw-btn-send').addEventListener('click', async () => {
@@ -5810,10 +5819,7 @@ class VoiceWidget extends HTMLElement {
         try {
           const res = await fetch(this.api.apiBaseUrl + '/api/admin/broadcast', {
             method: 'POST',
-            headers: {
-              ...this.api._getAuthHeaders(),
-              'Content-Type': 'application/json'
-            },
+            headers: this.api.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
               targetUserIds,
               messageText: text,
@@ -5826,14 +5832,22 @@ class VoiceWidget extends HTMLElement {
           if (result.ok) {
             alert(`Рассылка завершена!\nУспешно: ${result.results.success}\nОшибок: ${result.results.failed}`);
             this.selectedClientsForBroadcast.clear();
+            const root = this.getRoot()?.querySelector?.('[data-role="admin-clients-list"]');
+            if (root) {
+               root.querySelectorAll('.vw-client-checkbox').forEach(cb => cb.checked = false);
+               const btnSend = root.querySelector('[data-action="broadcast-create"]');
+               const btnClear = root.querySelector('[data-action="broadcast-clear"]');
+               if (btnSend) { btnSend.textContent = isUaLang ? 'Сформувати розсилку (0)' : 'Сформировать рассылку (0)'; btnSend.disabled = true; }
+               if (btnClear) btnClear.disabled = true;
+            }
             overlay.remove();
           } else {
-            alert('Ошибка: ' + result.error);
+            alert((isUaLang ? 'Помилка: ' : 'Ошибка: ') + result.error);
             btn.disabled = false;
             btn.textContent = isUaLang ? 'Відправити розсилку' : 'Отправить рассылку';
           }
         } catch (err) {
-          alert('Ошибка сети: ' + err.message);
+          alert((isUaLang ? 'Помилка мережі: ' : 'Ошибка сети: ') + err.message);
           btn.disabled = false;
           btn.textContent = isUaLang ? 'Відправити розсилку' : 'Отправить рассылку';
         }
