@@ -5705,6 +5705,144 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  openBroadcastEditor(targetUserIds) {
+    const isUaLang = this.getLangCode() === 'ua';
+    const overlay = document.createElement('div');
+    overlay.className = 'vw-modal-overlay vw-modal-overlay--active';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; overflow-y:auto;';
+    document.body.appendChild(overlay);
+
+    let currentPhotoUrl = null;
+    let ctaText = 'Посмотреть';
+
+    const renderEditor = () => {
+      overlay.innerHTML = `
+        <div class="vw-modal-content" style="background:#1C1C1E; color:#fff; padding:24px; border-radius:16px; width:100%; max-width:400px; position:relative; max-height:90vh; overflow-y:auto;">
+          <h2 style="margin:0 0 16px 0; font-size:18px;">${isUaLang ? 'Розсилка' : 'Рассылка'}</h2>
+          <div style="font-size:14px; margin-bottom:16px; color:#aaa;">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} ${targetUserIds.length}</div>
+          
+          <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600;">${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
+          <textarea id="vw-broadcast-text" style="width:100%; height:100px; padding:12px; border-radius:8px; border:1px solid #333; background:#2C2C2E; color:#fff; resize:vertical; font-family:inherit; margin-bottom:16px;" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}"></textarea>
+          
+          <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600;">${isUaLang ? 'Налаштування CTA-кнопки' : 'Настройка CTA-кнопки'}</label>
+          <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <input type="text" id="vw-broadcast-cta" value="${ctaText}" style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid #333; background:#2C2C2E; color:#fff; font-family:inherit;">
+            <button class="vw-btn" id="vw-btn-save-cta" style="background:rgba(255,255,255,0.1); padding:0 16px;">✅</button>
+          </div>
+
+          <label style="display:block; margin-bottom:8px; font-size:14px; font-weight:600;">${isUaLang ? 'Фото (Опціонально)' : 'Фото (Опционально)'}</label>
+          <input type="file" id="vw-broadcast-photo" accept="image/jpeg, image/png, image/webp" style="margin-bottom:8px; width:100%;">
+          <div id="vw-broadcast-photo-status" style="font-size:12px; color:#aaa; margin-bottom:16px;">${currentPhotoUrl ? 'Загружено' : ''}</div>
+
+          <div style="display:flex; gap:12px; margin-top:24px;">
+            <button class="vw-btn" id="vw-btn-cancel" style="background:rgba(255,255,255,0.1); flex:1;">${isUaLang ? 'Скасувати' : 'Отменить'}</button>
+            <button class="vw-btn vw-btn--primary" id="vw-btn-preview" style="flex:2;">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
+          </div>
+        </div>
+      `;
+
+      overlay.querySelector('#vw-btn-save-cta').addEventListener('click', () => {
+        ctaText = overlay.querySelector('#vw-broadcast-cta').value;
+      });
+
+      overlay.querySelector('#vw-broadcast-photo').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const statusEl = overlay.querySelector('#vw-broadcast-photo-status');
+        statusEl.textContent = isUaLang ? 'Завантаження...' : 'Загрузка...';
+        
+        try {
+          const formData = new FormData();
+          formData.append('images', file);
+          const response = await fetch(this.api.apiBaseUrl + '/api/admin/properties', {
+            method: 'POST',
+            headers: this.api._getAuthHeaders(),
+            body: formData
+          });
+          const res = await response.json();
+          if (res.ok && res.property?.images?.length) {
+            currentPhotoUrl = res.property.images[0];
+            statusEl.textContent = '✅ ' + (isUaLang ? 'Завантажено' : 'Загружено');
+          } else {
+            statusEl.textContent = '❌ ' + (res.error || 'Ошибка загрузки');
+          }
+        } catch (err) {
+          statusEl.textContent = '❌ ' + err.message;
+        }
+      });
+
+      overlay.querySelector('#vw-btn-cancel').addEventListener('click', () => overlay.remove());
+      overlay.querySelector('#vw-btn-preview').addEventListener('click', () => {
+        ctaText = overlay.querySelector('#vw-broadcast-cta').value;
+        const text = overlay.querySelector('#vw-broadcast-text').value;
+        renderPreview(text);
+      });
+    };
+
+    const renderPreview = (text) => {
+      // Mockup of Telegram message
+      overlay.innerHTML = `
+        <div class="vw-modal-content" style="background:#1C1C1E; color:#fff; padding:24px; border-radius:16px; width:100%; max-width:400px; position:relative; max-height:90vh; overflow-y:auto;">
+          <h2 style="margin:0 0 16px 0; font-size:18px;">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</h2>
+          
+          <div style="background:#2C2C2E; border-radius:12px; overflow:hidden; margin-bottom:24px; font-family:sans-serif;">
+            ${currentPhotoUrl ? `<img src="${currentPhotoUrl}" style="width:100%; height:auto; display:block;">` : ''}
+            <div style="padding:12px; font-size:15px; white-space:pre-wrap;">${text}</div>
+            ${ctaText ? `<div style="padding:12px; border-top:1px solid rgba(255,255,255,0.1); text-align:center; color:#3390ec; font-weight:600;">${ctaText}</div>` : ''}
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <button class="vw-btn vw-btn--primary" id="vw-btn-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
+            <button class="vw-btn" id="vw-btn-back" style="background:rgba(255,255,255,0.1);">${isUaLang ? 'Назад' : 'Назад'}</button>
+            <button class="vw-btn" id="vw-btn-cancel" style="background:transparent; color:#ff453a;">${isUaLang ? 'Скасувати' : 'Отменить'}</button>
+          </div>
+        </div>
+      `;
+
+      overlay.querySelector('#vw-btn-cancel').addEventListener('click', () => overlay.remove());
+      overlay.querySelector('#vw-btn-back').addEventListener('click', () => renderEditor());
+      
+      overlay.querySelector('#vw-btn-send').addEventListener('click', async () => {
+        const btn = overlay.querySelector('#vw-btn-send');
+        btn.disabled = true;
+        btn.textContent = isUaLang ? 'Відправка...' : 'Отправка...';
+        
+        try {
+          const res = await fetch(this.api.apiBaseUrl + '/api/admin/broadcast', {
+            method: 'POST',
+            headers: {
+              ...this.api._getAuthHeaders(),
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              targetUserIds,
+              messageText: text,
+              ctaText: ctaText,
+              photoUrl: currentPhotoUrl
+            })
+          });
+          
+          const result = await res.json();
+          if (result.ok) {
+            alert(\`Рассылка завершена!\nУспешно: \${result.results.success}\nОшибок: \${result.results.failed}\`);
+            this.selectedClientsForBroadcast.clear();
+            overlay.remove();
+          } else {
+            alert('Ошибка: ' + result.error);
+            btn.disabled = false;
+            btn.textContent = isUaLang ? 'Відправити розсилку' : 'Отправить рассылку';
+          }
+        } catch (err) {
+          alert('Ошибка сети: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = isUaLang ? 'Відправити розсилку' : 'Отправить рассылку';
+        }
+      });
+    };
+
+    renderEditor();
+  }
+
   async loadAccessClientsList(overlay) {
     if (!overlay) return;
     const isUaLang = this.getLangCode() === 'ua';
@@ -5771,10 +5909,28 @@ class VoiceWidget extends HTMLElement {
       const data = await this.api?.fetchAdminClientsList?.();
       const summary = data?.summary && typeof data.summary === 'object' ? data.summary : {};
       const clients = Array.isArray(data?.clients) ? data.clients : [];
+
+      this.selectedClientsForBroadcast = new Set();
+      const updateBroadcastButtons = () => {
+        const count = this.selectedClientsForBroadcast.size;
+        const btnSend = root.querySelector('[data-action="broadcast-create"]');
+        const btnClear = root.querySelector('[data-action="broadcast-clear"]');
+        if (btnSend) btnSend.textContent = `${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (${count})`;
+        if (btnSend) btnSend.disabled = count === 0;
+        if (btnClear) btnClear.disabled = count === 0;
+      };
+
       const summaryHtml = `
-        <div class="vw-access-sub-item">${isUaLang ? 'Клієнтів у боті' : 'Клиентов в боте'}: <strong>${safeNum(summary.totalClients)}</strong></div>
-        <div class="vw-access-sub-item">${isUaLang ? 'Заявки залишали' : 'Оставляли заявки'}: <strong>${safeNum(summary.withLeads)}</strong></div>
-        <div class="vw-access-sub-item">${isUaLang ? 'Активні за 7 днів' : 'Активные за 7 дней'}: <strong>${safeNum(summary.active7Days)}</strong></div>
+        <div class="vw-access-sub-item vw-stats-combined" style="display:flex; flex-direction:column; gap:8px; font-size:14px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between;"><span>👥 ${isUaLang ? 'Клієнтів у боті' : 'Клиентов в боте'}:</span> <strong>${safeNum(summary.totalClients)}</strong></div>
+          <div style="display:flex; justify-content:space-between;"><span>📝 ${isUaLang ? 'Заявки залишали' : 'Оставляли заявки'}:</span> <strong>${safeNum(summary.withLeads)}</strong></div>
+          <div style="display:flex; justify-content:space-between;"><span>🔥 ${isUaLang ? 'Активні за 7 днів' : 'Активные за 7 дней'}:</span> <strong>${safeNum(summary.active7Days)}</strong></div>
+        </div>
+        <div style="font-weight:600; margin-bottom:12px; font-size:16px;">${isUaLang ? 'Мої клієнти' : 'Мои клиенты'}</div>
+        <div class="vw-admin-actions-bar" style="display:flex; gap:8px; margin-bottom:16px;">
+          <button class="vw-btn" style="padding:6px 12px; font-size:13px; background:rgba(255,255,255,0.1); border-radius:6px;" data-action="select-all">${isUaLang ? 'Обрати всі' : 'Выбрать все'}</button>
+          <button class="vw-btn" style="padding:6px 12px; font-size:13px; background:rgba(255,255,255,0.1); border-radius:6px;" data-action="sort-by">${isUaLang ? 'Сортувати' : 'Сортировать'}</button>
+        </div>
       `;
       if (!clients.length) {
         root.innerHTML = `${summaryHtml}<div class="vw-access-sub-item"><strong>${isUaLang ? 'Клієнтів поки немає' : 'Клиентов пока нет'}</strong></div>`;
@@ -5785,17 +5941,24 @@ class VoiceWidget extends HTMLElement {
         const leads = Number(client?.leads_count || 0);
         const last = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || null;
         return `
-          <div class="vw-client-card" data-role="client-card" data-client-index="${idx}" role="button" tabindex="0">
+          <div class="vw-client-card" data-role="client-card" data-client-index="${idx}" role="button" tabindex="0" style="position:relative; padding-right:40px;">
             <span class="vw-client-card__main">
               <span class="vw-client-card__name">${esc(name)}</span>
               <span class="vw-client-card__tg">${tgLink(client)}</span>
             </span>
             <span class="vw-client-card__meta">${leads} ${isUaLang ? 'заяв.' : 'заяв.'} · ${formatDate(last)}</span>
+            <div class="vw-client-checkbox-wrap" data-action="toggle-select" data-client-id="${client.telegram_user_id}" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center;">
+              <input type="checkbox" class="vw-client-checkbox" value="${client.telegram_user_id}" style="pointer-events:none; width:18px; height:18px; accent-color:var(--vw-color-primary);">
+            </div>
           </div>
           <div class="vw-client-details" data-role="client-details" data-client-index="${idx}" style="display:none;"></div>
         `;
       }).join('');
-      root.innerHTML = `${summaryHtml}<div class="vw-clients-list">${rowsHtml}</div>`;
+      root.innerHTML = `${summaryHtml}<div class="vw-clients-list">${rowsHtml}</div>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px;">
+          <button class="vw-btn" style="background:rgba(255,255,255,0.1); color:#fff;" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
+          <button class="vw-btn vw-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
+        </div>`;
       root.querySelectorAll('[data-role="client-card"]').forEach((btn) => {
         const toggle = () => {
           const idx = Number(btn.getAttribute('data-client-index'));
@@ -5838,6 +6001,20 @@ class VoiceWidget extends HTMLElement {
         };
         btn.addEventListener('click', (event) => {
           if (event.target?.closest?.('a')) return;
+          const checkboxWrap = event.target?.closest?.('[data-action="toggle-select"]');
+          if (checkboxWrap) {
+            const uid = checkboxWrap.getAttribute('data-client-id');
+            const cb = checkboxWrap.querySelector('input');
+            if (this.selectedClientsForBroadcast.has(uid)) {
+              this.selectedClientsForBroadcast.delete(uid);
+              if(cb) cb.checked = false;
+            } else {
+              this.selectedClientsForBroadcast.add(uid);
+              if(cb) cb.checked = true;
+            }
+            updateBroadcastButtons();
+            return;
+          }
           toggle();
         });
         btn.addEventListener('keydown', (event) => {
@@ -5846,6 +6023,36 @@ class VoiceWidget extends HTMLElement {
           toggle();
         });
       });
+
+      // Actions bindings
+      const btnSelectAll = root.querySelector('[data-action="select-all"]');
+      if (btnSelectAll) {
+        btnSelectAll.addEventListener('click', () => {
+          clients.forEach(c => {
+            if(c.telegram_user_id) this.selectedClientsForBroadcast.add(c.telegram_user_id);
+          });
+          root.querySelectorAll('.vw-client-checkbox').forEach(cb => cb.checked = true);
+          updateBroadcastButtons();
+        });
+      }
+
+      const btnClear = root.querySelector('[data-action="broadcast-clear"]');
+      if (btnClear) {
+        btnClear.addEventListener('click', () => {
+          this.selectedClientsForBroadcast.clear();
+          root.querySelectorAll('.vw-client-checkbox').forEach(cb => cb.checked = false);
+          updateBroadcastButtons();
+        });
+      }
+
+      const btnCreate = root.querySelector('[data-action="broadcast-create"]');
+      if (btnCreate) {
+        btnCreate.addEventListener('click', () => {
+          if (this.selectedClientsForBroadcast.size === 0) return;
+          this.openBroadcastEditor(Array.from(this.selectedClientsForBroadcast));
+        });
+      }
+
     } catch (error) {
       root.innerHTML = `<div class="vw-access-sub-item"><strong>${esc(error?.message || 'load_failed')}</strong></div>`;
     }
@@ -14831,11 +15038,11 @@ render() {
 
     const qOp = canonicalOperation(query.operation || this._catalogAiLockedOperation || 'sale');
     const iOp = canonicalOperation(item.operation);
-    if (qOp && iOp && qOp !== iOp) return null;
+    if (qOp && (!iOp || qOp !== iOp)) return null;
 
     const qType = canonicalType(query.type || this._catalogAiLockedType || 'apartment');
     const iType = canonicalType(item.property_type || item.type);
-    if (qType && iType && qType !== iType) return null;
+    if (qType && (!iType || qType !== iType)) return null;
 
     // State-program filters are hard gates. Relaxed mode may soften price/rooms/etc.,
     // but it must never leak listings outside the requested program layer.
