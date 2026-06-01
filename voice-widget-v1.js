@@ -5709,7 +5709,8 @@ class VoiceWidget extends HTMLElement {
     const isUaLang = this.getLangCode() === 'ua';
     const overlay = document.createElement('div');
     overlay.className = 'vw-access-overlay';
-    document.body.appendChild(overlay);
+    const mountRoot = this.getRoot?.() || document.body;
+    mountRoot.appendChild(overlay);
 
     let currentPhotoUrl = null;
     let ctaText = isUaLang ? 'Подивитись' : 'Посмотреть';
@@ -6084,6 +6085,12 @@ class VoiceWidget extends HTMLElement {
       root.querySelector('[data-action="sort-by"]')?.addEventListener('change', (event) => {
         clientsSortMode = String(event.target?.value || 'latest');
         renderRows();
+      });
+      root.querySelector('[data-action="broadcast-create"]')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (this.selectedClientsForBroadcast.size === 0) return;
+        this.openBroadcastEditor(Array.from(this.selectedClientsForBroadcast));
       });
       root.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
