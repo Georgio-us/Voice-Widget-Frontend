@@ -5824,7 +5824,7 @@ class VoiceWidget extends HTMLElement {
           
           const result = await res.json();
           if (result.ok) {
-            alert(\`Рассылка завершена!\nУспешно: \${result.results.success}\nОшибок: \${result.results.failed}\`);
+            alert(`Рассылка завершена!\nУспешно: ${result.results.success}\nОшибок: ${result.results.failed}`);
             this.selectedClientsForBroadcast.clear();
             overlay.remove();
           } else {
