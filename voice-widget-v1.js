@@ -5713,6 +5713,9 @@ class VoiceWidget extends HTMLElement {
 
     let currentPhotoUrl = null;
     let ctaText = isUaLang ? 'Подивитись' : 'Посмотреть';
+    const adminApiBase = String(this.api?.apiUrl || this.apiUrl || '')
+      .replace(/\/api\/audio\/upload\/?$/i, '/api/admin')
+      .replace(/\/$/, '');
 
     const renderEditor = () => {
       overlay.innerHTML = `
@@ -5726,25 +5729,24 @@ class VoiceWidget extends HTMLElement {
 
           <div class="vw-access-sub-item" style="margin-bottom:8px;">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${targetUserIds.length}</strong></div>
           
-          <div class="vw-access-sub-item" style="flex-direction:column; gap:8px;">
+          <div class="vw-access-sub-item vw-broadcast-field">
             <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
-            <textarea id="vw-broadcast-text" style="width:100%; height:100px; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; resize:vertical; font-family:inherit; font-size:14px;" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}"></textarea>
+            <textarea id="vw-broadcast-text" class="vw-broadcast-input vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}"></textarea>
           </div>
           
-          <div class="vw-access-sub-item" style="flex-direction:column; gap:8px;">
+          <div class="vw-access-sub-item vw-broadcast-field">
             <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
-            <input type="text" id="vw-broadcast-cta" value="${ctaText}" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff; font-family:inherit; font-size:14px;">
+            <input type="text" id="vw-broadcast-cta" class="vw-broadcast-input" value="${ctaText}">
           </div>
 
-          <div class="vw-access-sub-item" style="flex-direction:column; gap:8px;">
-            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Фото (Опціонально)' : 'Фото (Опционально)'}</label>
-            <input type="file" id="vw-broadcast-photo" accept="image/jpeg, image/png, image/webp" style="font-size:13px; color:rgba(255,255,255,0.7);">
-            <div id="vw-broadcast-photo-status" style="font-size:12px; color:var(--vw-color-primary, #3390ec); margin-top:4px;">${currentPhotoUrl ? '✅ Загружено' : ''}</div>
+          <div class="vw-access-sub-item vw-broadcast-field">
+            <label style="font-size:13px; font-weight:500;">${isUaLang ? 'Посилання на фото (опційно)' : 'Ссылка на фото (опционально)'}</label>
+            <input type="url" id="vw-broadcast-photo-url" class="vw-broadcast-input" value="${currentPhotoUrl || ''}" placeholder="https://...">
           </div>
 
-          <div style="display:flex; gap:12px; margin-top:12px;">
-            <button class="vw-btn" id="vw-btn-cancel" style="background:rgba(255,255,255,0.1); flex:1;">${isUaLang ? 'Скасувати' : 'Отменить'}</button>
-            <button class="vw-btn vw-btn--primary" id="vw-btn-preview" style="flex:1;">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
+          <div class="vw-broadcast-actions">
+            <button type="button" class="vw-access-sub-btn" id="vw-btn-cancel">${isUaLang ? 'Скасувати' : 'Отменить'}</button>
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" id="vw-btn-preview">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
           </div>
         </div>
       `;
@@ -5752,35 +5754,10 @@ class VoiceWidget extends HTMLElement {
       overlay.querySelector('#vw-btn-close').addEventListener('click', () => overlay.remove());
       overlay.querySelector('#vw-btn-cancel').addEventListener('click', () => overlay.remove());
 
-      overlay.querySelector('#vw-broadcast-photo').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const statusEl = overlay.querySelector('#vw-broadcast-photo-status');
-        statusEl.textContent = isUaLang ? 'Завантаження...' : 'Загрузка...';
-        
-        try {
-          const formData = new FormData();
-          formData.append('images', file);
-          const response = await fetch(this.api.apiBaseUrl + '/api/admin/properties', {
-            method: 'POST',
-            headers: this.api.buildTelegramAuthHeaders(),
-            body: formData
-          });
-          const res = await response.json();
-          if (res.ok && res.property?.images?.length) {
-            currentPhotoUrl = res.property.images[0];
-            statusEl.textContent = '✅ ' + (isUaLang ? 'Завантажено' : 'Загружено');
-          } else {
-            statusEl.textContent = '❌ ' + (res.error || 'Ошибка загрузки');
-          }
-        } catch (err) {
-          statusEl.textContent = '❌ ' + err.message;
-        }
-      });
-
       overlay.querySelector('#vw-btn-preview').addEventListener('click', () => {
         ctaText = overlay.querySelector('#vw-broadcast-cta').value;
         const text = overlay.querySelector('#vw-broadcast-text').value;
+        currentPhotoUrl = String(overlay.querySelector('#vw-broadcast-photo-url')?.value || '').trim() || null;
         renderPreview(text);
       });
     };
@@ -5801,9 +5778,9 @@ class VoiceWidget extends HTMLElement {
             ${ctaText ? `<div style="padding:12px; border-top:1px solid rgba(255,255,255,0.05); text-align:center; color:var(--vw-color-primary, #3390ec); font-weight:500;">${ctaText}</div>` : ''}
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <button class="vw-btn vw-btn--primary" id="vw-btn-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
-            <button class="vw-btn" id="vw-btn-back" style="background:rgba(255,255,255,0.1);">${isUaLang ? 'Назад до редактора' : 'Назад к редактору'}</button>
+          <div class="vw-broadcast-actions vw-broadcast-actions--stack">
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" id="vw-btn-send">${isUaLang ? 'Відправити розсилку' : 'Отправить рассылку'}</button>
+            <button type="button" class="vw-access-sub-btn" id="vw-btn-back">${isUaLang ? 'Назад до редактора' : 'Назад к редактору'}</button>
           </div>
         </div>
       `;
@@ -5817,7 +5794,7 @@ class VoiceWidget extends HTMLElement {
         btn.textContent = isUaLang ? 'Відправка...' : 'Отправка...';
         
         try {
-          const res = await fetch(this.api.apiBaseUrl + '/api/admin/broadcast', {
+          const res = await fetch(`${adminApiBase}/broadcast`, {
             method: 'POST',
             headers: this.api.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
@@ -5925,13 +5902,71 @@ class VoiceWidget extends HTMLElement {
       const clients = Array.isArray(data?.clients) ? data.clients : [];
 
       this.selectedClientsForBroadcast = new Set();
+      let clientsSortMode = 'latest';
+      let showOnlyUnselected = false;
       const updateBroadcastButtons = () => {
         const count = this.selectedClientsForBroadcast.size;
         const btnSend = root.querySelector('[data-action="broadcast-create"]');
         const btnClear = root.querySelector('[data-action="broadcast-clear"]');
-        if (btnSend) btnSend.textContent = `${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (${count})`;
-        if (btnSend) btnSend.disabled = count === 0;
+        const btnUnselected = root.querySelector('[data-action="show-unselected"]');
+        if (btnSend) {
+          btnSend.textContent = `${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (${count})`;
+          btnSend.disabled = count === 0;
+        }
         if (btnClear) btnClear.disabled = count === 0;
+        if (btnUnselected) {
+          btnUnselected.classList.toggle('is-active', showOnlyUnselected);
+          btnUnselected.setAttribute('aria-pressed', showOnlyUnselected ? 'true' : 'false');
+        }
+      };
+      const getClientDateValue = (client) => {
+        const raw = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || client?.first_seen_at || '';
+        const ts = Date.parse(raw);
+        return Number.isFinite(ts) ? ts : 0;
+      };
+      const getClientLeadsValue = (client) => Number(client?.leads_count || 0);
+      const getClientNameValue = (client) => clientName(client).toLowerCase();
+      const getVisibleClients = () => {
+        const filtered = showOnlyUnselected
+          ? clients.filter((client) => !this.selectedClientsForBroadcast.has(String(client?.telegram_user_id || '')))
+          : clients.slice();
+        filtered.sort((a, b) => {
+          if (clientsSortMode === 'leads_desc') return getClientLeadsValue(b) - getClientLeadsValue(a);
+          if (clientsSortMode === 'name_asc') return getClientNameValue(a).localeCompare(getClientNameValue(b), isUaLang ? 'uk' : 'ru');
+          return getClientDateValue(b) - getClientDateValue(a);
+        });
+        return filtered;
+      };
+      const renderRows = () => {
+        const visibleClients = getVisibleClients();
+        const list = root.querySelector('[data-role="clients-list"]');
+        if (!list) return;
+        if (!visibleClients.length) {
+          list.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Немає клієнтів для цього фільтра' : 'Нет клиентов для этого фильтра'}</strong></div>`;
+          updateBroadcastButtons();
+          return;
+        }
+        list.innerHTML = visibleClients.map((client) => {
+          const originalIdx = clients.indexOf(client);
+          const name = clientName(client);
+          const leads = Number(client?.leads_count || 0);
+          const last = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || null;
+          const uid = String(client?.telegram_user_id || '');
+          const isSelected = uid && this.selectedClientsForBroadcast.has(uid);
+          return `
+            <div class="vw-client-card${isSelected ? ' is-selected' : ''}" data-role="client-card" data-client-index="${originalIdx}" role="button" tabindex="0">
+              <span class="vw-client-card__main">
+                <span class="vw-client-card__name">${esc(name)}</span>
+                <span class="vw-client-card__tg">${tgLink(client)}</span>
+              </span>
+              <span class="vw-client-card__meta">${leads} ${isUaLang ? 'заяв.' : 'заяв.'} · ${formatDate(last)}</span>
+              <button type="button" class="vw-client-select${isSelected ? ' is-selected' : ''}" data-action="toggle-select" data-client-id="${esc(uid)}" aria-label="${isUaLang ? 'Обрати клієнта' : 'Выбрать клиента'}" aria-pressed="${isSelected ? 'true' : 'false'}"></button>
+            </div>
+            <div class="vw-client-details" data-role="client-details" data-client-index="${originalIdx}" style="display:none;"></div>
+          `;
+        }).join('');
+        bindClientRows();
+        updateBroadcastButtons();
       };
 
       const summaryHtml = `
@@ -5941,39 +5976,26 @@ class VoiceWidget extends HTMLElement {
           <div style="display:flex; justify-content:space-between;"><span>🔥 ${isUaLang ? 'Активні за 7 днів' : 'Активные за 7 дней'}:</span> <strong>${safeNum(summary.active7Days)}</strong></div>
         </div>
         <div style="font-weight:600; margin-bottom:12px; font-size:16px;">${isUaLang ? 'Мої клієнти' : 'Мои клиенты'}</div>
-        <div class="vw-admin-actions-bar" style="display:flex; gap:8px; margin-bottom:16px;">
-          <button class="vw-btn" style="padding:6px 12px; font-size:13px; background:rgba(255,255,255,0.1); border-radius:6px;" data-action="select-all">${isUaLang ? 'Обрати всі' : 'Выбрать все'}</button>
-          <button class="vw-btn" style="padding:6px 12px; font-size:13px; background:rgba(255,255,255,0.1); border-radius:6px;" data-action="sort-by">${isUaLang ? 'Сортувати' : 'Сортировать'}</button>
+        <div class="vw-admin-clients-actions">
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="select-all">${isUaLang ? 'Обрати всі' : 'Выбрать все'}</button>
+          <select class="vw-access-sort-select vw-admin-clients-sort" data-action="sort-by" aria-label="${isUaLang ? 'Сортувати клієнтів' : 'Сортировать клиентов'}">
+            <option value="latest">${isUaLang ? 'Останні активні' : 'Последние активные'}</option>
+            <option value="leads_desc">${isUaLang ? 'Більше заявок' : 'Больше заявок'}</option>
+            <option value="name_asc">${isUaLang ? 'За імʼям' : 'По имени'}</option>
+          </select>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="show-unselected" aria-pressed="false">${isUaLang ? 'Необрані' : 'Невыбранные'}</button>
         </div>
       `;
       if (!clients.length) {
         root.innerHTML = `${summaryHtml}<div class="vw-access-sub-item"><strong>${isUaLang ? 'Клієнтів поки немає' : 'Клиентов пока нет'}</strong></div>`;
         return;
       }
-      const rowsHtml = clients.map((client, idx) => {
-        const name = clientName(client);
-        const leads = Number(client?.leads_count || 0);
-        const last = client?.last_seen_at || client?.last_session_at || client?.last_lead_at || null;
-        return `
-          <div class="vw-client-card" data-role="client-card" data-client-index="${idx}" role="button" tabindex="0" style="position:relative; padding-right:40px;">
-            <span class="vw-client-card__main">
-              <span class="vw-client-card__name">${esc(name)}</span>
-              <span class="vw-client-card__tg">${tgLink(client)}</span>
-            </span>
-            <span class="vw-client-card__meta">${leads} ${isUaLang ? 'заяв.' : 'заяв.'} · ${formatDate(last)}</span>
-            <div class="vw-client-checkbox-wrap" data-action="toggle-select" data-client-id="${client.telegram_user_id}" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); width:24px; height:24px; display:flex; align-items:center; justify-content:center;">
-              <input type="checkbox" class="vw-client-checkbox" value="${client.telegram_user_id}" style="pointer-events:none; width:18px; height:18px; accent-color:var(--vw-color-primary);">
-            </div>
-          </div>
-          <div class="vw-client-details" data-role="client-details" data-client-index="${idx}" style="display:none;"></div>
-        `;
-      }).join('');
-      root.innerHTML = `${summaryHtml}<div class="vw-clients-list">${rowsHtml}</div>
-        <div style="display:flex; flex-direction:column; gap:12px; margin-top:24px;">
-          <button class="vw-btn" style="background:rgba(255,255,255,0.1); color:#fff;" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
-          <button class="vw-btn vw-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
+      root.innerHTML = `${summaryHtml}<div class="vw-clients-list" data-role="clients-list"></div>
+        <div class="vw-admin-broadcast-bar">
+          <button type="button" class="vw-access-sub-btn" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
         </div>`;
-      root.querySelectorAll('[data-role="client-card"]').forEach((btn) => {
+      const bindClientRows = () => root.querySelectorAll('[data-role="client-card"]').forEach((btn) => {
         const toggle = () => {
           const idx = Number(btn.getAttribute('data-client-index'));
           const client = clients[idx];
@@ -6015,18 +6037,15 @@ class VoiceWidget extends HTMLElement {
         };
         btn.addEventListener('click', (event) => {
           if (event.target?.closest?.('a')) return;
-          const checkboxWrap = event.target?.closest?.('[data-action="toggle-select"]');
-          if (checkboxWrap) {
-            const uid = checkboxWrap.getAttribute('data-client-id');
-            const cb = checkboxWrap.querySelector('input');
+          const selectBtn = event.target?.closest?.('[data-action="toggle-select"]');
+          if (selectBtn) {
+            const uid = selectBtn.getAttribute('data-client-id');
             if (this.selectedClientsForBroadcast.has(uid)) {
               this.selectedClientsForBroadcast.delete(uid);
-              if(cb) cb.checked = false;
             } else {
               this.selectedClientsForBroadcast.add(uid);
-              if(cb) cb.checked = true;
             }
-            updateBroadcastButtons();
+            renderRows();
             return;
           }
           toggle();
@@ -6037,6 +6056,7 @@ class VoiceWidget extends HTMLElement {
           toggle();
         });
       });
+      renderRows();
 
       // Actions bindings
       const btnSelectAll = root.querySelector('[data-action="select-all"]');
@@ -6045,8 +6065,7 @@ class VoiceWidget extends HTMLElement {
           clients.forEach(c => {
             if(c.telegram_user_id) this.selectedClientsForBroadcast.add(c.telegram_user_id);
           });
-          root.querySelectorAll('.vw-client-checkbox').forEach(cb => cb.checked = true);
-          updateBroadcastButtons();
+          renderRows();
         });
       }
 
@@ -6054,10 +6073,18 @@ class VoiceWidget extends HTMLElement {
       if (btnClear) {
         btnClear.addEventListener('click', () => {
           this.selectedClientsForBroadcast.clear();
-          root.querySelectorAll('.vw-client-checkbox').forEach(cb => cb.checked = false);
-          updateBroadcastButtons();
+          renderRows();
         });
       }
+
+      root.querySelector('[data-action="sort-by"]')?.addEventListener('change', (event) => {
+        clientsSortMode = String(event.target?.value || 'latest');
+        renderRows();
+      });
+      root.querySelector('[data-action="show-unselected"]')?.addEventListener('click', () => {
+        showOnlyUnselected = !showOnlyUnselected;
+        renderRows();
+      });
 
       const btnCreate = root.querySelector('[data-action="broadcast-create"]');
       if (btnCreate) {
@@ -11488,18 +11515,79 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         gap: 8px;
       }
+      .vw-admin-clients-actions {
+        display: grid;
+        grid-template-columns: minmax(0, auto) minmax(132px, 1fr) minmax(0, auto);
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .vw-admin-clients-actions .vw-access-sub-btn {
+        min-height: 34px;
+        border-radius: 10px;
+        padding: 0 10px;
+        font-size: .82rem;
+        white-space: nowrap;
+      }
+      .vw-admin-clients-sort {
+        width: 100%;
+        max-width: none;
+      }
+      .vw-admin-broadcast-bar {
+        display: grid;
+        gap: 10px;
+        margin-top: 22px;
+      }
+      .vw-admin-broadcast-bar .vw-access-sub-btn {
+        min-height: 42px;
+        border-radius: 12px;
+      }
+      .vw-admin-clients-actions .vw-access-sub-btn.is-active,
+      .vw-client-card.is-selected {
+        border-color: rgba(45, 143, 225, 0.72);
+        box-shadow: 0 0 0 1px rgba(45, 143, 225, 0.28) inset;
+      }
       .vw-client-card {
         width: 100%;
         min-height: 48px;
+        position: relative;
         border-radius: 12px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
-        padding: 9px 12px;
+        padding: 9px 46px 9px 12px;
         display: grid;
         gap: 4px;
         text-align: left;
         cursor: pointer;
+      }
+      .vw-client-select {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        border-radius: 9px;
+        border: 1px solid rgba(255,255,255,0.38);
+        background: rgba(255,255,255,0.92);
+        color: #fff;
+        cursor: pointer;
+      }
+      .vw-client-select.is-selected {
+        border-color: rgba(45, 143, 225, 0.95);
+        background: var(--color-accent, #2d8fe1);
+      }
+      .vw-client-select.is-selected::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 4px;
+        width: 7px;
+        height: 12px;
+        border: solid #fff;
+        border-width: 0 3px 3px 0;
+        transform: rotate(45deg);
       }
       .vw-client-card__main {
         min-width: 0;
@@ -11539,6 +11627,54 @@ class VoiceWidget extends HTMLElement {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+      .vw-broadcast-field {
+        flex-direction: column;
+        gap: 8px;
+      }
+      .vw-broadcast-input {
+        width: 100%;
+        min-height: 42px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(0,0,0,0.22);
+        color: var(--text-primary, #fff);
+        padding: 10px 12px;
+        font-family: inherit;
+        font-size: 14px;
+        outline: none;
+      }
+      .vw-broadcast-input:focus {
+        border-color: rgba(92, 150, 255, 0.72);
+        box-shadow: 0 0 0 2px rgba(92, 150, 255, 0.18);
+      }
+      .vw-broadcast-textarea {
+        min-height: 110px;
+        resize: vertical;
+        line-height: 1.35;
+      }
+      .vw-broadcast-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .vw-broadcast-actions--stack {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .vw-broadcast-actions .vw-access-sub-btn {
+        min-height: 42px;
+        border-radius: 12px;
+      }
+      @media (max-width: 430px) {
+        .vw-admin-clients-actions {
+          grid-template-columns: 1fr 1fr;
+        }
+        .vw-admin-clients-sort {
+          grid-column: 1 / -1;
+          order: 3;
+        }
       }
       .vw-client-details {
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
