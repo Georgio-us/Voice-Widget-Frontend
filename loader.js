@@ -173,6 +173,34 @@
     }
   }
 
+  function moveHostToBodyEnd(host) {
+    try {
+      if (!host || !document.body || host.parentNode !== document.body) return;
+      if (document.body.lastElementChild === host) return;
+      document.body.appendChild(host);
+    } catch {}
+  }
+
+  function bindDomOrderGuard(host) {
+    try {
+      if (!host || !document.body || host.__vw_dom_order_guard__) return;
+      host.__vw_dom_order_guard__ = true;
+      let scheduled = false;
+      const schedule = () => {
+        if (scheduled) return;
+        scheduled = true;
+        window.requestAnimationFrame(() => {
+          scheduled = false;
+          moveHostToBodyEnd(host);
+        });
+      };
+      moveHostToBodyEnd(host);
+      const observer = new MutationObserver(schedule);
+      observer.observe(document.body, { childList: true });
+      host.__vw_dom_order_observer__ = observer;
+    } catch {}
+  }
+
   // стабилизируем позицию при изменении визуального вьюпорта (iOS клавиатура/toolbar)
   function bindViewportStabilizer(host, options) {
     try {
@@ -226,6 +254,7 @@
         if (result && result.disabled) return result;
         const host = createHostIfNeeded(options);
         positionHost(host, options);
+        bindDomOrderGuard(host);
         bindViewportStabilizer(host, options);
         const el = ensureElement(host, options);
         return { host, el };
@@ -254,6 +283,7 @@
           document.body.appendChild(host);
         }
         positionHost(host, options);
+        bindDomOrderGuard(host);
         bindViewportStabilizer(host, options);
         // переместим существующий тег внутрь host
         let el = document.querySelector('voice-widget');
