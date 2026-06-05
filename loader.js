@@ -12,6 +12,8 @@
     } catch { return ''; }
   })();
 
+  const VW_MIN_Z_INDEX = 2147483647;
+
   const DEFAULTS = {
     apiUrl: undefined,
     corner: 'right-bottom',         // 'right-bottom' | 'right-top' | 'left-bottom' | 'left-top'
@@ -19,10 +21,11 @@
     offsetX: 20,                    // px
     offsetY: 20,                    // px
     safeArea: false,                // учитывать env(safe-area-inset-*) — по умолчанию выкл, чтобы не было лишнего отступа
-    zIndex: 2147483646,             // поверх контента сайта и сторонних floating-виджетов (Jivo/WA)
+    zIndex: VW_MIN_Z_INDEX,         // поверх контента сайта и сторонних floating-виджетов (Jivo/WA)
     autoOpen: false,                // сразу открыть виджет
     widgetUrl: undefined,           // явный URL на voice-widget-v1.js (если не указан — берём из SCRIPT_BASE)
-    assetsBase: undefined           // опционально: база для ассетов (передадим в window.__VW_ASSETS_BASE__)
+    assetsBase: undefined,          // опционально: база для ассетов (передадим в window.__VW_ASSETS_BASE__)
+    enabled: undefined              // kill switch: false/0/off/no/disabled disables rendering
   };
 
   let runtimeConfigPromise = null;
@@ -54,6 +57,38 @@
       }
     });
     return runtimeConfigPromise;
+  }
+
+  function isDisabledValue(value) {
+    if (value === false) return true;
+    const normalized = String(value ?? '').trim().toLowerCase();
+    return normalized === '0'
+      || normalized === 'false'
+      || normalized === 'off'
+      || normalized === 'no'
+      || normalized === 'disabled';
+  }
+
+  function isWidgetDisabled(options) {
+    if (options && typeof options.enabled !== 'undefined') {
+      return isDisabledValue(options.enabled);
+    }
+    if (typeof window.__VW_ENABLED__ !== 'undefined') {
+      return isDisabledValue(window.__VW_ENABLED__);
+    }
+    return false;
+  }
+
+  function removeHostIfDisabled() {
+    try {
+      const host = document.getElementById('vw-host');
+      if (host) host.remove();
+    } catch {}
+  }
+
+  function resolveZIndex(value) {
+    const n = Number(value);
+    return String(Number.isFinite(n) ? Math.max(n, VW_MIN_Z_INDEX) : VW_MIN_Z_INDEX);
   }
 
   function ensureWidgetLoaded(options) {
@@ -101,7 +136,7 @@
     host = document.createElement('div');
     host.id = 'vw-host';
     host.style.position = 'fixed';
-    host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
+    host.style.zIndex = resolveZIndex(options.zIndex);
     host.style.width = 'auto';
     host.style.height = 'auto';
     host.style.pointerEvents = 'none';  /* не перехватывать клики — только сам виджет внутри */
@@ -117,7 +152,7 @@
     const addSafe = (axis) => (cfg.safeArea ? ` + env(safe-area-inset-${axis})` : ``);
     const px = (v) => (typeof v === 'number' ? `${v}px` : String(v || 0));
     host.style.position = 'fixed';
-    host.style.zIndex = String(cfg.zIndex || DEFAULTS.zIndex);
+    host.style.zIndex = resolveZIndex(cfg.zIndex);
     host.style.top = host.style.right = host.style.bottom = host.style.left = 'auto';
     host.style.display = '';
     host.style.justifyContent = '';
@@ -181,7 +216,14 @@
   window.VoiceWidget = {
     init(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
-      return ensureRuntimeConfig(options).then(() => ensureWidgetLoaded(options)).then(() => {
+      return ensureRuntimeConfig(options).then(() => {
+        if (isWidgetDisabled(options)) {
+          removeHostIfDisabled();
+          return { disabled: true, host: null, el: null };
+        }
+        return ensureWidgetLoaded(options);
+      }).then((result) => {
+        if (result && result.disabled) return result;
         const host = createHostIfNeeded(options);
         positionHost(host, options);
         bindViewportStabilizer(host, options);
@@ -192,13 +234,20 @@
     // на случай, если тег уже вёрстан на странице (необязательное)
     upgrade(opts) {
       const options = Object.assign({}, DEFAULTS, opts || {});
-      return ensureRuntimeConfig(options).then(() => ensureWidgetLoaded(options)).then(() => {
+      return ensureRuntimeConfig(options).then(() => {
+        if (isWidgetDisabled(options)) {
+          removeHostIfDisabled();
+          return { disabled: true, host: null, el: null };
+        }
+        return ensureWidgetLoaded(options);
+      }).then((result) => {
+        if (result && result.disabled) return result;
         let host = document.getElementById('vw-host');
         if (!host) {
           host = document.createElement('div');
           host.id = 'vw-host';
           host.style.position = 'fixed';
-          host.style.zIndex = String(options.zIndex || DEFAULTS.zIndex);
+          host.style.zIndex = resolveZIndex(options.zIndex);
           host.style.width = 'auto';
           host.style.height = 'auto';
           host.style.pointerEvents = 'none';  /* не перехватывать клики — только виджет внутри */
