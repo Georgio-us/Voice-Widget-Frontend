@@ -6454,7 +6454,13 @@ render() {
     if (normalized.image && !gallery.includes(normalized.image)) gallery.unshift(normalized.image);
     const canSwitchImage = gallery.length > 1;
     const coverImage = gallery[0] || normalized.image || '';
-    const locationLine = [normalized.city, normalized.province].filter(Boolean).join(' / ');
+    const primaryLocation = Array.isArray(normalized.urbanizations) && normalized.urbanizations.length
+      ? normalized.urbanizations[0]
+      : normalized.city;
+    const secondaryLocation = primaryLocation === normalized.city
+      ? normalized.province
+      : normalized.city;
+    const locationLine = [primaryLocation, secondaryLocation].filter(Boolean).join(' / ');
     const typeStatusLine = [normalized.property_type, normalized.listing_status].filter(Boolean).join('. ');
     const tagBadgesHtml = Array.isArray(normalized.tags) && normalized.tags.length
       ? `<div class="cs-image-tags">${normalized.tags.map((t) => `<button type="button" class="cs-image-tag" tabindex="-1" aria-hidden="true">${t}</button>`).join('')}</div>`
@@ -7268,6 +7274,7 @@ render() {
     if (image && !assetPool.includes(image)) assetPool.unshift(image);
     const imageGallery = assetPool;
     const coverImage = image || imageGallery[0] || '';
+    const urbanizations = readList(raw.urbanizations).map(v => String(v || '').trim()).filter(Boolean);
     const rawTags = Array.isArray(raw.tags)
       ? raw.tags
       : (typeof raw.tags === 'string'
@@ -7289,6 +7296,7 @@ render() {
       city,
       province,
       neighborhood,
+      urbanizations,
       property_type: propertyType ? propertyType.toUpperCase() : '',
       listing_status: listingStatus ? listingStatus.toUpperCase() : '',
       description: raw.description || '',
