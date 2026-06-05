@@ -16,14 +16,7 @@ const ASSETS_BASE = (() => {
 })();
 
 const DEFAULT_THEME = (() => {
-  try {
-    const raw = typeof window !== 'undefined' ? window.__VW_DEFAULT_THEME__ : null;
-    if (raw === 0 || raw === '0' || raw === 'light') return 'light';
-    if (raw === 1 || raw === '1' || raw === 'dark') return 'dark';
-    return null;
-  } catch (e) {
-    return null;
-  }
+  return 'light';
 })();
 
 import { AudioRecorder } from './modules/audio-recorder.js';
@@ -491,8 +484,8 @@ class VoiceWidget extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._theme = null;
-    this._pendingThemeAttr = null;
+    this._theme = 'light';
+    this._pendingThemeAttr = 'light';
 
     // базовые состояния
     this.isRecording = false;
@@ -725,8 +718,6 @@ class VoiceWidget extends HTMLElement {
     setText('#ctxSpamWarningCancelBtn', locale.cancel);
     setText('#ctxSpamWarningContinueBtn', locale.continue);
     setText('#ctxSpamBlockCloseBtn', locale.understood);
-    const ctxThemeBtn = root.getElementById('ctxThemeToggleBtn');
-    if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
     setText('#whatDataUnderstoodBtn', locale.understood);
     setText('#dataUnderstoodBtn', locale.understood);
     setText('#whatDataTrigger', locale.footerWhatData);
@@ -985,19 +976,11 @@ class VoiceWidget extends HTMLElement {
   }
 
   initTheme() {
-    // Deployment default must win over persisted browser preference when explicitly set.
-    let theme = DEFAULT_THEME || 'dark';
-    try {
-      const saved = localStorage.getItem('vw_theme');
-      if (!DEFAULT_THEME && (saved === 'light' || saved === 'dark')) theme = saved;
-    } catch {}
-    this.applyTheme(theme);
+    this.applyTheme(DEFAULT_THEME);
   }
 
   getTheme() {
-    if (this._theme === 'light' || this._theme === 'dark') return this._theme;
-    const raw = this.getAttribute('data-theme');
-    return raw === 'light' ? 'light' : 'dark';
+    return 'light';
   }
 
   getMicIconByTheme() {
@@ -1073,7 +1056,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   applyTheme(theme) {
-    const next = theme === 'light' ? 'light' : 'dark';
+    const next = 'light';
     this._theme = next;
     if (this.isConnected) this.setAttribute('data-theme', next);
     else this._pendingThemeAttr = next;
@@ -1090,8 +1073,7 @@ class VoiceWidget extends HTMLElement {
   }
 
   toggleTheme() {
-    const next = this.getTheme() === 'light' ? 'dark' : 'light';
-    this.applyTheme(next);
+    this.applyTheme('light');
   }
 
   checkBrowserSupport() {
@@ -3882,7 +3864,6 @@ render() {
             </div>
           </div>
             <a class="footer-text viral-link-text" id="contextViralLink" href="#">Powered by VIA AI, I want the same widget</a>
-            <button class="ctx-send-btn" id="ctxThemeToggleBtn" type="button">Dark mode</button>
             </div>
           </div>
 
@@ -5875,10 +5856,6 @@ render() {
         this._headerLangDropdownOpen = false;
         this.updateMenuUI();
       }
-    } else if (e.target.matches('#ctxThemeToggleBtn') || e.target.closest('#ctxThemeToggleBtn')) {
-      e.preventDefault();
-      this.toggleTheme();
-      this.updateInterface();
     } else if (e.target.matches('#debugRefreshBtn') || e.target.closest('#debugRefreshBtn')) {
       e.preventDefault();
       try { this.refreshDebugMenu(); } catch {}
@@ -7543,8 +7520,6 @@ render() {
     }
 
     if (!isDialog) {
-      const ctxThemeBtn = this.shadowRoot.getElementById('ctxThemeToggleBtn');
-      if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
       return;
     }
 
@@ -7561,8 +7536,6 @@ render() {
       </div>
     `;
 
-    const ctxThemeBtn = this.shadowRoot.getElementById('ctxThemeToggleBtn');
-    if (ctxThemeBtn) ctxThemeBtn.textContent = this.getTheme() === 'light' ? locale.menuThemeToDark : locale.menuThemeToLight;
   }
 
   // совместимость
