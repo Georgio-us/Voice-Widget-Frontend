@@ -6456,7 +6456,7 @@ render() {
     const coverImage = gallery[0] || normalized.image || '';
     const primaryLocation = Array.isArray(normalized.urbanizations) && normalized.urbanizations.length
       ? normalized.urbanizations[0]
-      : normalized.city;
+      : (normalized.neighborhood || normalized.city);
     const secondaryLocation = primaryLocation === normalized.city
       ? normalized.province
       : normalized.city;
@@ -6527,7 +6527,7 @@ render() {
           </div>`).join('');
     slide.innerHTML = `
       <div class="card-slide-front">
-        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.province}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
+        <div class="cs" data-variant-id="${normalized.id}" data-city="${normalized.city}" data-district="${normalized.province}" data-neighborhood="${normalized.neighborhood}" data-rooms="${normalized.rooms}" data-price-eur="${normalized.priceEUR}" data-image="${normalized.image}">
           <div class="cs-image">
             <div class="cs-image-nav">
               <button type="button" class="cs-image-nav-btn${canSwitchImage ? '' : ' is-hidden'}" data-action="image-prev" aria-label="Previous image">&#8249;</button>

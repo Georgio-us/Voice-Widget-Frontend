@@ -91,6 +91,7 @@ export class DebugMenuManager {
           id: node.getAttribute('data-variant-id') || null,
           city: node.getAttribute('data-city') || null,
           district: node.getAttribute('data-district') || null,
+          neighborhood: node.getAttribute('data-neighborhood') || null,
           rooms: this._parseFirstNumber(node.getAttribute('data-rooms')),
           priceEUR: this._parseFirstNumber(node.getAttribute('data-price-eur')),
           source: `dom#${idx + 1}`
@@ -135,7 +136,12 @@ export class DebugMenuManager {
     } else pushCheck('type', 'skip', '-', '-');
 
     if (query.location) {
-      const actual = `${candidate.city || ''} ${candidate.district || ''}`.trim().toLowerCase();
+      const actual = [
+        candidate.city,
+        candidate.district,
+        candidate.neighborhood,
+        ...(Array.isArray(candidate.urbanizations) ? candidate.urbanizations : [])
+      ].filter(Boolean).join(' ').trim().toLowerCase();
       const expected = String(
         (typeof query.location === 'object' && query.location !== null)
           ? (query.location.normalized || query.location.raw || '')
