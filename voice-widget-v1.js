@@ -6726,14 +6726,332 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  buildWantSellAccessHtml(locale = {}) {
+    return `
+      <div class="vw-want-bot vw-want-sell">
+        <div class="vw-want-bot__title">${locale.accessUserSellTitle || '🏠 Професійний продаж нерухомості'}</div>
+        <div class="vw-want-bot__subtitle">${locale.accessUserSellIntro || ''}</div>
+        <div class="vw-want-sell__section-title">${locale.accessUserSellListTitle || ''}</div>
+        <div class="vw-want-bot__list">
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">✅</span><span>${locale.accessUserSellBenefit1 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📊</span><span>${locale.accessUserSellBenefit2 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📸</span><span>${locale.accessUserSellBenefit3 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">⚖️</span><span>${locale.accessUserSellBenefit4 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🚀</span><span>${locale.accessUserSellBenefit5 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🗣</span><span>${locale.accessUserSellBenefit6 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">💰</span><span>${locale.accessUserSellBenefit7 || ''}</span></div>
+        </div>
+        <div class="vw-want-bot__subtitle vw-want-sell__outro">${locale.accessUserSellOutro || ''}</div>
+        <div class="vw-want-bot__title vw-want-sell__question">${locale.accessUserSellQuestion || ''}</div>
+      </div>
+      <div class="vw-access-sub-toolbar vw-access-sub-toolbar--want-bot">
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-sell-submit">${locale.accessUserSellCtaSell || 'Хочу продати'}</button>
+        <button type="button" class="vw-access-sub-btn" data-role="want-sell-estimate">${locale.accessUserSellCtaEstimate || 'Оцінити вартість'}</button>
+      </div>
+    `;
+  }
+
+  buildWantBotAccessHtml(locale = {}) {
+    return `
+      <div class="vw-want-bot">
+        <div class="vw-want-bot__title">${locale.accessUserBotIntro || ''}</div>
+        <div class="vw-want-bot__subtitle">${locale.accessUserBotSubtitle || ''}</div>
+        <div class="vw-want-bot__list">
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🔶</span><span>${locale.accessUserBotBenefit1 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">✍️</span><span>${locale.accessUserBotBenefit2 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">⚡</span><span>${locale.accessUserBotBenefit3 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🤖</span><span>${locale.accessUserBotBenefit4 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📊</span><span>${locale.accessUserBotBenefit5 || ''}</span></div>
+          <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📩</span><span>${locale.accessUserBotBenefit6 || ''}</span></div>
+        </div>
+      </div>
+      <div class="vw-access-sub-toolbar vw-access-sub-toolbar--want-bot">
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-bot-trial">${locale.accessUserBotTrialCta || '7-дневный тест'}</button>
+        <button type="button" class="vw-access-sub-btn" data-role="want-bot-consult">${locale.accessUserBotConsultCta || 'Консультация'}</button>
+      </div>
+    `;
+  }
+
+  buildSubscriptionAccessHtml({ locale = {}, isUaLang = false, countdownLabel = '' } = {}) {
+    const subscription = this.normalizeAccessSubscription(this.accessSubscription);
+    const isActive = subscription?.active === true;
+    const planLabel = this.getSubscriptionPlanLabel(subscription?.plan);
+    const statusLabel = this.getSubscriptionStatusLabel(subscription?.status, isActive);
+    const startsAtLabel = this.formatSubscriptionDate(subscription?.startsAt);
+    const endsAtLabel = subscription?.plan === 'lifetime'
+      ? (isUaLang ? 'Без строку' : 'Без срока')
+      : this.formatSubscriptionDate(subscription?.endsAt);
+    return `
+      <div class="vw-subscription-panel">
+        <div class="vw-subscription-status">
+          <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Поточний план:' : 'Текущий план:'}</span><span class="vw-subscription-value">${planLabel}</span></div>
+          <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Статус:' : 'Статус:'}</span><span class="vw-subscription-value">${statusLabel}</span></div>
+          <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Дата активації:' : 'Дата активации:'}</span><span class="vw-subscription-value">${startsAtLabel}</span></div>
+          <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Діє до:' : 'Действует до:'}</span><span class="vw-subscription-value">${endsAtLabel}</span></div>
+        </div>
+        <div class="vw-subscription-countdown">${countdownLabel}</div>
+        <div class="vw-subscription-prompt">${locale.accessSubPrompt || 'Хотите обновить/активировать подписку?'}</div>
+        <input
+          type="text"
+          class="vw-access-sub-input vw-subscription-key-input"
+          data-role="subscription-key-input"
+          placeholder="${locale.accessSubKeyPlaceholder || 'Введите ключ подписки'}"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <button type="button" class="vw-subscription-no-key" data-role="subscription-no-key">${locale.accessSubNoKey || 'у меня нет ключа'}</button>
+        <div class="vw-subscription-actions">
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-subscription-activate-btn" data-role="subscription-activate">${locale.accessSubActivate || 'Активировать'}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  buildKeygenAccessHtml({ isUaLang = false } = {}) {
+    const isSuperAdmin = this.accessFlags?.isSuperAdmin === true || this.accessRole === 'super_admin';
+    if (!isSuperAdmin) {
+      return `
+        <div class="vw-access-sub-list">
+          <div class="vw-access-sub-item">${isUaLang ? 'Доступ лише для super-admin.' : 'Доступ только для super-admin.'}</div>
+        </div>
+      `;
+    }
+    const state = this._ensureSubscriptionKeygenState();
+    const rows = this.getSubscriptionKeyPlanRows().map((row) => {
+      const rawKey = String(state.generatedByPlan?.[row.plan] || '').trim();
+      const isVisible = state.visibleByPlan?.[row.plan] === true;
+      const shownValue = rawKey ? (isVisible ? rawKey : this._maskSubscriptionKey(rawKey)) : '';
+      const generated = Number(state.statsByPlan?.[row.plan]?.generated || 0);
+      const used = Number(state.statsByPlan?.[row.plan]?.used || 0);
+      return `
+        <div class="vw-sub-keygen-row" data-plan-row="${row.plan}">
+          <div class="vw-sub-keygen-row-head">
+            <div class="vw-sub-keygen-plan">${row.code}</div>
+            <button type="button" class="vw-sub-keygen-generate" data-role="subscription-generate" data-plan="${row.plan}">${isUaLang ? 'Згенерувати 🔑' : 'Сгенерировать 🔑'}</button>
+          </div>
+          <div class="vw-sub-keygen-controls">
+            <input
+              type="text"
+              class="vw-access-sub-input vw-sub-keygen-input"
+              data-role="subscription-generated-key"
+              data-plan="${row.plan}"
+              value="${String(shownValue || '').replace(/"/g, '&quot;')}"
+              placeholder=""
+              readonly
+            >
+            <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-toggle-key" data-plan="${row.plan}" aria-label="${isUaLang ? 'Показати/приховати ключ' : 'Показать/скрыть ключ'}">👁</button>
+            <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-copy-key" data-plan="${row.plan}" aria-label="${isUaLang ? 'Копіювати ключ' : 'Копировать ключ'}">📋</button>
+          </div>
+          <div class="vw-sub-keygen-stats">${isUaLang ? 'Всього згенеровано' : 'Всего сгенерировано'}: <strong>${generated}</strong>&nbsp;&nbsp; ${isUaLang ? 'Всього використано' : 'Всего использовано'}: <strong>${used}</strong></div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="vw-sub-keygen-list">
+        ${rows}
+      </div>
+    `;
+  }
+
+  buildAdminClientsLoadingAccessHtml(isUaLang = false) {
+    return `
+      <div class="vw-access-sub-list" data-role="admin-clients-list">
+        <div class="vw-access-sub-item"><strong>${isUaLang ? 'Завантаження...' : 'Загрузка...'}</strong></div>
+      </div>
+    `;
+  }
+
+  buildAdminStatsAccessHtml(isUaLang = false) {
+    return `
+      <div class="vw-access-sub-list" data-role="admin-stats-summary">
+        <div class="vw-access-sub-item">${isUaLang ? 'Користувачів у боті (всього)' : 'Пользователей в боте (всего)'}: <strong data-role="stats-total-users">—</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Нових користувачів за сьогодні' : 'Новых пользователей за сегодня'}: <strong data-role="stats-users-today">—</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Нових заявок за сьогодні' : 'Новых заявок за сегодня'}: <strong data-role="stats-leads-today">—</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Нових сесій за сьогодні' : 'Новых сессий за сегодня'}: <strong data-role="stats-sessions-today">—</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Активних обʼєктів' : 'Активных объектов'}: <strong data-role="stats-active-properties">—</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Заявок (всього)' : 'Заявок (всего)'}: <strong data-role="stats-total-leads">—</strong></div>
+        <div class="vw-access-sub-item">${isUaLang ? 'Сесій (всього)' : 'Сессий (всего)'}: <strong data-role="stats-total-sessions">—</strong></div>
+        <div class="vw-access-sub-item vw-stats-accordion">
+          <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-leads-toggle" aria-expanded="false">
+            <span>${isUaLang ? 'Останні заявки' : 'Последние заявки'}</span>
+            <span class="vw-stats-accordion-count" data-role="stats-recent-leads-count">0</span>
+          </button>
+          <div class="vw-stats-accordion-body" data-role="stats-recent-leads-body"><strong>—</strong></div>
+        </div>
+        <div class="vw-access-sub-item" data-role="stats-leads-digest" style="display:none;"></div>
+        <div class="vw-access-sub-item vw-stats-accordion">
+          <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-activity-toggle" aria-expanded="false">
+            <span>${isUaLang ? 'Остання активність' : 'Последняя активность'}</span>
+            <span class="vw-stats-accordion-count" data-role="stats-recent-activity-count">0</span>
+          </button>
+          <div class="vw-stats-accordion-body" data-role="stats-recent-activity-body"><strong>—</strong></div>
+        </div>
+        <div class="vw-access-sub-item" data-role="stats-activity-digest" style="display:none;"></div>
+      </div>
+    `;
+  }
+
+  buildAccessPropertiesHtml({ list = [], adminViewOptions = {}, locale = {}, isUaLang = false, langCode = 'ru', isShareDualModeEnabled = false } = {}) {
+    const rows = list.map((item) => `
+      <article class="vw-access-obj-card vw-access-obj-card--admin${this.getAccessObjectCardBgClass(item)}" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}"${this.getAccessObjectCardBgAttr(item.image)}>
+        <div class="vw-access-obj-side">
+          <button
+            type="button"
+            class="vw-access-obj-edit"
+            data-role="row-edit"
+            aria-label="Редактировать объект ${item.id}"
+            title="Редактировать"
+          >✎</button>
+          <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
+          <button
+            type="button"
+            class="vw-access-obj-delete"
+            data-role="row-delete"
+            aria-label="Удалить объект ${item.id}"
+            title="Удалить"
+          >🗑</button>
+        </div>
+        <div class="vw-access-obj-main">
+          <div class="vw-access-obj-badges">
+            <span class="vw-access-obj-id-badge">${item.id}</span>
+            <span class="vw-access-obj-pill">${this.getAdminObjectOperationLabel(item)}</span>
+            <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
+          </div>
+          <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
+          <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${langCode === 'ua' ? 'кімн' : 'комн'} · ${this.formatLocationLabel(item.district)}</div>
+        </div>
+      </article>
+    `).join('');
+    const sortOptions = [
+      ['latest', langCode === 'ua' ? 'Останні додані' : 'Последние добавленные'],
+      ['price_asc', langCode === 'ua' ? 'Найдешевші' : 'Самые дешёвые'],
+      ['price_desc', langCode === 'ua' ? 'Найдорожчі' : 'Самые дорогие'],
+      ['source_olx', langCode === 'ua' ? 'Імпортовані з OLX' : 'Импортированные с OLX'],
+      ['source_manual', langCode === 'ua' ? 'Додані вручну' : 'Добавленные вручную'],
+      ['source_database', langCode === 'ua' ? 'Додані з бази' : 'Добавленные из базы']
+    ];
+    const activeSortMode = sortOptions.some(([value]) => value === adminViewOptions.sortMode)
+      ? adminViewOptions.sortMode
+      : 'latest';
+    const sortSelectLabel = langCode === 'ua' ? 'Сортувати за' : 'Сортировать по';
+    return `
+      <div class="vw-access-objects-layout">
+        <div class="vw-access-objects-topbar">
+          <div class="vw-access-objects-total">${langCode === 'ua' ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${langCode === 'ua' ? 'Обрати все' : 'Выбрать всё'}</button>
+          <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
+            <select class="vw-access-sort-select" data-role="sort-select" aria-label="${sortSelectLabel}" title="${sortSelectLabel}">
+              ${sortOptions.map(([value, label]) => `<option value="${value}"${value === activeSortMode ? ' selected' : ''}>${label}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="vw-access-objects-scroll">
+          <div class="vw-access-obj-list">${rows}</div>
+        </div>
+        <div class="vw-access-objects-bottombar${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>${isUaLang ? 'Скасувати' : 'Отменить'}</button>
+          ${isShareDualModeEnabled
+            ? `
+              <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
+                <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
+              </button>
+              <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
+                <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
+              </button>
+            `
+            : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>${locale.cardShareGuest || (isUaLang ? 'Поділитися' : 'Поделиться')}</button>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  buildAccessWishlistHtml({ list = [], locale = {}, isUaLang = false, isShareDualModeEnabled = false } = {}) {
+    const rows = list.map((item) => `
+      <article class="vw-access-obj-card${this.getAccessObjectCardBgClass(item)}" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}"${this.getAccessObjectCardBgAttr(item.image)}>
+        <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
+        <div class="vw-access-obj-main">
+          <div class="vw-access-obj-badges">
+            <span class="vw-access-obj-id-badge">${item.id}</span>
+            <span class="vw-access-obj-pill">${this.getAdminObjectOperationLabel(item)}</span>
+            <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
+          </div>
+          <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
+          <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${isUaLang ? 'кімн' : 'комн'} · ${this.formatLocationLabel(item.district)}</div>
+        </div>
+      </article>
+    `).join('');
+    const isEmptyWishlist = !rows;
+    return `
+      <div class="vw-access-objects-layout">
+        <div class="vw-access-objects-topbar">
+          <div class="vw-access-objects-total">${isUaLang ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${isUaLang ? 'Обрати все' : 'Выбрать всё'}</button>
+          <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
+            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
+              <span>${isUaLang ? 'Скинути' : 'Сбросить'}</span>
+              <span class="vw-access-reset-glyph" aria-hidden="true">↻</span>
+            </button>
+          </div>
+        </div>
+        <div class="vw-access-objects-scroll">
+          <div class="vw-access-obj-list${isEmptyWishlist ? ' vw-access-obj-list--empty' : ''}">
+            ${rows || `<div class="vw-access-sub-item">${locale.accessUserEmpty || "Здесь появятся объекты, которые вы добавите в избранное (Wishlist)"}</div>`}
+          </div>
+        </div>
+        <div class="vw-access-objects-bottombar vw-access-objects-bottombar--wishlist${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
+          <button type="button" class="vw-access-sub-btn" data-role="remove-selected" disabled>${locale.accessUserRemove || 'Убрать'}</button>
+          ${isShareDualModeEnabled
+            ? `
+              <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
+                <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
+              </button>
+              <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
+                <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
+              </button>
+            `
+            : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>${locale.cardShareGuest || (isUaLang ? 'Поділитися' : 'Поделиться')}</button>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  getAccessSubOverlayTitle({ safeSection = 'stats', locale = {}, isUaLang = false, isAddProperty = false } = {}) {
+    if (safeSection === 'properties') return isUaLang ? "Мої об'єкти" : 'Мои объекты';
+    if (safeSection === 'wishlist') return locale.accessUserWishlist || 'Моя подборка';
+    if (safeSection === 'want-sell') return locale.accessUserSellSectionTitle || 'Хочу продати';
+    if (safeSection === 'want-bot') return locale.accessUserBotSectionTitle || 'Хочу такого бота!';
+    if (isAddProperty) return isUaLang ? "Новий об'єкт" : 'Новый объект';
+    if (safeSection === 'subscription') return isUaLang ? 'Керування підпискою' : 'Управление подпиской';
+    if (safeSection === 'keygen') return locale.accessAdminKeygen || 'Генерация ключей';
+    if (safeSection === 'clients') return locale.accessAdminClients || (isUaLang ? 'Клієнти' : 'Клиенты');
+    return isUaLang ? 'Статистика' : 'Статистика';
+  }
+
+  buildAccessSubOverlayHead({ title = '', isAddProperty = false, isUaLang = false } = {}) {
+    if (isAddProperty) {
+      return `
+        <div class="vw-access-add-head">
+          <button type="button" class="vw-access-sub-back" data-role="back">← ${isUaLang ? 'Назад' : 'Назад'}</button>
+          <div class="vw-access-add-stage" data-role="add-stage">${isUaLang ? 'Основні параметри' : 'Основные параметры'}</div>
+          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="${isUaLang ? 'Скинути зміни' : 'Сбросить изменения'}">↻</button>
+        </div>
+      `;
+    }
+    return `
+      <div class="vw-access-sub-head">
+        <button type="button" class="vw-access-sub-back" data-role="back">← ${isUaLang ? 'Назад' : 'Назад'}</button>
+        <div class="vw-access-sub-title">${title}</div>
+        <span class="vw-access-sub-spacer" aria-hidden="true"></span>
+      </div>
+    `;
+  }
+
   openAccessSubOverlay(section = 'stats', options = {}) {
     this.ensureAccessOverlayStyles();
     this.closeAccessSubOverlay();
     const now = new Date();
-    const nextMonth = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
-    const fmtDate = (d) => {
-      try { return d.toLocaleDateString(this.getLangCode() === 'ua' ? 'uk-UA' : 'ru-RU'); } catch { return ''; }
-    };
     const locale = this.getCurrentLocale();
     const isUaLang = this.getLangCode() === 'ua';
     const safeSection = String(section || '').trim().toLowerCase();
@@ -6965,321 +7283,33 @@ class VoiceWidget extends HTMLElement {
         `;
       }
       if (safeSection === 'properties') {
-        const rows = list.map((item) => `
-          <article class="vw-access-obj-card vw-access-obj-card--admin${this.getAccessObjectCardBgClass(item)}" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}"${this.getAccessObjectCardBgAttr(item.image)}>
-            <div class="vw-access-obj-side">
-              <button
-                type="button"
-                class="vw-access-obj-edit"
-                data-role="row-edit"
-                aria-label="Редактировать объект ${item.id}"
-                title="Редактировать"
-              >✎</button>
-              <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
-              <button
-                type="button"
-                class="vw-access-obj-delete"
-                data-role="row-delete"
-                aria-label="Удалить объект ${item.id}"
-                title="Удалить"
-              >🗑</button>
-            </div>
-            <div class="vw-access-obj-main">
-              <div class="vw-access-obj-badges">
-                <span class="vw-access-obj-id-badge">${item.id}</span>
-                <span class="vw-access-obj-pill">${this.getAdminObjectOperationLabel(item)}</span>
-                <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
-              </div>
-              <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
-              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${langCode === 'ua' ? 'кімн' : 'комн'} · ${this.formatLocationLabel(item.district)}</div>
-            </div>
-          </article>
-        `).join('');
-        const sortOptions = [
-          ['latest', langCode === 'ua' ? 'Останні додані' : 'Последние добавленные'],
-          ['price_asc', langCode === 'ua' ? 'Найдешевші' : 'Самые дешёвые'],
-          ['price_desc', langCode === 'ua' ? 'Найдорожчі' : 'Самые дорогие'],
-          ['source_olx', langCode === 'ua' ? 'Імпортовані з OLX' : 'Импортированные с OLX'],
-          ['source_manual', langCode === 'ua' ? 'Додані вручну' : 'Добавленные вручную'],
-          ['source_database', langCode === 'ua' ? 'Додані з бази' : 'Добавленные из базы']
-        ];
-        const activeSortMode = sortOptions.some(([value]) => value === adminViewOptions.sortMode)
-          ? adminViewOptions.sortMode
-          : 'latest';
-        const sortSelectLabel = langCode === 'ua' ? 'Сортувати за' : 'Сортировать по';
-        return `
-          <div class="vw-access-objects-layout">
-            <div class="vw-access-objects-topbar">
-              <div class="vw-access-objects-total">${langCode === 'ua' ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${langCode === 'ua' ? 'Обрати все' : 'Выбрать всё'}</button>
-              <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
-                <select class="vw-access-sort-select" data-role="sort-select" aria-label="${sortSelectLabel}" title="${sortSelectLabel}">
-                  ${sortOptions.map(([value, label]) => `<option value="${value}"${value === activeSortMode ? ' selected' : ''}>${label}</option>`).join('')}
-                </select>
-              </div>
-            </div>
-            <div class="vw-access-objects-scroll">
-              <div class="vw-access-obj-list">${rows}</div>
-            </div>
-            <div class="vw-access-objects-bottombar${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--danger" data-role="cancel-selected" disabled>${isUaLang ? 'Скасувати' : 'Отменить'}</button>
-              ${isShareDualModeEnabled
-                ? `
-                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
-                    <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
-                  </button>
-                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
-                    <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
-                  </button>
-                `
-                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>${locale.cardShareGuest || (isUaLang ? 'Поділитися' : 'Поделиться')}</button>`
-              }
-            </div>
-          </div>
-        `;
+        return this.buildAccessPropertiesHtml({ list, adminViewOptions, locale, isUaLang, langCode, isShareDualModeEnabled });
       }
       if (safeSection === 'wishlist') {
-        const rows = list.map((item) => `
-          <article class="vw-access-obj-card${this.getAccessObjectCardBgClass(item)}" data-id="${item.id}" role="button" tabindex="0" aria-label="Выбрать ${item.id}"${this.getAccessObjectCardBgAttr(item.image)}>
-            <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check"></label>
-            <div class="vw-access-obj-main">
-              <div class="vw-access-obj-badges">
-                <span class="vw-access-obj-id-badge">${item.id}</span>
-                <span class="vw-access-obj-pill">${this.getAdminObjectOperationLabel(item)}</span>
-                <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
-              </div>
-              <h4 class="vw-access-obj-title">${item.title || '—'}</h4>
-              <div class="vw-access-obj-meta">${item.price} · ${item.area} · ${item.rooms} ${isUaLang ? 'кімн' : 'комн'} · ${this.formatLocationLabel(item.district)}</div>
-            </div>
-          </article>
-        `).join('');
-        const isEmptyWishlist = !rows;
-        return `
-          <div class="vw-access-objects-layout">
-            <div class="vw-access-objects-topbar">
-              <div class="vw-access-objects-total">${isUaLang ? 'Всього' : 'Всего'}: <strong data-role="list-total">${list.length}</strong></div>
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="select-all">${isUaLang ? 'Обрати все' : 'Выбрать всё'}</button>
-              <div class="vw-access-objects-topbar-actions vw-access-objects-topbar-actions--right">
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-role="reset-wishlist">
-                  <span>${isUaLang ? 'Скинути' : 'Сбросить'}</span>
-                  <span class="vw-access-reset-glyph" aria-hidden="true">↻</span>
-                </button>
-              </div>
-            </div>
-            <div class="vw-access-objects-scroll">
-              <div class="vw-access-obj-list${isEmptyWishlist ? ' vw-access-obj-list--empty' : ''}">
-                ${rows || `<div class="vw-access-sub-item">${locale.accessUserEmpty || "Здесь появятся объекты, которые вы добавите в избранное (Wishlist)"}</div>`}
-              </div>
-            </div>
-            <div class="vw-access-objects-bottombar vw-access-objects-bottombar--wishlist${isShareDualModeEnabled ? ' vw-access-objects-bottombar--dual-share' : ''}">
-              <button type="button" class="vw-access-sub-btn" data-role="remove-selected" disabled>${locale.accessUserRemove || 'Убрать'}</button>
-              ${isShareDualModeEnabled
-                ? `
-                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-global" aria-label="Share Global" title="Share Global" disabled>
-                    <img src="${ASSETS_BASE}link-share-btn.svg" alt="Share Global">
-                  </button>
-                  <button type="button" class="vw-access-sub-btn vw-access-share-icon-btn" data-role="share-inline" aria-label="Share Inline" title="Share Inline" disabled>
-                    <img src="${ASSETS_BASE}tg-share-btn.svg" alt="Share Inline">
-                  </button>
-                `
-                : `<button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="share-inline" disabled>${locale.cardShareGuest || (isUaLang ? 'Поділитися' : 'Поделиться')}</button>`
-              }
-            </div>
-          </div>
-        `;
+        return this.buildAccessWishlistHtml({ list, locale, isUaLang, isShareDualModeEnabled });
       }
       if (safeSection === 'want-sell') {
-        return `
-          <div class="vw-want-bot vw-want-sell">
-            <div class="vw-want-bot__title">${locale.accessUserSellTitle || '🏠 Професійний продаж нерухомості'}</div>
-            <div class="vw-want-bot__subtitle">${locale.accessUserSellIntro || ''}</div>
-            <div class="vw-want-sell__section-title">${locale.accessUserSellListTitle || ''}</div>
-            <div class="vw-want-bot__list">
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">✅</span><span>${locale.accessUserSellBenefit1 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📊</span><span>${locale.accessUserSellBenefit2 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📸</span><span>${locale.accessUserSellBenefit3 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">⚖️</span><span>${locale.accessUserSellBenefit4 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🚀</span><span>${locale.accessUserSellBenefit5 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🗣</span><span>${locale.accessUserSellBenefit6 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">💰</span><span>${locale.accessUserSellBenefit7 || ''}</span></div>
-            </div>
-            <div class="vw-want-bot__subtitle vw-want-sell__outro">${locale.accessUserSellOutro || ''}</div>
-            <div class="vw-want-bot__title vw-want-sell__question">${locale.accessUserSellQuestion || ''}</div>
-          </div>
-          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--want-bot">
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-sell-submit">${locale.accessUserSellCtaSell || 'Хочу продати'}</button>
-            <button type="button" class="vw-access-sub-btn" data-role="want-sell-estimate">${locale.accessUserSellCtaEstimate || 'Оцінити вартість'}</button>
-          </div>
-        `;
+        return this.buildWantSellAccessHtml(locale);
       }
       if (safeSection === 'want-bot') {
-        return `
-          <div class="vw-want-bot">
-            <div class="vw-want-bot__title">${locale.accessUserBotIntro || ''}</div>
-            <div class="vw-want-bot__subtitle">${locale.accessUserBotSubtitle || ''}</div>
-            <div class="vw-want-bot__list">
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🔶</span><span>${locale.accessUserBotBenefit1 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">✍️</span><span>${locale.accessUserBotBenefit2 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">⚡</span><span>${locale.accessUserBotBenefit3 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">🤖</span><span>${locale.accessUserBotBenefit4 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📊</span><span>${locale.accessUserBotBenefit5 || ''}</span></div>
-              <div class="vw-want-bot__item"><span class="vw-want-bot__emoji" aria-hidden="true">📩</span><span>${locale.accessUserBotBenefit6 || ''}</span></div>
-            </div>
-          </div>
-          <div class="vw-access-sub-toolbar vw-access-sub-toolbar--want-bot">
-            <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="want-bot-trial">${locale.accessUserBotTrialCta || '7-дневный тест'}</button>
-            <button type="button" class="vw-access-sub-btn" data-role="want-bot-consult">${locale.accessUserBotConsultCta || 'Консультация'}</button>
-          </div>
-        `;
+        return this.buildWantBotAccessHtml(locale);
       }
       if (safeSection === 'subscription') {
         const subscription = this.normalizeAccessSubscription(this.accessSubscription);
-        const isActive = subscription?.active === true;
-        const planLabel = this.getSubscriptionPlanLabel(subscription?.plan);
-        const statusLabel = this.getSubscriptionStatusLabel(subscription?.status, isActive);
-        const startsAtLabel = this.formatSubscriptionDate(subscription?.startsAt);
-        const endsAtLabel = subscription?.plan === 'lifetime'
-          ? (isUaLang ? 'Без строку' : 'Без срока')
-          : this.formatSubscriptionDate(subscription?.endsAt);
         const countdownLabel = formatCountdown(subscription?.endsAt, subscription?.plan);
-        return `
-          <div class="vw-subscription-panel">
-            <div class="vw-subscription-status">
-              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Поточний план:' : 'Текущий план:'}</span><span class="vw-subscription-value">${planLabel}</span></div>
-              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Статус:' : 'Статус:'}</span><span class="vw-subscription-value">${statusLabel}</span></div>
-              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Дата активації:' : 'Дата активации:'}</span><span class="vw-subscription-value">${startsAtLabel}</span></div>
-              <div class="vw-subscription-row"><span class="vw-subscription-label">${isUaLang ? 'Діє до:' : 'Действует до:'}</span><span class="vw-subscription-value">${endsAtLabel}</span></div>
-            </div>
-            <div class="vw-subscription-countdown">${countdownLabel}</div>
-            <div class="vw-subscription-prompt">${locale.accessSubPrompt || 'Хотите обновить/активировать подписку?'}</div>
-            <input
-              type="text"
-              class="vw-access-sub-input vw-subscription-key-input"
-              data-role="subscription-key-input"
-              placeholder="${locale.accessSubKeyPlaceholder || 'Введите ключ подписки'}"
-              autocomplete="off"
-              spellcheck="false"
-            >
-            <button type="button" class="vw-subscription-no-key" data-role="subscription-no-key">${locale.accessSubNoKey || 'у меня нет ключа'}</button>
-            <div class="vw-subscription-actions">
-              <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary vw-subscription-activate-btn" data-role="subscription-activate">${locale.accessSubActivate || 'Активировать'}</button>
-            </div>
-          </div>
-        `;
+        return this.buildSubscriptionAccessHtml({ locale, isUaLang, countdownLabel });
       }
       if (safeSection === 'keygen') {
-        const isSuperAdmin = this.accessFlags?.isSuperAdmin === true || this.accessRole === 'super_admin';
-        if (!isSuperAdmin) {
-          return `
-            <div class="vw-access-sub-list">
-              <div class="vw-access-sub-item">${isUaLang ? 'Доступ лише для super-admin.' : 'Доступ только для super-admin.'}</div>
-            </div>
-          `;
-        }
-        const state = this._ensureSubscriptionKeygenState();
-        const rows = this.getSubscriptionKeyPlanRows().map((row) => {
-          const rawKey = String(state.generatedByPlan?.[row.plan] || '').trim();
-          const isVisible = state.visibleByPlan?.[row.plan] === true;
-          const shownValue = rawKey ? (isVisible ? rawKey : this._maskSubscriptionKey(rawKey)) : '';
-          const generated = Number(state.statsByPlan?.[row.plan]?.generated || 0);
-          const used = Number(state.statsByPlan?.[row.plan]?.used || 0);
-          return `
-            <div class="vw-sub-keygen-row" data-plan-row="${row.plan}">
-              <div class="vw-sub-keygen-row-head">
-                <div class="vw-sub-keygen-plan">${row.code}</div>
-                <button type="button" class="vw-sub-keygen-generate" data-role="subscription-generate" data-plan="${row.plan}">${isUaLang ? 'Згенерувати 🔑' : 'Сгенерировать 🔑'}</button>
-              </div>
-              <div class="vw-sub-keygen-controls">
-                <input
-                  type="text"
-                  class="vw-access-sub-input vw-sub-keygen-input"
-                  data-role="subscription-generated-key"
-                  data-plan="${row.plan}"
-                  value="${String(shownValue || '').replace(/"/g, '&quot;')}"
-                  placeholder=""
-                  readonly
-                >
-                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-toggle-key" data-plan="${row.plan}" aria-label="${isUaLang ? 'Показати/приховати ключ' : 'Показать/скрыть ключ'}">👁</button>
-                <button type="button" class="vw-sub-keygen-icon-btn" data-role="subscription-copy-key" data-plan="${row.plan}" aria-label="${isUaLang ? 'Копіювати ключ' : 'Копировать ключ'}">📋</button>
-              </div>
-              <div class="vw-sub-keygen-stats">${isUaLang ? 'Всього згенеровано' : 'Всего сгенерировано'}: <strong>${generated}</strong>&nbsp;&nbsp; ${isUaLang ? 'Всього використано' : 'Всего использовано'}: <strong>${used}</strong></div>
-            </div>
-          `;
-        }).join('');
-        return `
-          <div class="vw-sub-keygen-list">
-            ${rows}
-          </div>
-        `;
+        return this.buildKeygenAccessHtml({ isUaLang });
       }
       if (safeSection === 'clients') {
-        return `
-          <div class="vw-access-sub-list" data-role="admin-clients-list">
-            <div class="vw-access-sub-item"><strong>${isUaLang ? 'Завантаження...' : 'Загрузка...'}</strong></div>
-          </div>
-        `;
+        return this.buildAdminClientsLoadingAccessHtml(isUaLang);
       }
-      return `
-        <div class="vw-access-sub-list" data-role="admin-stats-summary">
-          <div class="vw-access-sub-item">${isUaLang ? 'Користувачів у боті (всього)' : 'Пользователей в боте (всего)'}: <strong data-role="stats-total-users">—</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Нових користувачів за сьогодні' : 'Новых пользователей за сегодня'}: <strong data-role="stats-users-today">—</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Нових заявок за сьогодні' : 'Новых заявок за сегодня'}: <strong data-role="stats-leads-today">—</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Нових сесій за сьогодні' : 'Новых сессий за сегодня'}: <strong data-role="stats-sessions-today">—</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Активних обʼєктів' : 'Активных объектов'}: <strong data-role="stats-active-properties">—</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Заявок (всього)' : 'Заявок (всего)'}: <strong data-role="stats-total-leads">—</strong></div>
-          <div class="vw-access-sub-item">${isUaLang ? 'Сесій (всього)' : 'Сессий (всего)'}: <strong data-role="stats-total-sessions">—</strong></div>
-          <div class="vw-access-sub-item vw-stats-accordion">
-            <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-leads-toggle" aria-expanded="false">
-              <span>${isUaLang ? 'Останні заявки' : 'Последние заявки'}</span>
-              <span class="vw-stats-accordion-count" data-role="stats-recent-leads-count">0</span>
-            </button>
-            <div class="vw-stats-accordion-body" data-role="stats-recent-leads-body"><strong>—</strong></div>
-          </div>
-          <div class="vw-access-sub-item" data-role="stats-leads-digest" style="display:none;"></div>
-          <div class="vw-access-sub-item vw-stats-accordion">
-            <button type="button" class="vw-stats-accordion-toggle" data-role="stats-recent-activity-toggle" aria-expanded="false">
-              <span>${isUaLang ? 'Остання активність' : 'Последняя активность'}</span>
-              <span class="vw-stats-accordion-count" data-role="stats-recent-activity-count">0</span>
-            </button>
-            <div class="vw-stats-accordion-body" data-role="stats-recent-activity-body"><strong>—</strong></div>
-          </div>
-          <div class="vw-access-sub-item" data-role="stats-activity-digest" style="display:none;"></div>
-        </div>
-      `;
+      return this.buildAdminStatsAccessHtml(isUaLang);
     })();
 
-    const title = safeSection === 'properties'
-      ? (isUaLang ? "Мої об'єкти" : 'Мои объекты')
-      : safeSection === 'wishlist'
-        ? (locale.accessUserWishlist || 'Моя подборка')
-      : safeSection === 'want-sell'
-        ? (locale.accessUserSellSectionTitle || 'Хочу продати')
-      : safeSection === 'want-bot'
-        ? (locale.accessUserBotSectionTitle || 'Хочу такого бота!')
-      : isAddProperty
-        ? (isUaLang ? "Новий об'єкт" : 'Новый объект')
-      : safeSection === 'subscription'
-        ? (isUaLang ? 'Керування підпискою' : 'Управление подпиской')
-      : safeSection === 'keygen'
-        ? (locale.accessAdminKeygen || 'Генерация ключей')
-      : safeSection === 'clients'
-        ? (locale.accessAdminClients || (isUaLang ? 'Клієнти' : 'Клиенты'))
-        : (isUaLang ? 'Статистика' : 'Статистика');
-    const modalHead = isAddProperty
-      ? `
-        <div class="vw-access-add-head">
-          <button type="button" class="vw-access-sub-back" data-role="back">← ${isUaLang ? 'Назад' : 'Назад'}</button>
-          <div class="vw-access-add-stage" data-role="add-stage">${isUaLang ? 'Основні параметри' : 'Основные параметры'}</div>
-          <button type="button" class="vw-access-add-reset-head" data-role="add-reset-head" aria-label="${isUaLang ? 'Скинути зміни' : 'Сбросить изменения'}">↻</button>
-        </div>
-      `
-      : `
-        <div class="vw-access-sub-head">
-          <button type="button" class="vw-access-sub-back" data-role="back">← ${isUaLang ? 'Назад' : 'Назад'}</button>
-          <div class="vw-access-sub-title">${title}</div>
-          <span class="vw-access-sub-spacer" aria-hidden="true"></span>
-        </div>
-      `;
+    const title = this.getAccessSubOverlayTitle({ safeSection, locale, isUaLang, isAddProperty });
+    const modalHead = this.buildAccessSubOverlayHead({ title, isAddProperty, isUaLang });
 
     const overlay = document.createElement('div');
     overlay.id = 'vwAccessSubOverlay';
