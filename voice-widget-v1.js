@@ -7048,6 +7048,113 @@ class VoiceWidget extends HTMLElement {
     `;
   }
 
+  buildAddPropertyPhotoSlotHtml(slot = 0, isMain = false) {
+    return `<button type="button" class="vw-access-add-photo-slot${isMain ? ' vw-access-add-photo-slot--main' : ''}" data-role="photo-slot" data-slot="${slot}" aria-label="Добавить фото ${slot + 1}"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>`;
+  }
+
+  buildAddPropertyPhotoLayoutHtml() {
+    const extraSlots = Array.from({ length: 9 }, (_, idx) => this.buildAddPropertyPhotoSlotHtml(idx + 1)).join('');
+    return `
+      <div class="vw-access-add-photo-layout">
+        ${this.buildAddPropertyPhotoSlotHtml(0, true)}
+        <div class="vw-access-add-photo-grid">
+          ${extraSlots}
+        </div>
+      </div>
+    `;
+  }
+
+  buildAddPropertyActionsHtml({ langCode = 'ru', primaryRole = '', primaryLabel = '' } = {}) {
+    return `
+      <div class="vw-access-add-actions">
+        <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
+        <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="${primaryRole}">${primaryLabel}</button>
+      </div>
+    `;
+  }
+
+  buildAddPropertyFeatureChecksHtml(langCode = 'ru') {
+    const label = (ua, ru) => (langCode === 'ua' ? ua : ru);
+    return `
+      <div class="vw-access-add-check-grid">
+        <label class="vw-access-add-check-item"><input type="checkbox" name="exclusive"><span>${label('Ексклюзив', 'Эксклюзив')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="balcony"><span>${label('Балкон', 'Балкон')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="penthouse"><span>${label('Пентхаус', 'Пентхаус')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="loggia"><span>${label('Лоджія', 'Лоджия')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="smartFlat"><span>${label('Смарт-квартира', 'Смарт-квартира')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>${label('Тераса', 'Терраса')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>${label('Новобудова', 'Новострой')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>${label('Є паркінг', 'Есть паркинг')}</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="eoselia"><span>єОселя</span></label>
+        <label class="vw-access-add-check-item"><input type="checkbox" name="evidnovlennia"><span>єВідновлення</span></label>
+      </div>
+    `;
+  }
+
+  buildAddPropertyPreviewStepHtml({ langCode = 'ru', isEditProperty = false } = {}) {
+    return `
+      <div class="vw-access-add-step" data-step-panel="3">
+        <div class="vw-access-preview-card" data-role="preview-card">
+          <div class="vw-access-preview-media">
+            <img class="is-empty" data-role="preview-main-image" alt="preview">
+            <div class="vw-access-preview-overlay-badges">
+              <span class="vw-access-preview-pill" data-role="preview-id">ID</span>
+              <span class="vw-access-preview-pill" data-role="preview-op">${langCode === 'ua' ? 'Продаж' : 'Продажа'}</span>
+              <span class="vw-access-preview-pill" data-role="preview-type">Квартира</span>
+            </div>
+            <div class="vw-access-preview-thumbs">
+              <button type="button" class="vw-access-preview-thumb is-active" data-role="preview-thumb" data-thumb-index="0"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="1"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="2"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="3"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="4"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="5"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="6"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="7"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="8"></button>
+              <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="9"></button>
+            </div>
+          </div>
+          <div class="vw-access-preview-body" data-role="preview-front">
+            <div class="vw-access-preview-row">
+              <div class="vw-access-preview-title" data-role="preview-title">—</div>
+            </div>
+            <div class="vw-access-preview-row">
+              <div class="vw-access-preview-district" data-role="preview-district">—</div>
+              <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
+            </div>
+            <div class="vw-access-preview-specs">
+              <span class="vw-access-preview-pill" data-role="preview-rooms">🛏️ 0 rooms</span>
+              <span class="vw-access-preview-pill" data-role="preview-area">📐 0 m²</span>
+              <span class="vw-access-preview-pill" data-role="preview-floor">🏢 0 floor</span>
+            </div>
+          </div>
+        </div>
+        <div class="vw-access-add-actions">
+          <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
+          <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">${isEditProperty ? (langCode === 'ua' ? 'Опублікувати зміни' : 'Опубликовать изменения') : (langCode === 'ua' ? 'Опублікувати' : 'Опубликовать')}</button>
+        </div>
+      </div>
+    `;
+  }
+
+  buildAddPropertySuccessStepHtml(langCode = 'ru') {
+    return `
+      <div class="vw-access-add-step" data-step-panel="4">
+        <div class="vw-access-add-success">
+          <div class="vw-access-add-success-title">${langCode === 'ua' ? 'Дякуємо!' : 'Спасибо!'}</div>
+          <div class="vw-access-add-success-text">${langCode === 'ua' ? 'Оголошення додано на модерацію і зʼявиться після перевірки.' : 'Объявление добавлено на модерацию и появится после проверки.'}</div>
+        </div>
+        <div class="vw-access-add-actions">
+          <button type="button" class="vw-access-sub-btn" data-role="add-more">${langCode === 'ua' ? 'Додати ще обʼєкт' : 'Добавить ещё объект'}</button>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-continue">${langCode === 'ua' ? 'Продовжити' : 'Продолжить'}</button>
+        </div>
+      </div>
+    `;
+  }
+
   openAccessSubOverlay(section = 'stats', options = {}) {
     this.ensureAccessOverlayStyles();
     this.closeAccessSubOverlay();
@@ -7119,20 +7226,7 @@ class VoiceWidget extends HTMLElement {
                 <input class="vw-access-add-input" type="text" name="title" data-role="title" placeholder="${langCode === 'ua' ? '* Введіть заголовок' : '* Введите заголовок'}" autocomplete="off">
               </label>
               <div class="vw-access-add-hint">${langCode === 'ua' ? 'Можна додати до 10 фотографій до 10мб кожна' : 'Можно добавить до 10 фотографий до 10мб каждая'}</div>
-              <div class="vw-access-add-photo-layout">
-                <button type="button" class="vw-access-add-photo-slot vw-access-add-photo-slot--main" data-role="photo-slot" data-slot="0" aria-label="Добавить фото 1"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                <div class="vw-access-add-photo-grid">
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="1" aria-label="Добавить фото 2"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="2" aria-label="Добавить фото 3"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="3" aria-label="Добавить фото 4"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="4" aria-label="Добавить фото 5"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="5" aria-label="Добавить фото 6"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="6" aria-label="Добавить фото 7"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="7" aria-label="Добавить фото 8"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="8" aria-label="Добавить фото 9"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                  <button type="button" class="vw-access-add-photo-slot" data-role="photo-slot" data-slot="9" aria-label="Добавить фото 10"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 4.5H5l3.5-3z"/></svg></button>
-                </div>
-              </div>
+              ${this.buildAddPropertyPhotoLayoutHtml()}
               <div class="vw-access-add-row2">
                 <label class="vw-access-add-field">
                   <input class="vw-access-add-input" type="text" name="price" data-role="price" placeholder="${langCode === 'ua' ? '* Вкажіть ціну' : '* Укажите цену'}" autocomplete="off">
@@ -7165,11 +7259,11 @@ class VoiceWidget extends HTMLElement {
               <label class="vw-access-add-field" data-role="land-area-field" hidden>
                 <input class="vw-access-add-input" type="text" name="landAreaSotka" data-role="land-area-sotka" placeholder="${langCode === 'ua' ? 'Площа ділянки, сотки' : 'Площадь участка, сотки'}" autocomplete="off">
               </label>
-              <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
-                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-to-step-2">${langCode === 'ua' ? 'Продовжити' : 'Продолжить'}</button>
-              </div>
+              ${this.buildAddPropertyActionsHtml({
+                langCode,
+                primaryRole: 'add-to-step-2',
+                primaryLabel: langCode === 'ua' ? 'Продовжити' : 'Продолжить'
+              })}
             </div>
 
             <div class="vw-access-add-step" data-step-panel="2">
@@ -7203,82 +7297,19 @@ class VoiceWidget extends HTMLElement {
                   </select>
                 </label>
               </div>
-              <div class="vw-access-add-check-grid">
-                <label class="vw-access-add-check-item"><input type="checkbox" name="exclusive"><span>${langCode === 'ua' ? 'Ексклюзив' : 'Эксклюзив'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="balcony"><span>${langCode === 'ua' ? 'Балкон' : 'Балкон'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="penthouse"><span>${langCode === 'ua' ? 'Пентхаус' : 'Пентхаус'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="loggia"><span>${langCode === 'ua' ? 'Лоджія' : 'Лоджия'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="smartFlat"><span>${langCode === 'ua' ? 'Смарт-квартира' : 'Смарт-квартира'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="terrace"><span>${langCode === 'ua' ? 'Тераса' : 'Терраса'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="newbuilding"><span>${langCode === 'ua' ? 'Новобудова' : 'Новострой'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="parking"><span>${langCode === 'ua' ? 'Є паркінг' : 'Есть паркинг'}</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="eoselia"><span>єОселя</span></label>
-                <label class="vw-access-add-check-item"><input type="checkbox" name="evidnovlennia"><span>єВідновлення</span></label>
-              </div>
+              ${this.buildAddPropertyFeatureChecksHtml(langCode)}
               <label class="vw-access-add-field">
                 <textarea class="vw-access-add-textarea" name="description" data-role="description" placeholder="${langCode === 'ua' ? 'Опишіть квартиру' : 'Опишите квартиру'}"></textarea>
               </label>
-              <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
-                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-preview">${langCode === 'ua' ? 'Попередній перегляд' : 'Предпросмотр'}</button>
-              </div>
+              ${this.buildAddPropertyActionsHtml({
+                langCode,
+                primaryRole: 'add-preview',
+                primaryLabel: langCode === 'ua' ? 'Попередній перегляд' : 'Предпросмотр'
+              })}
             </div>
 
-            <div class="vw-access-add-step" data-step-panel="3">
-              <div class="vw-access-preview-card" data-role="preview-card">
-                <div class="vw-access-preview-media">
-                  <img class="is-empty" data-role="preview-main-image" alt="preview">
-                  <div class="vw-access-preview-overlay-badges">
-                    <span class="vw-access-preview-pill" data-role="preview-id">ID</span>
-                    <span class="vw-access-preview-pill" data-role="preview-op">${langCode === 'ua' ? 'Продаж' : 'Продажа'}</span>
-                    <span class="vw-access-preview-pill" data-role="preview-type">Квартира</span>
-                  </div>
-                  <div class="vw-access-preview-thumbs">
-                    <button type="button" class="vw-access-preview-thumb is-active" data-role="preview-thumb" data-thumb-index="0"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="1"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="2"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="3"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="4"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="5"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="6"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="7"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="8"></button>
-                    <button type="button" class="vw-access-preview-thumb" data-role="preview-thumb" data-thumb-index="9"></button>
-                  </div>
-                </div>
-                <div class="vw-access-preview-body" data-role="preview-front">
-                  <div class="vw-access-preview-row">
-                    <div class="vw-access-preview-title" data-role="preview-title">—</div>
-                  </div>
-                  <div class="vw-access-preview-row">
-                    <div class="vw-access-preview-district" data-role="preview-district">—</div>
-                    <div class="vw-access-preview-price" data-role="preview-price">0 USD</div>
-                  </div>
-                  <div class="vw-access-preview-specs">
-                    <span class="vw-access-preview-pill" data-role="preview-rooms">🛏️ 0 rooms</span>
-                    <span class="vw-access-preview-pill" data-role="preview-area">📐 0 m²</span>
-                    <span class="vw-access-preview-pill" data-role="preview-floor">🏢 0 floor</span>
-                  </div>
-                </div>
-              </div>
-              <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-draft">${langCode === 'ua' ? 'У чернетку' : 'В черновик'}</button>
-                <button type="button" class="vw-access-sub-btn" data-role="add-exit" style="display:none;">${langCode === 'ua' ? 'Вийти' : 'Выйти'}</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-publish-final">${isEditProperty ? (langCode === 'ua' ? 'Опублікувати зміни' : 'Опубликовать изменения') : (langCode === 'ua' ? 'Опублікувати' : 'Опубликовать')}</button>
-              </div>
-            </div>
-
-            <div class="vw-access-add-step" data-step-panel="4">
-              <div class="vw-access-add-success">
-                <div class="vw-access-add-success-title">${langCode === 'ua' ? 'Дякуємо!' : 'Спасибо!'}</div>
-                <div class="vw-access-add-success-text">${langCode === 'ua' ? 'Оголошення додано на модерацію і зʼявиться після перевірки.' : 'Объявление добавлено на модерацию и появится после проверки.'}</div>
-              </div>
-              <div class="vw-access-add-actions">
-                <button type="button" class="vw-access-sub-btn" data-role="add-more">${langCode === 'ua' ? 'Додати ще обʼєкт' : 'Добавить ещё объект'}</button>
-                <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-role="add-continue">${langCode === 'ua' ? 'Продовжити' : 'Продолжить'}</button>
-              </div>
-            </div>
+            ${this.buildAddPropertyPreviewStepHtml({ langCode, isEditProperty })}
+            ${this.buildAddPropertySuccessStepHtml(langCode)}
           </div>
         `;
       }
