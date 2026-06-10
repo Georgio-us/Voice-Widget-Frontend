@@ -5858,6 +5858,7 @@ class VoiceWidget extends HTMLElement {
         </select>
       </div>
       <input type="search" class="vw-access-sub-input vw-admin-clients-search" data-role="clients-search" placeholder="${isUaLang ? 'Пошук клієнта' : 'Поиск клиента'}" autocomplete="off">
+      <div class="vw-admin-clients-search-count" data-role="clients-search-count"></div>
     `;
   }
 
@@ -6146,6 +6147,35 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
+  updateAdminClientsSelectAllState({ root, visibleClients, isUaLang }) {
+    const btn = root?.querySelector?.('[data-action="select-all"]');
+    if (!btn) return;
+    const visibleIds = (Array.isArray(visibleClients) ? visibleClients : [])
+      .map((client) => String(client?.telegram_user_id || '').trim())
+      .filter(Boolean);
+    const selectedSet = this.selectedClientsForBroadcast instanceof Set ? this.selectedClientsForBroadcast : new Set();
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedSet.has(id));
+    btn.textContent = allVisibleSelected
+      ? (isUaLang ? 'Скасувати всі' : 'Отменить все')
+      : (isUaLang ? 'Обрати всі' : 'Выбрать все');
+    btn.classList.toggle('is-active', allVisibleSelected);
+    btn.disabled = visibleIds.length === 0;
+    btn.setAttribute('aria-pressed', allVisibleSelected ? 'true' : 'false');
+  }
+
+  updateAdminClientsSearchState({ root, visibleClients, totalClients, searchQuery, isUaLang }) {
+    const countEl = root?.querySelector?.('[data-role="clients-search-count"]');
+    if (!countEl) return;
+    const query = String(searchQuery || '').trim();
+    const visibleCount = Array.isArray(visibleClients) ? visibleClients.length : 0;
+    const totalCount = Array.isArray(totalClients) ? totalClients.length : Number(totalClients || 0);
+    if (!query) {
+      countEl.textContent = `${isUaLang ? 'У списку' : 'В списке'}: ${totalCount}`;
+      return;
+    }
+    countEl.textContent = `${isUaLang ? 'Знайдено' : 'Найдено'}: ${visibleCount}`;
+  }
+
   renderAdminClientsRows({ root, clients, sortMode, searchQuery, isUaLang, esc, formatDate }) {
     const visibleClients = this.getSortedAdminClients(clients, sortMode, isUaLang)
       .filter((client) => this.matchesAdminClientSearch(client, searchQuery));
@@ -6154,6 +6184,8 @@ class VoiceWidget extends HTMLElement {
     if (!visibleClients.length) {
       list.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Немає клієнтів для цього фільтра' : 'Нет клиентов для этого фильтра'}</strong></div>`;
       this.updateAdminClientsBroadcastButtons({ root, isUaLang });
+      this.updateAdminClientsSelectAllState({ root, visibleClients, isUaLang });
+      this.updateAdminClientsSearchState({ root, visibleClients, totalClients: clients, searchQuery, isUaLang });
       return [];
     }
     list.innerHTML = this.buildAdminClientRowsHtml({
@@ -6165,6 +6197,8 @@ class VoiceWidget extends HTMLElement {
       formatDate
     });
     this.updateAdminClientsBroadcastButtons({ root, isUaLang });
+    this.updateAdminClientsSelectAllState({ root, visibleClients, isUaLang });
+    this.updateAdminClientsSearchState({ root, visibleClients, totalClients: clients, searchQuery, isUaLang });
     return visibleClients;
   }
 
@@ -6255,8 +6289,14 @@ class VoiceWidget extends HTMLElement {
         return;
       }
       if (event.target?.closest?.('[data-action="select-all"]')) {
-        lastVisibleClients.forEach((client) => {
-          if (client?.telegram_user_id) this.selectedClientsForBroadcast.add(String(client.telegram_user_id));
+        const visibleIds = lastVisibleClients
+          .map((client) => String(client?.telegram_user_id || '').trim())
+          .filter(Boolean);
+        const allVisibleSelected = visibleIds.length > 0
+          && visibleIds.every((id) => this.selectedClientsForBroadcast.has(id));
+        visibleIds.forEach((id) => {
+          if (allVisibleSelected) this.selectedClientsForBroadcast.delete(id);
+          else this.selectedClientsForBroadcast.add(id);
         });
         renderRows();
         return;
@@ -11713,6 +11753,7 @@ class VoiceWidget extends HTMLElement {
         overflow-x: hidden;
       }
       .vw-access-sub-modal--clients {
+        width: min(460px, 100%);
         max-height: calc(100dvh - 32px);
         grid-template-rows: auto minmax(0, 1fr);
         gap: 18px;
@@ -11904,8 +11945,17 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-admin-clients-search {
         width: 100%;
-        min-height: 38px;
+        min-height: 42px;
         margin-bottom: 2px;
+        font-size: 16px;
+      }
+      .vw-admin-clients-search-count {
+        min-height: 16px;
+        margin-top: -6px;
+        font-size: .74rem;
+        line-height: 1.2;
+        font-weight: 700;
+        color: var(--text-secondary, rgba(255,255,255,0.68));
       }
       .vw-admin-clients-panel .vw-clients-list {
         min-height: 0;
@@ -11956,13 +12006,13 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-client-card {
         width: 100%;
-        min-height: 48px;
+        min-height: 56px;
         position: relative;
         border-radius: 12px;
         border: 1px solid var(--border-light, rgba(255,255,255,0.14));
         background: var(--bg-element, rgba(255,255,255,0.12));
         color: var(--text-primary, #fff);
-        padding: 9px 46px 9px 12px;
+        padding: 11px 54px 11px 14px;
         display: grid;
         gap: 4px;
         text-align: left;
@@ -11999,14 +12049,14 @@ class VoiceWidget extends HTMLElement {
       }
       .vw-client-card__main {
         min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        white-space: nowrap;
+        display: grid;
+        grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+        align-items: baseline;
+        gap: 10px;
       }
       .vw-client-card__name {
         min-width: 0;
-        max-width: 120px;
+        max-width: 190px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
