@@ -16943,16 +16943,12 @@ render() {
             </div>
             <div class="card-slide-paginator cards-dots-row"></div>
             <div class="card-actions-wrap">
-              <button type="button" class="catalog-slider-nav-btn catalog-slider-nav-btn--prev" data-action="catalog-slider-prev" aria-label="${escCardAttr(locale.prevObjectAria || 'Предыдущий объект')}">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+              <button type="button" class="cards-list-nav-btn catalog-slider-nav-btn catalog-slider-nav-btn--prev" data-action="catalog-slider-prev" aria-label="${escCardAttr(locale.prevObjectAria || 'Предыдущий объект')}">←</button>
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
                 <span>${locale.handoffDetails || 'Подробнее'}</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
-              <button type="button" class="catalog-slider-nav-btn catalog-slider-nav-btn--next" data-action="catalog-slider-next" aria-label="${escCardAttr(locale.nextObjectAria || 'Следующий объект')}">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
+              <button type="button" class="cards-list-nav-btn catalog-slider-nav-btn catalog-slider-nav-btn--next" data-action="catalog-slider-next" aria-label="${escCardAttr(locale.nextObjectAria || 'Следующий объект')}">→</button>
             </div>
           </div>
         </div>
@@ -17286,65 +17282,41 @@ render() {
     style.id = 'vw-catalog-slider-nav-styles';
     style.textContent = `
       .cards-slider-host:not(.catalog-layout-list) .card-actions-wrap {
-        width: min(100%, 470px);
-        margin-left: auto;
-        margin-right: auto;
-        display: grid;
-        grid-template-columns: 44px minmax(0, 1fr) 44px;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-      }
-      .cards-slider-host:not(.catalog-layout-list) .card-actions-wrap .card-more-btn {
-        width: 100%;
-        max-width: 270px;
-        justify-self: center;
+        position: relative;
       }
       .catalog-slider-nav-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
-        border: 1px solid rgba(255,255,255,0.18);
-        background: rgba(255,255,255,0.1);
-        color: var(--text-primary, #fff);
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+        background: var(--bg-element);
+        color: var(--text-primary);
+        font-size: 16px;
+        line-height: 1;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 18px rgba(0,0,0,0.18);
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-        transition: transform .14s ease, background .14s ease, border-color .14s ease;
+        z-index: 2;
       }
-      .catalog-slider-nav-btn svg {
-        width: 22px;
-        height: 22px;
-        display: block;
+      .catalog-slider-nav-btn--prev {
+        left: max(0px, calc(50% - 185px));
       }
-      .catalog-slider-nav-btn:active {
-        transform: scale(.94);
-        background: rgba(255,255,255,0.16);
-      }
-      .catalog-slider-nav-btn:focus-visible {
-        outline: 2px solid rgba(92,150,255,0.85);
-        outline-offset: 2px;
+      .catalog-slider-nav-btn--next {
+        right: max(0px, calc(50% - 185px));
       }
       .cards-slider-host.catalog-layout-list .catalog-slider-nav-btn {
         display: none;
       }
       @media (max-width: 380px) {
-        .cards-slider-host:not(.catalog-layout-list) .card-actions-wrap {
-          grid-template-columns: 40px minmax(0, 1fr) 40px;
-          gap: 8px;
+        .catalog-slider-nav-btn--prev {
+          left: 0;
         }
-        .catalog-slider-nav-btn {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
-        }
-        .catalog-slider-nav-btn svg {
-          width: 20px;
-          height: 20px;
+        .catalog-slider-nav-btn--next {
+          right: 0;
         }
       }
     `;
