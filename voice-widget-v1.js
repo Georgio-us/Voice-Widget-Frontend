@@ -14401,6 +14401,18 @@ render() {
         e.stopPropagation();
       } catch {}
       this.handleCatalogListNext();
+    } else if (e.target.closest('[data-action="catalog-slider-prev"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      this.handleCatalogSliderNav(-1);
+    } else if (e.target.closest('[data-action="catalog-slider-next"]')) {
+      try {
+        e.preventDefault();
+        e.stopPropagation();
+      } catch {}
+      this.handleCatalogSliderNav(1);
     } else if (e.target.closest('[data-action="read-description"]')) {
       try {
         e.preventDefault();
@@ -16605,6 +16617,7 @@ render() {
     const thread = this.$byId('thread');
     const messages = this.$byId('messagesContainer');
     if (!thread || !messages) return null;
+    try { this.ensureCatalogSliderNavStyles(); } catch {}
     let host = this.getRoot().querySelector('.card-screen.cards-slider-host');
     if (!host) {
       host = document.createElement('div');
@@ -16930,9 +16943,15 @@ render() {
             </div>
             <div class="card-slide-paginator cards-dots-row"></div>
             <div class="card-actions-wrap">
+              <button type="button" class="catalog-slider-nav-btn catalog-slider-nav-btn--prev" data-action="catalog-slider-prev" aria-label="${escCardAttr(locale.prevObjectAria || 'Предыдущий объект')}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
               <button class="card-btn select card-more-btn" data-action="select" data-variant-id="${normalized.id}">
                 <span>${locale.handoffDetails || 'Подробнее'}</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button type="button" class="catalog-slider-nav-btn catalog-slider-nav-btn--next" data-action="catalog-slider-next" aria-label="${escCardAttr(locale.nextObjectAria || 'Следующий объект')}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </div>
           </div>
@@ -17221,6 +17240,115 @@ render() {
       slider.scrollTo({ left, behavior: 'smooth' });
       requestAnimationFrame(() => { try { this.updateActiveCardSlide(); } catch {} });
     } catch {}
+  }
+
+  async handleCatalogSliderNav(direction = 1) {
+    try {
+      if (this._catalogDisplayMode === 'list') return;
+      const slider = this.getRoot().querySelector('.cards-slider');
+      if (!slider) return;
+      let slides = Array.from(slider.querySelectorAll('.card-slide'));
+      if (!slides.length) return;
+      const active = slider.querySelector('.card-slide.active');
+      let activeIdx = active ? slides.indexOf(active) : -1;
+      if (activeIdx < 0) {
+        const center = slider.scrollLeft + slider.clientWidth / 2;
+        let best = Infinity;
+        slides.forEach((slide, idx) => {
+          const mid = slide.offsetLeft + slide.clientWidth / 2;
+          const d = Math.abs(mid - center);
+          if (d < best) {
+            best = d;
+            activeIdx = idx;
+          }
+        });
+      }
+      if (activeIdx < 0) activeIdx = 0;
+
+      const step = Number(direction) < 0 ? -1 : 1;
+      let targetIdx = activeIdx + step;
+      if (targetIdx < 0) return;
+
+      if (targetIdx >= slides.length) {
+        try { this.maybeAppendCatalogOverflow(activeIdx, slides.length); } catch {}
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        slides = Array.from(slider.querySelectorAll('.card-slide'));
+        if (targetIdx >= slides.length) return;
+      }
+
+      this.scrollToSlideIndex(targetIdx);
+    } catch {}
+  }
+
+  ensureCatalogSliderNavStyles() {
+    if (document.getElementById('vw-catalog-slider-nav-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'vw-catalog-slider-nav-styles';
+    style.textContent = `
+      .cards-slider-host:not(.catalog-layout-list) .card-actions-wrap {
+        width: min(100%, 470px);
+        margin-left: auto;
+        margin-right: auto;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+      .cards-slider-host:not(.catalog-layout-list) .card-actions-wrap .card-more-btn {
+        width: 100%;
+        max-width: 270px;
+        justify-self: center;
+      }
+      .catalog-slider-nav-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(255,255,255,0.1);
+        color: var(--text-primary, #fff);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 18px rgba(0,0,0,0.18);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: transform .14s ease, background .14s ease, border-color .14s ease;
+      }
+      .catalog-slider-nav-btn svg {
+        width: 22px;
+        height: 22px;
+        display: block;
+      }
+      .catalog-slider-nav-btn:active {
+        transform: scale(.94);
+        background: rgba(255,255,255,0.16);
+      }
+      .catalog-slider-nav-btn:focus-visible {
+        outline: 2px solid rgba(92,150,255,0.85);
+        outline-offset: 2px;
+      }
+      .cards-slider-host.catalog-layout-list .catalog-slider-nav-btn {
+        display: none;
+      }
+      @media (max-width: 380px) {
+        .cards-slider-host:not(.catalog-layout-list) .card-actions-wrap {
+          grid-template-columns: 40px minmax(0, 1fr) 40px;
+          gap: 8px;
+        }
+        .catalog-slider-nav-btn {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+        }
+        .catalog-slider-nav-btn svg {
+          width: 20px;
+          height: 20px;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   ensureSliderCheckpointStyles() {
