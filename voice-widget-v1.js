@@ -5705,7 +5705,34 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
-  buildAdminBroadcastEditorHtml({ isUaLang, esc, targetCount, draft }) {
+  buildAdminBroadcastSelectedClientsHtml({ isUaLang, esc, targetUserIds, clients }) {
+    const ids = this.normalizeAdminBroadcastTargets(targetUserIds);
+    const clientMap = new Map((Array.isArray(clients) ? clients : [])
+      .map((client) => [String(client?.telegram_user_id || '').trim(), client])
+      .filter(([id]) => Boolean(id)));
+    const rows = ids.map((id) => {
+      const client = clientMap.get(id) || { telegram_user_id: id };
+      return `
+        <div class="vw-broadcast-selected-client">
+          <span>
+            <strong>${esc(this.getAdminClientDisplayName(client))}</strong>
+            <small>${this.buildAdminClientTelegramLink(client, esc)}</small>
+          </span>
+          <button type="button" class="vw-client-select is-selected" data-action="broadcast-target-remove" data-client-id="${esc(id)}" aria-label="${isUaLang ? 'Прибрати клієнта' : 'Убрать клиента'}"></button>
+        </div>
+      `;
+    }).join('');
+    return `
+      <details class="vw-broadcast-targets">
+        <summary class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${ids.length}</strong></summary>
+        <div class="vw-broadcast-targets-list">
+          ${rows || `<div class="vw-access-sub-item">${isUaLang ? 'Клієнтів не вибрано' : 'Клиенты не выбраны'}</div>`}
+        </div>
+      </details>
+    `;
+  }
+
+  buildAdminBroadcastEditorHtml({ isUaLang, esc, targetCount, targetUserIds, targetClients, draft }) {
     const currentDraft = draft && typeof draft === 'object' ? draft : {};
     const messageText = String(currentDraft.messageText || '').trim();
     const ctaText = String(currentDraft.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim();
@@ -5713,7 +5740,7 @@ class VoiceWidget extends HTMLElement {
     const photoPreview = String(currentDraft.photoPreview || '').trim();
     return `
       <input class="vw-access-add-file" data-role="broadcast-photo-input" type="file" accept="image/*">
-      <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${targetCount}</strong></div>
+      ${this.buildAdminBroadcastSelectedClientsHtml({ isUaLang, esc, targetUserIds, clients: targetClients })}
       <div class="vw-broadcast-field">
         <label>${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
         <textarea id="vw-broadcast-text" class="vw-access-add-textarea vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(messageText)}</textarea>
@@ -5737,7 +5764,7 @@ class VoiceWidget extends HTMLElement {
       </div>
       <div class="vw-broadcast-actions">
         <button type="button" class="vw-access-sub-btn" data-action="broadcast-back">${isUaLang ? 'Назад' : 'Назад'}</button>
-        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-preview">${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
+        <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-preview" ${targetCount > 0 ? '' : 'disabled'}>${isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр'}</button>
       </div>
     `;
   }
@@ -5813,7 +5840,8 @@ class VoiceWidget extends HTMLElement {
     return '—';
   }
 
-  buildAdminClientsSummaryHtml({ isUaLang, esc, safeNum, summary }) {
+  buildAdminClientsSummaryHtml({ isUaLang, esc, safeNum, summary, sortMode = 'latest' }) {
+    const currentSort = String(sortMode || 'latest');
     return `
       <div class="vw-access-sub-item vw-stats-combined" style="display:flex; flex-direction:column; gap:8px; font-size:14px; padding:12px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:16px;">
         <div style="display:flex; justify-content:space-between;"><span>👥 ${isUaLang ? 'Клієнтів у боті' : 'Клиентов в боте'}:</span> <strong>${safeNum(summary.totalClients)}</strong></div>
@@ -5824,11 +5852,12 @@ class VoiceWidget extends HTMLElement {
       <div class="vw-admin-clients-actions">
         <button type="button" class="vw-access-sub-btn vw-access-sub-btn--ghost vw-access-sub-btn--text-action" data-action="select-all">${isUaLang ? 'Обрати всі' : 'Выбрать все'}</button>
         <select class="vw-access-sort-select vw-admin-clients-sort" data-action="sort-by" aria-label="${isUaLang ? 'Сортувати клієнтів' : 'Сортировать клиентов'}">
-          <option value="latest">${isUaLang ? 'Останні активні' : 'Последние активные'}</option>
-          <option value="leads_desc">${isUaLang ? 'Більше заявок' : 'Больше заявок'}</option>
-          <option value="name_asc">${isUaLang ? 'За імʼям' : 'По имени'}</option>
+          <option value="latest" ${currentSort === 'latest' ? 'selected' : ''}>${isUaLang ? 'Останні активні' : 'Последние активные'}</option>
+          <option value="leads_desc" ${currentSort === 'leads_desc' ? 'selected' : ''}>${isUaLang ? 'Більше заявок' : 'Больше заявок'}</option>
+          <option value="name_asc" ${currentSort === 'name_asc' ? 'selected' : ''}>${isUaLang ? 'За імʼям' : 'По имени'}</option>
         </select>
       </div>
+      <input type="search" class="vw-access-sub-input vw-admin-clients-search" data-role="clients-search" placeholder="${isUaLang ? 'Пошук клієнта' : 'Поиск клиента'}" autocomplete="off">
     `;
   }
 
@@ -5847,6 +5876,21 @@ class VoiceWidget extends HTMLElement {
       return getClientDateValue(b) - getClientDateValue(a);
     });
     return filtered;
+  }
+
+  matchesAdminClientSearch(client = {}, query = '') {
+    const needle = String(query || '').trim().toLowerCase();
+    if (!needle) return true;
+    const haystack = [
+      this.getAdminClientDisplayName(client),
+      client?.telegram_username,
+      client?.telegram_user_id,
+      client?.first_name,
+      client?.last_name,
+      client?.phone,
+      client?.contact
+    ].map((value) => String(value || '').toLowerCase()).join(' ');
+    return haystack.includes(needle);
   }
 
   buildAdminClientRowsHtml({ clients, visibleClients, selectedIds, isUaLang, esc, formatDate }) {
@@ -5944,6 +5988,7 @@ class VoiceWidget extends HTMLElement {
     isUaLang,
     esc,
     targetUserIds,
+    targetClients,
     draft,
     setSectionTitle,
     onBack,
@@ -5952,12 +5997,15 @@ class VoiceWidget extends HTMLElement {
   }) {
     if (!root) return;
     setSectionTitle?.(isUaLang ? 'Розсилка клієнтам' : 'Рассылка клиентам');
+    root.className = 'vw-access-sub-list vw-broadcast-panel';
     const safeTargetUserIds = this.normalizeAdminBroadcastTargets(targetUserIds);
     const currentDraft = this.normalizeAdminBroadcastDraft(draft, isUaLang);
     root.innerHTML = this.buildAdminBroadcastEditorHtml({
       isUaLang,
       esc,
       targetCount: safeTargetUserIds.length,
+      targetUserIds: safeTargetUserIds,
+      targetClients,
       draft: currentDraft
     });
     const syncDraftFromFields = () => this.collectAdminBroadcastDraft(root, currentDraft);
@@ -5978,7 +6026,19 @@ class VoiceWidget extends HTMLElement {
         onRenderEditor?.(safeTargetUserIds, currentDraft);
         return;
       }
+      const removeTargetBtn = event.target?.closest?.('[data-action="broadcast-target-remove"]');
+      if (removeTargetBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        syncDraftFromFields();
+        const removeId = String(removeTargetBtn.getAttribute('data-client-id') || '').trim();
+        const nextTargetUserIds = safeTargetUserIds.filter((id) => id !== removeId);
+        this.selectedClientsForBroadcast?.delete?.(removeId);
+        onRenderEditor?.(nextTargetUserIds, currentDraft);
+        return;
+      }
       if (event.target?.closest?.('[data-action="broadcast-preview"]')) {
+        if (!safeTargetUserIds.length) return;
         onPreview?.(safeTargetUserIds, syncDraftFromFields());
       }
     };
@@ -6005,6 +6065,7 @@ class VoiceWidget extends HTMLElement {
       reader.readAsDataURL(file);
       fileInput.value = '';
     };
+    root.oninput = null;
     root.onkeydown = null;
   }
 
@@ -6021,6 +6082,7 @@ class VoiceWidget extends HTMLElement {
   }) {
     if (!root) return;
     setSectionTitle?.(isUaLang ? 'Попередній перегляд' : 'Предварительный просмотр');
+    root.className = 'vw-access-sub-list vw-broadcast-panel';
     const safeTargetUserIds = this.normalizeAdminBroadcastTargets(targetUserIds);
     const currentDraft = this.normalizeAdminBroadcastDraft(draft, isUaLang);
     root.innerHTML = this.buildAdminBroadcastPreviewHtml({
@@ -6055,6 +6117,7 @@ class VoiceWidget extends HTMLElement {
       }
     };
     root.onchange = null;
+    root.oninput = null;
     root.onkeydown = null;
   }
 
@@ -6083,14 +6146,15 @@ class VoiceWidget extends HTMLElement {
     }
   }
 
-  renderAdminClientsRows({ root, clients, sortMode, isUaLang, esc, formatDate }) {
-    const visibleClients = this.getSortedAdminClients(clients, sortMode, isUaLang);
+  renderAdminClientsRows({ root, clients, sortMode, searchQuery, isUaLang, esc, formatDate }) {
+    const visibleClients = this.getSortedAdminClients(clients, sortMode, isUaLang)
+      .filter((client) => this.matchesAdminClientSearch(client, searchQuery));
     const list = root?.querySelector?.('[data-role="clients-list"]');
-    if (!list) return;
+    if (!list) return [];
     if (!visibleClients.length) {
       list.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Немає клієнтів для цього фільтра' : 'Нет клиентов для этого фильтра'}</strong></div>`;
       this.updateAdminClientsBroadcastButtons({ root, isUaLang });
-      return;
+      return [];
     }
     list.innerHTML = this.buildAdminClientRowsHtml({
       clients,
@@ -6101,6 +6165,7 @@ class VoiceWidget extends HTMLElement {
       formatDate
     });
     this.updateAdminClientsBroadcastButtons({ root, isUaLang });
+    return visibleClients;
   }
 
   toggleAdminClientDetails({ root, clients, card, isUaLang, esc, safeNum, formatDate }) {
@@ -6146,29 +6211,38 @@ class VoiceWidget extends HTMLElement {
   }) {
     if (!root) return;
     setSectionTitle?.(isUaLang ? 'Клієнти' : 'Клиенты');
-    const summaryHtml = this.buildAdminClientsSummaryHtml({ isUaLang, esc, safeNum, summary });
+    const summaryHtml = this.buildAdminClientsSummaryHtml({ isUaLang, esc, safeNum, summary, sortMode: getSortMode?.() || 'latest' });
     if (!Array.isArray(clients) || !clients.length) {
+      root.className = 'vw-access-sub-list vw-admin-clients-panel';
       root.innerHTML = `${summaryHtml}<div class="vw-access-sub-item"><strong>${isUaLang ? 'Клієнтів поки немає' : 'Клиентов пока нет'}</strong></div>`;
       root.onclick = null;
       root.onchange = null;
+      root.oninput = null;
       root.onkeydown = null;
       return;
     }
 
-    root.innerHTML = `${summaryHtml}<div class="vw-clients-list" data-role="clients-list"></div>
+    root.className = 'vw-access-sub-list vw-admin-clients-panel';
+    root.innerHTML = `<div class="vw-admin-clients-top">${summaryHtml}</div>
+      <div class="vw-clients-list" data-role="clients-list"></div>
       <div class="vw-admin-broadcast-bar">
         <button type="button" class="vw-access-sub-btn" data-action="broadcast-clear" disabled>${isUaLang ? 'Скасувати обрані' : 'Отменить выбранные'}</button>
         <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-create" disabled>${isUaLang ? 'Сформувати розсилку' : 'Сформировать рассылку'} (0)</button>
       </div>`;
 
-    const renderRows = () => this.renderAdminClientsRows({
-      root,
-      clients,
-      sortMode: getSortMode?.() || 'latest',
-      isUaLang,
-      esc,
-      formatDate
-    });
+    let clientsSearchQuery = '';
+    let lastVisibleClients = [];
+    const renderRows = () => {
+      lastVisibleClients = this.renderAdminClientsRows({
+        root,
+        clients,
+        sortMode: getSortMode?.() || 'latest',
+        searchQuery: clientsSearchQuery,
+        isUaLang,
+        esc,
+        formatDate
+      });
+    };
 
     renderRows();
 
@@ -6181,7 +6255,7 @@ class VoiceWidget extends HTMLElement {
         return;
       }
       if (event.target?.closest?.('[data-action="select-all"]')) {
-        clients.forEach((client) => {
+        lastVisibleClients.forEach((client) => {
           if (client?.telegram_user_id) this.selectedClientsForBroadcast.add(String(client.telegram_user_id));
         });
         renderRows();
@@ -6205,6 +6279,11 @@ class VoiceWidget extends HTMLElement {
     root.onchange = (event) => {
       if (!event.target?.matches?.('[data-action="sort-by"]')) return;
       setSortMode?.(String(event.target?.value || 'latest'));
+      renderRows();
+    };
+    root.oninput = (event) => {
+      if (!event.target?.matches?.('[data-role="clients-search"]')) return;
+      clientsSearchQuery = String(event.target?.value || '');
       renderRows();
     };
     root.onkeydown = (event) => {
@@ -6263,6 +6342,7 @@ class VoiceWidget extends HTMLElement {
     const formatDate = (value) => this.formatAdminClientDate(value, isUaLang);
     const root = overlay.querySelector('[data-role="admin-clients-list"]');
     if (!root) return;
+    overlay.querySelector('.vw-access-sub-modal')?.classList.add('vw-access-sub-modal--clients');
     root.innerHTML = `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Завантаження...' : 'Загрузка...'}</strong></div>`;
     try {
       const data = await this.api?.fetchAdminClientsList?.();
@@ -6280,6 +6360,7 @@ class VoiceWidget extends HTMLElement {
           isUaLang,
           esc,
           targetUserIds,
+          targetClients: clients,
           draft,
           setSectionTitle,
           onBack: renderClientsScreen,
@@ -11631,6 +11712,12 @@ class VoiceWidget extends HTMLElement {
         overflow-y: auto;
         overflow-x: hidden;
       }
+      .vw-access-sub-modal--clients {
+        max-height: calc(100dvh - 32px);
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 18px;
+        overflow: hidden;
+      }
       .vw-access-sub-head {
         display: grid;
         grid-template-columns: auto 1fr auto;
@@ -11802,6 +11889,37 @@ class VoiceWidget extends HTMLElement {
         display: grid;
         gap: 8px;
       }
+      .vw-admin-clients-panel {
+        min-height: 0;
+        max-height: 100%;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 10px;
+        overflow: hidden;
+      }
+      .vw-admin-clients-top {
+        min-width: 0;
+        display: grid;
+        gap: 10px;
+      }
+      .vw-admin-clients-search {
+        width: 100%;
+        min-height: 38px;
+        margin-bottom: 2px;
+      }
+      .vw-admin-clients-panel .vw-clients-list {
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 2px;
+      }
+      .vw-broadcast-panel {
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 2px;
+        overscroll-behavior: contain;
+      }
       .vw-admin-clients-actions {
         display: grid;
         grid-template-columns: minmax(0, auto) minmax(132px, 1fr);
@@ -11823,7 +11941,9 @@ class VoiceWidget extends HTMLElement {
       .vw-admin-broadcast-bar {
         display: grid;
         gap: 10px;
-        margin-top: 22px;
+        margin-top: 0;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,255,255,0.08);
       }
       .vw-admin-broadcast-bar .vw-access-sub-btn {
         min-height: 42px;
@@ -11923,6 +12043,62 @@ class VoiceWidget extends HTMLElement {
         border-radius: 14px;
         font-size: .92rem;
         font-weight: 700;
+      }
+      .vw-broadcast-targets {
+        display: grid;
+        gap: 8px;
+      }
+      .vw-broadcast-targets summary {
+        cursor: pointer;
+        list-style: none;
+      }
+      .vw-broadcast-targets summary::-webkit-details-marker {
+        display: none;
+      }
+      .vw-broadcast-targets summary::after {
+        content: "⌄";
+        margin-left: auto;
+        font-size: 1rem;
+        opacity: .72;
+      }
+      .vw-broadcast-targets[open] summary::after {
+        transform: rotate(180deg);
+      }
+      .vw-broadcast-targets-list {
+        display: grid;
+        gap: 6px;
+      }
+      .vw-broadcast-selected-client {
+        position: relative;
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.10));
+        padding: 8px 46px 8px 12px;
+        display: flex;
+        align-items: center;
+      }
+      .vw-broadcast-selected-client span {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+      }
+      .vw-broadcast-selected-client strong,
+      .vw-broadcast-selected-client small {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vw-broadcast-selected-client strong {
+        font-size: .86rem;
+        line-height: 1.2;
+        font-weight: 800;
+      }
+      .vw-broadcast-selected-client small {
+        font-size: .76rem;
+        line-height: 1.2;
+        color: var(--text-secondary, rgba(255,255,255,0.74));
       }
       .vw-broadcast-field {
         display: grid;
