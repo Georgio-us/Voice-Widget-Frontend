@@ -5732,22 +5732,24 @@ class VoiceWidget extends HTMLElement {
     `;
   }
 
-  buildAdminBroadcastEditorHtml({ isUaLang, esc, targetCount, targetUserIds, targetClients, draft }) {
+  buildAdminBroadcastEditorHtml({ isUaLang, esc, targetCount, targetUserIds, targetClients, targetProperties, draft }) {
     const currentDraft = draft && typeof draft === 'object' ? draft : {};
     const messageText = String(currentDraft.messageText || '').trim();
-    const ctaText = String(currentDraft.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim();
+    const ctaText = String(currentDraft.ctaText || '').trim();
     const photoFile = currentDraft.photoFile instanceof File ? currentDraft.photoFile : null;
     const photoPreview = String(currentDraft.photoPreview || '').trim();
+    const selectedPropertyIds = Array.isArray(currentDraft.selectedPropertyIds) ? currentDraft.selectedPropertyIds : [];
     return `
       <input class="vw-access-add-file" data-role="broadcast-photo-input" type="file" accept="image/*">
       ${this.buildAdminBroadcastSelectedClientsHtml({ isUaLang, esc, targetUserIds, clients: targetClients })}
+      ${this.buildAdminBroadcastSelectedPropertiesHtml({ isUaLang, esc, selectedPropertyIds, properties: targetProperties })}
       <div class="vw-broadcast-field">
         <label>${isUaLang ? 'Текст повідомлення' : 'Текст сообщения'}</label>
         <textarea id="vw-broadcast-text" class="vw-access-add-textarea vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(messageText)}</textarea>
       </div>
       <div class="vw-broadcast-field">
         <label>${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
-        <input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}">
+        <input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}" placeholder="${isUaLang ? 'Наприклад: Дивитись добірку' : 'Например: Смотреть подборку'}">
       </div>
       <div class="vw-broadcast-field">
         <label>${isUaLang ? 'Фото для розсилки' : 'Фото для рассылки'}</label>
@@ -5774,8 +5776,10 @@ class VoiceWidget extends HTMLElement {
     const messageText = String(currentDraft.messageText || '').trim();
     const ctaText = String(currentDraft.ctaText || '').trim();
     const photoPreview = String(currentDraft.photoPreview || '').trim();
+    const selectedPropertyIds = Array.isArray(currentDraft.selectedPropertyIds) ? currentDraft.selectedPropertyIds : [];
     return `
       <div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано клієнтів:' : 'Выбрано клиентов:'} <strong>${targetCount}</strong></div>
+      ${selectedPropertyIds.length ? `<div class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано обʼєктів:' : 'Выбрано объектов:'} <strong>${selectedPropertyIds.length}</strong></div>` : ''}
       <div class="vw-broadcast-preview-card">
         ${photoPreview ? `<img src="${esc(photoPreview)}" alt="">` : ''}
         <div class="vw-broadcast-preview-text">${esc(messageText || (isUaLang ? 'Без тексту' : 'Без текста'))}</div>
@@ -5795,11 +5799,13 @@ class VoiceWidget extends HTMLElement {
     return nextDraft;
   }
 
-  async sendAdminBroadcast({ adminApiBase, targetUserIds, messageText, ctaText, photoFile }) {
+  async sendAdminBroadcast({ adminApiBase, targetUserIds, messageText, ctaText, photoFile, selectedPropertyIds, ctaUrl }) {
     const body = new FormData();
     body.append('targetUserIds', JSON.stringify(Array.isArray(targetUserIds) ? targetUserIds : []));
     body.append('messageText', String(messageText || '').trim());
     body.append('ctaText', String(ctaText || '').trim());
+    body.append('selectedPropertyIds', JSON.stringify(Array.isArray(selectedPropertyIds) ? selectedPropertyIds : []));
+    if (ctaUrl) body.append('ctaUrl', String(ctaUrl || '').trim());
     if (photoFile instanceof File) body.append('image', photoFile, photoFile.name || 'broadcast.jpg');
     this.api?.appendTelegramUserToFormData?.(body);
     const tgIdentity = this.api?.getTelegramUserIdentity?.();
@@ -5976,12 +5982,177 @@ class VoiceWidget extends HTMLElement {
   }
 
   normalizeAdminBroadcastDraft(draft = {}, isUaLang = false) {
+    const selectedPropertyIds = Array.isArray(draft?.selectedPropertyIds)
+      ? Array.from(new Set(draft.selectedPropertyIds.map((id) => this.normalizeDeepLinkPropId(id)).filter(Boolean))).slice(0, 10)
+      : [];
     return {
+      broadcastKind: String(draft?.broadcastKind || (selectedPropertyIds.length ? 'selection' : 'news')).trim().toLowerCase() || 'news',
       messageText: String(draft?.messageText || '').trim(),
-      ctaText: String(draft?.ctaText || (isUaLang ? 'Подивитись' : 'Посмотреть')).trim(),
+      ctaText: String(draft?.ctaText || '').trim(),
       photoFile: draft?.photoFile instanceof File ? draft.photoFile : null,
-      photoPreview: String(draft?.photoPreview || '').trim()
+      photoPreview: String(draft?.photoPreview || '').trim(),
+      selectedPropertyIds,
+      ctaUrl: String(draft?.ctaUrl || '').trim()
     };
+  }
+
+  hasAdminBroadcastDraftContent(draft = {}) {
+    const current = draft && typeof draft === 'object' ? draft : {};
+    return Boolean(
+      String(current.messageText || '').trim()
+      || String(current.ctaText || '').trim()
+      || current.photoFile instanceof File
+      || String(current.photoPreview || '').trim()
+      || (Array.isArray(current.selectedPropertyIds) && current.selectedPropertyIds.length > 0)
+    );
+  }
+
+  confirmAdminBroadcastDiscard({ root, isUaLang }) {
+    if (!root) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const layer = document.createElement('div');
+      layer.className = 'vw-access-add-dialog-layer';
+      layer.innerHTML = `
+        <div class="vw-access-add-dialog">
+          <div class="vw-access-add-dialog-title">${isUaLang ? 'Дані розсилки не буде збережено.' : 'Данные рассылки не будут сохранены.'}</div>
+          <div class="vw-access-add-dialog-actions">
+            <button type="button" class="vw-access-add-dialog-btn is-primary" data-role="broadcast-keep-editing">${isUaLang ? 'Продовжити редагування' : 'Продолжить редактирование'}</button>
+            <button type="button" class="vw-access-add-dialog-btn is-danger" data-role="broadcast-discard">${isUaLang ? 'Вийти без збереження' : 'Выйти без сохранения'}</button>
+          </div>
+        </div>
+      `;
+      const close = (answer) => {
+        try { layer.remove(); } catch {}
+        resolve(Boolean(answer));
+      };
+      layer.addEventListener('click', (event) => {
+        if (event.target === layer) close(false);
+      });
+      layer.querySelector('[data-role="broadcast-keep-editing"]')?.addEventListener('click', () => close(false));
+      layer.querySelector('[data-role="broadcast-discard"]')?.addEventListener('click', () => close(true));
+      root.appendChild(layer);
+    });
+  }
+
+  buildAdminBroadcastScenarioHtml({ isUaLang }) {
+    const items = isUaLang
+      ? [
+          ['news', '📰', 'Новина', 'Текст, фото та кнопка для швидкого повідомлення клієнтам.'],
+          ['property', '🏠', 'Обʼєкт', 'Обрати один обʼєкт і відправити клієнтам кнопку на його картку.'],
+          ['selection', '🏘', 'Добірка', 'Обрати до 10 обʼєктів і відправити клієнтам добірку.']
+        ]
+      : [
+          ['news', '📰', 'Новость', 'Текст, фото и кнопка для быстрого сообщения клиентам.'],
+          ['property', '🏠', 'Объект', 'Выбрать один объект и отправить клиентам кнопку на его карточку.'],
+          ['selection', '🏘', 'Подборка', 'Выбрать до 10 объектов и отправить клиентам подборку.']
+        ];
+    return `
+      <div class="vw-broadcast-scenarios">
+        ${items.map(([kind, icon, title, text]) => `
+          <button type="button" class="vw-broadcast-scenario-card" data-action="broadcast-scenario" data-kind="${kind}">
+            <span class="vw-broadcast-scenario-card__icon" aria-hidden="true">${icon}</span>
+            <span class="vw-broadcast-scenario-card__body">
+              <strong>${title}</strong>
+              <small>${text}</small>
+            </span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="vw-broadcast-actions vw-broadcast-actions--stack">
+        <button type="button" class="vw-access-sub-btn" data-action="broadcast-back">${isUaLang ? 'Назад до клієнтів' : 'Назад к клиентам'}</button>
+      </div>
+    `;
+  }
+
+  buildAdminBroadcastSelectedPropertiesHtml({ isUaLang, esc, selectedPropertyIds, properties }) {
+    const ids = Array.isArray(selectedPropertyIds) ? selectedPropertyIds.map((id) => this.normalizeDeepLinkPropId(id)).filter(Boolean) : [];
+    if (!ids.length) return '';
+    const propertyMap = new Map((Array.isArray(properties) ? properties : []).map((item) => [String(item?.id || '').trim().toUpperCase(), item]));
+    return `
+      <details class="vw-broadcast-targets">
+        <summary class="vw-access-sub-item vw-broadcast-count">${isUaLang ? 'Вибрано обʼєктів:' : 'Выбрано объектов:'} <strong>${ids.length}</strong></summary>
+        <div class="vw-broadcast-targets-list">
+          ${ids.map((id) => {
+            const item = propertyMap.get(id) || { id, title: id };
+            return `
+              <div class="vw-broadcast-selected-property">
+                <span>
+                  <strong>${esc(item.title || id)}</strong>
+                  <small>${esc(id)} · ${esc(item.price || '—')} · ${esc(item.district || '—')}</small>
+                </span>
+                <button type="button" class="vw-client-select is-selected" data-action="broadcast-property-remove" data-property-id="${esc(id)}" aria-label="${isUaLang ? 'Прибрати обʼєкт' : 'Убрать объект'}"></button>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </details>
+    `;
+  }
+
+  buildAdminBroadcastCtaUrl(selectedPropertyIds = []) {
+    const ids = Array.from(new Set((Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [])
+      .map((id) => this.normalizeDeepLinkPropId(id))
+      .filter(Boolean))).slice(0, 10);
+    if (ids.length === 1) return this.buildTelegramPropertyLink(ids[0]);
+    if (ids.length > 1) return this.buildTelegramSelectionLink(ids);
+    return String(VW_SHARE_BASE_URL || '').trim();
+  }
+
+  buildAdminBroadcastPropertyPickerHtml({ isUaLang, esc, list, selectedPropertyIds, mode, searchQuery }) {
+    const isSingle = mode === 'property';
+    const selectedSet = new Set((Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [])
+      .map((id) => this.normalizeDeepLinkPropId(id))
+      .filter(Boolean));
+    const query = String(searchQuery || '').trim().toLowerCase();
+    const visible = (Array.isArray(list) ? list : []).filter((item) => {
+      if (!query) return true;
+      return [
+        item?.id,
+        item?.title,
+        item?.district,
+        item?.price,
+        item?.area
+      ].map((value) => String(value || '').toLowerCase()).join(' ').includes(query);
+    });
+    const rows = visible.map((item) => {
+      const id = this.normalizeDeepLinkPropId(item?.id);
+      const isSelected = id && selectedSet.has(id);
+      return `
+        <article class="vw-access-obj-card vw-broadcast-property-card${isSelected ? ' is-selected' : ''}${this.getAccessObjectCardBgClass(item)}" data-id="${esc(id)}" role="button" tabindex="0" aria-label="${isUaLang ? 'Обрати' : 'Выбрать'} ${esc(id)}"${this.getAccessObjectCardBgAttr(item.image)}>
+          <label class="vw-access-obj-check" data-role="row-check-wrap"><input type="checkbox" data-role="row-check" ${isSelected ? 'checked' : ''}></label>
+          <div class="vw-access-obj-main">
+            <div class="vw-access-obj-badges">
+              <span class="vw-access-obj-id-badge">${esc(id)}</span>
+              <span class="vw-access-obj-pill">${this.getAdminObjectOperationLabel(item)}</span>
+              <span class="vw-access-obj-pill">${this.getAdminObjectTypeLabel(item)}</span>
+            </div>
+            <h4 class="vw-access-obj-title">${esc(item.title || '—')}</h4>
+            <div class="vw-access-obj-meta">${esc(item.price || '—')} · ${esc(item.area || '—')} · ${esc(item.rooms || '—')} ${isUaLang ? 'кімн' : 'комн'} · ${esc(item.district || '—')}</div>
+          </div>
+        </article>
+      `;
+    }).join('');
+    const selectedCount = selectedSet.size;
+    const limitText = isSingle
+      ? (isUaLang ? 'Оберіть один обʼєкт для розсилки.' : 'Выберите один объект для рассылки.')
+      : (isUaLang ? 'Можна обрати до 10 обʼєктів.' : 'Можно выбрать до 10 объектов.');
+    return `
+      <div class="vw-broadcast-picker">
+        <div class="vw-access-sub-item vw-broadcast-picker-hint">
+          <strong>${isSingle ? (isUaLang ? 'Обʼєкт' : 'Объект') : (isUaLang ? 'Добірка' : 'Подборка')}</strong>
+          <span>${limitText}</span>
+        </div>
+        <input type="search" class="vw-access-sub-input vw-admin-clients-search" data-role="broadcast-property-search" value="${esc(searchQuery || '')}" placeholder="${isUaLang ? 'Пошук обʼєкта' : 'Поиск объекта'}" autocomplete="off">
+        <div class="vw-admin-clients-search-count">${isUaLang ? 'Знайдено' : 'Найдено'}: ${visible.length} · ${isUaLang ? 'Обрано' : 'Выбрано'}: ${selectedCount}</div>
+        <div class="vw-broadcast-property-list">
+          ${rows || `<div class="vw-access-sub-item"><strong>${isUaLang ? 'Обʼєкти не знайдено' : 'Объекты не найдены'}</strong></div>`}
+        </div>
+        <div class="vw-admin-broadcast-bar">
+          <button type="button" class="vw-access-sub-btn" data-action="broadcast-picker-back">${isUaLang ? 'Назад' : 'Назад'}</button>
+          <button type="button" class="vw-access-sub-btn vw-access-sub-btn--primary" data-action="broadcast-picker-confirm" ${selectedCount > 0 ? '' : 'disabled'}>${isUaLang ? 'Додати до розсилки' : 'Добавить в рассылку'} (${selectedCount})</button>
+        </div>
+      </div>
+    `;
   }
 
   renderAdminBroadcastEditorScreen({
@@ -5990,6 +6161,7 @@ class VoiceWidget extends HTMLElement {
     esc,
     targetUserIds,
     targetClients,
+    targetProperties,
     draft,
     setSectionTitle,
     onBack,
@@ -6007,11 +6179,17 @@ class VoiceWidget extends HTMLElement {
       targetCount: safeTargetUserIds.length,
       targetUserIds: safeTargetUserIds,
       targetClients,
+      targetProperties,
       draft: currentDraft
     });
     const syncDraftFromFields = () => this.collectAdminBroadcastDraft(root, currentDraft);
-    root.onclick = (event) => {
+    root.onclick = async (event) => {
       if (event.target?.closest?.('[data-action="broadcast-back"]')) {
+        const latestDraft = syncDraftFromFields();
+        if (this.hasAdminBroadcastDraftContent(latestDraft)) {
+          const ok = await this.confirmAdminBroadcastDiscard({ root, isUaLang });
+          if (!ok) return;
+        }
         onBack?.();
         return;
       }
@@ -6038,9 +6216,31 @@ class VoiceWidget extends HTMLElement {
         onRenderEditor?.(nextTargetUserIds, currentDraft);
         return;
       }
+      const removePropertyBtn = event.target?.closest?.('[data-action="broadcast-property-remove"]');
+      if (removePropertyBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        syncDraftFromFields();
+        const removeId = this.normalizeDeepLinkPropId(removePropertyBtn.getAttribute('data-property-id') || '');
+        currentDraft.selectedPropertyIds = (currentDraft.selectedPropertyIds || []).filter((id) => this.normalizeDeepLinkPropId(id) !== removeId);
+        currentDraft.broadcastKind = currentDraft.selectedPropertyIds.length ? 'selection' : 'news';
+        currentDraft.ctaUrl = this.buildAdminBroadcastCtaUrl(currentDraft.selectedPropertyIds);
+        onRenderEditor?.(safeTargetUserIds, currentDraft);
+        return;
+      }
       if (event.target?.closest?.('[data-action="broadcast-preview"]')) {
         if (!safeTargetUserIds.length) return;
-        onPreview?.(safeTargetUserIds, syncDraftFromFields());
+        const latestDraft = syncDraftFromFields();
+        if (!latestDraft.messageText) {
+          this.ui?.showNotification?.(isUaLang ? 'Заповніть текст повідомлення' : 'Заполните текст сообщения');
+          return;
+        }
+        if (!latestDraft.ctaText) {
+          this.ui?.showNotification?.(isUaLang ? 'Заповніть назву CTA-кнопки' : 'Заполните название CTA-кнопки');
+          return;
+        }
+        latestDraft.ctaUrl = this.buildAdminBroadcastCtaUrl(latestDraft.selectedPropertyIds);
+        onPreview?.(safeTargetUserIds, latestDraft);
       }
     };
     root.onchange = (event) => {
@@ -6107,7 +6307,9 @@ class VoiceWidget extends HTMLElement {
           targetUserIds: safeTargetUserIds,
           messageText: currentDraft.messageText,
           ctaText: currentDraft.ctaText,
-          photoFile: currentDraft.photoFile
+          photoFile: currentDraft.photoFile,
+          selectedPropertyIds: currentDraft.selectedPropertyIds,
+          ctaUrl: currentDraft.ctaUrl || this.buildAdminBroadcastCtaUrl(currentDraft.selectedPropertyIds)
         });
         alert(`${isUaLang ? 'Розсилку завершено!' : 'Рассылка завершена!'}\n${isUaLang ? 'Успішно' : 'Успешно'}: ${result.results?.success ?? 0}\n${isUaLang ? 'Помилок' : 'Ошибок'}: ${result.results?.failed ?? 0}`);
         onDone?.();
@@ -6120,6 +6322,121 @@ class VoiceWidget extends HTMLElement {
     root.onchange = null;
     root.oninput = null;
     root.onkeydown = null;
+  }
+
+  renderAdminBroadcastScenarioScreen({
+    root,
+    isUaLang,
+    setSectionTitle,
+    onBack,
+    onChoose
+  }) {
+    if (!root) return;
+    setSectionTitle?.(isUaLang ? 'Тип розсилки' : 'Тип рассылки');
+    root.className = 'vw-access-sub-list vw-broadcast-panel';
+    root.innerHTML = this.buildAdminBroadcastScenarioHtml({ isUaLang });
+    root.onclick = (event) => {
+      const scenarioBtn = event.target?.closest?.('[data-action="broadcast-scenario"]');
+      if (scenarioBtn) {
+        onChoose?.(String(scenarioBtn.getAttribute('data-kind') || 'news').trim().toLowerCase());
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-back"]')) {
+        onBack?.();
+      }
+    };
+    root.onchange = null;
+    root.oninput = null;
+    root.onkeydown = null;
+  }
+
+  renderAdminBroadcastPropertyPickerScreen({
+    root,
+    isUaLang,
+    esc,
+    targetUserIds,
+    properties,
+    mode,
+    draft,
+    setSectionTitle,
+    onBack,
+    onConfirm
+  }) {
+    if (!root) return;
+    const isSingle = mode === 'property';
+    setSectionTitle?.(isSingle ? (isUaLang ? 'Обрати обʼєкт' : 'Выбрать объект') : (isUaLang ? 'Обрати добірку' : 'Выбрать подборку'));
+    root.className = 'vw-access-sub-list vw-admin-clients-panel vw-broadcast-picker-panel';
+    const currentDraft = this.normalizeAdminBroadcastDraft({ ...(draft || {}), broadcastKind: mode }, isUaLang);
+    let searchQuery = '';
+    const renderPicker = () => {
+      root.innerHTML = this.buildAdminBroadcastPropertyPickerHtml({
+        isUaLang,
+        esc,
+        list: properties,
+        selectedPropertyIds: currentDraft.selectedPropertyIds,
+        mode,
+        searchQuery
+      });
+    };
+    const toggleId = (idRaw) => {
+      const id = this.normalizeDeepLinkPropId(idRaw);
+      if (!id) return;
+      const set = new Set(currentDraft.selectedPropertyIds || []);
+      if (set.has(id)) {
+        set.delete(id);
+      } else if (isSingle) {
+        set.clear();
+        set.add(id);
+      } else if (set.size >= 10) {
+        this.ui?.showNotification?.(isUaLang ? 'Для розсилки можна обрати до 10 обʼєктів' : 'Для рассылки можно выбрать до 10 объектов');
+      } else {
+        set.add(id);
+      }
+      currentDraft.selectedPropertyIds = Array.from(set);
+      currentDraft.ctaUrl = this.buildAdminBroadcastCtaUrl(currentDraft.selectedPropertyIds);
+      renderPicker();
+    };
+    renderPicker();
+    root.onclick = async (event) => {
+      if (event.target?.closest?.('[data-action="broadcast-picker-back"]')) {
+        if (this.hasAdminBroadcastDraftContent(currentDraft)) {
+          const ok = await this.confirmAdminBroadcastDiscard({ root, isUaLang });
+          if (!ok) return;
+        }
+        onBack?.();
+        return;
+      }
+      if (event.target?.closest?.('[data-action="broadcast-picker-confirm"]')) {
+        if (!currentDraft.selectedPropertyIds.length) return;
+        currentDraft.broadcastKind = currentDraft.selectedPropertyIds.length === 1 ? 'property' : 'selection';
+        currentDraft.ctaUrl = this.buildAdminBroadcastCtaUrl(currentDraft.selectedPropertyIds);
+        onConfirm?.(targetUserIds, currentDraft);
+        return;
+      }
+      const card = event.target?.closest?.('[data-id]');
+      if (!card) return;
+      event.preventDefault();
+      toggleId(card.getAttribute('data-id'));
+    };
+    root.oninput = (event) => {
+      if (!event.target?.matches?.('[data-role="broadcast-property-search"]')) return;
+      searchQuery = String(event.target?.value || '');
+      renderPicker();
+      const input = root.querySelector('[data-role="broadcast-property-search"]');
+      if (input) {
+        input.focus();
+        const len = input.value.length;
+        try { input.setSelectionRange(len, len); } catch {}
+      }
+    };
+    root.onchange = null;
+    root.onkeydown = (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const card = event.target?.closest?.('[data-id]');
+      if (!card) return;
+      event.preventDefault();
+      toggleId(card.getAttribute('data-id'));
+    };
   }
 
   updateAdminClientsBroadcastButtons({ root, isUaLang }) {
@@ -6394,6 +6711,47 @@ class VoiceWidget extends HTMLElement {
       const adminApiBase = this.getAdminApiBaseUrl();
       const setSectionTitle = (value) => this.setAccessSubTitle(overlay, value);
       let renderBroadcastPreview = null;
+      let broadcastPropertyList = null;
+      const getBroadcastPropertyList = async () => {
+        if (Array.isArray(broadcastPropertyList) && broadcastPropertyList.length) return broadcastPropertyList;
+        await this.ensureAdminFullCatalogLoaded();
+        broadcastPropertyList = this.applyAdminPropertiesView(
+          this.getAdminObjectsMockList({ preferFull: true }),
+          { sortMode: 'latest', operationFilter: 'all' }
+        );
+        return broadcastPropertyList;
+      };
+      const renderBroadcastScenario = (targetUserIds) => {
+        this.renderAdminBroadcastScenarioScreen({
+          root,
+          isUaLang,
+          setSectionTitle,
+          onBack: renderClientsScreen,
+          onChoose: async (kind) => {
+            const safeKind = ['news', 'property', 'selection'].includes(kind) ? kind : 'news';
+            if (safeKind === 'news') {
+              renderBroadcastEditor(targetUserIds, { broadcastKind: 'news', selectedPropertyIds: [] });
+              return;
+            }
+            const properties = await getBroadcastPropertyList();
+            renderBroadcastPropertyPicker(targetUserIds, safeKind, { broadcastKind: safeKind, selectedPropertyIds: [] }, properties);
+          }
+        });
+      };
+      const renderBroadcastPropertyPicker = (targetUserIds, mode, draft = {}, properties = []) => {
+        this.renderAdminBroadcastPropertyPickerScreen({
+          root,
+          isUaLang,
+          esc,
+          targetUserIds,
+          properties,
+          mode,
+          draft,
+          setSectionTitle,
+          onBack: () => renderBroadcastScenario(targetUserIds),
+          onConfirm: renderBroadcastEditor
+        });
+      };
       const renderBroadcastEditor = (targetUserIds, draft = {}) => {
         this.renderAdminBroadcastEditorScreen({
           root,
@@ -6401,9 +6759,10 @@ class VoiceWidget extends HTMLElement {
           esc,
           targetUserIds,
           targetClients: clients,
+          targetProperties: broadcastPropertyList || [],
           draft,
           setSectionTitle,
-          onBack: renderClientsScreen,
+          onBack: () => renderBroadcastScenario(targetUserIds),
           onPreview: renderBroadcastPreview,
           onRenderEditor: renderBroadcastEditor
         });
@@ -6436,7 +6795,7 @@ class VoiceWidget extends HTMLElement {
           getSortMode: () => clientsSortMode,
           setSortMode: (nextSortMode) => { clientsSortMode = nextSortMode; },
           setSectionTitle,
-          onCreateBroadcast: renderBroadcastEditor
+          onCreateBroadcast: renderBroadcastScenario
         });
       };
       renderClientsScreen();
@@ -11969,6 +12328,112 @@ class VoiceWidget extends HTMLElement {
         overflow-x: hidden;
         padding-right: 2px;
         overscroll-behavior: contain;
+      }
+      .vw-broadcast-picker-panel {
+        grid-template-rows: minmax(0, 1fr);
+      }
+      .vw-broadcast-scenarios {
+        display: grid;
+        gap: 10px;
+      }
+      .vw-broadcast-scenario-card {
+        width: 100%;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(45,143,225,0.22), rgba(255,255,255,0.08));
+        color: var(--text-primary, #fff);
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 12px;
+        text-align: left;
+        cursor: pointer;
+      }
+      .vw-broadcast-scenario-card__icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.22);
+        font-size: 1.35rem;
+      }
+      .vw-broadcast-scenario-card__body {
+        min-width: 0;
+        display: grid;
+        gap: 4px;
+      }
+      .vw-broadcast-scenario-card__body strong {
+        font-size: .98rem;
+        line-height: 1.25;
+        font-weight: 900;
+      }
+      .vw-broadcast-scenario-card__body small {
+        font-size: .78rem;
+        line-height: 1.35;
+        font-weight: 650;
+        color: var(--text-secondary, rgba(255,255,255,0.76));
+      }
+      .vw-broadcast-picker {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+        gap: 10px;
+        overflow: hidden;
+      }
+      .vw-broadcast-picker-hint {
+        display: grid;
+        gap: 3px;
+      }
+      .vw-broadcast-picker-hint span {
+        font-size: .78rem;
+        line-height: 1.3;
+        color: var(--text-secondary, rgba(255,255,255,0.72));
+      }
+      .vw-broadcast-property-list {
+        min-height: 0;
+        display: grid;
+        gap: 8px;
+        overflow-y: auto;
+        padding-right: 2px;
+        overscroll-behavior: contain;
+      }
+      .vw-broadcast-property-card .vw-access-obj-check {
+        right: 10px;
+        top: 10px;
+      }
+      .vw-broadcast-selected-property {
+        position: relative;
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid var(--border-light, rgba(255,255,255,0.14));
+        background: var(--bg-element, rgba(255,255,255,0.10));
+        padding: 8px 46px 8px 12px;
+        display: flex;
+        align-items: center;
+      }
+      .vw-broadcast-selected-property span {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+      }
+      .vw-broadcast-selected-property strong,
+      .vw-broadcast-selected-property small {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vw-broadcast-selected-property strong {
+        font-size: .86rem;
+        line-height: 1.2;
+        font-weight: 800;
+      }
+      .vw-broadcast-selected-property small {
+        font-size: .76rem;
+        line-height: 1.2;
+        color: var(--text-secondary, rgba(255,255,255,0.74));
       }
       .vw-admin-clients-actions {
         display: grid;
