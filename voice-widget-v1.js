@@ -5736,6 +5736,7 @@ class VoiceWidget extends HTMLElement {
     const currentDraft = draft && typeof draft === 'object' ? draft : {};
     const messageText = String(currentDraft.messageText || '').trim();
     const ctaText = String(currentDraft.ctaText || '').trim();
+    const isInterestBroadcast = String(currentDraft.broadcastKind || 'news').toLowerCase() === 'news';
     const photoFile = currentDraft.photoFile instanceof File ? currentDraft.photoFile : null;
     const photoPreview = String(currentDraft.photoPreview || '').trim();
     const selectedPropertyIds = Array.isArray(currentDraft.selectedPropertyIds) ? currentDraft.selectedPropertyIds : [];
@@ -5748,8 +5749,11 @@ class VoiceWidget extends HTMLElement {
         <textarea id="vw-broadcast-text" class="vw-access-add-textarea vw-broadcast-textarea" placeholder="${isUaLang ? 'Введіть текст...' : 'Введите текст...'}">${esc(messageText)}</textarea>
       </div>
       <div class="vw-broadcast-field">
-        <label>${isUaLang ? 'Назва CTA-кнопки' : 'Название CTA-кнопки'}</label>
-        <input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}" placeholder="${isUaLang ? 'Наприклад: Дивитись добірку' : 'Например: Смотреть подборку'}">
+        <label>${isUaLang ? 'Кнопка' : 'Кнопка'}</label>
+        ${isInterestBroadcast
+          ? `<input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText || 'Интересно')}" readonly>
+             <span class="vw-access-sub-item">${isUaLang ? 'Натискання одразу створить заявку та покаже подяку.' : 'Нажатие сразу создаст заявку и покажет благодарность.'}</span>`
+          : `<input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}" placeholder="${isUaLang ? 'Наприклад: Дивитись добірку' : 'Например: Смотреть подборку'}">`}
       </div>
       <div class="vw-broadcast-field">
         <label>${isUaLang ? 'Фото для розсилки' : 'Фото для рассылки'}</label>
@@ -5804,6 +5808,7 @@ class VoiceWidget extends HTMLElement {
     body.append('targetUserIds', JSON.stringify(Array.isArray(targetUserIds) ? targetUserIds : []));
     body.append('messageText', String(messageText || '').trim());
     body.append('ctaText', String(ctaText || '').trim());
+    body.append('ctaMode', Array.isArray(selectedPropertyIds) && selectedPropertyIds.length ? 'link' : 'interest');
     body.append('selectedPropertyIds', JSON.stringify(Array.isArray(selectedPropertyIds) ? selectedPropertyIds : []));
     if (ctaUrl) body.append('ctaUrl', String(ctaUrl || '').trim());
     if (photoFile instanceof File) body.append('image', photoFile, photoFile.name || 'broadcast.jpg');
@@ -5985,10 +5990,11 @@ class VoiceWidget extends HTMLElement {
     const selectedPropertyIds = Array.isArray(draft?.selectedPropertyIds)
       ? Array.from(new Set(draft.selectedPropertyIds.map((id) => this.normalizeDeepLinkPropId(id)).filter(Boolean))).slice(0, 10)
       : [];
+    const broadcastKind = String(draft?.broadcastKind || (selectedPropertyIds.length ? 'selection' : 'news')).trim().toLowerCase() || 'news';
     return {
-      broadcastKind: String(draft?.broadcastKind || (selectedPropertyIds.length ? 'selection' : 'news')).trim().toLowerCase() || 'news',
+      broadcastKind,
       messageText: String(draft?.messageText || '').trim(),
-      ctaText: String(draft?.ctaText || '').trim(),
+      ctaText: broadcastKind === 'news' ? 'Интересно' : String(draft?.ctaText || '').trim(),
       photoFile: draft?.photoFile instanceof File ? draft.photoFile : null,
       photoPreview: String(draft?.photoPreview || '').trim(),
       selectedPropertyIds,
