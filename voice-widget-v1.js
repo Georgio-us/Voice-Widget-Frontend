@@ -5751,7 +5751,7 @@ class VoiceWidget extends HTMLElement {
       <div class="vw-broadcast-field">
         <label>${isUaLang ? 'Кнопка' : 'Кнопка'}</label>
         ${isInterestBroadcast
-          ? `<input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText || 'Интересно')}" readonly>
+          ? `<input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}" placeholder="${isUaLang ? 'Наприклад: Цікаво' : 'Например: Интересно'}">
              <span class="vw-access-sub-item">${isUaLang ? 'Натискання одразу створить заявку та покаже подяку.' : 'Нажатие сразу создаст заявку и покажет благодарность.'}</span>`
           : `<input type="text" id="vw-broadcast-cta" class="vw-access-add-input vw-broadcast-input" value="${esc(ctaText)}" placeholder="${isUaLang ? 'Наприклад: Дивитись добірку' : 'Например: Смотреть подборку'}">`}
       </div>
@@ -5994,7 +5994,7 @@ class VoiceWidget extends HTMLElement {
     return {
       broadcastKind,
       messageText: String(draft?.messageText || '').trim(),
-      ctaText: broadcastKind === 'news' ? 'Интересно' : String(draft?.ctaText || '').trim(),
+      ctaText: String(draft?.ctaText || '').trim(),
       photoFile: draft?.photoFile instanceof File ? draft.photoFile : null,
       photoPreview: String(draft?.photoPreview || '').trim(),
       selectedPropertyIds,
@@ -13998,6 +13998,7 @@ class VoiceWidget extends HTMLElement {
       this.initializeUI();
       this._uiInitializedOnce = true;
     }
+    this.consumeBroadcastInterestLaunch();
     if (this._pendingThemeAttr) {
       try { this.setAttribute('data-theme', this._pendingThemeAttr); } catch {}
       this._pendingThemeAttr = null;
@@ -14007,6 +14008,46 @@ class VoiceWidget extends HTMLElement {
     if (this._themeInitializedOnce) return;
     this.initTheme();
     this._themeInitializedOnce = true;
+  }
+
+  async consumeBroadcastInterestLaunch() {
+    if (this._broadcastInterestHandled) return;
+    const broadcastId = (() => {
+      try { return String(new URLSearchParams(window.location.search).get('broadcastInterest') || '').trim(); } catch { return ''; }
+    })();
+    if (!/^[0-9a-f-]{36}$/i.test(broadcastId)) return;
+    this._broadcastInterestHandled = true;
+    try {
+      const endpoint = String(this.api?.apiUrl || '')
+        .replace(/\/api\/audio\/upload\/?$/i, `/api/admin/broadcast/${encodeURIComponent(broadcastId)}/interest`);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: this.api?.buildTelegramAuthHeaders?.()
+      });
+      if (!response.ok) throw new Error('INTEREST_REQUEST_FAILED');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('broadcastInterest');
+      window.history.replaceState({}, '', url.toString());
+      this.showBroadcastInterestThanksModal();
+    } catch (error) {
+      console.warn('broadcast interest launch failed:', error?.message || error);
+      this.ui?.showNotification?.('Не удалось отправить заявку. Попробуйте ещё раз.');
+    }
+  }
+
+  showBroadcastInterestThanksModal() {
+    try {
+      const existing = this.querySelector('.vw-broadcast-interest-modal-layer');
+      if (existing) existing.remove();
+      const layer = document.createElement('div');
+      layer.className = 'vw-broadcast-interest-modal-layer';
+      layer.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.56)';
+      layer.innerHTML = `<div class="vw-broadcast-interest-modal" role="dialog" aria-modal="true" aria-label="Спасибо" style="max-width:360px;padding:24px;border-radius:18px;background:#242426;color:#fff;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.35)"><h3 style="margin:0 0 12px;font-size:21px">Спасибо за интерес!</h3><p style="margin:0 0 20px;line-height:1.45;color:#e4e4e7">Я свяжусь с вами в ближайшее время, чтобы обсудить детали.</p><button type="button" style="border:0;border-radius:10px;padding:11px 30px;background:#3390ec;color:#fff;font:inherit;font-weight:600">ОК</button></div>`;
+      const close = () => layer.remove();
+      layer.addEventListener('click', (event) => { if (event.target === layer) close(); });
+      layer.querySelector('button')?.addEventListener('click', close);
+      this.appendChild(layer);
+    } catch {}
   }
 
   init(config = {}) {
