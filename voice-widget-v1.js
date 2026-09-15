@@ -1714,6 +1714,14 @@ class APIClient {
     return await res.json().catch(() => null);
   }
 
+  async resolveEstateCrmSelection(token) {
+    const cardsBase = this._deriveCardsBaseUrl();
+    const integrationBase = cardsBase.replace(/\/api\/cards$/i, '/api/integrations/estate');
+    const res = await fetch(`${integrationBase}/v1/public/selections/${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error(`Estate CRM selection resolve failed: ${res.status}`);
+    return await res.json().catch(() => null);
+  }
+
   async createManualProperty(payload = {}, imageFiles = []) {
     const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/properties');
     const formData = new FormData();
@@ -3753,6 +3761,33 @@ class VoiceWidget extends HTMLElement {
     return [];
   }
 
+  getEstateCrmSelectionTokenFromUrl() {
+    const candidates = [];
+    try {
+      const params = new URLSearchParams(window.location.search);
+      candidates.push(params.get('selection'));
+      candidates.push(params.get('selectionId'));
+      candidates.push(params.get('selectionToken'));
+      candidates.push(params.get('startapp'));
+      candidates.push(params.get('start'));
+    } catch {}
+    candidates.push(this.readTelegramStartParam());
+    try {
+      const href = String(window.location.href || '');
+      const fromHref = href.match(/(?:startapp|start_param|tgWebAppStartParam|selection|selectionId|selectionToken)=([^&#]+)/i)?.[1] || '';
+      if (fromHref) candidates.push(decodeURIComponent(fromHref));
+      const fromPath = href.match(/\/(?:share\/sel|s\/s)\/([^/?#]+)/i)?.[1] || '';
+      if (fromPath) candidates.push(fromPath);
+    } catch {}
+    for (const value of candidates) {
+      const token = this.normalizeDeepLinkSelectionToken(value);
+      // Existing VIA links encode IDs locally. Opaque CRM links are resolved
+      // by the backend and never expose CRM contact/deal identifiers here.
+      if (token && !this.decodeDeepLinkSelectionIds(token).length) return token;
+    }
+    return '';
+  }
+
   clearDeepLinkParamInUrl() {
     try {
       const currentUrl = new URL(window.location.href);
@@ -3878,6 +3913,19 @@ class VoiceWidget extends HTMLElement {
       ? this._deepLinkSelectionIds
       : this.getDeepLinkSelectionIdsFromUrl();
     this._deepLinkSelectionIds = Array.isArray(selectionIds) ? selectionIds : [];
+    if (!this._deepLinkSelectionIds.length) {
+      const opaqueToken = this.getEstateCrmSelectionTokenFromUrl();
+      if (opaqueToken) {
+        try {
+          const resolved = await this.api.resolveEstateCrmSelection(opaqueToken);
+          this._deepLinkSelectionIds = Array.isArray(resolved?.propertyExternalIds)
+            ? resolved.propertyExternalIds
+            : [];
+        } catch {
+          this._deepLinkSelectionIds = [];
+        }
+      }
+    }
     if (!this._deepLinkSelectionIds.length) {
       this.logEntryFlow('DEEPLINK_DETECTED', { type: 'none' });
       return false;
