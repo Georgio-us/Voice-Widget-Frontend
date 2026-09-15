@@ -1995,6 +1995,36 @@ class APIClient {
     return data?.digest && typeof data.digest === 'object' ? data.digest : null;
   }
 
+  async fetchEstateCrmIntegrationStatus() {
+    const u = this._appendAdminAuthToUrl(new URL(`${this._deriveAdminApiBase()}/integrations/estate/status`));
+    const res = await fetch(u.toString(), { headers: this.buildTelegramAuthHeaders() });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(String(data?.error || `ESTATE_CRM_STATUS_${res.status}`));
+    return data;
+  }
+
+  async confirmEstateCrmPairing(pairingCode) {
+    const u = this._appendAdminAuthToUrl(new URL(`${this._deriveAdminApiBase()}/integrations/estate/pairing/confirm`));
+    const res = await fetch(u.toString(), {
+      method: 'POST', headers: this.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ pairingCode: String(pairingCode || '').trim() })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(String(data?.error || `ESTATE_CRM_PAIRING_${res.status}`));
+    return data;
+  }
+
+  async disconnectEstateCrm() {
+    const u = this._appendAdminAuthToUrl(new URL(`${this._deriveAdminApiBase()}/integrations/estate/disconnect`));
+    const res = await fetch(u.toString(), {
+      method: 'POST', headers: this.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: '{}'
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(String(data?.error || `ESTATE_CRM_DISCONNECT_${res.status}`));
+    return data;
+  }
+
   _deriveAdminApiBase() {
     try {
       const u = new URL(String(this.apiUrl));
@@ -13898,6 +13928,7 @@ class VoiceWidget extends HTMLElement {
             ${isSuperAdmin ? `<button type="button" class="vw-access-item" data-role="admin-keygen"><span class="vw-access-item__icon" aria-hidden="true">🧩</span><span class="vw-access-item__label">${locale.accessAdminKeygen || 'Генерация ключей'}</span></button>` : ''}
             <button type="button" class="vw-access-item" data-role="olx-connect"><span class="vw-access-item__icon" aria-hidden="true">🔗</span><span class="vw-access-item__label">${locale.accessAdminOlxConnect || 'Подключить OLX'}</span></button>
             <button type="button" class="vw-access-item" data-role="olx-sync"><span class="vw-access-item__icon" aria-hidden="true">⬇️</span><span class="vw-access-item__label">${locale.accessAdminOlxSync || 'Импортировать объекты OLX'}</span></button>
+            <button type="button" class="vw-access-item" data-role="estate-crm-connect"><span class="vw-access-item__icon" aria-hidden="true">🔄</span><span class="vw-access-item__label">Estate CRM: подключить</span></button>
           </div>
         </div>
       `
@@ -13945,6 +13976,29 @@ class VoiceWidget extends HTMLElement {
       olxSyncBtn.disabled = false;
       this.setOlxSyncButtonMode(olxSyncBtn, 'import');
       olxSyncBtn.addEventListener('click', () => this.syncOlxAdverts(olxSyncBtn));
+    }
+    const estateCrmBtn = overlay.querySelector('[data-role="estate-crm-connect"]');
+    if (estateCrmBtn) {
+      estateCrmBtn.addEventListener('click', async () => {
+        const current = await this.api.fetchEstateCrmIntegrationStatus().catch(() => null);
+        if (current?.connected) {
+          const disconnect = window.confirm('Estate CRM подключён. Отключить интеграцию?');
+          if (!disconnect) return;
+          await this.api.disconnectEstateCrm().then(() => this.ui?.showNotification?.('✅ Estate CRM отключён')).catch((error) => this.ui?.showNotification?.(`⚠️ ${error.message}`));
+          return;
+        }
+        const code = window.prompt('Вставьте одноразовый код подключения из Estate CRM:');
+        if (!code) return;
+        estateCrmBtn.disabled = true;
+        try {
+          await this.api.confirmEstateCrmPairing(code);
+          this.ui?.showNotification?.('✅ Estate CRM подключён');
+        } catch (error) {
+          this.ui?.showNotification?.(`⚠️ Не удалось подключить Estate CRM: ${error.message}`);
+        } finally {
+          estateCrmBtn.disabled = false;
+        }
+      });
     }
     overlay.querySelector('[data-role="admin-add-property"]')?.addEventListener('click', () => this.openAccessSubOverlay('add-property'));
     overlay.querySelector('[data-role="admin-stats"]')?.addEventListener('click', () => this.openAccessSubOverlay('stats'));
