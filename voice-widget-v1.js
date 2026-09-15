@@ -1722,6 +1722,18 @@ class APIClient {
     return await res.json().catch(() => null);
   }
 
+  async emitEstateCrmClientEvent(payload = {}) {
+    const cardsBase = this._deriveCardsBaseUrl();
+    const integrationBase = cardsBase.replace(/\/api\/cards$/i, '/api/integrations/estate');
+    const res = await fetch(`${integrationBase}/v1/client-events`, {
+      method: 'POST',
+      headers: this.widget.buildTelegramAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(`Estate CRM client event failed: ${res.status}`);
+    return await res.json().catch(() => ({}));
+  }
+
   async createManualProperty(payload = {}, imageFiles = []) {
     const base = String(this.apiUrl || '').replace(/\/api\/audio\/upload\/?$/i, '/api/admin/properties');
     const formData = new FormData();
@@ -3923,6 +3935,12 @@ class VoiceWidget extends HTMLElement {
             ? resolved.propertyExternalIds
             : [];
           this._estateCrmSelectionId = resolved?.selectionId ? String(resolved.selectionId) : null;
+          this.api.emitEstateCrmClientEvent({
+            type: 'selection.opened', selectionId: this._estateCrmSelectionId, sessionId: this.sessionId || null
+          }).catch(() => {});
+          this.api.emitEstateCrmClientEvent({
+            type: 'telegram.identity_seen', selectionId: this._estateCrmSelectionId, sessionId: this.sessionId || null
+          }).catch(() => {});
         } catch {
           this._deepLinkSelectionIds = [];
         }
@@ -3933,7 +3951,15 @@ class VoiceWidget extends HTMLElement {
       return false;
     }
     this.logEntryFlow('DEEPLINK_DETECTED', { type: 'selection', count: this._deepLinkSelectionIds.length });
-    return await this.renderSelectionByIds(this._deepLinkSelectionIds);
+    const rendered = await this.renderSelectionByIds(this._deepLinkSelectionIds);
+    if (rendered && this._estateCrmSelectionId) {
+      const firstId = this._deepLinkSelectionIds[0] || '';
+      this.api.emitEstateCrmClientEvent({
+        type: 'property.viewed', selectionId: this._estateCrmSelectionId,
+        propertyExternalId: firstId, sessionId: this.sessionId || null
+      }).catch(() => {});
+    }
+    return rendered;
   }
 
   exitDeepLinkMode({ clearUrl = true } = {}) {
