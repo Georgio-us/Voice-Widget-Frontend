@@ -5383,6 +5383,43 @@ class VoiceWidget extends HTMLElement {
     });
   }
 
+  closeEstateCrmSuccessModal() {
+    try {
+      const overlay = this.getRoot().querySelector('#vwEstateCrmSuccessOverlay');
+      if (overlay?.parentElement) overlay.parentElement.removeChild(overlay);
+    } catch {}
+  }
+
+  openEstateCrmSuccessModal() {
+    this.closeEstateCrmSuccessModal();
+    this.ensureOlxImportResultStyles();
+    const isUa = this.getLangCode() === 'ua';
+    const title = isUa ? 'Estate CRM підключено' : 'Estate CRM подключена';
+    const message = isUa
+      ? 'Зв’язок успішно створено. Тепер CRM може отримувати об’єкти VIA, створювати підбірки та приймати події клієнтів.'
+      : 'Связь успешно создана. Теперь CRM может получать объекты VIA, создавать подборки и принимать события клиентов.';
+    const action = isUa ? 'Продовжити' : 'Продолжить';
+    const overlay = document.createElement('div');
+    overlay.id = 'vwEstateCrmSuccessOverlay';
+    overlay.className = 'vw-olx-import-result-overlay';
+    overlay.innerHTML = `
+      <div class="vw-olx-import-result-modal" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="vw-olx-import-result-title">✅ ${title}</div>
+        <div class="vw-olx-import-result-text">${message}</div>
+        <div class="vw-olx-import-result-actions">
+          <button type="button" class="vw-olx-import-result-btn" data-role="close">${action}</button>
+        </div>
+      </div>
+    `;
+    this.getRoot().appendChild(overlay);
+    const close = () => this.closeEstateCrmSuccessModal();
+    overlay.querySelector('[data-role="close"]')?.addEventListener('click', close);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    overlay.querySelector('[data-role="close"]')?.focus?.();
+  }
+
   _mapSubscriptionPlanLabel(planRaw) {
     const plan = String(planRaw || '').trim().toLowerCase();
     if (plan === 'trial_7') return 'Пробный 7 дней';
@@ -13992,7 +14029,8 @@ class VoiceWidget extends HTMLElement {
         estateCrmBtn.disabled = true;
         try {
           await this.api.confirmEstateCrmPairing(code);
-          this.ui?.showNotification?.('✅ Estate CRM подключён');
+          this.setAccessButtonLabel(estateCrmBtn, 'Estate CRM: подключено');
+          this.openEstateCrmSuccessModal();
         } catch (error) {
           this.ui?.showNotification?.(`⚠️ Не удалось подключить Estate CRM: ${error.message}`);
         } finally {
