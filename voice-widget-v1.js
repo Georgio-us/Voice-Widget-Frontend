@@ -3506,6 +3506,7 @@ class VoiceWidget extends HTMLElement {
     this.recordedChunks = [];
     this._deepLinkPropId = this.getDeepLinkPropIdFromUrl();
     this._deepLinkSelectionIds = this.getDeepLinkSelectionIdsFromUrl();
+    this._estateCrmSelectionId = null;
     this._activeDeepLinkPropId = null;
     this._isDeepLinkMode = false;
     this._deepLinkModeType = null;
@@ -3921,6 +3922,7 @@ class VoiceWidget extends HTMLElement {
           this._deepLinkSelectionIds = Array.isArray(resolved?.propertyExternalIds)
             ? resolved.propertyExternalIds
             : [];
+          this._estateCrmSelectionId = resolved?.selectionId ? String(resolved.selectionId) : null;
         } catch {
           this._deepLinkSelectionIds = [];
         }
@@ -18339,6 +18341,9 @@ render() {
       ...payload,
       sessionId: ensureSessionId()
     };
+    if (!finalPayload.estateCrmSelectionId && this._estateCrmSelectionId) {
+      finalPayload.estateCrmSelectionId = this._estateCrmSelectionId;
+    }
     let resolvedTgUserId = '';
     try {
       if (typeof this?.getTelegramUserIdentity === 'function') {
@@ -19810,6 +19815,7 @@ render() {
         comment: telegramValid ? `telegram:${telegramNormalized}` : null,
         language: (this.currentLang || this.defaultLanguage || 'ua').toLowerCase(),
         propertyId: normalizedSource === 'tg_property_card' ? propertyId : null,
+        estateCrmSelectionId: this._estateCrmSelectionId || null,
         consent: true
       };
 
@@ -19966,6 +19972,7 @@ render() {
         comment: null,
         language: language,
         propertyId,
+        estateCrmSelectionId: this._estateCrmSelectionId || null,
         consent: true
       };
 
